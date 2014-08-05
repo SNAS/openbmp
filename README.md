@@ -5,11 +5,6 @@ OpenBMP is an open source project that implements **draft-ietf-grow-bmp-07**.  B
 
 JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR, and JunOS 13.3 implement version 3 (draft 07).
 
-> **NOTE:** 
-> Source and binary packages are pending internal review.  The process should be completed by Aug 2014.
-> The binary packages as well as source should be available in Aug 2014.
-
-
 ### Daemon
 OpenBMP daemon is a BMP receiver for devices that implement BMP, such as Cisco and Juniper routers.  Collected BMP messages are decoded and stored in a SQL database.
 
@@ -85,9 +80,10 @@ Interfacing with the Database
 See the [docs/DATABASE.md](docs/DATABASE.md) documentation for the database schema and how to interact with it.    
 
 
-Change Log
+Release Notes
 ----------
-The [docs/CHANGELOG.md](docs/CHANGELOG.md) details changes by release. 
+Check the release notes for changes by release.  
+
 
 
 Road Map

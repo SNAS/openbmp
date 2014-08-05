@@ -33,7 +33,7 @@ AS_Path | varchar | AS Path in string format
 ASPath_Count | int | Count of ASN's in the path
 Communities | varchar | Standard Communities in string format
 ClusterList | varchar | Cluster list in string format
-Aggregator | varchar | Aggregator IP address in printed format
+Aggregator | varchar | Aggregator AS and IP address in printed format
 PeerAddress | varchar | Peer IP address in printed format
 LastModified | timestamp | Timestamp of when last modified/udpated
 
@@ -56,7 +56,7 @@ AS_Path | varchar | AS Path in string format
 ASPath_Count | int | Count of ASN's in the path
 Communities | varchar | Standard Communities in string format
 ClusterList | varchar | Cluster list in string format
-Aggregator | varchar | Aggregator IP address in printed format
+Aggregator | varchar | Aggregator AS and IP address in printed format
 PeerAddress | varchar | Peer IP address in printed format
 LastModified | timestamp | Timestamp of when last modified/udpated
 
@@ -102,7 +102,7 @@ Column | DataType | Description
 hash_id | char(32) | Hash ID for this table
 name | varchar(255) | DNS/custom name or if empty the BMP initiate message (sysName)
 descr | varchar(255) | Description of router/BMP device (if empty will be sysDescr learned)
-src_addr | varchar(40) | IPv4/IPv6 address of the BMP device
+ip_address | varchar(40) | IPv4/IPv6 address of the BMP device
 asn | unsigned int 32bit | ASN of the BMP device
 isConnected | boolean | BMP connection state ; true is established
 isPassive | boolean | Indicates if OpenBMP is passive or active
@@ -128,7 +128,7 @@ peer_as | unsigned int 32bit | Peer ASN
 isL3VPN | boolean | Peer is VPNv4 if true and global if false
 isIPv4 | boolean | Peer IP type is IPv4 if true and IPv6 if false
 isPrePolicy | boolean | True if pre-policy (adj-rib-in) or false if post-policy (loc-rib)
-peer_state | int | Peer state is 0=down, 1=up, 2=receiving initial dump via bmp
+state | int | Peer state is 0=down, 1=up, 2=receiving initial dump via bmp
 timestamp| timestamp | Last time the record was updated  - seconds since EPOCH
 
 
@@ -145,7 +145,7 @@ as_path_count | int | Count of AS's in the path, including in sets
 origin_as | unsigned int 32bit | Origin AS - first ASN in path
 nexthop_isIPv4 | boolean | Next-hop is IPv4 if true and IPv6 if false
 next_hop | varchar(40) | IP address of next-hop in printed format
-aggregator | varchar(40) | Aggregator IP in printed format
+aggregator | varchar(40) | Aggregator AS and IP in printed format
 originator_id| varchar(15) | Originator ID in printed format
 atomic_agg | boolean | True if atomic aggregate, false if not
 med | unsigned int 32bit | BGP med value
