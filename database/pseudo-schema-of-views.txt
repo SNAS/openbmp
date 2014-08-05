@@ -1,0 +1,60 @@
+###############################################################################
+# Pseudo schema of database VIEWS that should be used by ODL and others. 
+# 
+# Views are the same no matter which backend DB is used. 
+# 
+# Syntax is similar to create table using single quotes to wrap column and
+#    table names. 
+###############################################################################
+
+# v_routes - Table of all current routes for all routers and all peers.
+#     All routes are distinct by prefix, prefix length and bgp peer/address,
+#     add path will be added.
+#
+#     Table is large and should be filtered when returning results.
+CREATE TABLE 'v_routes' (
+  'RouterName' varchar(200) NOT NULL,
+  'PeerName' varchar(200),
+  'Prefix' varchar(40) NOT NULL,
+  'PrefixLen' int(10) unsigned NOT NULL, 
+  'Origin' varchar(16) NOT NULL,
+  'Origin_AS' int(10) unsigned 
+  'MED' int(10) unsigned,
+  'LocalPref' int(10) unsigned,
+  'NH' varchar(40),
+  'AS_Path' varchar(8192) NOT NULL,
+  'ASPath_Count' int(8) unsigned,
+  'Communities' varchar(4096),
+  'ClusterList' varchar(2048),
+  'Aggregator' varchar(64),
+  'PeerAddress' varchar(40) NOT NULL,
+  'PeerASN' int(10) unsigned NOT NULL,
+  'LastModified' timestamp NOT NULL
+);
+
+# v_routes_history - Table of all routes over time for all routers and all peers
+#     This is juut like v_routes except the timestamp will show paths changing over time.
+#     As mentioned above, addpaths will be added in the future. 
+# 
+#     Table is large and should be filtered when returning results.
+CREATE TABLE 'v_routes' (
+  'RouterName' varchar(200) NOT NULL,
+  'PeerName' varchar(200),
+  'Prefix' varchar(40) NOT NULL,
+  'PrefixLen' int(10) unsigned NOT NULL,
+  'Origin' varchar(16) NOT NULL,
+  'Origin_AS' int(10) unsigned 
+  'MED' int(10) unsigned,
+  'LocalPref' int(10) unsigned,
+  'NH' varchar(40),
+  'AS_Path' varchar(8192) NOT NULL,
+  'ASPath_Count' int(8) unsigned,
+  'Communities' varchar(4096),
+  'ClusterList' varchar(2048),
+  'Aggregator' varchar(64),
+  'PeerAddress' varchar(40) NOT NULL,
+  'PeerASN' int(10) unsigned NOT NULL,
+  'LastModified' timestamp NOT NULL
+);
+
+# END
