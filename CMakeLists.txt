@@ -1,7 +1,7 @@
 # cmake file for openbmpd
 
 # Define the version
-set (OPENBMPD_VERSION "0.7.0")
+set (OPENBMPD_VERSION "0.8.0")
 
 cmake_minimum_required (VERSION 2.8)
 project (OPENBMP)
