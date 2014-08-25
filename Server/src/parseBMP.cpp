@@ -436,29 +436,41 @@ void parseBMP::handleStatsReport(DbInterface *dbi_ptr, int sock) {
                     i, stat_type, stat_len);
 
         // check if this is a 32 bit number  (default)
-        if (stat_len == 4) {
+        if (stat_len == 4 or stat_len == 8) {
 
-            // Read the stats counter - 32bits
-            if ((recv(sock, b, 4, MSG_WAITALL)) == 4) {
+            // Read the stats counter - 32/64 bits
+            if ((recv(sock, b, stat_len, MSG_WAITALL)) == stat_len) {
                 // convert the bytes from network to host order
-                reverseBytes(b, 4);
+                reverseBytes(b, stat_len);
 
                 // Update the table structure based on the stats counter type
                 switch (stat_type) {
                 case STATS_PREFIX_REJ:
-                    memcpy((void*) &stats.prefixes_rej, (void*) b, 4);
+                    memcpy((void*) &stats.prefixes_rej, (void*) b, stat_len);
                     break;
                 case STATS_DUP_PREFIX:
-                    memcpy((void*) &stats.known_dup_prefixes, (void*) b, 4);
+                    memcpy((void*) &stats.known_dup_prefixes, (void*) b, stat_len);
                     break;
                 case STATS_DUP_WITHDRAW:
-                    memcpy((void*) &stats.known_dup_withdraws, (void*) b, 4);
+                    memcpy((void*) &stats.known_dup_withdraws, (void*) b, stat_len);
                     break;
                 case STATS_INVALID_CLUSTER_LIST:
-                    memcpy((void*) &stats.invalid_cluster_list, (void*) b, 4);
+                    memcpy((void*) &stats.invalid_cluster_list, (void*) b, stat_len);
                     break;
                 case STATS_INVALID_AS_PATH_LOOP:
-                    memcpy((void*) &stats.invalid_as_path_loop, (void*) b, 4);
+                    memcpy((void*) &stats.invalid_as_path_loop, (void*) b, stat_len);
+                    break;
+                case STATS_INVALID_ORIGINATOR_ID:
+                    memcpy((void*) &stats.invalid_originator_id, (void*) b, stat_len);
+                    break;
+                case STATS_INVALID_AS_CONFED_LOOP:
+                    memcpy((void*) &stats.invalid_as_confed_loop, (void*) b, stat_len);
+                    break;
+                case STATS_NUM_ROUTES_ADJ_RIB_IN:
+                    memcpy((void*) &stats.routes_adj_rib_in, (void*) b, stat_len);
+                    break;
+                case STATS_NUM_ROUTES_LOC_RIB:
+                    memcpy((void*) &stats.routes_loc_rib, (void*) b, stat_len);
                     break;
                 }
 
@@ -466,8 +478,8 @@ void parseBMP::handleStatsReport(DbInterface *dbi_ptr, int sock) {
                             b[3] << 24 | b[2] << 16 | b[1] << 8 | b[0]);
             }
 
-        } else { // stats len to large, we need to skip it.
-            SELF_DEBUG("sock=%d : skipping stats report '%u' because length of '%u' is to large.",
+        } else { // stats len not expected, we need to skip it.
+            SELF_DEBUG("sock=%d : skipping stats report '%u' because length of '%u' is not expected.",
                         sock, stat_type, stat_len);
             while (stat_len-- > 0)
                 read(sock, &b[0], 1);

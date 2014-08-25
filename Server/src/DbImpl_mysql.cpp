@@ -10,6 +10,8 @@
 #include <cstring>
 #include <iostream>
 
+#include <inttypes.h>
+
 // MySQL headers
 #include "mysql_connection.h"
 #include "mysql_driver.h"
@@ -20,6 +22,7 @@
 
 #include "DbImpl_mysql.h"
 #include "md5.h"
+
 
 using namespace std;
 
@@ -542,6 +545,9 @@ void mysqlBMP::add_PeerDownEvent(tbl_peer_down_event &down_event) {
     }
 }
 
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
 void mysqlBMP::add_StatReport(tbl_stats_report &stats) {
     try {
         char buf[4096];                 // Misc working buffer
@@ -551,12 +557,18 @@ void mysqlBMP::add_StatReport(tbl_stats_report &stats) {
         hash_toStr(stats.peer_hash_id, p_hash_str);
 
         snprintf(buf, sizeof(buf),
-                "INSERT into %s (%s) values ('%s', %u, %u, %u, %u, %u)",
+                "INSERT into %s (%s%s%s) values ('%s', %u, %u, %u, %u, %u, %u, %u, %"PRIu64", %"PRIu64")",
                 TBL_NAME_STATS_REPORT,
-                "peer_hash_id,prefixes_rejected,known_dup_prefixes,known_dup_withdraws,updates_invalid_by_cluster_list,updates_invalid_by_as_path_loop",
+                "peer_hash_id,prefixes_rejected,known_dup_prefixes,known_dup_withdraws,",
+                "updates_invalid_by_cluster_list,updates_invalid_by_as_path_loop,updates_invalid_by_originagtor_id,",
+                "updates_invalid_by_as_confed_loop,num_routes_adj_rib_in,num_routes_local_rib",
+
                 p_hash_str.c_str(), stats.prefixes_rej,
                 stats.known_dup_prefixes, stats.known_dup_withdraws,
-                stats.invalid_cluster_list, stats.invalid_as_path_loop);
+                stats.invalid_cluster_list, stats.invalid_as_path_loop,
+                stats.invalid_originator_id, stats.invalid_as_confed_loop,
+                stats.routes_adj_rib_in, stats.routes_loc_rib);
+
 
         // Run the query to add the record
         stmt = con->createStatement();

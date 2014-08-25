@@ -129,7 +129,7 @@ void parseBGP::handleMessage(int sock) {
                 read(sock, &byte, 1);
 
             //throw "WARNING: Unsupported BGP message type";
-            LOG_WARN("Unsupported BGP message type, sock=%d", sock);
+            LOG_WARN("Unsupported BGP message type, sock=%d type=%d", sock, c_hdr.type);
             break;
     }
 

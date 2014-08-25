@@ -208,12 +208,12 @@ peer_hash_id | char(32) | Hash ID of bgp_peers table
 prefixes_rej | unsigned int 32bit | Number of prefixes rejected by inbound policy
 known_dup_prefixes | unsigned int 32bit | Number of (known) duplicate prefix advertisements
 known_dup_withdraws | unsigned int 32bit | Number of (known) duplicate withdraws
-invalid_cluster_list | unsigned int 32bit | Number of updates invalidated due to CLUSTER_LIST loop
-invalid_as_path_loop | unsigned int 32bit | Number of updates invalidated due to AS_PATH loop
-invalid_originator_id | unsigned int 32bit | Number of updates invalidated due to ORIGINATOR_ID
-invalid_as_confed_loop | unsigned int 32bit | Number of updates invalidated due to AS_CONFED loop
-routes_adj_rib_in | unsigned int 64bit | Number of routes in Adj-RIBs-In
-routes_loc_rib | unsigned int 64bit | Number of routes in Loc-RIB
+updates_invalid_cluster_list | unsigned int 32bit | Number of updates invalidated due to CLUSTER_LIST loop
+updates_invalid_by_as_path_loop | unsigned int 32bit | Number of updates invalidated due to AS_PATH loop
+updates_invalid_by_originator_id | unsigned int 32bit | Number of updates invalidated due to ORIGINATOR_ID
+updates_invalid_by_as_confed_loop | unsigned int 32bit | Number of updates invalidated due to AS_CONFED loop
+num_routes_adj_rib_in | unsigned int 64bit | Number of routes in Adj-RIBs-In
+num_routes_local_rib | unsigned int 64bit | Number of routes in Loc-RIB
 timestamp| timestamp | BMP recorded time  - seconds since EPOCH
 
 > Other metrics can be added

@@ -5,8 +5,6 @@ Openbmp is built and installed using 'cmake' to build the makefiles.
 Install the dependancies
 ------------------------
 
-> The below is not yet complete but should be 
-
 ### Ubuntu 14.04
 
 ``` 
