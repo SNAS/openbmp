@@ -5,6 +5,15 @@ OpenBMP stores the parsed BMP messages in a database. The DB is updated realtime
 
 The design allows for admins, network engineers, scripts/programs, etc. to interact with the Database in a read-only fashion.   A single database instance running with 8G of RAM and 4 vCPU's can handle several routers with several full Internet routing bgp peers. 
 
+Behaviors
+---------
+* BGP information will persist in the DB so long as the data is being updated.  
+* When openbmp is stopped, the data will still be there in the DB but the routers table will be updated to indicate that BMP router(s) are not connected with a term code of 65535 and term text indicating openbmp was stopped/not running.  Peers are unchanged to allow going back in time to check their last known states.  
+* When openbmp is started it will add/re-add routers and peers when BMP messages are received.  When the router is added, all router associated peers in the DB will have a state set to zero to indicate the peer is not connected.  When PEER UP or monitoring information is received for the peer, the peer state will change to indicate it's active/up.  
+* A special timestamp field (**_db_timestamp_**) in the **rib** table is used to indicate if the RIB entry is stale or not.  The **rib.db_timestamp** should always be _greater than or equal to_ the **peer.timestmap**.  RIB entries that have an older **db_timestamp** than the peer timestmap remain for historical reporting.  These older RIB entries can be safely purged based on admin/retention policy using something like: `DELETE r  FROM rib r JOIN bgp_peers p ON (r.peer_hash_id = p.hash_id) WHERE r.db_timestamp < p.timestamp;` 
+
+
+
 Primary Keys
 ------------
 OpenBMP is not just logging BMP/BGP messages, instead it is actively maintaining the information.   Therefore, there is a need for OpenBMP to update existing objects, such as NLRI and timestamps.   To facilitate this, each table includes a **hash_id** which is currently a MD5 hash of various columns.  Each table hash_id is computed on column information instead of requiring multiple column primary keys or unique key constraints.   
@@ -101,9 +110,9 @@ Column | DataType | Description
 ------ | -------- | -----------
 hash_id | char(32) | Hash ID for this table
 name | varchar(255) | DNS/custom name or if empty the BMP initiate message (sysName)
-descr | varchar(255) | Description of router/BMP device (if empty will be sysDescr learned)
+description | varchar(255) | Description of router/BMP device (if empty will be sysDescr learned)
 ip_address | varchar(40) | IPv4/IPv6 address of the BMP device
-asn | unsigned int 32bit | ASN of the BMP device
+router_AS | unsigned int 32bit | ASN of the BMP device
 isConnected | boolean | BMP connection state ; true is established
 isPassive | boolean | Indicates if OpenBMP is passive or active
 term_reason_code | int | BMP termination reason code  for last termination (isConnected=false)
@@ -153,7 +162,7 @@ local_pref | unsigned int 32bit | BGP local preference
 community_list | varchar(variable) | Standard community list in string format
 ext_community_list | varchar(variable) | Extended community list in string format
 cluster_list | varchar(variable) | Cluster list in string format
-timestamp| timestamp | Last time the record was updated  - seconds since EPOCH
+timestamp | timestamp | timestmap from BMP sender (normally this is the receive time of the entry on the router) - seconds since EPOCH
 
 
 ### rib
@@ -166,7 +175,8 @@ path_attr_hash_id | char(32) | Hash ID of the path_attrs table
 peer_hash_id | char(32) | Hash ID of the bgp_peers table
 prefix | varchar(40) | Prefix in printed format
 prefix_len | int | Length of prefix in bits
-timestamp| timestamp | Last time the record was updated  - seconds since EPOCH
+timestamp | timestamp | RIB entry timestmap from BMP sender (normally this is the receive time of the entry on the router) - seconds since EPOCH
+db_timestamp | timestamp | DB timestamp when the recorder was added/modified in the DB - seconds since EPOCH
 
 
 ### peer_down_events
@@ -179,7 +189,7 @@ bmp_reason | varchar(64) | Short text description of the BMP reason code
 bgp_error_code | int | BGP notification error code (see RFC4271 Section 4.5)
 bgp_error_subcode | int | BGP notification error subcode (see RFC4271 Section 4.5)
 error_text | varchar(255) | Text description of bgp error code and subcode meaning
-timestamp| timestamp | BMP recorded time  - seconds since EPOCH
+timestamp| timestamp | timestmap from BMP sender - seconds since EPOCH
 
 ### peer_up_events
 Peer up events are logged whenever bmp device is established with OpenBMP and when the peer transitions from down to up.
@@ -196,7 +206,7 @@ remote_port | int | Remote port number for the peer session
 hold_time | int | BGP hold time for the peer session
 sent_open_params | varchar(variable) | String list of open params sent to peer
 recv_open_params | varchar(variable) | String list of open params received from peer
-timestamp| timestamp | BMP recorded time  - seconds since EPOCH
+timestamp| timestamp | timestmap from BMP sender - seconds since EPOCH
 
 ### stat_reports
 

@@ -65,11 +65,11 @@ char parseBMP::handleMessage(int sock) {
     bytes_read = read(sock, &ver, 1);
 
     if (bytes_read < 0)
-        throw "ERROR: Failed to read from socket.";
+        throw "1: Failed to read from socket.";
     else if (bytes_read == 0)
-        throw "INFO: Connection closed";
+        throw "2: Connection closed";
     else if (bytes_read != 1)
-        throw "ERROR: Cannot read the BMP version byte from socket";
+        throw "3: Cannot read the BMP version byte from socket";
 
     // check the version
     if (ver == 3) { // draft-ietf-grow-bmp-04 - 07
@@ -326,11 +326,12 @@ void parseBMP::parsePeerHdr(int sock) {
     }
 
     if (p_hdr.peer_flags & 0x40) { // L flag of 1 means this is post-policy of Adj-RIB-In
-        SELF_DEBUG("sock=%d : Msg is for POST-POLICY Adj-RIB-In",
-                sock);
+        SELF_DEBUG("sock=%d : Msg is for POST-POLICY Adj-RIB-In", sock);
+        p_entry->isPrePolicy = false;
+
     } else {
-        SELF_DEBUG("sock=%d : Msg is for PRE-POLICY Adj-RIB-In",
-                sock);
+        SELF_DEBUG("sock=%d : Msg is for PRE-POLICY Adj-RIB-In", sock);
+        p_entry->isPrePolicy = true;
     }
 
     // convert the BMP byte messages to human readable strings
@@ -366,7 +367,7 @@ void parseBMP::parsePeerHdr(int sock) {
         break;
     }
 
-    // Update the MySQL peer entry struct
+    // Update the DB peer entry struct
     strncpy(p_entry->peer_addr, peer_addr, sizeof(peer_addr));
     p_entry->peer_as = strtoll(peer_as, NULL, 16);
     strncpy(p_entry->peer_bgp_id, peer_bgp_id, sizeof(peer_bgp_id));

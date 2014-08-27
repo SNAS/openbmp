@@ -18,8 +18,10 @@
 #include <cstring>
 #include <cstdlib>
 #include <string>
+#include <cerrno>
 
-#include "BMPServer.h"
+#include "BMPListener.h"
+#include "BMPReader.h"
 #include "parseBMP.h"
 #include "parseBGP.h"
 #include "DbInterface.hpp"
@@ -33,77 +35,22 @@ using namespace std;
  *  \param [in] config  Pointer to the loaded configuration
  *
  */
-BMPServer::BMPServer(Logger *logPtr, Cfg_Options *config) {
-    sock = 0;
+BMPReader::BMPReader(Logger *logPtr, Cfg_Options *config) {
     debug = false;
 
-    // Update pointer to the config
     cfg = config;
 
     log = logPtr;
 
-    svr_addr.sin_port = htons(atoi(cfg->bmp_port));
-    svr_addr.sin_addr.s_addr = INADDR_ANY;
-
-    // Open the v4 socket
-    open_socket_v4();
+    if (cfg->debug_bmp)
+        enableDebug();
 }
 
 /**
  * Destructor
  */
-BMPServer::~BMPServer() {
-    if (sock > 0)
-        close (sock);
+BMPReader::~BMPReader() {
 
-    delete cfg;
-}
-
-/**
- * Opens server IPv4 listening socket
- */
-void BMPServer::open_socket_v4() {
-   svr_addr.sin_family = PF_INET;
-
-   // Open the socket
-   if ( (sock=socket(PF_INET, SOCK_STREAM, 0))  <= 0) {
-       throw "ERROR: Cannot open a socket.";
-   }
-
-   // Set socket options
-   int on = 1;
-   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
-       close(sock);
-       throw "ERROR: Failed to set socket option SO_REUSEADDR";
-   }
-
-   // Bind to the address/port
-   if (bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) < 0) {
-       close(sock);
-       throw "ERROR: Cannot bind to address and port";
-   }
-
-   // Wait for incoming connections
-   listen(sock, 20);
-}
-
-/**
- * Accept new/pending connections
- *
- * Will accept new connections and wait if one is not currently ready.
- *
- * \param [out]  c  Client information reference to where the client info will be stored
- */
-void BMPServer::accept_connection(ClientInfo &c) {
-   socklen_t c_addr_len = sizeof(c.c_addr);         // the client info length
-
-   // Accept the pending client request, or block till one exists
-   if ( (c.c_sock = accept(sock, (struct sockaddr *) &c.c_addr, &c_addr_len)) < 0)
-       throw "ERROR: Failed to accept client connection";
-
-   // Update returned class to have address and port of client in text form.
-   snprintf(c.c_ipv4, sizeof(c.c_ipv4), "%s", inet_ntoa(c.c_addr.sin_addr));
-   snprintf(c.c_port, sizeof(c.c_port), "%u", ntohs(c.c_addr.sin_port));
 }
 
 /**
@@ -114,7 +61,7 @@ void BMPServer::accept_connection(ClientInfo &c) {
  * \param [in]  client      Client information pointer
  * \param [in]  dbi_ptr     The database pointer referencer - DB should be already initialized
  */
-void BMPServer::ReadIncomingMsg(ClientInfo *client, DbInterface *dbi_ptr) {
+void BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *dbi_ptr) {
     parseBGP *pBGP;                                 // Pointer to BGP parser
 
     // Data storage structures
@@ -129,6 +76,11 @@ void BMPServer::ReadIncomingMsg(ClientInfo *client, DbInterface *dbi_ptr) {
     }
 
     char bmp_type = 0;
+    DbInterface::tbl_router r_entry;
+
+    // Setup the router record table object
+    r_entry.isConnected = 1;
+    memcpy(r_entry.src_addr, client->c_ipv4, sizeof(client->c_ipv4));
 
     try {
         bmp_type = pBMP->handleMessage(client->c_sock);
@@ -137,10 +89,6 @@ void BMPServer::ReadIncomingMsg(ClientInfo *client, DbInterface *dbi_ptr) {
          * Now that we have parsed the BMP message...
          *  add record to the database
          */
-        DbInterface::tbl_router r_entry;
-
-        // Setup the router record table object
-        memcpy(r_entry.src_addr, client->c_ipv4, sizeof(client->c_ipv4));
 
         dbi_ptr->add_Router(r_entry);         // add the router entry
 
@@ -208,7 +156,7 @@ void BMPServer::ReadIncomingMsg(ClientInfo *client, DbInterface *dbi_ptr) {
 
                 } else {
                     LOG_ERR("Error with client socket %d", client->c_sock);
-                    throw "BMPServer: Unable to read from client socket";
+                    throw "BMPReader: Unable to read from client socket";
                 }
                 break;
             }
@@ -240,7 +188,15 @@ void BMPServer::ReadIncomingMsg(ClientInfo *client, DbInterface *dbi_ptr) {
                 break;
             }
         }
+
     } catch (const char *str) {
+        // Record that the connection is no longer active
+
+        // Mark the router as disconnected and update the error to be a local disconnect (no term message received)
+        r_entry.term_reason_code = 65535;
+        snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text), "%s", str);
+        dbi_ptr->disconnect_Router(r_entry);
+
         delete pBMP;                    // Make sure to free the resource
         throw str;
     }
@@ -253,10 +209,10 @@ void BMPServer::ReadIncomingMsg(ClientInfo *client, DbInterface *dbi_ptr) {
 /*
  * Enable/Disable debug
  */
-void BMPServer::enableDebug() {
+void BMPReader::enableDebug() {
     debug = true;
 }
 
-void BMPServer::disableDebug() {
+void BMPReader::disableDebug() {
     debug = false;
 }

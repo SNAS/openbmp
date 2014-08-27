@@ -15,13 +15,17 @@
  * \author Tim Evens <tievens@cisco.com>, <tim@openbmp.org>
  */
 
-#include "BMPServer.h"
+#include "BMPListener.h"
 #include "DbImpl_mysql.h"
 #include "DbInterface.hpp"
+#include "client_thread.h"
 #include "openbmpd_version.h"
+#include "Config.h"
 
 #include <unistd.h>
 #include <fstream>
+#include <csignal>
+#include <cstring>
 
 using namespace std;
 
@@ -38,24 +42,10 @@ bool        debugEnabled    = false;                // Globally enable/disable d
 
 #define MAX_THREADS 200
 
-/*
- * Configuration Options (global arg)
- */
-BMPServer::Cfg_Options cfg;
-
-// GLOBAL var - thread management structure
-struct Thread_Mgmt {
-    pthread_t thr;
-    BMPServer::ClientInfo client;
-    char running;                       // true if running, zero if not running
-};
-
 // Global thread list
-vector<Thread_Mgmt *> thr_list(0);
+vector<ThreadMgmt *> thr_list(0);
 
-// Create global bmp_server pointer
-BMPServer *bmp_svr;
-
+static Logger *log;                                 // Local source logger reference
 
 /**
  * Usage of the program
@@ -87,13 +77,49 @@ void Usage(char *prog) {
 
 }
 
+
+/**
+ * Signal handler
+ *
+ */
+void signal_handler(int signum)
+{
+    LOG_NOTICE("Caught signal %d", signum);
+
+    /*
+     * Respond based on the signal
+     */
+    switch (signum) {
+        case SIGTERM :
+        case SIGKILL :
+        case SIGQUIT :
+        case SIGPIPE :
+        case SIGINT  :
+        case SIGCHLD : // Handle the child cleanup
+
+            for (size_t i=0; i < thr_list.size(); i++) {
+                pthread_cancel(thr_list.at(i)->thr);
+                thr_list.at(i)->running = false;
+                pthread_join(thr_list.at(i)->thr, NULL);
+            }
+
+            break;
+
+        default:
+            LOG_INFO("Ignoring signal %d", signum);
+            break;
+    }
+}
+
 /**
  * Parse and handle the command line args
+ *
+ * \param [out] cfg    Reference to config options - Will be updated based on cli
  *
  * \returns true if error, false if no error
  *
  */
-bool ReadCmdArgs(int argc, char **argv) {
+bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
     // Initialize the defaults
     cfg.bmp_port = const_cast<char *>("5000");
@@ -244,77 +270,114 @@ bool ReadCmdArgs(int argc, char **argv) {
     return false;
 }
 
+
 /**
- * Client thread function
+ * Run Server loop
  *
- * Thread function that is called when starting a new thread.
- * The DB/mysql is initialized for each thread.
- *
- * @param [in]  arg     Pointer to the BMPServer ClientInfo
+ * \param [in]  cfg    Reference to the config options
  */
-/* ------------------------------------------------------------------
- * Client Thread function
- *     The client connection will be handled by this thread.
- * ------------------------------------------------------------------ */
-void *ClientThread(void *arg) {
-    pthread_t myid = pthread_self();
+void runServer(Cfg_Options &cfg) {
+    mysqlBMP *mysql;
+    int active_connections = 0;                 // Number of active connections/threads
 
-    // Setup the args
-    BMPServer::ClientInfo *client = static_cast<BMPServer::ClientInfo *>(arg);
-
-    Logger *log = bmp_svr->log;
-
-    // connect to mysql
-    mysqlBMP *mysql = new mysqlBMP(log, cfg.dbURL,cfg.username, cfg.password, cfg.dbName);
-
-    if (cfg.debug_mysql)
-        mysql->enableDebug();
+    LOG_INFO("Starting server");
 
     try {
+
+        // Test Mysql connection
+        mysql = new mysqlBMP(log, cfg.dbURL,cfg.username, cfg.password, cfg.dbName);
+        delete mysql;
+
+        // allocate and start a new bmp server
+        BMPListener *bmp_svr = new BMPListener(log, &cfg);
+
+        // Loop to accept new connections
         while (1) {
-            bmp_svr->ReadIncomingMsg(client, (DbInterface *)mysql);
+            /*
+             * Check for any stale threads/connections
+             */
+             for (size_t i=0; i < thr_list.size(); i++) {
+                // If thread is not running, it means it terminated, so close it out
+                if (!thr_list.at(i)->running) {
+
+                    // Join the thread to clean up
+                    pthread_join(thr_list.at(i)->thr, NULL);
+
+                    // free the vector entry
+                    delete thr_list.at(i);
+                    thr_list.erase(thr_list.begin() + i);
+                    --active_connections;
+                }
+                //TODO: Add code to check for a socket that is open, but not really connected/half open
+            }
+
+            /*
+             * Create a new client thread if we aren't at the max number of active sessions
+             */
+            if (active_connections <= MAX_THREADS) {
+                ThreadMgmt *thr = new ThreadMgmt;
+                thr->cfg = &cfg;
+                thr->log = log;
+
+                pthread_attr_t thr_attr;            // thread attribute
+
+                // wait for a new connection and accept
+                LOG_INFO("Waiting for new connection, active connections = %d", active_connections);
+                bmp_svr->accept_connection(thr->client);
+
+                /*
+                 * Start a new thread for every new router connection
+                 */
+                LOG_INFO("Client Connected => %s:%s, sock = %d",
+                        thr->client.c_ipv4, thr->client.c_port, thr->client.c_sock);
+
+
+                pthread_attr_init(&thr_attr);
+                //pthread_attr_setdetachstate(&thr.thr_attr, PTHREAD_CREATE_DETACHED);
+                pthread_attr_setdetachstate(&thr_attr, PTHREAD_CREATE_JOINABLE);
+                thr->running = 1;
+
+
+                // Start the thread to handle the client connection
+                pthread_create(&thr->thr,  &thr_attr,
+                        ClientThread, thr);
+
+                // Add thread to vector
+                thr_list.insert(thr_list.end(), thr);
+
+                // Free attribute
+                pthread_attr_destroy(&thr_attr);
+
+                // Bump the current thread count
+                ++active_connections;
+
+
+            } else {
+                LOG_WARN("Reached max number of threads, cannot accept new BMP connections at this time.");
+                sleep (1);
+            }
         }
+
 
     } catch (char const *str) {
-        LOG_NOTICE("%s: Thread for sock [%d] ended", str, client->c_sock);
+        LOG_WARN(str);
     }
-
-    // Delete mysql
-    delete mysql;
-
-    // close the socket
-    shutdown(client->c_sock, SHUT_RDWR);
-    close (client->c_sock);
-
-    // Indicate that we are no longer running
-    for (size_t i=0; i < thr_list.size(); i++) {
-        if (pthread_equal(thr_list.at(i)->thr, myid)) {
-            thr_list.at(i)->running = 0;
-            break;
-        }
-    }
-
-    // Exit the thread
-    pthread_exit(NULL);
-
-    return NULL;
 }
 
 /**
  * main function
  */
 int main(int argc, char **argv) {
-    mysqlBMP *mysql;
-    int active_connections = 0;                 // Number of active connections/threads
+    Cfg_Options cfg;
 
     // Process the command line args
-    if (ReadCmdArgs(argc, argv)) {
+    if (ReadCmdArgs(argc, argv, cfg)) {
         Usage(argv[0]);
         return 1;
     }
 
     // Initialize logging
-    Logger *log = new Logger(log_filename, debug_filename);
+    log = new Logger(log_filename, debug_filename);
 
     // Set up defaults for logging
     log->setWidthFilename(15);
@@ -343,88 +406,25 @@ int main(int argc, char **argv) {
         }
     }
 
+    /*
+     * Setup the signal handlers
+     */
+    struct sigaction sigact;
+    sigact.sa_handler = signal_handler;
+    sigact.sa_flags = 0;
+    sigemptyset( &sigact.sa_mask);          // blocked signals while handler runs
 
-    LOG_INFO("Starting server");
+    sigaction(SIGCHLD, &sigact, NULL);
+    sigaction(SIGHUP, &sigact, NULL);
+    sigaction(SIGTERM, &sigact, NULL);
+    sigaction(SIGPIPE, &sigact, NULL);
+    sigaction(SIGQUIT, &sigact, NULL);
+    sigaction(SIGINT, &sigact, NULL);
+    sigaction(SIGUSR1, &sigact, NULL);
+    sigaction(SIGUSR2, &sigact, NULL);
 
-	try {
-
-	    // Test Mysql connection
-        mysql = new mysqlBMP(log, cfg.dbURL,cfg.username, cfg.password, cfg.dbName);
-        delete mysql;
-
-        // allocate and start a new bmp server
-        bmp_svr = new BMPServer(log, &cfg);
-
-	    // Loop to accept new connections
-	    while (1) {
-            /*
-             * Check for any stale connections
-             */
-             for (size_t i=0; i < thr_list.size(); i++) {
-                // If thread is not running, it means it terminated, so close it out
-                if (!thr_list.at(i)->running) {
-
-                    // Join the thread to clean up
-                    pthread_join(thr_list.at(i)->thr, NULL);
-
-                    // free the vector entry
-                    delete thr_list.at(i);
-                    thr_list.erase(thr_list.begin() + i);
-                    --active_connections;
-                }
-                //TODO: Add code to check for a socket that is open, but not really connected/half open
-            }
-
-            /*
-             * Create a new client thread if we aren't at the max number of active sessions
-             */
-	        if (active_connections <= MAX_THREADS) {
-                Thread_Mgmt *thr = new Thread_Mgmt;
-                pthread_attr_t thr_attr;            // thread attribute
-
-	            // wait for a new connection and accept
-                LOG_INFO("Waiting for new connection, active connections = %d", active_connections);
-	            bmp_svr->accept_connection(thr->client);
-
-	            /*
-	             * Start a new thread for every new router connection
-	             */
-                LOG_INFO("Client Connected => %s:%d, sock = %d",
-                        thr->client.c_ipv4, thr->client.c_port, thr->client.c_sock);
-
-
-                // set thread detach state attribute to DETACHED
-                pthread_attr_init(&thr_attr);
-                //pthread_attr_setdetachstate(&thr.thr_attr, PTHREAD_CREATE_DETACHED);
-                pthread_attr_setdetachstate(&thr_attr, PTHREAD_CREATE_JOINABLE);
-                thr->running = 1;
-
-
-                // Start the thread to handle the client connection
-	            pthread_create(&thr->thr,  &thr_attr,
-	                    ClientThread, &thr->client);
-
-                // Add thread to vector
-                thr_list.insert(thr_list.end(), thr);
-
-	            // Free attribute
-	            pthread_attr_destroy(&thr_attr);
-
-
-	            // Bump the current thread count
-	            // TODO: Need to remove threads when they are gone
-                ++active_connections;
-
-	        } else {
-	            LOG_WARN("Reached max number of threads, cannot accept new BMP connections at this time.");
-	            sleep (1);
-	        }
-	    }
-
-
-	} catch (char const *str) {
-	    cout << str << endl;
-	}
+    // Run the server (loop)
+    runServer(cfg);
 
 	LOG_NOTICE("Program ended normally");
 

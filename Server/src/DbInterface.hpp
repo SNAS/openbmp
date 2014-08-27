@@ -296,6 +296,17 @@ public:
     virtual void add_Peer(tbl_bgp_peer &peer) = 0;
 
     /*****************************************************************//**
+     * \brief       Update a peer entry
+     *
+     * \details     Will update a peer entry (does not add an entry)
+     *
+     * \param[in]   peer      BGP peer entry  (hash must already be defined)
+     *
+     * \returns     True if updated, False if not.
+     *****************************************************************/
+    virtual bool update_Peer(struct tbl_bgp_peer &peer) = 0;
+
+    /*****************************************************************//**
      * \brief       Add/Update a router entry
      *
      * \details     Will add a new router or update an existing
@@ -310,6 +321,29 @@ public:
      *              safe to do so when this method returns.
      *****************************************************************/
     virtual void add_Router(struct tbl_router &r_entry) = 0;
+
+    /*****************************************************************//**
+     * \brief       Update a router entry
+     *
+     * \details     Will update a router entry (does not add a entry)
+     *
+     * \param[in]   router      Router entry  (hash must already be defined)
+     *
+     * \returns     True if updated, False if not.
+     *****************************************************************/
+    virtual bool update_Router(struct tbl_router &r_entry) = 0;
+
+    /*****************************************************************//**
+     * \brief       Indicates/updates a router entry for disconnected state
+     *
+     * \details     Updates the router entry to be in disconnected state and
+     *              purges memory for it's cached state.
+     *
+     * \param[in]   router      Router entry  (hash must already be defined)
+     *
+     * \returns     True if updated, False if not.
+     *****************************************************************/
+    virtual bool disconnect_Router(struct tbl_router &r_entry) = 0;
 
     /*****************************************************************//**
      * \brief       Add/Update RIB entries

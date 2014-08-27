@@ -34,14 +34,16 @@ include_directories(${MYSQLCONNECTORCPP_INCLUDE_DIR} )
 
 # Define the source files to compile
 set (SRC_FILES
-	src/BMPServer.cpp
+	src/BMPListener.cpp
+	src/BMPReader.cpp
 	src/DbImpl_mysql.cpp
 	src/openbmp.cpp
 	src/parseBGP.cpp
 	src/parseBMP.cpp
 	src/md5.cpp
 	src/Logger.cpp
-        src/BitByteUtils.cpp
+	src/BitByteUtils.cpp
+	src/client_thread.cpp
 	) 
 
 # Disable warnings

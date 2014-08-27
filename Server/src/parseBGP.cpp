@@ -480,6 +480,7 @@ void parseBGP::processNLRI(int sock, unsigned short nlri_len) {
         memcpy(rib_entry.path_attr_hash_id, path_hash_id, sizeof(path_hash_id));
         memcpy(rib_entry.peer_hash_id, p_entry->hash_id, sizeof(p_entry->hash_id));
         rib_entry.prefix_len = upd_hdr.nlri_routes->at(i).len;
+        rib_entry.timestamp_secs = p_entry->timestamp_secs;
 
         rib_list.insert(rib_list.end(), rib_entry);
 

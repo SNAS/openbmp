@@ -14,7 +14,10 @@
 
 #include "DbInterface.hpp"
 #include "Logger.h"
+#include <string>
+#include <map>
 #include <vector>
+#include <ctime>
 
 #include "mysql_connection.h"
 #include <cppconn/driver.h>
@@ -51,7 +54,10 @@ public:
      * See DbInterface.hpp for method details
      */
     void add_Peer(tbl_bgp_peer &peer);
+    bool update_Peer(tbl_bgp_peer &peer);
     void add_Router(struct tbl_router &r_entry);
+    bool update_Router(struct tbl_router &r_entry);
+    bool disconnect_Router(struct tbl_router &r_entry);
     void add_Rib(std::vector<tbl_rib> &rib);
     void delete_Rib(std::vector<tbl_rib> &rib);
     void add_PathAttrs(tbl_path_attr &path);
@@ -73,9 +79,10 @@ private:
     sql::ResultSet  *res;
 
     // array of hashes
-    std::vector<unsigned char *> router_list;
-    std::vector<unsigned char *> peer_list;
-
+    typedef std::map<std::string, time_t>::iterator router_list_iter;
+    std::map<std::string, time_t> router_list;
+    std::map<std::string, time_t> peer_list;
+    typedef std::map<std::string, time_t>::iterator peer_list_iter;
     /**
      * Connects to mysql server
      *
@@ -86,17 +93,6 @@ private:
      */
     void mysqlConnect(char *hostURL, char *username, char *password, char *db);
 
-    /**
-     * Compares two binary/raw hashs (16 bytes)
-     *
-     * The compare is done against a list of hashes that were previously cached.
-     *
-     * \param [in]  list    Vector list of known/cached hashes to check
-     * \param [in]  hash    Hash to compare/find in the hash list
-     *
-     * \returns true if match is found, false if not found.
-     */
-    bool hashCompare(std::vector<unsigned char*> list, unsigned char *hash);
 };
 
 #endif /* MYSQLBMP_H_ */

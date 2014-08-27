@@ -56,6 +56,36 @@ mysqlBMP::mysqlBMP(Logger *logPtr, char *hostURL, char *username, char *password
  * Destructor
  */
 mysqlBMP::~mysqlBMP() {
+
+    /*
+     * Disconnect the router entries in the DB normally
+     */
+    char buf[4096]; // Misc working buffer
+    for (router_list_iter it = router_list.begin(); it != router_list.end(); it++) {
+        try {
+
+
+            // Build the query
+            snprintf(buf, sizeof(buf),
+                    "UPDATE %s SET isConnected=0,term_reason_code=65535,term_reason_text=\"OpenBMP server stopped\" where hash_id = '%s'",
+                    TBL_NAME_ROUTERS,
+                    it->first.c_str());
+
+            // Run the query to add the record
+            stmt = con->createStatement();
+            stmt->execute(buf);
+
+            // Free the query statement
+            delete stmt;
+        } catch (sql::SQLException &e) {
+            LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                    e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        }
+    }
+
+    // Disconnect the driver
+    driver->threadEnd();
+
     // Free vars
     if (con != NULL) {
         delete con;
@@ -139,36 +169,29 @@ void mysqlBMP::add_Peer(tbl_bgp_peer &p_entry) {
         memcpy(p_entry.hash_id, hash_raw, 16);
         delete[] hash_raw;
 
-        /****************
-         * The below code adds the efficiency to not update mysql if we already have updated it,
-         *    but because we maintain state of the bgp peer, we still need to update it.
-         *    Using INSERT .. ON DUPLICATE UPDATE should do the trick to still be efficent.
-         *
-         // Check if we have already processed this entry
-         if (hashCompare(peer_list, p_entry.hash_id)) {
-         delete [] hash_raw;             // Delete since we don't need to save this
-         return;
-         }
-
-         // Else we need to add this to the hash
-         peer_list.insert(peer_list.end(), hash_raw);
-         *
-         ***************************/
-
-        // Build the query
+        // Convert binary hash to string
         string p_hash_str;
-        string r_hash_str;
         hash_toStr(p_entry.hash_id, p_hash_str);
+        string r_hash_str;
         hash_toStr(p_entry.router_hash_id, r_hash_str);
 
+        // Check if we have already processed this entry, if so update it an return
+        if (peer_list.find(p_hash_str) != peer_list.end()) {
+            peer_list[p_hash_str] = time(NULL);
+            return;
+        }
+
+        // Insert/Update map entry
+        peer_list[p_hash_str] = time(NULL);
+
+        // Build the query
         snprintf(buf, sizeof(buf),
-                "INSERT into %s (%s) values ('%s','%s','%s',%d, '%s', '%s', %u, %d,from_unixtime(%u)) ON DUPLICATE KEY UPDATE timestamp=from_unixtime(%u),state=1",
+                "REPLACE into %s (%s) values ('%s','%s','%s',%d, '%s', '%s', %u, %d, %d, current_timestamp,1)",
                 TBL_NAME_BGP_PEERS,
-                "hash_id,router_hash_id, peer_rd,isIPv4,peer_addr,peer_bgp_id,peer_as,isL3VPNpeer,timestamp",
+                "hash_id,router_hash_id, peer_rd,isIPv4,peer_addr,peer_bgp_id,peer_as,isL3VPNpeer,isPrePolicy,timestamp,state",
                 p_hash_str.c_str(), r_hash_str.c_str(), p_entry.peer_rd,
                 p_entry.isIPv4, p_entry.peer_addr, p_entry.peer_bgp_id,
-                p_entry.peer_as, p_entry.isL3VPN, p_entry.timestamp_secs,
-                p_entry.timestamp_secs);
+                p_entry.peer_as, p_entry.isL3VPN, p_entry.isPrePolicy);
 
         SELF_DEBUG("QUERY=%s", buf);
 
@@ -183,6 +206,25 @@ void mysqlBMP::add_Peer(tbl_bgp_peer &p_entry) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
     }
+}
+
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+bool mysqlBMP::update_Peer(tbl_bgp_peer &p_entry) {
+    string p_hash_str;
+    hash_toStr(p_entry.hash_id, p_hash_str);
+
+    // Check if the peer exists, if so purge it from the list so it can be added/updated again
+    if (peer_list.find(p_hash_str) != peer_list.end()) {
+        peer_list.erase(p_hash_str);
+
+        add_Peer(p_entry);
+
+        return true;
+    }
+
+    return false;
 }
 
 /**
@@ -207,31 +249,37 @@ void mysqlBMP::add_Router(tbl_router &r_entry) {
         // Save the hash
         unsigned char *hash_raw = hash.raw_digest();
         memcpy(r_entry.hash_id, hash_raw, 16);
-        //delete [] hash_raw;
+        delete [] hash_raw;
 
-        // Check if we have already processed this entry
-        if (hashCompare(router_list, r_entry.hash_id)) {
-            delete[] hash_raw; // Delete this since we don't need to save it
-            return;
-        }
-
-        // Else we need to add this to the hash
-        router_list.insert(router_list.end(), hash_raw);
-
-        // Build the query
+        // Convert binary hash to string
         string r_hash_str;
         hash_toStr(r_entry.hash_id, r_hash_str);
 
+        // Check if we have already processed this entry, if so update it an return
+        if (router_list.find(r_hash_str) != router_list.end()) {
+            router_list[r_hash_str] = time(NULL);
+            return;
+        }
+
+        // Insert/Update map entry
+        router_list[r_hash_str] = time(NULL);
+
+        // Build the query
         snprintf(buf, sizeof(buf),
                 "INSERT into %s (%s) values ('%s', '%s','%s')",
                 TBL_NAME_ROUTERS, "hash_id,name,ip_address", r_hash_str.c_str(),
                 r_entry.name, r_entry.src_addr);
 
         // Add the on duplicate statement
-        strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp ");
+        strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1");
 
         // Run the query to add the record
         stmt = con->createStatement();
+        stmt->execute(buf);
+
+        // Update all peers to indicate peers are not up - till proven other wise
+        snprintf(buf, sizeof(buf), "UPDATE %s SET state=0 where router_hash_id='%s'",
+                TBL_NAME_BGP_PEERS, r_hash_str.c_str());
         stmt->execute(buf);
 
         // Free the query statement
@@ -242,6 +290,63 @@ void mysqlBMP::add_Router(tbl_router &r_entry) {
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
 
     }
+}
+
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+bool mysqlBMP::update_Router(tbl_router &r_entry) {
+    string r_hash_str;
+    hash_toStr(r_entry.hash_id, r_hash_str);
+
+    // Check if the router exists, if so purge it from the list so it can be added/updated again
+    if (router_list.find(r_hash_str) != router_list.end()) {
+        router_list.erase(r_hash_str);
+
+        add_Router(r_entry);
+
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+bool mysqlBMP::disconnect_Router(tbl_router &r_entry) {
+    string r_hash_str;
+    hash_toStr(r_entry.hash_id, r_hash_str);
+
+    // Check if the router exists, if so purge it from the list so it can be added/updated again
+    if (router_list.find(r_hash_str) != router_list.end()) {
+        router_list.erase(r_hash_str);
+
+        try {
+            char buf[4096]; // Misc working buffer
+
+            // Build the query
+            snprintf(buf, sizeof(buf),
+                    "UPDATE %s SET isConnected=0,term_reason_code=%"PRIu16",term_reason_text=\"%s\" where hash_id = '%s'",
+                    TBL_NAME_ROUTERS,
+                    r_entry.term_reason_code, r_entry.term_reason_text,
+                    r_hash_str.c_str());
+
+            // Run the query to add the record
+            stmt = con->createStatement();
+            stmt->execute(buf);
+
+            // Free the query statement
+            delete stmt;
+
+            return true;
+        } catch (sql::SQLException &e) {
+            LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                    e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -258,7 +363,7 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
         //buf_len = sprintf(buf, "REPLACE into %s (%s) values ", TBL_NAME_RIB,
         //        "hash_id,path_attr_hash_id,peer_hash_id,prefix, prefix_len");
         buf_len = sprintf(buf, "INSERT into %s (%s) values ", TBL_NAME_RIB,
-                "hash_id,path_attr_hash_id,peer_hash_id,prefix, prefix_len");
+                "hash_id,path_attr_hash_id,peer_hash_id,prefix, prefix_len,timestamp");
 
         string rib_hash_str;
         string path_hash_str;
@@ -293,9 +398,10 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
             hash_toStr(rib_entry[i].peer_hash_id, p_hash_str);
 
             buf_len += snprintf(buf2, sizeof(buf2),
-                    " ('%s','%s','%s','%s', %d),", rib_hash_str.c_str(),
+                    " ('%s','%s','%s','%s', %d, from_unixtime(%u)),", rib_hash_str.c_str(),
                     path_hash_str.c_str(), p_hash_str.c_str(),
-                    rib_entry[i].prefix, rib_entry[i].prefix_len);
+                    rib_entry[i].prefix, rib_entry[i].prefix_len,
+                    rib_entry[i].timestamp_secs);
 
             // Cat the entry to the query buff
             if (buf_len < 800000 /* size of buf */)
@@ -307,7 +413,7 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
 
         // Add the on duplicate statement
         snprintf(buf2, sizeof(buf2),
-                " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,path_attr_hash_id=values(path_attr_hash_id)");
+                " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),path_attr_hash_id=values(path_attr_hash_id),db_timestamp=current_timestamp");
         strcat(buf, buf2);
 
 
@@ -426,7 +532,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
         // Setup the initial MySQL query
         buf_len =
                 sprintf(buf, "INSERT into %s (%s) values ", TBL_NAME_PATH_ATTRS,
-                        "hash_id,peer_hash_id,origin,as_path,next_hop,med,local_pref,isAtomicAgg,aggregator,community_list,ext_community_list,cluster_list,originator_id,origin_as,as_path_count");
+                        "hash_id,peer_hash_id,origin,as_path,next_hop,med,local_pref,isAtomicAgg,aggregator,community_list,ext_community_list,cluster_list,originator_id,origin_as,as_path_count,timestamp");
 
         /*
          * Generate router table hash from the following fields
@@ -464,7 +570,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
 
         buf_len +=
                 snprintf(buf2, sizeof(buf2),
-                        "('%s','%s','%s','%s','%s', %u,%u,%d,'%s','%s','%s','%s','%s','%u','%u'),",
+                        "('%s','%s','%s','%s','%s', %u,%u,%d,'%s','%s','%s','%s','%s','%u','%u', from_unixtime(%u)),",
                         path_hash_str.c_str(), p_hash_str.c_str(),
                         path_entry.origin, path_entry.as_path,
                         path_entry.next_hop, path_entry.med,
@@ -472,7 +578,8 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
                         path_entry.aggregator, path_entry.community_list,
                         path_entry.ext_community_list, path_entry.cluster_list,
                         path_entry.originator_id, path_entry.origin_as,
-                        path_entry.as_path_count);
+                        path_entry.as_path_count,
+                        path_entry.timestamp_secs);
 
         // Cat the string to our query buffer
         if (buf_len < sizeof(buf))
@@ -483,7 +590,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
 
         // Add the on duplicate statement
         snprintf(buf2, sizeof(buf2),
-                " ON DUPLICATE KEY UPDATE timestamp=current_timestamp  ");
+                " ON DUPLICATE KEY UPDATE timestamp=values(timestamp)  ");
         strcat(buf, buf2);
 
         SELF_DEBUG("QUERY=%s\n", buf);
@@ -528,12 +635,8 @@ void mysqlBMP::add_PeerDownEvent(tbl_peer_down_event &down_event) {
         stmt->execute(buf);
 
         // Update the bgp peer state to be not active
-        snprintf(buf, sizeof(buf), "UPDATE %s set state=0 WHERE hash_id = '%s'",
+        snprintf(buf, sizeof(buf), "UPDATE %s SET state=0 WHERE hash_id = '%s'",
         TBL_NAME_BGP_PEERS, p_hash_str.c_str());
-
-        SELF_DEBUG("QUERY=%s", buf);
-
-        // Run the query to add the record
         stmt->execute(buf);
 
         // Free the query statement
@@ -581,26 +684,6 @@ void mysqlBMP::add_StatReport(tbl_stats_report &stats) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
     }
-}
-
-/**
- * Compares two binary/raw hashs (16 bytes)
- *
- * The compare is done against a list of hashes that were previously cached.
- *
- * \param [in]  list    Vector list of known/cached hashes to check
- * \param [in]  hash    Hash to compare/find in the hash list
- *
- * \returns true if match is found, false if not found.
- */
-bool mysqlBMP::hashCompare(vector<unsigned char*> list, unsigned char *hash) {
-
-    for (size_t i = 0; i < list.size(); i++) {
-        if (!memcmp(list[i], hash, 16)) // Match, stop now
-            return true;
-    }
-
-    return false;
 }
 
 /**
