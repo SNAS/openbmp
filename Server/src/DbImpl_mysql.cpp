@@ -570,7 +570,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
 
         buf_len +=
                 snprintf(buf2, sizeof(buf2),
-                        "('%s','%s','%s','%s','%s', %u,%u,%d,'%s','%s','%s','%s','%s','%u','%u', from_unixtime(%u)),",
+                        "('%s','%s','%s','%s','%s', %u,%u,%d,'%s','%s','%s','%s','%s','%"PRIu32"','%hu', from_unixtime(%u)),",
                         path_hash_str.c_str(), p_hash_str.c_str(),
                         path_entry.origin, path_entry.as_path,
                         path_entry.next_hop, path_entry.med,

@@ -198,7 +198,7 @@ public:
 
         uint16_t    as_path_count;          ///< Count of AS PATH's in the path (includes all in AS-SET)
 
-        uint16_t    origin_as;              ///< Origin ASN
+        uint32_t    origin_as;              ///< Origin ASN
         bool        nexthop_isIPv4;         ///< True if IPv4, false if IPv6
         char        next_hop[40];           ///< Next-hop IP in printed form
         char        aggregator[40];         ///< Aggregator IP in printed form

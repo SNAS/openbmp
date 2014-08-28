@@ -225,8 +225,32 @@ CREATE TABLE `stat_reports` (
   `num_routes_adj_rib_in` bigint(20) unsigned DEFAULT NULL,
   `num_routes_local_rib` bigint(20) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`,`peer_hash_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=424 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=2030 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Temporary table structure for view `v_peer_prefix_report_last`
+--
+
+DROP TABLE IF EXISTS `v_peer_prefix_report_last`;
+/*!50001 DROP VIEW IF EXISTS `v_peer_prefix_report_last`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE TABLE `v_peer_prefix_report_last` (
+  `BMP_Router` tinyint NOT NULL,
+  `BGP_Peer` tinyint NOT NULL,
+  `TS` tinyint NOT NULL,
+  `Rejected` tinyint NOT NULL,
+  `ConfedLoop` tinyint NOT NULL,
+  `ASLoop` tinyint NOT NULL,
+  `InvalidClusterList` tinyint NOT NULL,
+  `InvalidOriginator` tinyint NOT NULL,
+  `KnownPrefix_DUP` tinyint NOT NULL,
+  `KnownWithdraw_DUP` tinyint NOT NULL,
+  `Pre_RIB` tinyint NOT NULL,
+  `Post_RIB` tinyint NOT NULL
+) ENGINE=MyISAM */;
+SET character_set_client = @saved_cs_client;
 
 --
 -- Temporary table structure for view `v_routes`
@@ -301,7 +325,7 @@ CREATE TABLE `withdrawn_log` (
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_prefix` (`prefix`,`prefix_len`)
-) ENGINE=InnoDB AUTO_INCREMENT=13859 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
+) ENGINE=InnoDB AUTO_INCREMENT=39663 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
 /*!50100 PARTITION BY KEY (peer_hash_id)
 PARTITIONS 64 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -321,6 +345,25 @@ PARTITIONS 64 */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`openbmp`@`localhost` SQL SECURITY DEFINER */
 /*!50001 VIEW `prefix_aspath` AS select `rtr`.`name` AS `RouterName`,`p`.`name` AS `PeerName`,`r`.`prefix` AS `Prefix`,`r`.`prefix_len` AS `PrefixLen`,`path`.`origin` AS `Origin`,trim(`path`.`as_path`) AS `AS_Path`,`path`.`next_hop` AS `NH` from (`bgp_peers` `p` straight_join ((`rib` `r` straight_join `routers` `rtr`) straight_join `path_attrs` `path`) on(((`r`.`peer_hash_id` = `p`.`hash_id`) and (`r`.`path_attr_hash_id` = `path`.`hash_id`) and (`p`.`router_hash_id` = `rtr`.`hash_id`)))) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_peer_prefix_report_last`
+--
+
+/*!50001 DROP TABLE IF EXISTS `v_peer_prefix_report_last`*/;
+/*!50001 DROP VIEW IF EXISTS `v_peer_prefix_report_last`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8 */;
+/*!50001 SET character_set_results     = utf8 */;
+/*!50001 SET collation_connection      = utf8_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`openbmp`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `v_peer_prefix_report_last` AS select if((length(`r`.`name`) > 0),`r`.`name`,`r`.`ip_address`) AS `BMP_Router`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `BGP_Peer`,`s`.`timestamp` AS `TS`,`s`.`prefixes_rejected` AS `Rejected`,`s`.`updates_invalid_by_as_confed_loop` AS `ConfedLoop`,`s`.`updates_invalid_by_as_path_loop` AS `ASLoop`,`s`.`updates_invalid_by_cluster_list` AS `InvalidClusterList`,`s`.`updates_invalid_by_originagtor_id` AS `InvalidOriginator`,`s`.`known_dup_prefixes` AS `KnownPrefix_DUP`,`s`.`known_dup_withdraws` AS `KnownWithdraw_DUP`,`s`.`num_routes_adj_rib_in` AS `Pre_RIB`,`s`.`num_routes_local_rib` AS `Post_RIB` from ((`stat_reports` `s` join `bgp_peers` `p` on((`s`.`peer_hash_id` = `p`.`hash_id`))) join `routers` `r` on((`p`.`router_hash_id` = `r`.`hash_id`))) where `s`.`id` in (select max(`stat_reports`.`id`) AS `id` from `stat_reports` group by `stat_reports`.`peer_hash_id`) group by `s`.`peer_hash_id` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -372,4 +415,4 @@ PARTITIONS 64 */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-27  8:17:19
+-- Dump completed on 2014-08-28 15:07:22

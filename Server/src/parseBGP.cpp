@@ -923,7 +923,7 @@ void parseBGP::processPathAttrs() {
 
                 }
 
-                // The the last ASN and record it as the Origin AS
+                // Get the last ASN and record it as the Origin AS
                 //   This can be the ASN that is in an AS-SET - for example if it's last
                 {
                     long as_path_sz = strlen((const char *)record.as_path);
