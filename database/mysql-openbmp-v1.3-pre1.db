@@ -225,7 +225,7 @@ CREATE TABLE `stat_reports` (
   `num_routes_adj_rib_in` bigint(20) unsigned DEFAULT NULL,
   `num_routes_local_rib` bigint(20) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`,`peer_hash_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2030 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=2072 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -325,7 +325,7 @@ CREATE TABLE `withdrawn_log` (
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_prefix` (`prefix`,`prefix_len`)
-) ENGINE=InnoDB AUTO_INCREMENT=39663 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
+) ENGINE=InnoDB AUTO_INCREMENT=40718 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
 /*!50100 PARTITION BY KEY (peer_hash_id)
 PARTITIONS 64 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -382,7 +382,7 @@ PARTITIONS 64 */;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`openbmp`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_routes` AS select `rtr`.`name` AS `RouterName`,`p`.`name` AS `PeerName`,`r`.`prefix` AS `Prefix`,`r`.`prefix_len` AS `PrefixLen`,`path`.`origin` AS `Origin`,`path`.`origin_as` AS `Origin_AS`,`path`.`med` AS `MED`,`path`.`local_pref` AS `LocalPref`,`path`.`next_hop` AS `NH`,`path`.`as_path` AS `AS_Path`,`path`.`as_path_count` AS `ASPath_Count`,`path`.`community_list` AS `Communities`,`path`.`cluster_list` AS `ClusterList`,`path`.`aggregator` AS `Aggregator`,`p`.`peer_addr` AS `PeerAddress`,`p`.`peer_as` AS `PeerASN`,`r`.`timestamp` AS `LastModified` from (((`bgp_peers` `p` join `rib` `r`) join `path_attrs` `path`) join `routers` `rtr` on(((`p`.`hash_id` = `path`.`peer_hash_id`) and (`p`.`hash_id` = `r`.`peer_hash_id`) and (`r`.`path_attr_hash_id` = `path`.`hash_id`) and (`p`.`router_hash_id` = `rtr`.`hash_id`)))) */;
+/*!50001 VIEW `v_routes` AS select if((length(`rtr`.`name`) > 0),`rtr`.`name`,`rtr`.`ip_address`) AS `RouterName`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `PeerName`,`r`.`prefix` AS `Prefix`,`r`.`prefix_len` AS `PrefixLen`,`path`.`origin` AS `Origin`,`path`.`origin_as` AS `Origin_AS`,`path`.`med` AS `MED`,`path`.`local_pref` AS `LocalPref`,`path`.`next_hop` AS `NH`,`path`.`as_path` AS `AS_Path`,`path`.`as_path_count` AS `ASPath_Count`,`path`.`community_list` AS `Communities`,`path`.`cluster_list` AS `ClusterList`,`path`.`aggregator` AS `Aggregator`,`p`.`peer_addr` AS `PeerAddress`,`p`.`peer_as` AS `PeerASN`,`r`.`timestamp` AS `LastModified` from (((`bgp_peers` `p` join `rib` `r`) join `path_attrs` `path`) join `routers` `rtr` on(((`p`.`hash_id` = `path`.`peer_hash_id`) and (`p`.`hash_id` = `r`.`peer_hash_id`) and (`r`.`path_attr_hash_id` = `path`.`hash_id`) and (`p`.`router_hash_id` = `rtr`.`hash_id`)))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -415,4 +415,4 @@ PARTITIONS 64 */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-28 15:07:22
+-- Dump completed on 2014-08-28 15:47:11
