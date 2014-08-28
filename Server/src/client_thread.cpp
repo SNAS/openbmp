@@ -27,7 +27,6 @@ void ClientThread_cancel(void *arg) {
     shutdown(cInfo->client->c_sock, SHUT_RDWR);
     close (cInfo->client->c_sock);
 
-    LOG_INFO("Closing mysql connection");
     delete cInfo->mysql;
 }
 
@@ -51,8 +50,6 @@ void *ClientThread(void *arg) {
     cInfo.client = &thr->client;
     cInfo.log = thr->log;
 
-    LOG_INFO("Connecting to mysql");
-
     // connect to mysql
     cInfo.mysql = new mysqlBMP(log, thr->cfg->dbURL,thr->cfg->username, thr->cfg->password, thr->cfg->dbName);
 
@@ -67,14 +64,15 @@ void *ClientThread(void *arg) {
 
     try {
         BMPReader rBMP(log, thr->cfg);
-        LOG_INFO("Thread started to monitor BMP from router");
+        LOG_INFO("Thread started to monitor BMP from router %s using socket %d",
+                cInfo.client->c_ipv4, cInfo.client->c_sock);
 
         while (1) {
             rBMP.ReadIncomingMsg(cInfo.client, (DbInterface *)cInfo.mysql);
         }
 
     } catch (char const *str) {
-        LOG_NOTICE("%s: Thread for sock [%d] ended", str, cInfo.client->c_sock);
+        LOG_INFO("%s: Thread for sock [%d] ended", str, cInfo.client->c_sock);
     }
 
     pthread_cleanup_pop(0);

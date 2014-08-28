@@ -109,14 +109,14 @@ This table is a list of all BMP devices.  Normally this table is populated based
 Column | DataType | Description
 ------ | -------- | -----------
 hash_id | char(32) | Hash ID for this table
-name | varchar(255) | DNS/custom name or if empty the BMP initiate message (sysName)
-description | varchar(255) | Description of router/BMP device (if empty will be sysDescr learned)
+name | varchar(255) | BMP initiate message sysName
+description | varchar(255) | BMP initiate message sysDescr
 ip_address | varchar(40) | IPv4/IPv6 address of the BMP device
 router_AS | unsigned int 32bit | ASN of the BMP device
 isConnected | boolean | BMP connection state ; true is established
 isPassive | boolean | Indicates if OpenBMP is passive or active
-term_reason_code | int | BMP termination reason code  for last termination (isConnected=false)
-term_reason_text | varchar(255) | Text description of the reason code meaning
+term_reason_code | int | BMP termination reason code  for LAST termination (isConnected=false)
+term_reason_text | varchar(255) | Text description of the LAST reason code meaning
 term_data | blob/text | Attribute value pairs provided in termination data 
 initiate_data| blob/text | Attribute value paris provided in initiation message
 timestamp| timestamp | Last time the record was updated  - seconds since EPOCH

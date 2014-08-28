@@ -47,6 +47,11 @@ public:
                      STATS_INVALID_AS_PATH_LOOP, STATS_INVALID_ORIGINATOR_ID, STATS_INVALID_AS_CONFED_LOOP,
                      STATS_NUM_ROUTES_ADJ_RIB_IN, STATS_NUM_ROUTES_LOC_RIB };
 
+     /**
+      * BMP Initiation Message Types
+      */
+     enum BMP_INIT_TYPES { INIT_TYPE_FREE_FORM_STRING=0, INIT_TYPE_SYSDESCR, INIT_TYPE_SYSNAME };
+
 
      /**
       * BMP common header
@@ -161,6 +166,27 @@ public:
      */
     void handleStatsReport(DbInterface *dbi_ptr, int sock);
 
+    /**
+     * handle the initiation message and add to DB
+     *
+     * \param [in/out] r_entry     Already defined router entry reference (will be updated)
+     * \param [in]     dbi_ptr     Pointer to exiting dB implementation
+     * \param [in]     sock        Socket to read the init message from
+     */
+    void handleInitMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_ptr, int sock);
+
+    /**
+     * get current BMP message type
+     */
+    char getBMPType();
+
+    /**
+     * get current BMP message length
+     *
+     * The length returned does not include the version 3 common header length
+     */
+    uint32_t getBMPLength();
+
     // Debug methods
     void enableDebug();
     void disableDebug();
@@ -170,7 +196,8 @@ private:
     Logger          *log;                       ///< Logging class pointer
 
     DbInterface::tbl_bgp_peer *p_entry;         ///< peer table entry - will be updated with BMP info
-    char bmp_type;                              ///< The BMP message type
+    char            bmp_type;                   ///< The BMP message type
+    uint32_t        bmp_len;                    ///< Length of the BMP message - does not include the common header size
 
     // Storage for the byte converted strings - This must match the DbInterface bgp_peer struct
     char peer_addr[40];                         ///< Printed format of the peer address (Ipv4 and Ipv6)

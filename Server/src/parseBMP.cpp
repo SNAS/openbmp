@@ -111,58 +111,61 @@ void parseBMP::parseBMPv3(int sock) {
     // Adjust length to remove common header size
     c_hdr.len -= 1 + BMP_HDRv3_LEN;
 
-    // Process the message based on type
+    // Parse additional headers based on type
     bmp_type = c_hdr.type;
+    bmp_len = c_hdr.len;
+
     switch (c_hdr.type) {
-    case TYPE_ROUTE_MON: // Route monitoring
-        SELF_DEBUG("BMP MSG : route monitor");
-        parsePeerHdr(sock);
-        break;
+        case TYPE_ROUTE_MON: // Route monitoring
+            SELF_DEBUG("BMP MSG : route monitor");
+            parsePeerHdr(sock);
+            break;
 
-    case TYPE_STATS_REPORT: // Statistics Report
-        SELF_DEBUG("BMP MSG : stats report");
-        parsePeerHdr(sock);
-        break;
+        case TYPE_STATS_REPORT: // Statistics Report
+            SELF_DEBUG("BMP MSG : stats report");
+            parsePeerHdr(sock);
+            break;
 
-    case TYPE_PEER_UP: // Peer Up notification
-    {
-        //TODO: implement
-        SELF_DEBUG("BMP MSG : peer up");
-        parsePeerHdr(sock);
-        LOG_INFO("PEER_UP message, not yet implemented -- ignoring for now.");
-        unsigned char *buf = new unsigned char[c_hdr.len];
-        recv(sock, buf, c_hdr.len - BMP_PEER_HDR_LEN, MSG_WAITALL);
-        delete[] buf;
-        break;
-    }
-    case TYPE_PEER_DOWN: // Peer down notification
-        SELF_DEBUG("BMP MSG : peer down");
-        parsePeerHdr(sock);
-        break;
+        case TYPE_PEER_UP: // Peer Up notification
+        {
+            //TODO: implement
+            SELF_DEBUG("BMP MSG : peer up");
+            parsePeerHdr(sock);
+            LOG_INFO("PEER_UP message, not yet implemented -- ignoring for now.");
+            unsigned char *buf = new unsigned char[c_hdr.len];
+            recv(sock, buf, c_hdr.len - BMP_PEER_HDR_LEN, MSG_WAITALL);
+            delete[] buf;
+            break;
+        }
+        case TYPE_PEER_DOWN: // Peer down notification
+            SELF_DEBUG("BMP MSG : peer down");
+            parsePeerHdr(sock);
+            break;
 
-    case TYPE_INIT_MSG: // BMP initial message
-    {
-        //TODO: implement
-        SELF_DEBUG("BMP MSG : init message");
-        LOG_INFO("INIT message, not yet implemented -- ignoring for now.");
-        unsigned char *buf = new unsigned char[c_hdr.len];
-        recv(sock, buf, c_hdr.len, MSG_WAITALL);
-        delete[] buf;
-        break;
-    }
-    case TYPE_TERMINATION: // BMP termination message
-    {
-        //TODO: implement
-        SELF_DEBUG("BMP MSG : termination message\n");
-        LOG_INFO("TERM message, not yet implemented -- ignoring for now.");
-        unsigned char *buf = new unsigned char[c_hdr.len];
-        recv(sock, buf, c_hdr.len, MSG_WAITALL);
-        delete[] buf;
-        break;
-    }
-    default:
-        SELF_DEBUG("ERROR: Unknown BMP message type of %d", c_hdr.type);
-        break;
+        /*
+        case TYPE_INIT_MSG: // BMP initial message
+        {
+            SELF_DEBUG("BMP MSG : init message received");
+            unsigned char *buf = new unsigned char[c_hdr.len];
+            recv(sock, buf, c_hdr.len, MSG_WAITALL);
+            delete[] buf;
+
+            break;
+        } */
+
+        case TYPE_TERMINATION: // BMP termination message
+        {
+            //TODO: implement
+            SELF_DEBUG("BMP MSG : termination message\n");
+            LOG_INFO("TERM message, not yet implemented -- ignoring for now.");
+            unsigned char *buf = new unsigned char[c_hdr.len];
+            recv(sock, buf, c_hdr.len, MSG_WAITALL);
+            delete[] buf;
+            break;
+        }
+        default:
+            SELF_DEBUG("ERROR: Unknown BMP message type of %d", c_hdr.type);
+            break;
     }
 }
 
@@ -491,6 +494,106 @@ void parseBMP::handleStatsReport(DbInterface *dbi_ptr, int sock) {
     dbi_ptr->add_StatReport(stats);
 }
 
+/**
+ * handle the initiation message and add to DB
+ *
+ * \param [in/out] r_entry     Already defined router entry reference (will be updated)
+ * \param [in]     dbi_ptr     Pointer to exiting dB implementation
+ * \param [in]     sock        Socket to read the init message from
+ */
+void parseBMP::handleInitMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_ptr, int sock) {
+    init_msg_v3 initMsg;
+    char infoBuf[2048];
+    int infoLen;
+
+    // Make sure the init message isn't too big for internal memory parsing
+    if (bmp_len <= 40000) {
+        char *buf = new char[bmp_len]();
+        char *bufPtr = buf;
+
+        if ((recv(sock, bufPtr, bmp_len, MSG_WAITALL)) != bmp_len) {
+            delete [] buf;
+            throw "ERROR: Failed to read complete init message from socket.";
+        }
+
+        /*
+         * Loop through the init message (in buffer) to parse each TLV
+         */
+        for (int i=0; i < bmp_len; i += BMP_INIT_MSG_LEN) {
+            memcpy(&initMsg, bufPtr, BMP_INIT_MSG_LEN);
+            initMsg.info = NULL;
+            reverseBytes((unsigned char *)&initMsg.len, 2);
+            reverseBytes((unsigned char *)&initMsg.type, 2);
+
+            bufPtr += BMP_INIT_MSG_LEN;                // Move pointer past the info header
+
+            // TODO: Change to SELF_DEBUG after IOS supports INIT messages correctly
+            LOG_INFO("Init message type %hu and length %hu parsed", initMsg.type, initMsg.len);
+
+            if (initMsg.len > 0) {
+                infoLen = sizeof(infoBuf) < initMsg.len ? sizeof(infoBuf) : initMsg.len;
+                bzero(infoBuf, sizeof(infoBuf));
+                memcpy(infoBuf, bufPtr, infoLen);
+                bufPtr += infoLen;                     // Move pointer past the info data
+                i += infoLen;                       // Update the counter past the info data
+
+                initMsg.info = infoBuf;
+
+                // TODO: Change to SELF_DEBUG after IOS supports INIT messages correctly
+                LOG_INFO("Init message type %hu = %s", initMsg.type, initMsg.info);
+            }
+
+            /*
+             * Save the data based on info type
+             */
+            switch (initMsg.type) {
+                case INIT_TYPE_FREE_FORM_STRING :
+                    r_entry.initiate_data = initMsg.info;
+                    r_entry.initiate_data_sz = infoLen;
+                    dbi_ptr->update_Router(r_entry);
+                    break;
+
+                case INIT_TYPE_SYSNAME :
+                    strncpy((char *)r_entry.name, initMsg.info, sizeof(r_entry.name));
+                    dbi_ptr->update_Router(r_entry);
+                    break;
+
+                case INIT_TYPE_SYSDESCR :
+                    strncpy((char *)r_entry.descr, initMsg.info, sizeof(r_entry.descr));
+                    dbi_ptr->update_Router(r_entry);
+                    break;
+
+                default:
+                    LOG_NOTICE("Init message type %hu is unexpected per draft-07", initMsg.type);
+            }
+
+
+        }
+
+        // Free the buffer
+        delete [] buf;
+    }
+    else {
+        // message is too large to parse, ignoring
+        LOG_NOTICE("Init message length of %u is too large to process, must be less than 40K", bmp_len);
+    }
+}
+
+/**
+ * get current BMP message type
+ */
+char parseBMP::getBMPType() {
+    return bmp_type;
+}
+
+/**
+ * get current BMP message length
+ *
+ * The length returned does not include the version 3 common header length
+ */
+uint32_t parseBMP::getBMPLength() {
+    return bmp_len;
+}
 
 /**
  * Enable/Disable debug

@@ -163,7 +163,7 @@ void BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
             case parseBMP::TYPE_PEER_UP : // Peer up type
                 // TODO: Check the peer up message before parsing the OPEN message
-                LOG_INFO("PEER UP Received and not supported by this daemon yet");
+                LOG_INFO("%s: PEER UP Received and not supported by this daemon yet", client->c_ipv4);
                 break;
 
             case parseBMP::TYPE_ROUTE_MON : { // Route monitoring type
@@ -181,12 +181,16 @@ void BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
             }
 
             case parseBMP::TYPE_STATS_REPORT : { // Stats Report
-                /*
-                 * for now, we don't really support this, but let's move past the data of it
-                 */
                 pBMP->handleStatsReport(dbi_ptr, client->c_sock);
                 break;
             }
+
+            case parseBMP::TYPE_INIT_MSG : { // Initiation Message
+                LOG_INFO("%s: Init message received with length of %u", client->c_ipv4, pBMP->getBMPLength());
+                pBMP->handleInitMsg(r_entry, dbi_ptr, client->c_sock);
+                break;
+            }
+
         }
 
     } catch (const char *str) {
