@@ -248,7 +248,7 @@ CREATE TABLE `stat_reports` (
   `num_routes_adj_rib_in` bigint(20) unsigned DEFAULT NULL,
   `num_routes_local_rib` bigint(20) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`,`peer_hash_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2190 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=2198 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -381,7 +381,7 @@ CREATE TABLE `withdrawn_log` (
   `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_prefix` (`prefix`,`prefix_len`)
-) ENGINE=InnoDB AUTO_INCREMENT=42245 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
+) ENGINE=InnoDB AUTO_INCREMENT=42323 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
 /*!50100 PARTITION BY KEY (peer_hash_id)
 PARTITIONS 64 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -438,7 +438,7 @@ PARTITIONS 64 */;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`openbmp`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_peers` AS select if((length(`rtr`.`name`) > 0),`rtr`.`name`,`rtr`.`ip_address`) AS `RouterName`,`u`.`local_ip` AS `LocalIP`,`u`.`local_port` AS `LocalPort`,`u`.`local_asn` AS `LocalASN`,`u`.`local_bgp_id` AS `LocalBGPId`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `PeerName`,`p`.`peer_addr` AS `PeerIP`,`u`.`remote_port` AS `PeerPort`,`p`.`peer_as` AS `PeerASN`,`p`.`peer_bgp_id` AS `PeerBGPId`,`u`.`local_hold_time` AS `LocalHoldTime`,`u`.`remote_hold_time` AS `PeerHoldTime`,`p`.`state` AS `isUp`,`rtr`.`isConnected` AS `isBMPConnected`,`d`.`bmp_reason` AS `LastBMPReasonCode`,`d`.`bgp_err_code` AS `LastDownCode`,`d`.`bgp_err_subcode` AS `LastdownSubCode`,`d`.`error_text` AS `LastDownMessage`,`d`.`timestamp` AS `LastDownTimestamp`,`u`.`sent_capabilities` AS `SentCapabilities`,`u`.`recv_capabilities` AS `RecvCapabilities` from (((`bgp_peers` `p` join `peer_up_events` `u` on((`p`.`hash_id` = `u`.`peer_hash_id`))) join `routers` `rtr` on((`p`.`router_hash_id` = `rtr`.`hash_id`))) join `peer_down_events` `d` on((`p`.`hash_id` = `d`.`peer_hash_id`))) where `d`.`id` in (select max(`peer_down_events`.`id`) AS `id` from `peer_down_events` group by `peer_down_events`.`peer_hash_id`) */;
+/*!50001 VIEW `v_peers` AS select if((length(`rtr`.`name`) > 0),`rtr`.`name`,`rtr`.`ip_address`) AS `RouterName`,`u`.`local_ip` AS `LocalIP`,`u`.`local_port` AS `LocalPort`,`u`.`local_asn` AS `LocalASN`,`u`.`local_bgp_id` AS `LocalBGPId`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `PeerName`,`p`.`peer_addr` AS `PeerIP`,`u`.`remote_port` AS `PeerPort`,`p`.`peer_as` AS `PeerASN`,`p`.`peer_bgp_id` AS `PeerBGPId`,`u`.`local_hold_time` AS `LocalHoldTime`,`u`.`remote_hold_time` AS `PeerHoldTime`,`p`.`state` AS `isUp`,`rtr`.`isConnected` AS `isBMPConnected`,`d`.`bmp_reason` AS `LastBMPReasonCode`,`d`.`bgp_err_code` AS `LastDownCode`,`d`.`bgp_err_subcode` AS `LastdownSubCode`,`d`.`error_text` AS `LastDownMessage`,`d`.`timestamp` AS `LastDownTimestamp`,`u`.`sent_capabilities` AS `SentCapabilities`,`u`.`recv_capabilities` AS `RecvCapabilities` from (((`bgp_peers` `p` join `peer_up_events` `u` on((`p`.`hash_id` = `u`.`peer_hash_id`))) join `routers` `rtr` on((`p`.`router_hash_id` = `rtr`.`hash_id`))) left join `peer_down_events` `d` on((`p`.`hash_id` = `d`.`peer_hash_id`))) where (`d`.`id` in (select max(`peer_down_events`.`id`) AS `id` from `peer_down_events` group by `peer_down_events`.`peer_hash_id`) or isnull(`d`.`id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -490,4 +490,4 @@ PARTITIONS 64 */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2014-08-29 17:44:16
+-- Dump completed on 2014-08-29 17:48:49
