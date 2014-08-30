@@ -134,11 +134,19 @@ void BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
                             break;
                         }
                         case 2 : // Local system close, no bgp notify
-                            snprintf(down_event.error_text, sizeof(down_event.error_text),
-                                    "Local (%s) closed peer (%s) session: No BGP notify message.", r_entry.src_addr,
-                                    p_entry.peer_addr);
-                            break;
+                        {
+                            // Read two byte code corresponding to the FSM event
+                            uint16_t fsm_event = 0 ;
+                            if (recv(client->c_sock, &fsm_event, 2, MSG_WAITALL) == 2) {
+                                reverseBytes((unsigned char *)&fsm_event, sizeof(fsm_event));
+                            } else
+                                throw "ERROR: Failed to read 2 byte FSM code following peer down notify reason 2";
 
+                            snprintf(down_event.error_text, sizeof(down_event.error_text),
+                                    "Local (%s) closed peer (%s) session: fsm_event=%d, No BGP notify message.",
+                                    r_entry.src_addr,p_entry.peer_addr, fsm_event);
+                            break;
+                        }
                         case 3 : { // remote system close with bgp notify
                             snprintf(down_event.error_text, sizeof(down_event.error_text),
                                     "Remote peer (%s) closed local (%s) session: ", r_entry.src_addr,
@@ -162,9 +170,31 @@ void BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
             }
 
             case parseBMP::TYPE_PEER_UP : // Peer up type
-                // TODO: Check the peer up message before parsing the OPEN message
-                LOG_INFO("%s: PEER UP Received and not supported by this daemon yet", client->c_ipv4);
+            {
+                DbInterface::tbl_peer_up_event up_event = {0};
+                if (pBMP->parsePeerUpEventHdr(client->c_sock, up_event)) {
+                    LOG_INFO("%s: PEER UP Received, local addr=%s:%hu remote addr=%s:%hu", client->c_ipv4,
+                            up_event.local_ip, up_event.local_port, p_entry.peer_addr, up_event.remote_port);
+
+                    // Prepare the BGP parser
+                    pBGP = new parseBGP(log, dbi_ptr, &p_entry);
+                    if (cfg->debug_bgp)
+                       pBGP->enableDebug();
+
+                    // Parse the BGP sent/received open messages
+                    pBGP->handleMessage(client->c_sock, &up_event);
+
+                    // Free the bgp parser
+                    delete pBGP;
+
+                    // Add the up event to the DB
+                    dbi_ptr->add_PeerUpEvent(up_event);
+
+                } else {
+                    LOG_NOTICE("%s: PEER UP Received but failed to parse the BMP header.", client->c_ipv4);
+                }
                 break;
+            }
 
             case parseBMP::TYPE_ROUTE_MON : { // Route monitoring type
                 /*

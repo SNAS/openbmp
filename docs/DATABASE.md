@@ -80,20 +80,24 @@ RouterName | varchar | DNS/custom name or BMP initiate message (sysName)
 LocalIP | varchar | IP Address of the BMP router local peering address
 LocalPort | int | Local port number of the BMP router local peering session
 LocalASN | int | Local ASN for peering sessions
+LocalBGPId | varchar | Local BGP ID
 PeerName | varchar | Name or IP address of peer
-PeerAddress | varchar | Peer IP address in printed format
+PeerIP | varchar | Peer IP address in printed format
 PeerPort | int | Remote port number of the peer
 PeerASN | int | Peer ASN for session
-holdTime | int | BGP holdtime being used, if up
+PeerBGPId | varchar | Peer BGP ID
+LocalHoldTime | int | BGP holdtime sent to peer
+PeerHoldTime | int | BGP holdtime received from peer
 isUp | boolean | True if peer is up, or false if peer is down
 isBMPConnected | boolean | True if the router BMP session is connected, false if not
-SentParams | varchar(variable) | String list of open params sent to peer
-RecvParams | varchar(variable) | String list of open params received from peer
+LastBMPReasonCode | varchar | BMP Reason code (Down message contains reason text)
 LastDownCode | int | BGP error code of the last down notification
 LastDownSubCode | int | BGP error subcode of the last down notification
 LastDownMessage | varchar | Meaning of last peer down notification
 LastDownTimestamp | timestamp | Timestamp of the last time peer down was sent
 LastUpTimestamp | timestamp | Timestamp of the last time peer up was sent
+SentCapabilities | varchar(variable) | String list of sent capabilities
+RecvCapabilities | varchar(variable) | String list of received capabilties
 
 
 Schema for Stored Procedures
@@ -185,7 +189,7 @@ Peer down events are logged whenever received in this table.
 Column | DataType | Description
 ------ | -------- | -----------
 peer_hash_id | char(32) | Hash ID of bgp_peers table
-bmp_reason | varchar(64) | Short text description of the BMP reason code
+bmp_reason | varchar(64) | BMP reason code value (error_text contains reason)
 bgp_error_code | int | BGP notification error code (see RFC4271 Section 4.5)
 bgp_error_subcode | int | BGP notification error subcode (see RFC4271 Section 4.5)
 error_text | varchar(255) | Text description of bgp error code and subcode meaning
@@ -202,10 +206,12 @@ Column | DataType | Description
 peer_hash_id | char(32) | Hash ID of the bgp_peers table
 local_ip | varchar(40) | printed form of the Local BMP device peer IP address (IPv4 or IPv6)
 local_port | int | Local port number for the peer session
+local_hold_time | int | BGP hold time sent for the session
+local_bgp_id | varchar(15) | Local BGP ID in printed format
 remote_port | int | Remote port number for the peer session
-hold_time | int | BGP hold time for the peer session
-sent_open_params | varchar(variable) | String list of open params sent to peer
-recv_open_params | varchar(variable) | String list of open params received from peer
+remote_hold_time | int | BGP hold time recvived for the session
+sent_capabilities | varchar(4096) | String list of sent to peer capabilities (syntax is `cap_name(code number)={...}, ... `) 
+recv_capabilities | varchar(4096) | String list of received from peer capabilities (syntax is `cap_name(code number)={...}, ... `)
 timestamp| timestamp | timestmap from BMP sender - seconds since EPOCH
 
 ### stat_reports

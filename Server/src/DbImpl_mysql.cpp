@@ -689,9 +689,41 @@ void mysqlBMP::add_StatReport(tbl_stats_report &stats) {
 /**
  * Abstract method Implementation - See DbInterface.hpp for details
  */
-// TODO: Implement method
 void mysqlBMP::add_PeerUpEvent(DbInterface::tbl_peer_up_event &up_event) {
+    try {
+        char buf[16384]; // Misc working buffer
 
+        // Build the query
+        string p_hash_str;
+        hash_toStr(up_event.peer_hash_id, p_hash_str);
+
+        // Insert the bgp peer up event
+        snprintf(buf, sizeof(buf),
+                "REPLACE into %s (%s) values ('%s','%s','%s',%"PRIu16",%"PRIu16",%"PRIu32",%"PRIu16",%"PRIu16",'%s','%s')",
+                TBL_NAME_PEER_UP,
+                "peer_hash_id,local_ip,local_bgp_id,local_port,local_hold_time,local_asn,remote_port,remote_hold_time,sent_capabilities,recv_capabilities",
+                p_hash_str.c_str(), up_event.local_ip, up_event.local_bgp_id, up_event.local_port,up_event.local_hold_time,
+                up_event.local_asn,
+                up_event.remote_port,up_event.remote_hold_time,up_event.sent_cap, up_event.recv_cap);
+
+        SELF_DEBUG("QUERY=%s", buf);
+
+        // Run the query to add the record
+        stmt = con->createStatement();
+        stmt->execute(buf);
+
+        // Update the bgp peer state to be active
+        snprintf(buf, sizeof(buf), "UPDATE %s SET state=1 WHERE hash_id = '%s'",
+        TBL_NAME_BGP_PEERS, p_hash_str.c_str());
+        stmt->execute(buf);
+
+        // Free the query statement
+        delete stmt;
+
+    } catch (sql::SQLException &e) {
+        LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+    }
 }
 
 /*

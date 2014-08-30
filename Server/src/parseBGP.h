@@ -11,11 +11,17 @@
 #define PARSEBGP_H_
 
 #include <vector>
+#include <list>
 #include "DbInterface.hpp"
 #include "BitByteUtils.h"
 #include "Logger.h"
 
-#define BGP_MSG_HDR_LEN 19
+#define BGP_MSG_HDR_LEN         19                      // BGP message header size
+#define BGP_OPEN_MSG_MIN_LEN    29                      // Includes the expected header size
+#define BGP_VERSION             4
+#define BGP_CAP_PARAM_TYPE      2
+#define BGP_AS_TRANS            23456                   // BGP ASN when AS exceeds 16bits
+
 
 using namespace std;
 
@@ -98,23 +104,76 @@ public:
     } __attribute__ ((__packed__)) c_hdr;
 
     /**
-    * defines the OPEN BGP header per RFC4271
-    */
-    struct open_param {
-        unsigned char type;                 ///< unambiguously identifies parameters
-        unsigned char len;                  ///< parameter value length in octets
-        unsigned char *value;               ///< pointer to array - must be deleted
+     * Defines the BGP capabilities
+     *      http://www.iana.org/assignments/capability-codes/capability-codes.xhtml
+     */
+    enum BGP_CAP_CODES {
+            BGP_CAP_MPBGP=1,
+            BGP_CAP_ROUTE_REFRESH,
+            BGP_CAP_OUTBOUND_FILTER,
+            BGP_CAP_MULTI_ROUTES_DEST,
+
+            BGP_CAP_GRACEFUL_RESTART=64,
+            BGP_CAP_4OCTET_ASN,
+
+            BGP_CAP_DYN_CAP=67,
+            BGP_CAP_MULTI_SESSION,
+            BGP_CAP_ADD_PATH,
+            BGP_CAP_ROUTE_REFRESH_ENHANCED
     };
 
-    struct open_bgp_hdr {
-        unsigned char     ver;              ///< Version, currently 4
-        unsigned short    my_as : 16;       ///< 2 byte ASN - AS_TRANS = 23456 to indicate 4-octet ASN
-    unsigned short    hold : 16;            ///< 2 byte hold time - can be zero or >= 3 seconds
-        unsigned long     bgp_id : 32;      ///< 4 byte bgp id of sender - router_id
-        unsigned char     param_len;        ///< optional parameter length - 0 means no params
-        struct open_param *params;          ///< Array of parameters
+    /**
+     * defines the Capability BGP header per RFC5492
+     *      http://www.iana.org/assignments/capability-codes/capability-codes.xhtml
+     */
+     struct cap_param {
+         u_char       code;                     ///< unambiguously identifies individual capabilities
+         u_char       len;                      ///< Capability value length in octets
+     } __attribute__ ((__packed__));
+
+    /**
+     * Defines the MPBGP capability data
+     */
+     struct cap_mpbgp_data {
+         uint16_t       afi;                    ///< Address family to support
+          u_char         reserved;               ///< Unused
+          u_char         safi;                   ///< Subsequent address family
+      } __attribute__ ((__packed__));
+
+    /**
+     * defines the OPEN BGP header per RFC4271
+     */
+    struct open_param {
+        u_char       type;                     ///< unambiguously identifies parameters (using RFC5492)
+                                                 /*
+                                                  * Type value of 2 is optional
+                                                  */
+        u_char       len;                      ///< parameter value length in octets
     } __attribute__ ((__packed__));
 
+    /**
+     * BGP open header
+     */
+    struct open_bgp_hdr {
+        u_char            ver;                 ///< Version, currently 4
+        uint16_t          asn;                 ///< 2 byte ASN - AS_TRANS = 23456 to indicate 4-octet ASN
+        uint16_t          hold;                ///< 2 byte hold time - can be zero or >= 3 seconds
+        uint32_t          bgp_id;              ///< 4 byte bgp id of sender - router_id
+        u_char            param_len;           ///< optional parameter length - 0 means no params
+    } __attribute__((__packed__));
+
+    /**
+     * BGP capability header (draft-ietf-idr-dynamic-cap-14)
+     */
+    struct cap_bgp_hdr {
+        u_char      init_ack : 1;              ///< Revision is being init (0) or ack (1)
+        u_char      ack_req  : 1;              ///< request for ack
+        u_char      resvered : 5;              ///< unused
+        u_char      action   : 1;              ///< 0 for advertising and 1 for removing
+        uint32_t    seq_num;                   ///< match ack to revision
+        u_char      cap;                       ///< Capability code
+        uint16_t    cap_len;                   ///< Capability length (2 bytes intead of one)
+    } __attribute__((__packed__));
 
 
     /**
@@ -352,6 +411,20 @@ public:
      */
     void handleMessage(int sock, DbInterface::tbl_peer_down_event *peer_down_entry);
 
+    /**
+     * Same as handleMessage, except that it updates the peer_up_event table struct
+     *
+     * \details
+     *  This method will read the expected sent and receive open messages.
+     *
+     *  This method does not directly add to Db, so the calling
+     *  method/function must handle that.
+     *
+     * \param [in]     sock             Socket to read BGP message from
+     * \param [in,out] peer_up_event    Updated with details from the peer up message (sent/recv open msg)
+     */
+    void handleMessage(int sock, DbInterface::tbl_peer_up_event *up_event);
+
     /*
      * Debug methods
      */
@@ -399,6 +472,21 @@ private:
      * \param [in]     sock     Socket to read BGP message from
      */
     void parseNotifyMsg(int sock);
+
+    /**
+     * Parses an open message
+     *
+     * \details
+     *      Reads the notification message from the socket.  The parsed output
+     *      will be returned back via the passed references.
+     *
+     * \param [in]   sock         Socket to read BGP message from
+     * \param [out]  asn          Reference to the ASN that was discovered
+     * \param [out]  holdTime     Reference to the hold time
+     * \param [out]  bgp_id       Pointer to allocated buffer for bgp ID (MUST BE >= 15 bytes allocated)
+     * \param [out]  capabilities Reference to the capabilities string
+     */
+    void parseOpenMsg(int sock, uint32_t &asn, uint16_t &holdTime, char *bgp_id, list<string> &capabilties);
 
     /**
      * Parses the BGP attributes in the update

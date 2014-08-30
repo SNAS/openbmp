@@ -24,6 +24,7 @@
 #define BMP_PEER_HDR_LEN 42         ///< BMP peer header length
 #define BMP_INIT_MSG_LEN 4          ///< BMP init message header length, does not count the info field
 #define BMP_TERM_MSG_LEN 4          ///< BMP term message header length, does not count the info field
+#define BMP_PEER_UP_HDR_LEN 20      ///< BMP peer up event header size not including the recv/sent open param message
 
 /**
  * \class   parseBMP
@@ -174,6 +175,18 @@ public:
      * \param [in]     sock        Socket to read the init message from
      */
     void handleInitMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_ptr, int sock);
+
+    /**
+     * Parse the v3 peer up BMP header
+     *
+     *      This method will update the db peer_up_event struct with BMP header info.
+     *
+     * \param [in]  sock     Socket to read the message from
+     * \param [out] up_event Reference to the peer up event storage (will be updated with bmp info)
+     *
+     * \returns true if successfully parsed the bmp peer up header, false otherwise
+     */
+    bool parsePeerUpEventHdr(int sock, DbInterface::tbl_peer_up_event &up_event);
 
     /**
      * get current BMP message type

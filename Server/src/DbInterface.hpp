@@ -85,23 +85,15 @@ public:
         char        local_ip[40];           ///< IPv4 or IPv6 printed IP address
         uint16_t    local_port;             ///< Local port number
         uint32_t    local_asn;              ///< Local ASN for peer
+        uint16_t    local_hold_time;        ///< BGP hold time
+        char        local_bgp_id[15];       ///< Local BGP ID in printed form
         uint32_t    remote_asn;             ///< Remote ASN for peer
         uint16_t    remote_port;            ///< Remote port number
-        uint16_t    hold_time;              ///< BGP hold time
+        uint16_t    remote_hold_time;       ///< BGP hold time
+        char        remote_bgp_id[15];      ///< Remote Peer BGP ID in printed form
 
-        /**
-         * Caller allocated string of recv open params.  Must freed by the
-         * implementing DB interface class.
-         */
-        char        *recv_open_params;
-        size_t      recv_open_params_sz;    ///< Size of the allocated memory by the caller
-
-        /**
-         * Caller allocated string of sent open params.  Must freed by the
-         * implementing DB interface class.
-         */
-        char        *sent_open_params;
-        size_t      sent_open_params_sz;    ///< Size of the allocated memory by the caller
+        char        sent_cap[4096];         ///< Received Open param capabilities
+        char        recv_cap[4096];         ///< Received Open param capabilities
 
         uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
     };

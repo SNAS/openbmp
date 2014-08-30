@@ -122,6 +122,10 @@ void parseBGP::handleMessage(int sock) {
             parseNotifyMsg(sock);
             break;
 
+        case BGP_MSG_OPEN: // OPEN message
+            // Allow the message and let the calling method handle the rest
+            break;
+
         default :
             // Some messages we don't support, skip ahead passed this unsupported type
             char byte;
@@ -155,6 +159,79 @@ void parseBGP::handleMessage(int sock, DbInterface::tbl_peer_down_event *peer_do
 
     // Reset the pointer
     //notify_tbl = NULL;
+
+}
+
+/**
+ * Same as handleMessage, except that it updates the peer_up_event table struct
+ *
+ * \details
+ *  This method will read the expected sent and receive open messages.
+ *
+ *  This method does not directly add to Db, so the calling
+ *  method/function must handle that.
+ *
+ * \param [in]     sock             Socket to read BGP message from
+ * \param [in,out] peer_up_event    Updated with details from the peer up message (sent/recv open msg)
+ */
+void parseBGP::handleMessage(int sock, DbInterface::tbl_peer_up_event *up_event) {
+    /*
+     * Process the sent open message
+     */
+
+    // Process the BGP message normally
+    handleMessage(sock);
+
+    // Process the sent open message
+    list <string> cap_list;
+    if (c_hdr.type == BGP_MSG_OPEN) {
+        parseOpenMsg(sock, up_event->local_asn, up_event->local_hold_time, up_event->local_bgp_id, cap_list);
+
+        // Convert the list to string
+        bzero(up_event->sent_cap, sizeof(up_event->sent_cap));
+
+        string cap_str;
+        for (list<string>::iterator it = cap_list.begin(); it != cap_list.end(); it++) {
+            if ( it != cap_list.begin())
+                cap_str.append(", ");
+
+            cap_str.append((*it));
+        }
+
+        memcpy(up_event->sent_cap, cap_str.c_str(), sizeof(up_event->sent_cap));
+
+    } else {
+        throw "ERROR: Invalid BGP MSG for BMP Sent OPEN message, expected OPEN message.";
+    }
+
+    /*
+     * Process the received open message
+     */
+
+    // Process the BGP message normally
+    handleMessage(sock);
+
+    // Process the sent open message
+    cap_list.clear();
+    if (c_hdr.type == BGP_MSG_OPEN) {
+        parseOpenMsg(sock, up_event->remote_asn, up_event->remote_hold_time, up_event->remote_bgp_id, cap_list);
+
+        // Convert the list to string
+        bzero(up_event->recv_cap, sizeof(up_event->recv_cap));
+
+        string cap_str;
+        for (list<string>::iterator it = cap_list.begin(); it != cap_list.end(); it++) {
+            if ( it != cap_list.begin())
+                cap_str.append(", ");
+
+            cap_str.append((*it));
+        }
+
+        memcpy(up_event->recv_cap, cap_str.c_str(), sizeof(up_event->recv_cap));
+
+    } else {
+        throw "ERROR: Invalid BGP MSG for BMP Received OPEN message, expected OPEN message.";
+    }
 
 }
 
@@ -397,6 +474,235 @@ void parseBGP::parseNotifyMsg(int sock) {
             read(sock, &buf[0], 1);
     }
 
+}
+
+/**
+ * Parses an open message
+ *
+ * \details
+ *      Reads the notification message from the socket.  The parsed output
+ *      will be returned back via the passed references.
+ *
+ * \param [in]   sock         Socket to read BGP message from
+ * \param [out]  asn          Reference to the ASN that was discovered
+ * \param [out]  holdTime     Reference to the hold time
+ * \param [out]  bgp_id       Pointer to allocated buffer for bgp ID (MUST BE >= 15 bytes allocated)
+ * \param [out]  capabilities Reference to the capabilities list string
+ */
+void parseBGP::parseOpenMsg(int sock, uint32_t &asn, uint16_t &holdTime, char *bgp_id, list<string> &capabilties) {
+    open_bgp_hdr open_hdr = {0};
+
+    capabilties.clear();
+
+    // Read the open header
+    if ( (recv(sock, &open_hdr, sizeof(open_bgp_hdr), MSG_WAITALL)) != sizeof(open_bgp_hdr))
+           throw "ERROR: Cannot read the BGP OPEN message header from socket.";
+
+    BGP_SWAP_BYTES(open_hdr.hold);
+    BGP_SWAP_BYTES(open_hdr.asn);
+
+    holdTime = open_hdr.hold;
+    asn = open_hdr.asn;
+
+    inet_ntop(AF_INET, &open_hdr.bgp_id, bgp_id, 15);
+
+    SELF_DEBUG("Open message: %s ver=%d hold=%u asn=%hu bgp_id=%s params_len=%d",
+            p_entry->peer_addr, open_hdr.ver, open_hdr.hold, open_hdr.asn, bgp_id, open_hdr.param_len);
+
+    // Read the remaining open message data (params)
+    u_char buf[255] = {0};
+    u_char *buf_ptr = buf;
+
+    if ( (recv(sock, &buf, open_hdr.param_len, MSG_WAITALL)) != open_hdr.param_len)
+        throw "ERROR: Cannot read the BGP OPEN message parameters from socket.";
+
+    /*
+     * Loop through the capabilities (will set the 4 byte ASN)
+     */
+    char capStr[200];
+    open_param *param;
+    cap_param  *cap;
+    for (int i=0; i < open_hdr.param_len; ) {
+        param = (open_param *)buf_ptr;
+        SELF_DEBUG("Peer %s: Open param type=%d len=%d", p_entry->peer_addr,
+                    param->type, param->len);
+
+        if (param->type != BGP_CAP_PARAM_TYPE) {
+            LOG_NOTICE("Peer %s: Open param type %d is not supported, expected type %d",
+                    p_entry->peer_addr, param->type, BGP_CAP_PARAM_TYPE);
+        }
+
+        /*
+         * Process the capabilities if present
+         */
+        else if (param->len >= 2) {
+            u_char *cap_ptr = buf_ptr + 2;
+
+            for (int c=0; c < param->len; ) {
+                cap = (cap_param *)cap_ptr;
+                SELF_DEBUG("Peer %s: Capability code=%d len=%d", p_entry->peer_addr,
+                        cap->code, cap->len);
+
+                /*
+                 * Handle the capability
+                 */
+                switch (cap->code) {
+                    case BGP_CAP_4OCTET_ASN :
+                        if (cap->len == 4) {
+                            memcpy(&asn, cap_ptr + 2, 4);
+                            BGP_SWAP_BYTES(asn);
+                            snprintf(capStr, sizeof(capStr), "4 Octet ASN (%d)", BGP_CAP_4OCTET_ASN);
+                            capabilties.push_back(capStr);
+                        } else {
+                            LOG_NOTICE("Peer %s: 4 octet ASN capability length is invalid %d expected 4",
+                                    p_entry->peer_addr, cap->len);
+                        }
+                        break;
+
+                    case BGP_CAP_ROUTE_REFRESH:
+                        SELF_DEBUG("Peer %s: supports route-refresh", p_entry->peer_addr);
+                        snprintf(capStr, sizeof(capStr), "Route Refresh (%d)", BGP_CAP_ROUTE_REFRESH);
+                                                    capabilties.push_back(capStr);
+                        break;
+
+                    case BGP_CAP_ROUTE_REFRESH_ENHANCED:
+                        SELF_DEBUG("Peer %s: supports route-refresh enhanced", p_entry->peer_addr);
+                        snprintf(capStr, sizeof(capStr), "Route Refresh Enchanced (%d)", BGP_CAP_ROUTE_REFRESH_ENHANCED);
+                        capabilties.push_back(capStr);
+                        break;
+
+                    case BGP_CAP_ADD_PATH:
+                        SELF_DEBUG("Peer %s: supports add-path", p_entry->peer_addr);
+                        snprintf(capStr, sizeof(capStr), "ADD Path (%d)", BGP_CAP_ADD_PATH);
+                        capabilties.push_back(capStr);
+                        break;
+
+                    case BGP_CAP_GRACEFUL_RESTART:
+                        SELF_DEBUG("Peer %s: supports graceful restart", p_entry->peer_addr);
+                        snprintf(capStr, sizeof(capStr), "Graceful Restart (%d)", BGP_CAP_GRACEFUL_RESTART);
+                        capabilties.push_back(capStr);
+                        break;
+
+                    case BGP_CAP_OUTBOUND_FILTER:
+                        SELF_DEBUG("Peer %s: supports outbound filter", p_entry->peer_addr);
+                        snprintf(capStr, sizeof(capStr), "Outbound Filter (%d)", BGP_CAP_OUTBOUND_FILTER);
+                        capabilties.push_back(capStr);
+                        break;
+
+                    case BGP_CAP_MULTI_SESSION:
+                        SELF_DEBUG("Peer %s: supports multi-session", p_entry->peer_addr);
+                        snprintf(capStr, sizeof(capStr), "Multi-session (%d)", BGP_CAP_MULTI_SESSION);
+                        capabilties.push_back(capStr);
+                        break;
+
+                    case BGP_CAP_MPBGP:
+                    {
+                        cap_mpbgp_data data;
+                        if (cap->len == sizeof(data)) {
+                            memcpy(&data, (cap_ptr + 2), sizeof(data));
+                            BGP_SWAP_BYTES(data.afi);
+
+                            SELF_DEBUG("Peer %s: supports MPBGP afi = %d safi=%d",
+                                    p_entry->peer_addr, data.afi, data.safi);
+
+                            snprintf(capStr, sizeof(capStr), "MPBGP (%d) : afi=%d safi=%d",
+                                     BGP_CAP_MPBGP, data.afi, data.safi);
+
+                            /*
+                             * Decode the SAFI - http://www.iana.org/assignments/safi-namespace/safi-namespace.xhtml
+                             */
+                            string decode_str = "unknown";
+                            switch (data.safi) {
+                                case 1 : // Unicast IP forwarding
+                                    decode_str = "Unicast";
+                                    break;
+
+                                case 2 : // Multicast IP forwarding
+                                    decode_str = "Multicast";
+                                    break;
+
+                                case 4 : // NLRI with MPLS Labels
+                                    decode_str = "NLRI/MPLS";
+                                    break;
+
+                                case 5 : // MCAST VPN
+                                    decode_str = "MCAST VPN";
+                                    break;
+
+                                case 65 : // VPLS
+                                    decode_str = "VPLS";
+                                    break;
+
+                                case 66 : // BGP MDT
+                                    decode_str = "BGP MDT";
+                                    break;
+
+                                case 67 : // BGP 4over6
+                                    decode_str = "BGP 4over6";
+                                    break;
+
+                                case 68 : // BGP 6over4
+                                    decode_str = "BGP 6over4";
+                                    break;
+
+                                case 70 : // BGP EVPNs
+                                    decode_str = "BGP EVPNs";
+                                    break;
+
+                                case 71 : // BGP-LS
+                                    decode_str = "BGP-LS";
+                                    break;
+
+                                case 128 : // MPLS-Labeled VPN
+                                    decode_str = "MPLS-Labeled VPN";
+                                    break;
+
+                                case 129 : // Multicast BGP/MPLS VPN
+                                    decode_str = "Multicast BGP/MPLS VPN";
+                                    break;
+
+                                case 132 : // Route target constrains
+                                    decode_str = "RT constrains";
+                                    break;
+                            }
+
+                            // Add decoded string with address family type
+                            string decodedStr(capStr);
+                            decodedStr.append(" : ");
+                            decodedStr.append(decode_str);
+
+                            if (data.afi == 1)
+                                decodedStr.append(" IPv4");
+
+                            else
+                                decodedStr.append(" IPv6");
+
+                            capabilties.push_back(decodedStr);
+
+                        }
+                        else {
+                            LOG_NOTICE("Peer %s: MPBGP capability but length %d is invalid expected %d.",
+                                    p_entry->peer_addr, cap->len, sizeof(data));
+                        }
+
+                        break;
+                    }
+
+                    default :
+                        SELF_DEBUG("Peer %s: Ignoring capability %d, not implemented", p_entry->peer_addr, cap->code);
+                        break;
+                }
+
+                // Move the pointer to the next capability
+                c += 2 + cap->len;
+                cap_ptr += 2 + cap->len;
+            }
+        }
+
+        // Move index to next param
+        i += 2 + param->len;
+        buf_ptr += 2 + param->len;
+    }
 }
 
 /**

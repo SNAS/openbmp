@@ -34,6 +34,7 @@
 parseBMP::parseBMP(Logger *logPtr, DbInterface::tbl_bgp_peer *peer_entry) {
     debug = false;
     bmp_type = -1; // Initially set to error
+    bmp_len = 0;
     log = logPtr;
 
     // Set the passed storage for the router entry items.
@@ -128,13 +129,15 @@ void parseBMP::parseBMPv3(int sock) {
 
         case TYPE_PEER_UP: // Peer Up notification
         {
-            //TODO: implement
             SELF_DEBUG("BMP MSG : peer up");
             parsePeerHdr(sock);
+
+            /*
             LOG_INFO("PEER_UP message, not yet implemented -- ignoring for now.");
             unsigned char *buf = new unsigned char[c_hdr.len];
             recv(sock, buf, c_hdr.len - BMP_PEER_HDR_LEN, MSG_WAITALL);
             delete[] buf;
+            */
             break;
         }
         case TYPE_PEER_DOWN: // Peer down notification
@@ -398,6 +401,76 @@ void parseBMP::parsePeerHdr(int sock) {
                 p_hdr.peer_as[3]);
     SELF_DEBUG("sock=%d : Peer RD = %s", sock, peer_rd);
 }
+
+/**
+ * Parse the v3 peer up BMP header
+ *
+ *      This method will update the db peer_up_event struct with BMP header info.
+ *
+ * \param [in]  sock     Socket to read the message from
+ * \param [out] up_event Reference to the peer up event storage (will be updated with bmp info)
+ *
+ * \returns true if successfully parsed the bmp peer up header, false otherwise
+ */
+bool parseBMP::parsePeerUpEventHdr(int sock, DbInterface::tbl_peer_up_event &up_event) {
+    unsigned char local_addr[16];
+    int i;
+    bool isParseGood = true;
+    int bytes_read = 0;
+
+    // Set the timestamp to the peer timestamp
+    up_event.timestamp_secs = p_entry->timestamp_secs;
+    memcpy(up_event.peer_hash_id, p_entry->hash_id, sizeof(p_entry->hash_id));
+
+    // Get the local address
+    if ( recv(sock, &local_addr, 16, MSG_WAITALL) != 16)
+        isParseGood = false;
+    else
+        bytes_read += 16;
+
+    if (isParseGood and p_entry->isIPv4) {
+        snprintf(up_event.local_ip, sizeof(up_event.local_ip), "%d.%d.%d.%d",
+                    local_addr[12], local_addr[13], local_addr[14],
+                    local_addr[15]);
+        SELF_DEBUG("%s : Peer UP local address is IPv4 %s", peer_addr, up_event.local_ip);
+
+    } else if (isParseGood) {
+        inet_ntop(AF_INET6, local_addr, up_event.local_ip, sizeof(up_event.local_ip));
+        SELF_DEBUG("%s : Peer UP local address is IPv6 %s", peer_addr, up_event.local_ip);
+    }
+
+    // Get the local port
+    if (isParseGood and recv(sock, &up_event.local_port, 2, MSG_WAITALL) != 2)
+            isParseGood = false;
+
+    else if (isParseGood) {
+        bytes_read += 2;
+        reverseBytes((unsigned char *) &up_event.local_port, sizeof(up_event.local_port));
+    }
+
+    // Get the remote port
+    if (isParseGood and recv(sock, &up_event.remote_port, 2, MSG_WAITALL) != 2)
+        isParseGood = false;
+
+    else if (isParseGood) {
+        bytes_read += 2;
+        reverseBytes((unsigned char *) &up_event.remote_port, sizeof(up_event.remote_port));
+    }
+
+    // Validate parse is still good, if not read the remaining bytes of the message so that the next msg will work
+    if (isParseGood == false) {
+        LOG_NOTICE("%s: PEER UP header failed to be parsed, read only %d bytes of the header",
+                peer_addr, bytes_read);
+
+        int bytes_to_read = (bmp_len - BMP_PEER_HDR_LEN - bytes_read);
+        unsigned char *buf = new unsigned char[bytes_to_read];
+        recv(sock, buf, bytes_to_read, MSG_WAITALL);
+        delete[] buf;
+    }
+
+    return isParseGood;
+}
+
 
 /**
  * Handle the stats reports and add to DB
