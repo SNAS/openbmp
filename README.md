@@ -11,15 +11,39 @@ OpenBMP daemon is a BMP receiver for devices that implement BMP, such as Cisco a
 > Raw dumps are on the roadmap
 
 ### UI
-OpenBMP UI is a Web-App UI that interacts with OpenBMP server/daemon.   Multiple OpenBMP daemons can be centrally managed via the same UI. 
+OpenBMP UI is a Web-App UI that interacts with OpenBMP server/daemon.   Multiple OpenBMP daemons can be centrally managed via the same UI.
 
 ### Database
 The SQL/transactional database is designed to be flexible for all types of reporting on the collected data by simply linking tables or by creating views.
 
-The database is tuned to support high transactional rates and storage for millions of prefixes and other BGP information.   OpenBMP statistics track how well the database is performing and will alert if there are any issues. 
+The database is tuned to support high transactional rates and storage for millions of prefixes and other BGP information.   OpenBMP statistics track how well the database is performing and will alert if there are any issues.
 
-The OpenBMP daemon will automatically configure the database if the database does not exist, or if the UI instructs to recreate it.  Schemas are less likely to change, but in the event they change, a migration script and instructions will be provided in the [installation](docs/INSTALL.md) notes to explain how to upgrade. 
+News
+----
+### Sep-2-2014
+> OpenBMP now fully supports draft-ietf-grow-bmp-07
 
+* Added termination message parsing and storage
+* Pseudo schema has been updated to include v_peers
+
+
+### Aug-29-2014
+* Fixed an issue with peer down event BMP reason 2 causing the thread to exit.
+* Added full support of peer up notifications, including complete decode of the sent and received open message and capabilities.
+* Added new "v_peers" table as documented on http://www.openbmp.org/#!docs/DATABASE.md.
+* Bumped the current DB to use v1.3-pre2.
+
+### Aug-27-2014
+Initiation sysName, sysDescr, and free form string values are now stored.
+
+Termination messages and peer up messages will be added shortly.   The v_peers VIEW does not exist yet
+because peer up messages are required.   Once the peer up messages are added (very soon) v_peers will be added.  This will provide a peers view into active neighbors.
+
+New views will be created to provide consolidated reporting statistics per peer, such number of prefixes in RIB and peer down/peer up events.
+
+JunOS 14.1 and IOS XE 3.12 verified.
+
+OpenBMP UI is being revised and will be updated soon.
 
 OpenBMP Flow
 ------------
