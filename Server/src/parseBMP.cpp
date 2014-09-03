@@ -66,11 +66,11 @@ char parseBMP::handleMessage(int sock) {
     bytes_read = read(sock, &ver, 1);
 
     if (bytes_read < 0)
-        throw "1: Failed to read from socket.";
+        throw "(1) Failed to read from socket.";
     else if (bytes_read == 0)
-        throw "2: Connection closed";
+        throw "(2) Connection closed";
     else if (bytes_read != 1)
-        throw "3: Cannot read the BMP version byte from socket";
+        throw "(3) Cannot read the BMP version byte from socket";
 
     // check the version
     if (ver == 3) { // draft-ietf-grow-bmp-04 - 07
@@ -132,12 +132,6 @@ void parseBMP::parseBMPv3(int sock) {
             SELF_DEBUG("BMP MSG : peer up");
             parsePeerHdr(sock);
 
-            /*
-            LOG_INFO("PEER_UP message, not yet implemented -- ignoring for now.");
-            unsigned char *buf = new unsigned char[c_hdr.len];
-            recv(sock, buf, c_hdr.len - BMP_PEER_HDR_LEN, MSG_WAITALL);
-            delete[] buf;
-            */
             break;
         }
         case TYPE_PEER_DOWN: // Peer down notification
@@ -145,27 +139,11 @@ void parseBMP::parseBMPv3(int sock) {
             parsePeerHdr(sock);
             break;
 
-        /*
-        case TYPE_INIT_MSG: // BMP initial message
-        {
-            SELF_DEBUG("BMP MSG : init message received");
-            unsigned char *buf = new unsigned char[c_hdr.len];
-            recv(sock, buf, c_hdr.len, MSG_WAITALL);
-            delete[] buf;
-
+        case TYPE_INIT_MSG:
+        case TYPE_TERM_MSG:
+            // Allowed
             break;
-        } */
 
-        case TYPE_TERMINATION: // BMP termination message
-        {
-            //TODO: implement
-            SELF_DEBUG("BMP MSG : termination message\n");
-            LOG_INFO("TERM message, not yet implemented -- ignoring for now.");
-            unsigned char *buf = new unsigned char[c_hdr.len];
-            recv(sock, buf, c_hdr.len, MSG_WAITALL);
-            delete[] buf;
-            break;
-        }
         default:
             SELF_DEBUG("ERROR: Unknown BMP message type of %d", c_hdr.type);
             break;
@@ -576,7 +554,7 @@ void parseBMP::handleStatsReport(DbInterface *dbi_ptr, int sock) {
  */
 void parseBMP::handleInitMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_ptr, int sock) {
     init_msg_v3 initMsg;
-    char infoBuf[2048];
+    char infoBuf[sizeof(r_entry.initiate_data)];
     int infoLen;
 
     // Make sure the init message isn't too big for internal memory parsing
@@ -621,25 +599,23 @@ void parseBMP::handleInitMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_
              */
             switch (initMsg.type) {
                 case INIT_TYPE_FREE_FORM_STRING :
-                    r_entry.initiate_data = initMsg.info;
-                    r_entry.initiate_data_sz = infoLen;
-                    dbi_ptr->update_Router(r_entry);
+                    memcpy(r_entry.initiate_data, initMsg.info, initMsg.len);
                     break;
 
                 case INIT_TYPE_SYSNAME :
                     strncpy((char *)r_entry.name, initMsg.info, sizeof(r_entry.name));
-                    dbi_ptr->update_Router(r_entry);
                     break;
 
                 case INIT_TYPE_SYSDESCR :
                     strncpy((char *)r_entry.descr, initMsg.info, sizeof(r_entry.descr));
-                    dbi_ptr->update_Router(r_entry);
                     break;
 
                 default:
                     LOG_NOTICE("Init message type %hu is unexpected per draft-07", initMsg.type);
             }
 
+            // Update the router entry with the details
+            dbi_ptr->update_Router(r_entry);
 
         }
 
@@ -649,6 +625,121 @@ void parseBMP::handleInitMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_
     else {
         // message is too large to parse, ignoring
         LOG_NOTICE("Init message length of %u is too large to process, must be less than 40K", bmp_len);
+    }
+}
+
+/**
+ * handle the termination message
+ *
+ * NOTE: This does not update the DB, it is expected that the caller will do that based
+ *  on the returned/updated info in r_entry.
+ *
+ * \param [in/out] r_entry     Already defined router entry reference (will be updated)
+ * \param [in]     dbi_ptr     Pointer to exiting dB implementation
+ * \param [in]     sock        Socket to read the term message from
+ */
+void parseBMP::handleTermMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_ptr, int sock) {
+    term_msg_v3 termMsg;
+    char infoBuf[sizeof(r_entry.term_data)];
+    int infoLen;
+
+    // Make sure the term message isn't too big for internal memory parsing
+    if (bmp_len <= 40000) {
+        char *buf = new char[bmp_len]();
+        char *bufPtr = buf;
+
+        if ((recv(sock, bufPtr, bmp_len, MSG_WAITALL)) != bmp_len) {
+            delete [] buf;
+            throw "ERROR: Failed to read complete term message from socket.";
+        }
+
+        /*
+         * Loop through the term message (in buffer) to parse each TLV
+         */
+        for (int i=0; i < bmp_len; i += BMP_TERM_MSG_LEN) {
+            memcpy(&termMsg, bufPtr, BMP_TERM_MSG_LEN);
+            termMsg.info = NULL;
+            reverseBytes((unsigned char *)&termMsg.len, 2);
+            reverseBytes((unsigned char *)&termMsg.type, 2);
+
+            bufPtr += BMP_TERM_MSG_LEN;                // Move pointer past the info header
+
+            // TODO: Change to SELF_DEBUG after IOS supports INIT messages correctly
+            LOG_INFO("Term message type %hu and length %hu parsed", termMsg.type, termMsg.len);
+
+            if (termMsg.len > 0) {
+                infoLen = sizeof(infoBuf) < termMsg.len ? sizeof(infoBuf) : termMsg.len;
+                bzero(infoBuf, sizeof(infoBuf));
+                memcpy(infoBuf, bufPtr, infoLen);
+                bufPtr += infoLen;                     // Move pointer past the info data
+                i += infoLen;                       // Update the counter past the info data
+
+                termMsg.info = infoBuf;
+
+                LOG_INFO("Term message type %hu = %s", termMsg.type, termMsg.info);
+            }
+
+            /*
+             * Save the data based on info type
+             */
+            switch (termMsg.type) {
+                case TERM_TYPE_FREE_FORM_STRING :
+                    memcpy(r_entry.term_data, termMsg.info, termMsg.len);
+                    break;
+
+                case TERM_TYPE_REASON :
+                {
+                    // Get the term reason code from info data (first 2 bytes)
+                    uint16_t term_reason;
+                    memcpy(&term_reason, termMsg.info, 2);
+                    reverseBytes((unsigned char *)&term_reason, 2);
+                    r_entry.term_reason_code = term_reason;
+
+                    switch (term_reason) {
+                        case TERM_REASON_ADMIN_CLOSE :
+                            LOG_INFO("%s BMP session closed by remote administratively", r_entry.src_addr);
+                            snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
+                                   "Remote session administratively closed");
+                            break;
+
+                        case TERM_REASON_OUT_OF_RESOURCES:
+                            LOG_INFO("%s BMP session closed by remote due to out of resources", r_entry.src_addr);
+                            snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
+                                    "Remote out of resources");
+                            break;
+
+                        case TERM_REASON_REDUNDANT_CONN:
+                            LOG_INFO("%s BMP session closed by remote due to connection being redundant", r_entry.src_addr);
+                            snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
+                                    "Remote considers connection redundant");
+                            break;
+
+                        case TERM_REASON_UNSPECIFIED:
+                            LOG_INFO("%s BMP session closed by remote as unspecified", r_entry.src_addr);
+                            snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
+                                    "Remote closed with unspecified reason");
+                            break;
+
+                        default:
+                            LOG_INFO("%s closed with undefined reason code of %d", r_entry.src_addr, term_reason);
+                            snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
+                                   "Unknown %d termination reason, which is not part of draft.", term_reason);
+                    }
+
+                    break;
+                }
+
+                default:
+                    LOG_NOTICE("Term message type %hu is unexpected per draft", termMsg.type);
+            }
+        }
+
+        // Free the buffer
+        delete [] buf;
+    }
+    else {
+        // message is too large to parse, ignoring
+        LOG_NOTICE("Term message length of %u is too large to process, must be less than 40K", bmp_len);
     }
 }
 

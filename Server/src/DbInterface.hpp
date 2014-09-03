@@ -116,17 +116,8 @@ public:
         uint16_t    term_reason_code;       ///< BMP termination reason code
         char        term_reason_text[255];  ///< BMP termination reason text decode string
 
-        /**
-         * Caller allocated string containing the termination info data.
-         */
-        char        *term_data;             ///< Type=0 String termination info data
-        size_t      term_data_sz;           ///< Size of the allocated memory by the caller
-
-        /**
-         * Caller allocated string containing the initiation info data.
-         */
-        char        *initiate_data;         ///< Type=0 String initiation info data
-        size_t      initiate_data_sz;       ///< Size of the allocated memory by the caller
+        char        term_data[4096];        ///< Type=0 String termination info data
+        char        initiate_data[4096];    ///< Type=0 String initiation info data
 
         uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
     };

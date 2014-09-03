@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <cstring>
 #include <iostream>
+#include <algorithm>
+#include <string>
 
 #include <inttypes.h>
 
@@ -264,14 +266,18 @@ void mysqlBMP::add_Router(tbl_router &r_entry) {
         // Insert/Update map entry
         router_list[r_hash_str] = time(NULL);
 
+        // Convert the init data to string for storage
+        string initData(r_entry.initiate_data);
+        std::replace(initData.begin(), initData.end(), '\'', '"');
+
         // Build the query
         snprintf(buf, sizeof(buf),
-                "INSERT into %s (%s) values ('%s', '%s', '%s','%s')",
-                TBL_NAME_ROUTERS, "hash_id,name,description,ip_address", r_hash_str.c_str(),
-                r_entry.name, r_entry.descr, r_entry.src_addr);
+                "INSERT into %s (%s) values ('%s', '%s', '%s','%s','%s')",
+                TBL_NAME_ROUTERS, "hash_id,name,description,ip_address,initate_data", r_hash_str.c_str(),
+                r_entry.name, r_entry.descr, r_entry.src_addr, initData.c_str());
 
         // Add the on duplicate statement
-        strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1,name=values(name),description=values(description)");
+        strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1,name=values(name),description=values(description),initate_data=values(initate_data)");
 
         // Run the query to add the record
         stmt = con->createStatement();
@@ -323,13 +329,17 @@ bool mysqlBMP::disconnect_Router(tbl_router &r_entry) {
         router_list.erase(r_hash_str);
 
         try {
+            // Convert the term data to string for storage
+            string termData (r_entry.term_data);
+            std::replace(termData.begin(), termData.end(), '\'', '"');
+
             char buf[4096]; // Misc working buffer
 
             // Build the query
             snprintf(buf, sizeof(buf),
-                    "UPDATE %s SET isConnected=0,term_reason_code=%"PRIu16",term_reason_text=\"%s\" where hash_id = '%s'",
+                    "UPDATE %s SET isConnected=0,term_reason_code=%"PRIu16",term_reason_text=\"%s\",term_data='%s' where hash_id = '%s'",
                     TBL_NAME_ROUTERS,
-                    r_entry.term_reason_code, r_entry.term_reason_text,
+                    r_entry.term_reason_code, r_entry.term_reason_text, termData.c_str(),
                     r_hash_str.c_str());
 
             // Run the query to add the record

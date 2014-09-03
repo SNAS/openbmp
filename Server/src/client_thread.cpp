@@ -67,12 +67,14 @@ void *ClientThread(void *arg) {
         LOG_INFO("Thread started to monitor BMP from router %s using socket %d",
                 cInfo.client->c_ipv4, cInfo.client->c_sock);
 
-        while (1) {
-            rBMP.ReadIncomingMsg(cInfo.client, (DbInterface *)cInfo.mysql);
+        bool run = true;
+        while (run) {
+            run = rBMP.ReadIncomingMsg(cInfo.client, (DbInterface *)cInfo.mysql);
         }
+        LOG_INFO("%s: Thread for sock [%d] ended normally", cInfo.client->c_ipv4, cInfo.client->c_sock);
 
     } catch (char const *str) {
-        LOG_INFO("%s: Thread for sock [%d] ended", str, cInfo.client->c_sock);
+        LOG_INFO("%s: %s - Thread for sock [%d] ended", cInfo.client->c_ipv4, str, cInfo.client->c_sock);
     }
 
     pthread_cleanup_pop(0);

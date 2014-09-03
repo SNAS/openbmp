@@ -39,7 +39,7 @@ public:
      * BMP common header types
      */
      enum BMP_TYPE { TYPE_ROUTE_MON=0, TYPE_STATS_REPORT, TYPE_PEER_DOWN,
-                    TYPE_PEER_UP, TYPE_INIT_MSG, TYPE_TERMINATION };
+                    TYPE_PEER_UP, TYPE_INIT_MSG, TYPE_TERM_MSG };
 
      /**
       * BMP stats types
@@ -52,6 +52,17 @@ public:
       * BMP Initiation Message Types
       */
      enum BMP_INIT_TYPES { INIT_TYPE_FREE_FORM_STRING=0, INIT_TYPE_SYSDESCR, INIT_TYPE_SYSNAME };
+
+     /**
+      * BMP Termination Message Types
+      */
+     enum BMP_TERM_TYPES { TERM_TYPE_FREE_FORM_STRING=0, TERM_TYPE_REASON };
+
+     /**
+      * BMP Termination Message reasons for type=1
+      */
+     enum BMP_TERM_TYPE1_REASON { TERM_REASON_ADMIN_CLOSE=0, TERM_REASON_UNSPECIFIED, TERM_REASON_OUT_OF_RESOURCES,
+                     TERM_REASON_REDUNDANT_CONN};
 
 
      /**
@@ -175,6 +186,18 @@ public:
      * \param [in]     sock        Socket to read the init message from
      */
     void handleInitMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_ptr, int sock);
+
+    /**
+     * handle the termination message
+     *
+     * NOTE: This does not update the DB, it is expected that the caller will do that based
+     *  on the returned/updated info in r_entry.
+     *
+     * \param [in/out] r_entry     Already defined router entry reference (will be updated)
+     * \param [in]     dbi_ptr     Pointer to exiting dB implementation
+     * \param [in]     sock        Socket to read the term message from
+     */
+    void handleTermMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_ptr, int sock);
 
     /**
      * Parse the v3 peer up BMP header

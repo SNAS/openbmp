@@ -60,8 +60,11 @@ BMPReader::~BMPReader() {
  *
  * \param [in]  client      Client information pointer
  * \param [in]  dbi_ptr     The database pointer referencer - DB should be already initialized
+ *
+ * \return true if more to read, false if the connection is done/closed
  */
-void BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *dbi_ptr) {
+bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *dbi_ptr) {
+    bool rval = true;
     parseBGP *pBGP;                                 // Pointer to BGP parser
 
     // Data storage structures
@@ -76,7 +79,12 @@ void BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
     }
 
     char bmp_type = 0;
+
     DbInterface::tbl_router r_entry;
+    bzero(r_entry.term_reason_text, sizeof(r_entry.term_reason_text));
+    bzero(r_entry.descr, sizeof(r_entry.descr));
+    bzero(r_entry.initiate_data, sizeof(r_entry.initiate_data));
+    bzero(r_entry.term_data, sizeof(r_entry.term_data));
 
     // Setup the router record table object
     r_entry.isConnected = 1;
@@ -221,11 +229,19 @@ void BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
                 break;
             }
 
+            case parseBMP::TYPE_TERM_MSG : { // Termination Message
+                LOG_INFO("%s: Init message received with length of %u", client->c_ipv4, pBMP->getBMPLength());
+                pBMP->handleTermMsg(r_entry, dbi_ptr, client->c_sock);
+                dbi_ptr->disconnect_Router(r_entry);
+                close(client->c_sock);
+
+                rval = false;                           // Indicate connection is closed
+                break;
+            }
+
         }
 
     } catch (const char *str) {
-        // Record that the connection is no longer active
-
         // Mark the router as disconnected and update the error to be a local disconnect (no term message received)
         r_entry.term_reason_code = 65535;
         snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text), "%s", str);
@@ -237,6 +253,8 @@ void BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
     // Free the bmp parser
     delete pBMP;
+
+    return rval;
 }
 
 

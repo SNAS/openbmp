@@ -50,8 +50,9 @@ public:
      *
      * \param [in]  client      Client information pointer
      * \param [in]  dbi_ptr     The database pointer referencer - DB should be already initialized
+     * \return true if more to read, false if the connection is done/closed
      */
-    void ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *dbi_ptr);
+    bool ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *dbi_ptr);
 
     // Debug methods
     void enableDebug();
