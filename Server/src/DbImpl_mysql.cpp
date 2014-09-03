@@ -273,11 +273,11 @@ void mysqlBMP::add_Router(tbl_router &r_entry) {
         // Build the query
         snprintf(buf, sizeof(buf),
                 "INSERT into %s (%s) values ('%s', '%s', '%s','%s','%s')",
-                TBL_NAME_ROUTERS, "hash_id,name,description,ip_address,initate_data", r_hash_str.c_str(),
+                TBL_NAME_ROUTERS, "hash_id,name,description,ip_address,init_data", r_hash_str.c_str(),
                 r_entry.name, r_entry.descr, r_entry.src_addr, initData.c_str());
 
         // Add the on duplicate statement
-        strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1,name=values(name),description=values(description),initate_data=values(initate_data)");
+        strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1,name=values(name),description=values(description),init_data=values(init_data)");
 
         // Run the query to add the record
         stmt = con->createStatement();
