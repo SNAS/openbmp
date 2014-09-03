@@ -37,7 +37,7 @@ CREATE TABLE 'v_routes' (
 #     As mentioned above, addpaths will be added in the future. 
 # 
 #     Table is large and should be filtered when returning results.
-CREATE TABLE 'v_routes' (
+CREATE TABLE 'v_routes_history' (
   'RouterName' varchar(200) NOT NULL,
   'PeerName' varchar(200),
   'Prefix' varchar(40) NOT NULL,
