@@ -1,7 +1,10 @@
 # cmake file for openbmpd
 
 # Define the version
-set (OPENBMPD_VERSION "0.8.0-pre")
+set (OPENBMP_VER_MAJOR "0")
+set (OPENBMP_VER_MINOR "8")
+set (OPENBMP_VER_PATCH "0-pre")
+set (OPENBMPD_VERSION "${OPENBMP_VER_MAJOR}.${OPENBMP_VER_MINOR}.${OPENBMP_VER_PATCH}")
 
 cmake_minimum_required (VERSION 2.8)
 project (OPENBMP)
@@ -18,4 +21,10 @@ include_directories( ${CMAKE_BINARY_DIR}/generated/ )
 
 # Add the Server directory
 add_subdirectory (Server)
+
+FIND_PROGRAM(DPKG_CMD dpkg)
+IF(DPKG_CMD)
+  add_subdirectory (deb_package)
+ENDIF(DPKG_CMD)
+
 
