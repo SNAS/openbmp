@@ -86,11 +86,11 @@ public:
         uint16_t    local_port;             ///< Local port number
         uint32_t    local_asn;              ///< Local ASN for peer
         uint16_t    local_hold_time;        ///< BGP hold time
-        char        local_bgp_id[15];       ///< Local BGP ID in printed form
+        char        local_bgp_id[16];       ///< Local BGP ID in printed form
         uint32_t    remote_asn;             ///< Remote ASN for peer
         uint16_t    remote_port;            ///< Remote port number
         uint16_t    remote_hold_time;       ///< BGP hold time
-        char        remote_bgp_id[15];      ///< Remote Peer BGP ID in printed form
+        char        remote_bgp_id[16];      ///< Remote Peer BGP ID in printed form
 
         char        sent_cap[4096];         ///< Received Open param capabilities
         char        recv_cap[4096];         ///< Received Open param capabilities
@@ -144,7 +144,7 @@ public:
 
         char        peer_rd[32];            ///< Peer distinguisher ID (string/printed format)
         char        peer_addr[40];          ///< Peer IP address in printed form
-        char        peer_bgp_id[15];        ///< Peer BGP ID in printed form
+        char        peer_bgp_id[16];        ///< Peer BGP ID in printed form
         uint32_t    peer_as;                ///< Peer ASN
         bool        isL3VPN;                ///< true if peer is L3VPN, otherwise it is Global
         bool        isPrePolicy;            ///< True if the routes are pre-policy, false if not
@@ -209,7 +209,7 @@ public:
         size_t      cluster_list_sz;        ///< Size of the cluster list in bytes (buffer size)
 
 
-        char        originator_id[15];      ///< Originator ID in printed form
+        char        originator_id[16];      ///< Originator ID in printed form
         uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
 
     };

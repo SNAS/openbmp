@@ -45,7 +45,7 @@ mysqlBMP::mysqlBMP(Logger *logPtr, char *hostURL, char *username, char *password
     stmt = NULL;
     con = NULL;
 
-    log = logPtr;
+    logger = logPtr;
 
     disableDebug();
     setMaxBlobSize(8192);
@@ -337,7 +337,7 @@ bool mysqlBMP::disconnect_Router(tbl_router &r_entry) {
 
             // Build the query
             snprintf(buf, sizeof(buf),
-                    "UPDATE %s SET isConnected=0,term_reason_code=%"PRIu16",term_reason_text=\"%s\",term_data='%s' where hash_id = '%s'",
+                    "UPDATE %s SET isConnected=0,term_reason_code=%" PRIu16 ",term_reason_text=\"%s\",term_data='%s' where hash_id = '%s'",
                     TBL_NAME_ROUTERS,
                     r_entry.term_reason_code, r_entry.term_reason_text, termData.c_str(),
                     r_hash_str.c_str());
@@ -542,7 +542,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
         // Setup the initial MySQL query
         buf_len =
                 sprintf(buf, "INSERT into %s (%s) values ", TBL_NAME_PATH_ATTRS,
-                        "hash_id,peer_hash_id,origin,as_path,next_hop,med,local_pref,isAtomicAgg,aggregator,community_list,ext_community_list,cluster_list,originator_id,origin_as,as_path_count,timestamp");
+                        "hash_id,peer_hash_id,origin,as_path,next_hop,med,local_pref,isAtomicAgg,aggregator,community_list,ext_community_list,cluster_list,originator_id,origin_as,as_path_count,nexthop_isIPv4,timestamp");
 
         /*
          * Generate router table hash from the following fields
@@ -580,7 +580,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
 
         buf_len +=
                 snprintf(buf2, sizeof(buf2),
-                        "('%s','%s','%s','%s','%s', %u,%u,%d,'%s','%s','%s','%s','%s','%"PRIu32"','%hu', from_unixtime(%u)),",
+                        "('%s','%s','%s','%s','%s', %u,%u,%d,'%s','%s','%s','%s','%s','%" PRIu32 "','%hu','%d',from_unixtime(%u)),",
                         path_hash_str.c_str(), p_hash_str.c_str(),
                         path_entry.origin, path_entry.as_path,
                         path_entry.next_hop, path_entry.med,
@@ -588,7 +588,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
                         path_entry.aggregator, path_entry.community_list,
                         path_entry.ext_community_list, path_entry.cluster_list,
                         path_entry.originator_id, path_entry.origin_as,
-                        path_entry.as_path_count,
+                        path_entry.as_path_count, path_entry.nexthop_isIPv4,
                         path_entry.timestamp_secs);
 
         // Cat the string to our query buffer
@@ -670,7 +670,7 @@ void mysqlBMP::add_StatReport(tbl_stats_report &stats) {
         hash_toStr(stats.peer_hash_id, p_hash_str);
 
         snprintf(buf, sizeof(buf),
-                "INSERT into %s (%s%s%s) values ('%s', %u, %u, %u, %u, %u, %u, %u, %"PRIu64", %"PRIu64")",
+                "INSERT into %s (%s%s%s) values ('%s', %u, %u, %u, %u, %u, %u, %u, %" PRIu64 ", %" PRIu64 ")",
                 TBL_NAME_STATS_REPORT,
                 "peer_hash_id,prefixes_rejected,known_dup_prefixes,known_dup_withdraws,",
                 "updates_invalid_by_cluster_list,updates_invalid_by_as_path_loop,updates_invalid_by_originagtor_id,",
@@ -709,7 +709,7 @@ void mysqlBMP::add_PeerUpEvent(DbInterface::tbl_peer_up_event &up_event) {
 
         // Insert the bgp peer up event
         snprintf(buf, sizeof(buf),
-                "REPLACE into %s (%s) values ('%s','%s','%s',%"PRIu16",%"PRIu16",%"PRIu32",%"PRIu16",%"PRIu16",'%s','%s')",
+                "REPLACE into %s (%s) values ('%s','%s','%s',%" PRIu16 ",%" PRIu16 ",%" PRIu32 ",%" PRIu16 ",%" PRIu16 ",'%s','%s')",
                 TBL_NAME_PEER_UP,
                 "peer_hash_id,local_ip,local_bgp_id,local_port,local_hold_time,local_asn,remote_port,remote_hold_time,sent_capabilities,recv_capabilities",
                 p_hash_str.c_str(), up_event.local_ip, up_event.local_bgp_id, up_event.local_port,up_event.local_hold_time,

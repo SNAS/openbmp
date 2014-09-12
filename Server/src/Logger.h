@@ -18,16 +18,16 @@
 /*
  * DEBUG is a macro for DebugPrint with FILE, LINE, FUNCTION added
  */
-#define DEBUG(...) log->DebugPrint(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
-#define SELF_DEBUG(...) if (debug) log->DebugPrint(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define DEBUG(...) logger->DebugPrint(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+#define SELF_DEBUG(...) if (debug) logger->DebugPrint(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 
 /*
  * Below defines LOG macros for various severities
  */
-#define LOG_INFO(...)    log->Print("INFO",   __FUNCTION__, __VA_ARGS__)
-#define LOG_WARN(...)    log->Print("WARN",   __FUNCTION__, __VA_ARGS__)
-#define LOG_NOTICE(...)  log->Print("NOTICE", __FUNCTION__, __VA_ARGS__)
-#define LOG_ERR(...)     log->Print("ERROR",  __FUNCTION__, __VA_ARGS__)
+#define LOG_INFO(...)    logger->Print("INFO",   __FUNCTION__, __VA_ARGS__)
+#define LOG_WARN(...)    logger->Print("WARN",   __FUNCTION__, __VA_ARGS__)
+#define LOG_NOTICE(...)  logger->Print("NOTICE", __FUNCTION__, __VA_ARGS__)
+#define LOG_ERR(...)     logger->Print("ERROR",  __FUNCTION__, __VA_ARGS__)
 
 /**
  * \class   Logger

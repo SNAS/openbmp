@@ -45,7 +45,7 @@ bool        debugEnabled    = false;                // Globally enable/disable d
 // Global thread list
 vector<ThreadMgmt *> thr_list(0);
 
-static Logger *log;                                 // Local source logger reference
+static Logger *logger;                              // Local source logger reference
 
 /**
  * Usage of the program
@@ -285,11 +285,11 @@ void runServer(Cfg_Options &cfg) {
     try {
 
         // Test Mysql connection
-        mysql = new mysqlBMP(log, cfg.dbURL,cfg.username, cfg.password, cfg.dbName);
+        mysql = new mysqlBMP(logger, cfg.dbURL,cfg.username, cfg.password, cfg.dbName);
         delete mysql;
 
         // allocate and start a new bmp server
-        BMPListener *bmp_svr = new BMPListener(log, &cfg);
+        BMPListener *bmp_svr = new BMPListener(logger, &cfg);
 
         // Loop to accept new connections
         while (1) {
@@ -317,7 +317,7 @@ void runServer(Cfg_Options &cfg) {
             if (active_connections <= MAX_THREADS) {
                 ThreadMgmt *thr = new ThreadMgmt;
                 thr->cfg = &cfg;
-                thr->log = log;
+                thr->log = logger;
 
                 pthread_attr_t thr_attr;            // thread attribute
 
@@ -377,14 +377,14 @@ int main(int argc, char **argv) {
     }
 
     // Initialize logging
-    log = new Logger(log_filename, debug_filename);
+    logger = new Logger(log_filename, debug_filename);
 
     // Set up defaults for logging
-    log->setWidthFilename(15);
-    log->setWidthFunction(18);
+    logger->setWidthFilename(15);
+    logger->setWidthFunction(18);
 
     if (debugEnabled)
-        log->enableDebug();
+        logger->enableDebug();
     else {
         /*
         * Become a daemon if debug is not enabled

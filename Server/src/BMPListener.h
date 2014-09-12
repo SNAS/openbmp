@@ -74,7 +74,7 @@ public:
 
 
 public:
-    Logger      *log;                       ///< Logging class pointer
+    Logger      *logger;                    ///< Logging class pointer
 
 private:
     Cfg_Options *cfg;                       ///< Config pointer

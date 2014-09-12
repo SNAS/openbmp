@@ -19,7 +19,7 @@
  */
 void ClientThread_cancel(void *arg) {
     ClientThreadInfo *cInfo = static_cast<ClientThreadInfo *>(arg);
-    Logger *log = cInfo->log;
+    Logger *logger = cInfo->log;
 
     LOG_INFO("Thread terminating due to cancel request.");
 
@@ -43,7 +43,7 @@ void *ClientThread(void *arg) {
 
     // Setup the args
     ThreadMgmt *thr = static_cast<ThreadMgmt *>(arg);
-    Logger *log = thr->log;
+    Logger *logger = thr->log;
 
     // Setup the client thread info struct
     ClientThreadInfo cInfo;
@@ -51,7 +51,7 @@ void *ClientThread(void *arg) {
     cInfo.log = thr->log;
 
     // connect to mysql
-    cInfo.mysql = new mysqlBMP(log, thr->cfg->dbURL,thr->cfg->username, thr->cfg->password, thr->cfg->dbName);
+    cInfo.mysql = new mysqlBMP(logger, thr->cfg->dbURL,thr->cfg->username, thr->cfg->password, thr->cfg->dbName);
 
     /*
      * Setup the cleanup routine for when the thread is canceled.
@@ -63,7 +63,7 @@ void *ClientThread(void *arg) {
         cInfo.mysql->enableDebug();
 
     try {
-        BMPReader rBMP(log, thr->cfg);
+        BMPReader rBMP(logger, thr->cfg);
         LOG_INFO("Thread started to monitor BMP from router %s using socket %d",
                 cInfo.client->c_ipv4, cInfo.client->c_sock);
 

@@ -71,7 +71,7 @@ public:
 
 private:
     bool            debug;                      ///< debug flag to indicate debugging
-    Logger          *log;                       ///< Logging class pointer
+    Logger          *logger;                    ///< Logging class pointer
 
     sql::Driver     *driver;
     sql::Connection *con;

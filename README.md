@@ -20,30 +20,21 @@ The database is tuned to support high transactional rates and storage for millio
 
 News
 ----
-### Sep-2-2014
+### Sep-12-2014
+Refactored BGP parsing to make way for upcoming changes to support BGP-LS and MPLS/VPN's.
+
+
+### Sep-10-2014
+**Released version 0.7.1**   See [release-0.7.1](docs/release_notes/release-0.7.1.md) for more details.
+
 > OpenBMP now fully supports draft-ietf-grow-bmp-07
 
-* Added termination message parsing and storage
-* Pseudo schema has been updated to include v_peers
+**Upcoming Changes:**
 
+  * Refactor parsing and remove older BMP version support - Goign forward will be BMP v3 (current draft 07)
+  * Add BGP-LS support - IGP tables/views
+  * OpenBMP UI is being revised using ODL
 
-### Aug-29-2014
-* Fixed an issue with peer down event BMP reason 2 causing the thread to exit.
-* Added full support of peer up notifications, including complete decode of the sent and received open message and capabilities.
-* Added new "v_peers" table as documented on http://www.openbmp.org/#!docs/DATABASE.md.
-* Bumped the current DB to use v1.3-pre2.
-
-### Aug-27-2014
-Initiation sysName, sysDescr, and free form string values are now stored.
-
-Termination messages and peer up messages will be added shortly.   The v_peers VIEW does not exist yet
-because peer up messages are required.   Once the peer up messages are added (very soon) v_peers will be added.  This will provide a peers view into active neighbors.
-
-New views will be created to provide consolidated reporting statistics per peer, such number of prefixes in RIB and peer down/peer up events.
-
-JunOS 14.1 and IOS XE 3.12 verified.
-
-OpenBMP UI is being revised and will be updated soon.
 
 OpenBMP Flow
 ------------

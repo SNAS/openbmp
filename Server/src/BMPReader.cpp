@@ -40,7 +40,7 @@ BMPReader::BMPReader(Logger *logPtr, Cfg_Options *config) {
 
     cfg = config;
 
-    log = logPtr;
+    logger = logPtr;
 
     if (cfg->debug_bmp)
         enableDebug();
@@ -71,7 +71,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
     DbInterface::tbl_bgp_peer p_entry;
 
     // Initialize the parser for BMP messages
-    parseBMP *pBMP = new parseBMP(log, &p_entry);    // handler for BMP messages
+    parseBMP *pBMP = new parseBMP(logger, &p_entry);    // handler for BMP messages
 
     if (cfg->debug_bmp) {
         enableDebug();
@@ -112,33 +112,27 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
          * At this point we only have the BMP header message, what happens next depends
          *      on the BMP message type.
          */
-
         switch (bmp_type) {
             case parseBMP::TYPE_PEER_DOWN : { // Peer down type
-                // Read the reason code
-                char reason;
-                if (read(client->c_sock, &reason, 1) == 1) {
-                    LOG_NOTICE("sock=%d : %s: BGP peer down notification with reason code: %d",
-                            client->c_sock, p_entry.peer_addr, reason);
 
-                    DbInterface::tbl_peer_down_event down_event = {0};
+                DbInterface::tbl_peer_down_event down_event = {0};
 
-                    // Initialize the down_event struct
-                    down_event.bmp_reason = reason;
-                    memcpy(down_event.peer_hash_id, p_entry.hash_id, sizeof(p_entry.hash_id));
+                if (pBMP->parsePeerDownEventHdr(client->c_sock,down_event)) {
+                    pBMP->bufferBMPMessage(client->c_sock);
+
 
                     // Prepare the BGP parser
-                    pBGP = new parseBGP(log, dbi_ptr, &p_entry);
+                    pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr);
                     if (cfg->debug_bgp)
                        pBGP->enableDebug();
 
                     // Check if the reason indicates we have a BGP message that follows
-                    switch (reason) {
+                    switch (down_event.bmp_reason) {
                         case 1 : { // Local system close with BGP notify
                             snprintf(down_event.error_text, sizeof(down_event.error_text),
                                     "Local close by (%s) for peer (%s) : ", r_entry.src_addr,
                                     p_entry.peer_addr);
-                            pBGP->handleMessage(client->c_sock, &down_event);
+                            pBGP->handleDownEvent(pBMP->bmp_data, pBMP->bmp_data_len, down_event);
                             break;
                         }
                         case 2 : // Local system close, no bgp notify
@@ -146,7 +140,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
                             // Read two byte code corresponding to the FSM event
                             uint16_t fsm_event = 0 ;
                             if (recv(client->c_sock, &fsm_event, 2, MSG_WAITALL) == 2) {
-                                reverseBytes((unsigned char *)&fsm_event, sizeof(fsm_event));
+                                bgp::SWAP_BYTES(&fsm_event);
                             } else
                                 throw "ERROR: Failed to read 2 byte FSM code following peer down notify reason 2";
 
@@ -160,7 +154,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
                                     "Remote peer (%s) closed local (%s) session: ", r_entry.src_addr,
                                     p_entry.peer_addr);
 
-                            pBGP->handleMessage(client->c_sock, &down_event);
+                            pBGP->handleDownEvent(pBMP->bmp_data, pBMP->bmp_data_len, down_event);
                             break;
                         }
                     }
@@ -180,17 +174,20 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
             case parseBMP::TYPE_PEER_UP : // Peer up type
             {
                 DbInterface::tbl_peer_up_event up_event = {0};
+
                 if (pBMP->parsePeerUpEventHdr(client->c_sock, up_event)) {
                     LOG_INFO("%s: PEER UP Received, local addr=%s:%hu remote addr=%s:%hu", client->c_ipv4,
                             up_event.local_ip, up_event.local_port, p_entry.peer_addr, up_event.remote_port);
 
+                    pBMP->bufferBMPMessage(client->c_sock);
+
                     // Prepare the BGP parser
-                    pBGP = new parseBGP(log, dbi_ptr, &p_entry);
+                    pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr);
                     if (cfg->debug_bgp)
                        pBGP->enableDebug();
 
                     // Parse the BGP sent/received open messages
-                    pBGP->handleMessage(client->c_sock, &up_event);
+                    pBGP->handleUpEvent(pBMP->bmp_data, pBMP->bmp_data_len, &up_event);
 
                     // Free the bgp parser
                     delete pBGP;
@@ -205,33 +202,44 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
             }
 
             case parseBMP::TYPE_ROUTE_MON : { // Route monitoring type
+                pBMP->bufferBMPMessage(client->c_sock);
+
                 /*
                  * Read and parse the the BGP message from the client.
                  *     parseBGP will update mysql directly
                  */
-                pBGP = new parseBGP(log, dbi_ptr, &p_entry);
+                pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr);
                 if (cfg->debug_bgp)
                     pBGP->enableDebug();
 
-                pBGP->handleMessage(client->c_sock);
+                pBGP->handleUpdate(pBMP->bmp_data, pBMP->bmp_data_len);
                 delete pBGP;
+
                 break;
             }
 
             case parseBMP::TYPE_STATS_REPORT : { // Stats Report
-                pBMP->handleStatsReport(dbi_ptr, client->c_sock);
+                DbInterface::tbl_stats_report stats = { 0 };
+                if (! pBMP->handleStatsReport(client->c_sock, stats))
+                    // Add to mysql
+                    dbi_ptr->add_StatReport(stats);
+
                 break;
             }
 
             case parseBMP::TYPE_INIT_MSG : { // Initiation Message
                 LOG_INFO("%s: Init message received with length of %u", client->c_ipv4, pBMP->getBMPLength());
-                pBMP->handleInitMsg(r_entry, dbi_ptr, client->c_sock);
+                pBMP->handleInitMsg(client->c_sock, r_entry);
+
+                // Update the router entry with the details
+                dbi_ptr->update_Router(r_entry);
                 break;
             }
 
             case parseBMP::TYPE_TERM_MSG : { // Termination Message
                 LOG_INFO("%s: Init message received with length of %u", client->c_ipv4, pBMP->getBMPLength());
-                pBMP->handleTermMsg(r_entry, dbi_ptr, client->c_sock);
+                pBMP->handleTermMsg(client->c_sock, r_entry);
+
                 dbi_ptr->disconnect_Router(r_entry);
                 close(client->c_sock);
 

@@ -13,7 +13,6 @@
 
 #include "DbInterface.hpp"
 #include "Logger.h"
-#include "BitByteUtils.h"
 
 
 /*
@@ -111,7 +110,7 @@ public:
 
 
      /**
-      * BMP temrination message
+      * BMP termination message
       */
      struct term_msg_v3 {
          uint16_t        type;              ///< 2 bytes - Information type
@@ -122,22 +121,12 @@ public:
      } __attribute__ ((__packed__));
 
     /**
-     *  BMP headers for older versions
+     * BMP message buffer
+     *      BMP data message is read into this buffer so that it can be passed to the BGP parser for handling.
+     *      Complete BGP message is read, otherwise error is generated.
      */
-    struct common_hdr_old {
-       //unsigned char ver;               // 1 byte -- Not part of struct since it's read before
-       unsigned char type;                // 1 byte
-       unsigned char peer_type;           // 1 byte
-       unsigned char peer_flags;          // 1 byte
-
-       unsigned char peer_dist_id[8];     // 8 byte peer distinguisher
-       unsigned char peer_addr[16];       // 16 bytes
-       unsigned char peer_as[4];          // 4 byte
-       unsigned char peer_bgp_id[4];      // 4 byte peer bgp id
-       unsigned long ts_secs : 32;        // 4 byte timestamp in seconds
-       unsigned long ts_usecs : 32;       // 4 byte timestamp microseconds
-    } __attribute__ ((__packed__));
-
+    u_char      bmp_data[65535];
+    size_t      bmp_data_len;              ///< Length/size of data in the data buffer
 
     /**
      * Constructor for class
@@ -171,33 +160,53 @@ public:
     char handleMessage(int sock);
 
     /**
-     * Handle the stats reports and add to DB
+     * Parse and return back the stats report
      *
-     * \param [in]  dbi_ptr     Pointer to exiting dB implementation
      * \param [in]  sock        Socket to read the stats message from
+     * \param [out] stats       Reference to stats report data
+     *
+     * \return true if error, false if no error
      */
-    void handleStatsReport(DbInterface *dbi_ptr, int sock);
+    bool handleStatsReport(int sock, DbInterface::tbl_stats_report &stats);
 
     /**
-     * handle the initiation message and add to DB
+     * handle the initiation message and udpate the router entry
      *
-     * \param [in/out] r_entry     Already defined router entry reference (will be updated)
-     * \param [in]     dbi_ptr     Pointer to exiting dB implementation
      * \param [in]     sock        Socket to read the init message from
+     * \param [in/out] r_entry     Already defined router entry reference (will be updated)
      */
-    void handleInitMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_ptr, int sock);
+    void handleInitMsg(int sock, DbInterface::tbl_router &r_entry);
 
     /**
-     * handle the termination message
+     * handle the termination message, router entry will be updated
      *
-     * NOTE: This does not update the DB, it is expected that the caller will do that based
-     *  on the returned/updated info in r_entry.
-     *
-     * \param [in/out] r_entry     Already defined router entry reference (will be updated)
-     * \param [in]     dbi_ptr     Pointer to exiting dB implementation
      * \param [in]     sock        Socket to read the term message from
+     * \param [in/out] r_entry     Already defined router entry reference (will be updated)
      */
-    void handleTermMsg(DbInterface::tbl_router &r_entry, DbInterface *dbi_ptr, int sock);
+    void handleTermMsg(int sock, DbInterface::tbl_router &r_entry);
+    /**
+     * Buffer remaining BMP message
+     *
+     * \details This method will read the remaining amount of BMP data and store it in the instance variable bmp_data.
+     *          Normally this is used to store the BGP message so that it can be parsed.
+     *
+     * \param [in]  sock       Socket to read the message from
+     *
+     * \returns true if successfully parsed the bmp peer down header, false otherwise
+     */
+    void bufferBMPMessage(int sock);
+
+    /**
+     * Parse the v3 peer down BMP header
+     *
+     *      This method will update the db peer_down_event struct with BMP header info.
+     *
+     * \param [in]  sock       Socket to read the message from
+     * \param [out] down_event Reference to the peer down event storage (will be updated with bmp info)
+     *
+     * \returns true if successfully parsed the bmp peer down header, false otherwise
+     */
+    bool parsePeerDownEventHdr(int sock, DbInterface::tbl_peer_down_event &down_event);
 
     /**
      * Parse the v3 peer up BMP header
@@ -229,7 +238,7 @@ public:
 
 private:
     bool            debug;                      ///< debug flag to indicate debugging
-    Logger          *log;                       ///< Logging class pointer
+    Logger          *logger;                    ///< Logging class pointer
 
     DbInterface::tbl_bgp_peer *p_entry;         ///< peer table entry - will be updated with BMP info
     char            bmp_type;                   ///< The BMP message type
@@ -239,7 +248,7 @@ private:
     char peer_addr[40];                         ///< Printed format of the peer address (Ipv4 and Ipv6)
     char peer_as[32];                           ///< Printed format of the peer ASN
     char peer_rd[32];                           ///< Printed format of the peer RD
-    char peer_bgp_id[15];                       ///< Printed format of the peer bgp ID
+    char peer_bgp_id[16];                       ///< Printed format of the peer bgp ID
 
     /**
      * Parse v1 and v2 BMP header

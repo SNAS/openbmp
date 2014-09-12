@@ -38,7 +38,7 @@ BMPListener::BMPListener(Logger *logPtr, Cfg_Options *config) {
     // Update pointer to the config
     cfg = config;
 
-    log = logPtr;
+    logger = logPtr;
 
     if (cfg->debug_bmp)
         enableDebug();
