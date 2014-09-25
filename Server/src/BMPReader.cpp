@@ -7,7 +7,6 @@
  *
  */
 
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -115,7 +114,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
         switch (bmp_type) {
             case parseBMP::TYPE_PEER_DOWN : { // Peer down type
 
-                DbInterface::tbl_peer_down_event down_event = {0};
+                DbInterface::tbl_peer_down_event down_event = {};
 
                 if (pBMP->parsePeerDownEventHdr(client->c_sock,down_event)) {
                     pBMP->bufferBMPMessage(client->c_sock);
@@ -139,10 +138,8 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
                         {
                             // Read two byte code corresponding to the FSM event
                             uint16_t fsm_event = 0 ;
-                            if (recv(client->c_sock, &fsm_event, 2, MSG_WAITALL) == 2) {
-                                bgp::SWAP_BYTES(&fsm_event);
-                            } else
-                                throw "ERROR: Failed to read 2 byte FSM code following peer down notify reason 2";
+                            memcpy(&fsm_event, pBMP->bmp_data, 2);
+                            bgp::SWAP_BYTES(&fsm_event);
 
                             snprintf(down_event.error_text, sizeof(down_event.error_text),
                                     "Local (%s) closed peer (%s) session: fsm_event=%d, No BGP notify message.",
@@ -173,7 +170,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
             case parseBMP::TYPE_PEER_UP : // Peer up type
             {
-                DbInterface::tbl_peer_up_event up_event = {0};
+                DbInterface::tbl_peer_up_event up_event = {};
 
                 if (pBMP->parsePeerUpEventHdr(client->c_sock, up_event)) {
                     LOG_INFO("%s: PEER UP Received, local addr=%s:%hu remote addr=%s:%hu", client->c_ipv4,
@@ -219,7 +216,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
             }
 
             case parseBMP::TYPE_STATS_REPORT : { // Stats Report
-                DbInterface::tbl_stats_report stats = { 0 };
+                DbInterface::tbl_stats_report stats = {};
                 if (! pBMP->handleStatsReport(client->c_sock, stats))
                     // Add to mysql
                     dbi_ptr->add_StatReport(stats);

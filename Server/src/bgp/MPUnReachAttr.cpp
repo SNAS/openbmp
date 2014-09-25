@@ -67,7 +67,7 @@ void MPUnReachAttr::parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::Up
         return;
     }
 
-    SELF_DEBUG("%S: afi=%d safi=%d", peer_addr.c_str(), nlri.afi, nlri.safi);
+    SELF_DEBUG("%s: afi=%d safi=%d", peer_addr.c_str(), nlri.afi, nlri.safi);
 
     /*
      * NLRI data depends on the AFI & SAFI

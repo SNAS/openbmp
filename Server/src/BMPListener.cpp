@@ -7,7 +7,6 @@
  *
  */
 
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -79,7 +78,7 @@ void BMPListener::open_socket_v4() {
    }
 
    // Bind to the address/port
-   if (bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) < 0) {
+    if (::bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) < 0) {
        close(sock);
        throw "ERROR: Cannot bind to address and port";
    }
@@ -112,6 +111,12 @@ void BMPListener::accept_connection(ClientInfo &c) {
    // Update returned class to have address and port of client in text form.
    snprintf(c.c_ipv4, sizeof(c.c_ipv4), "%s", inet_ntoa(c.c_addr.sin_addr));
    snprintf(c.c_port, sizeof(c.c_port), "%hu", ntohs(c.c_addr.sin_port));
+
+   // Enable TCP Keepalives
+   int on = 1;
+   if(setsockopt(c.c_sock, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0) {
+       LOG_NOTICE("%s: sock=%d: Unable to enable tcp keepalives", c.c_ipv4, c.c_sock);
+   }
 }
 
 

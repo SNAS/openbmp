@@ -10,7 +10,7 @@ cmake_minimum_required (VERSION 2.8)
 project (OPENBMP)
 
 # find and include boost
-find_package( Boost 1.49.0 REQUIRED)
+find_package( Boost 1.41.0 REQUIRED)
    if(Boost_FOUND)
       include_directories(${Boost_INCLUDE_DIRS})
   endif()

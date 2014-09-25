@@ -15,7 +15,6 @@
 #include <cstring>
 #include <string>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include "bgp_common.h"
@@ -295,8 +294,9 @@ bool parseBMP::parsePeerDownEventHdr(int sock, DbInterface::tbl_peer_down_event 
         memcpy(down_event.peer_hash_id, p_entry->hash_id, sizeof(p_entry->hash_id));
 
     } else {
-        false;
+        return false;
     }
+
     return true;
 }
 
@@ -347,7 +347,6 @@ void parseBMP::bufferBMPMessage(int sock) {
  */
 bool parseBMP::parsePeerUpEventHdr(int sock, DbInterface::tbl_peer_up_event &up_event) {
     unsigned char local_addr[16];
-    int i;
     bool isParseGood = true;
     int bytes_read = 0;
 

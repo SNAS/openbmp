@@ -23,7 +23,7 @@ find_library(MYSQLCONNECTORCPP_LIBRARY
         lib)
 
 if (NOT MYSQLCONNECTORCPP_INCLUDE_DIR OR NOT MYSQLCONNECTORCPP_LIBRARY)
-	Message (FATAL_ERROR "Mysql connector is not found, cannot proceed.  Try apt-get install libmysqlcppconn-dev")
+	Message (FATAL_ERROR "Mysql connector is not found, cannot proceed.  Try 'apt-get install libmysqlcppconn-dev' or visit http://dev.mysql.com/downloads/connector/cpp/")
 #else ()
 #	Message ("mysql lib = " ${MYSQLCONNECTORCPP_LIBRARY})
 endif()
@@ -46,8 +46,8 @@ set (SRC_FILES
 	src/bgp/NotificationMsg.cpp
 	src/bgp/OpenMsg.cpp
 	src/bgp/UpdateMsg.cpp
-	src/bgp/MpReachAttr.cpp
-	src/bgp/MpUnReachAttr.cpp
+	src/bgp/MPReachAttr.cpp
+	src/bgp/MPUnReachAttr.cpp
 	) 
 
 # Disable warnings
@@ -82,5 +82,5 @@ add_executable (openbmpd ${SRC_FILES})
 target_link_libraries (openbmpd ${LIBS}) 
 
 # Install the binary and configs
-install(TARGETS openbmpd DESTINATION /usr/bin COMPONENT binaries)
-#install(FILES openbmpd.conf DESTINATION /etc/openbmp/ COMPONENT config)
+install(TARGETS openbmpd DESTINATION bin COMPONENT binaries)
+#install(FILES openbmpd.conf DESTINATION etc/openbmp/ COMPONENT config)

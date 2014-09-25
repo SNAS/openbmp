@@ -6,13 +6,13 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  *
  */
-#include <stdlib.h>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <algorithm>
 #include <string>
 
-#include <inttypes.h>
+#include <cinttypes>
 
 // MySQL headers
 #include "mysql_connection.h"

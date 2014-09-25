@@ -11,8 +11,7 @@
 
 #include <cstdio>
 #include <iostream>
-#include <sys/types.h>
-#include <stdint.h>
+#include <cstdint>
 
 
 /*

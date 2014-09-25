@@ -70,7 +70,7 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, bgp_msg::Update
         return;
     }
 
-    SELF_DEBUG("%S: afi=%d safi=%d nh_len=%d reserved=%d", peer_addr.c_str(),
+    SELF_DEBUG("%s: afi=%d safi=%d nh_len=%d reserved=%d", peer_addr.c_str(),
                 nlri.afi, nlri.safi, nlri.nh_len, nlri.reserved);
 
     /*

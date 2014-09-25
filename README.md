@@ -20,6 +20,12 @@ The database is tuned to support high transactional rates and storage for millio
 
 News
 ----
+### Sep-24-2014
+Fixed some minor issues and updated documentation based on feedback.   MacOS builds should
+work as well. 
+
+A new binary package is available for Ubuntu 14.04 per the updated [INSTALL](docs/INSTALL.md) instructions.
+
 ### Sep-12-2014
 Refactored BGP parsing to make way for upcoming changes to support BGP-LS and MPLS/VPN's.
 
@@ -31,7 +37,6 @@ Refactored BGP parsing to make way for upcoming changes to support BGP-LS and MP
 
 **Upcoming Changes:**
 
-  * Refactor parsing and remove older BMP version support - Goign forward will be BMP v3 (current draft 07)
   * Add BGP-LS support - IGP tables/views
   * OpenBMP UI is being revised using ODL
 

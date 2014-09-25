@@ -39,8 +39,6 @@ void ClientThread_cancel(void *arg) {
  * @param [in]  arg     Pointer to the BMPServer ClientInfo
  */
 void *ClientThread(void *arg) {
-    pthread_t myid = pthread_self();
-
     // Setup the args
     ThreadMgmt *thr = static_cast<ThreadMgmt *>(arg);
     Logger *logger = thr->log;

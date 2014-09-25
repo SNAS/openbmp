@@ -11,9 +11,8 @@
 #define BGPCOMMON_H_
 
 #include <string>
-#include <sys/types.h>
-#include <stdint.h>
-#include <inttypes.h>
+#include <cstdint>
+#include <cinttypes>
 #include <cstring>
 
 namespace bgp {

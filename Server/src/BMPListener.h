@@ -10,7 +10,6 @@
 #ifndef BMPLISTENER_H_
 #define BMPLISTENER_H_
 
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>

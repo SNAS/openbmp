@@ -1,3 +1,8 @@
+Databases Supported
+===================
+Currently MySQL/MariaDB **5.5.17** (and greater) is supported.   Any Linux distribution that uses an
+older version should install the latest 5.6 or 5.7 via [MySQL Download](http://dev.mysql.com/downloads/mysql/) or via [MariaDB Download](https://downloads.mariadb.org/)
+
 Interaction with the Database
 =============================
 
