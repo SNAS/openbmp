@@ -38,22 +38,30 @@ public:
         unsigned char type;
         unsigned char subtype;
         union {
-            union {
-                uint16_t       ga2;  // 2 byte AS
-                struct in_addr gaip; // IP address
-                uint32_t       ga4;  // same as above unless a struct in_addr is something weird
-	    } global_admin;
-            union {
-                uint16_t       la2;  // 2 byte local admin
-	        uint32_t       la4;  // 4 byte local admin
-            } local_admin;
-            struct {
-              uint64_t	       val : 48; // 6 byte opaque value
-	    } opaque;
-        } value;
-     };
+            struct ext_as {
+                uint16_t       as;
+                uint32_t       val;
+            }         ext_as;
+            struct ext_as4 {
+                uint32_t       as;
+                uint16_t       val;
+            }         ext_as4;
+            struct ext_ip {
+                struct in_addr addr;
+                uint16_t       val;
+            }         ext_ip;
+            struct ext_opaq {
+                uint64_t       val : 48; // 6 byte opaque value
+	    }         ext_opaque;
+        }       data;;
+     } __attribute__ ((__packed__));
 
-    // Need to do something here for IPv6 Specific...
+     struct v6ext_comm {
+         unsigned char   type;
+         unsigned char   subtype;
+         struct in6_addr global_admin;
+         uint16_t	 local_admin;
+     } __attribute__ ((__packed__));
 	
     /**
      * Constructor for class
