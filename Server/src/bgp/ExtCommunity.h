@@ -38,22 +38,28 @@ public:
         unsigned char type;
         unsigned char subtype;
         union {
-            struct ext_as {
+            struct __attribute__ ((__packed__)) ext_as {
                 uint16_t       as;
                 uint32_t       val;
             }         ext_as;
-            struct ext_as4 {
+            struct __attribute__ ((__packed__)) ext_as4 {
                 uint32_t       as;
                 uint16_t       val;
             }         ext_as4;
-            struct ext_ip {
+            struct __attribute__ ((__packed__)) ext_ip {
                 struct in_addr addr;
                 uint16_t       val;
             }         ext_ip;
-            struct ext_opaq {
-                uint64_t       val : 48; // 6 byte opaque value
+            struct __attribute__ ((__packed__)) ext_opaq {
+                uint16_t       val[3];
 	    }         ext_opaque;
-        }       data;;
+            struct __attribute__ ((__packed__)) ext_l2info {
+                uint8_t        encap;
+                uint8_t        cf;
+                uint16_t       mtu;
+                uint16_t       reserved;
+            }         ext_l2info;
+        }       data;
      } __attribute__ ((__packed__));
 
      struct v6ext_comm {
@@ -87,18 +93,32 @@ public:
      * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
      *
      */
-     void parseExtCommunities(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
+    void parseExtCommunities(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
 
-    typedef std::map<unsigned char, std::string> subtypemap;
-    typedef std::map<unsigned char, subtypemap>  typedict;
-    typedef std::map<uint16_t, std::string>      v6typemap; 
+    /**
+     * Parse the extended communties path attribute
+     *
+     * \details
+     *     Will parse the EXTENDED COMMUNITIES data passed. Parsed data will be stored
+     *     in parsed_data.
+     *
+     * \param [in]   attr_len       Length of the attribute data
+     * \param [in]   data           Pointer to the attribute data
+     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+     *
+     */
+    void parsev6ExtCommunities(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
 
 private:
     bool             debug;                           ///< debug flag to indicate debugging
     Logger           *logger;                         ///< Logging class pointer
     std::string      peer_addr;                       ///< Printed form of the peer address for logging
 
-    static subtypemap create_typedict(void);
+    typedef std::map<unsigned char, std::string> subtypemap;
+    typedef std::map<unsigned char, subtypemap>  typedict;
+    typedef std::map<uint16_t, std::string>      v6typemap; 
+
+    static typedict    create_typedict(void);
     static subtypemap create_evpnsubtype(void);
     static subtypemap create_t2osubtype(void);
     static subtypemap create_nt2osubtype(void);
@@ -130,13 +150,6 @@ private:
 
     static const v6typemap tip6types;
     static const v6typemap ntip6types;
-
-    /**
-     * Initialize the type/subtype dictionary
-     *
-     * \details Initializes the type/sybtype dictionary
-     */
-     void initDict(void);
 
     /**
      * String representation of type/subtype

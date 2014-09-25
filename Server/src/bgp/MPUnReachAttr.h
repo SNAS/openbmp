@@ -59,10 +59,10 @@ public:
      *
      * \param [in]   attr_len       Length of the attribute data
      * \param [in]   data           Pointer to the attribute data
-     * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
      *
      */
-    void parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_udpate_data &parsed_data);
+    void parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
 
 private:
     bool             debug;                           ///< debug flag to indicate debugging
@@ -76,9 +76,9 @@ private:
      *          the specific SAFI method will be performed to further parse the message.
      *
      * \param [in]   nlri           Reference to parsed UnReach NLRI struct
-     * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
      */
-    void parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_udpate_data &parsed_data);
+    void parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
 
     /**
      * MP Reach NLRI parse for BGP_AFI_IPV6 (unicast ipv6)
@@ -86,9 +86,9 @@ private:
      * \details Will handle the SAFI and parsing of AFI IPv6 (unicast)
      *
      * \param [in]   nlri           Reference to parsed UnReach NLRI struct
-     * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
      */
-    void parseAfiUnicstIPv6(mp_unreach_nlri &nlri, UpdateMsg::parsed_udpate_data &parsed_data);
+    void parseAfiUnicstIPv6(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
 };
 
 } /* namespace bgp_msg */

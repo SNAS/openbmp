@@ -8,6 +8,8 @@
  */
 
 #include <arpa/inet.h>
+#include <sstream>
+#include <iostream>
 
 #include "UpdateMsg.h"
 #include "ExtCommunity.h"
@@ -29,6 +31,8 @@ const ExtCommunity::subtypemap ExtCommunity:: tafields     = ExtCommunity::creat
 const ExtCommunity::v6typemap  ExtCommunity:: tip6types	   = ExtCommunity::create_tip6types();
 const ExtCommunity::v6typemap  ExtCommunity:: ntip6types   = ExtCommunity::create_ntip6types();
 
+const ExtCommunity::typedict   ExtCommunity:: tdict        = ExtCommunity::create_typedict();
+
 ExtCommunity::ExtCommunity(Logger *logPtr, std::string peerAddr, bool enable_debug) {
     logger = logPtr;
     debug = enable_debug;
@@ -36,6 +40,63 @@ ExtCommunity::ExtCommunity(Logger *logPtr, std::string peerAddr, bool enable_deb
 }
 
 ExtCommunity::~ExtCommunity() {
+}
+
+void ExtCommunity::parseExtCommunities(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
+    std::string decodeStr = "";
+    char ipv4_char[16];
+    uint64_t val64bit = 0;
+    struct ext_comm ec;
+
+    bzero((void *)&ec, sizeof(ec));
+    for (int i=0; i < attr_len; i += 8) {
+        if (i)
+            decodeStr.append(" ");
+
+        memcpy((void *)&ec, data+i, 8);
+        
+        decodeStr.append((tdict.find(ec.type)->second).find(ec.subtype)->second);
+        decodeStr.append(":");
+        if (ec.type == 0x00 || ec.type == 0x40) {
+            bgp::SWAP_BYTES(&ec.data.ext_as.as);
+            bgp::SWAP_BYTES(&ec.data.ext_as.val);
+            decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec.data.ext_as.as) )->str());
+            decodeStr.append(":");
+            decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec.data.ext_as.val) )->str());
+        } else if (ec.type == 0x01 || ec.type == 0x41) {
+            bgp::SWAP_BYTES(&ec.data.ext_ip.addr);
+            bgp::SWAP_BYTES(&ec.data.ext_ip.val);
+            inet_ntop(AF_INET, &ec.data.ext_ip.addr, ipv4_char, sizeof(ipv4_char));
+            decodeStr.append(ipv4_char);
+            decodeStr.append(":");
+            decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec.data.ext_ip.val) )->str());
+        } else if (ec.type == 0x03 || ec.type == 0x43) {
+            bgp::SWAP_BYTES(&ec.data.ext_as4.as);
+            bgp::SWAP_BYTES(&ec.data.ext_as4.val);
+            decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec.data.ext_as4.as) )->str());
+            decodeStr.append(":");
+            decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec.data.ext_as4.val) )->str());
+        } else if (ec.type == 0x80 && ec.subtype == 0x0a) {
+            decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec.data.ext_l2info.encap) )->str());
+            decodeStr.append(":");
+            decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec.data.ext_l2info.cf) )->str());
+            bgp::SWAP_BYTES(&ec.data.ext_l2info.mtu);
+            decodeStr.append(":");
+            decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec.data.ext_l2info.mtu) )->str());
+        } else { // Treat everything else as an opaque value until we get around to writing formatting rules for the rest
+            bgp::SWAP_BYTES(&ec.data.ext_opaque);
+            val64bit |= ((uint64_t)ec.data.ext_opaque.val[0] << 32);
+            val64bit |= ((uint64_t)ec.data.ext_opaque.val[1] << 16);
+            val64bit |= (uint64_t)ec.data.ext_opaque.val[2];
+            decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << val64bit ))->str());
+        }
+        
+    }
+    parsed_data.attrs[ATTR_TYPE_EXT_COMMUNITY] = std::string(decodeStr);
+}
+
+void ExtCommunity::parsev6ExtCommunities(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
+    parsed_data.attrs[ATTR_TYPE_IPV6_EXT_COMMUNITY] = std::string("v6extcomm");
 }
 
 ExtCommunity::subtypemap ExtCommunity::create_evpnsubtype(void) {
@@ -183,6 +244,26 @@ ExtCommunity::v6typemap ExtCommunity::create_ntip6types(void) {
 
     return m;
 
+}
+
+ExtCommunity::typedict ExtCommunity::create_typedict(void) {
+    ExtCommunity::typedict m;
+
+    m[0x00] = ExtCommunity:: t2osubtype;
+    m[0x01] = ExtCommunity:: tip4subtype;
+    m[0x02] = ExtCommunity:: t4osubtype;
+    m[0x03] = ExtCommunity:: topsubtype;
+    //m[0x04] no subtypes for QoS marking
+    //m[0x05] no subtypes for CoS capability
+    m[0x06] = ExtCommunity:: evpnsubtype;
+    //m[0x08] used for flowspec, no subtypes
+    m[0x80] = ExtCommunity:: gtesubtype;
+    m[0x40] = ExtCommunity:: nt2osubtype;
+    m[0x41] = ExtCommunity:: ntip4subtype;
+    m[0x42] = ExtCommunity:: nt4osubtype;
+    m[0x43] = ExtCommunity:: ntopsubtype;
+    //m[0x44] no subtypes for QoS marking
+    return m;
 }
 
 }

@@ -48,6 +48,7 @@ set (SRC_FILES
 	src/bgp/UpdateMsg.cpp
 	src/bgp/MPReachAttr.cpp
 	src/bgp/MPUnReachAttr.cpp
+        src/bgp/ExtCommunity.cpp
 	) 
 
 # Disable warnings

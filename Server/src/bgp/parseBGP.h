@@ -177,7 +177,7 @@ private:
      *
      * \param  parsed_data          Reference to the parsed update data
      */
-    void UpdateDB(bgp_msg::UpdateMsg::parsed_udpate_data &parsed_data);
+    void UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
 
     /**
      * Update the Database path attributes

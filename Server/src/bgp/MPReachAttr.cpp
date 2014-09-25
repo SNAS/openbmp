@@ -44,9 +44,9 @@ MPReachAttr::~MPReachAttr() {
  *
  * \param [in]   attr_len       Length of the attribute data
  * \param [in]   data           Pointer to the attribute data
- * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+ * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_udpate_data &parsed_data) {
+void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
     mp_reach_nlri nlri;
     /*
      * Set the MP NLRI struct
@@ -88,9 +88,9 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, bgp_msg::Update
  *          the specific SAFI method will be performed to further parse the message.
  *
  * \param [in]   nlri           Reference to parsed NLRI struct
- * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+ * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_udpate_data &parsed_data) {
+void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
 
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6
@@ -111,9 +111,9 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_udpate_data &p
  * \details Will handle parsing the SAFI's for address family ipv6
  *
  * \param [in]   nlri           Reference to parsed NLRI struct
- * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+ * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPReachAttr::parseAfiUnicstIPv6(mp_reach_nlri &nlri, UpdateMsg::parsed_udpate_data &parsed_data) {
+void MPReachAttr::parseAfiUnicstIPv6(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
     u_char      ipv6_raw[16];
     char        ipv6_char[40];
 
