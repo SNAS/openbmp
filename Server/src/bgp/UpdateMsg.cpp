@@ -10,6 +10,7 @@
 
 #include <string>
 #include <cstring>
+#include <sstream>
 #include <arpa/inet.h>
 
 #include "MPReachAttr.h"
@@ -318,13 +319,15 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
         case ATTR_TYPE_MED : // MED value
             memcpy(&value32bit, data, 4);
             bgp::SWAP_BYTES(&value32bit);
-            parsed_data.attrs[ATTR_TYPE_MED] = std::to_string(value32bit);
+            parsed_data.attrs[ATTR_TYPE_MED] =
+                static_cast<std::ostringstream*>( &(std::ostringstream() << value32bit) )->str();
             break;
 
         case ATTR_TYPE_LOCAL_PREF : // local pref value
             memcpy(&value32bit, data, 4);
             bgp::SWAP_BYTES(&value32bit);
-            parsed_data.attrs[ATTR_TYPE_LOCAL_PREF] = std::to_string(value32bit);
+            parsed_data.attrs[ATTR_TYPE_LOCAL_PREF] = 
+                 static_cast<std::ostringstream*>( &(std::ostringstream() << value32bit) )->str();
             break;
 
         case ATTR_TYPE_ATOMIC_AGGREGATE : // Atomic aggregate
@@ -362,12 +365,12 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
                 // Add entry
                 memcpy(&value16bit, data, 2); data += 2;
                 bgp::SWAP_BYTES(&value16bit);
-                decodeStr.append(std::to_string(value16bit));
+                decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << value16bit) )->str());
 
                 decodeStr.append(":");
                 memcpy(&value16bit, data, 2); data += 2;
                 bgp::SWAP_BYTES(&value16bit);
-                decodeStr.append(std::to_string(value16bit));
+                decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << value16bit) )->str());
              }
 
             parsed_data.attrs[ATTR_TYPE_COMMUNITIES] = decodeStr;
@@ -436,12 +439,12 @@ void UpdateMsg::parseAttr_Aggegator(uint16_t attr_len, u_char *data, parsed_attr
      if (attr_len == 8) { // RFC4893 ASN of 4 octets
          memcpy(&value32bit, data, 4); data += 4;
          bgp::SWAP_BYTES(&value32bit);
-         decodeStr.assign(std::to_string(value32bit));
+         decodeStr.assign(static_cast<std::ostringstream*>( &(std::ostringstream() << value32bit) )->str());
 
      } else if (attr_len == 6) {
          memcpy(&value16bit, data, 2); data += 2;
          bgp::SWAP_BYTES(&value16bit);
-         decodeStr.assign(std::to_string(value16bit));
+         decodeStr.assign(static_cast<std::ostringstream*>( &(std::ostringstream() << value16bit) )->str());
 
      } else {
          LOG_ERR("%s: rtr=%s: path attribute is not the correct size of 6 or 8 octets.", peer_addr.c_str(), router_addr.c_str());
@@ -504,7 +507,7 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
 
            bgp::SWAP_BYTES(&seg_asn);
            decoded_path.append(" ");
-           decoded_path.append(std::to_string(seg_asn));
+           decoded_path.append(static_cast<std::ostringstream*>( &(std::ostringstream() << seg_asn) )->str());
 
            // Increase the as path count
            ++as_path_cnt;
@@ -521,7 +524,7 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
      * Update the attributes map
      */
     attrs[ATTR_TYPE_AS_PATH] = decoded_path;
-    attrs[ATTR_TYPE_INTERNAL_AS_COUNT] = std::to_string(as_path_cnt);
+    attrs[ATTR_TYPE_INTERNAL_AS_COUNT] = static_cast<std::ostringstream*>( &(std::ostringstream() << as_path_cnt) )->str();
 
     /*
      * Get the last ASN and update the attributes map
