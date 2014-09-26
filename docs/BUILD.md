@@ -4,21 +4,90 @@ See the various requirements and suggested system configurations at [Requirement
 
 Openbmp is built and installed using 'cmake' to build the makefiles. 
 
-Install the dependancies
-------------------------
 
-### Ubuntu 14.04
+Ubuntu 14.04
+------------
+### Install Ubuntu 14.04
+Install standard Ubuntu 14.04/Trusty server image [Ubuntu Download](http://www.ubuntu.com/download)
+
+### Install the dependancies
 
 ``` 
 sudo apt-get install gcc g++ libboost-dev mysql-client-5.6 mysql-common-5.6 cmake libmysqlcppconn-dev libmysqlcppconn7
 ```
+> ### NOTE
+> If you use an existing server, you may have to adjust the dependency installs. 
 
-### RHEL7/CentOS7
-tbd
+
+RHEL7/CentOS7
+-------------
+
+### Install RHEL7 or CentOS 7.  
+We use CentOS 7 minimal.  [CentOS 7 Download](http://www.centos.org/download/)
+
+### Install basic dependancies
+```
+sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget
+```
+
+### Install MySQL devel dependancies 
+Mysql is still used till MariaDB has been tested
+
+```
+wget http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
+
+sudo rpm -i mysql-community-release-el7-5.noarch.rpm
+
+sudo yum install -y mysql-community-devel mysql-community-libs 
+```
+
+### Install MySQL C++ Connector (used while MySQL is still being used)
+```
+wget http://dev.mysql.com/get/Downloads/Connector-C++/mysql-connector-c++-1.1.4-linux-el6-x86-64bit.rpm
+
+rpm -i mysql-connector-c++-1.1.4-linux-el6-x86-64bit.rpm
+```
+
+> ### NOTE
+> If you use an existing server, you may have to adjust the dependency installs. 
 
 
-Compiling
----------
+RHEL6/CentOS6 (6.5) - Legacy support
+------------------------------------
+
+### Install RHEL6 or CentOS 6.  
+We use CentOS 6 minimal.  [CentOS 6 Download](http://wiki.centos.org/Download)
+
+### Install basic dependancies
+```
+sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget
+```
+
+### Install MySQL devel dependancies 
+Mysql is still used till MariaDB has been tested
+
+```
+wget http://dev.mysql.com/get/mysql-community-release-el6-5.noarch.rpm
+
+sudo rpm -i mysql-community-release-el6-5.noarch.rpm
+
+sudo yum install -y mysql-community-devel mysql-community-libs 
+```
+
+### Install MySQL C++ Connector (used while MySQL is still being used)
+```
+wget http://dev.mysql.com/get/Downloads/Connector-C++/mysql-connector-c++-1.1.4-linux-el6-x86-64bit.rpm
+
+rpm -i mysql-connector-c++-1.1.4-linux-el6-x86-64bit.rpm
+```
+
+> ### NOTE
+> If you use an existing server, you may have to adjust the dependency installs. 
+
+
+
+Compiling Source (ALL)
+-------------------------------------
 
 Do the following: 
 
@@ -71,8 +140,8 @@ Linking CXX executable openbmpd
 ```
 
 
-Installing the binary & Configs
--------------------------------
+Install (ALL)
+----------------------------------------------------
 
 Run: **sudo** make install
 

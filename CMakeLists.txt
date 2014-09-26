@@ -3,10 +3,10 @@
 # Define the version
 set (OPENBMP_VER_MAJOR "0")
 set (OPENBMP_VER_MINOR "8")
-set (OPENBMP_VER_PATCH "0-pre")
+set (OPENBMP_VER_PATCH "0-pre5")
 set (OPENBMPD_VERSION "${OPENBMP_VER_MAJOR}.${OPENBMP_VER_MINOR}.${OPENBMP_VER_PATCH}")
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 2.6)
 project (OPENBMP)
 
 # find and include boost
