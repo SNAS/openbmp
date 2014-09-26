@@ -28,10 +28,12 @@ const ExtCommunity::subtypemap ExtCommunity:: ntopsubtype  = ExtCommunity::creat
 const ExtCommunity::subtypemap ExtCommunity:: gtesubtype   = ExtCommunity::create_gtesubtype();
 const ExtCommunity::subtypemap ExtCommunity:: tafields     = ExtCommunity::create_tafields();
 
-const ExtCommunity::v6typemap  ExtCommunity:: tip6types	   = ExtCommunity::create_tip6types();
-const ExtCommunity::v6typemap  ExtCommunity:: ntip6types   = ExtCommunity::create_ntip6types();
-
 const ExtCommunity::typedict   ExtCommunity:: tdict        = ExtCommunity::create_typedict();
+
+const ExtCommunity::subtypemap ExtCommunity:: tip6subtype  = ExtCommunity::create_tip6subtype();
+const ExtCommunity::subtypemap ExtCommunity:: ntip6subtype = ExtCommunity::create_ntip6subtype();
+
+const ExtCommunity::typedict   ExtCommunity:: tdict6       = ExtCommunity::create_typedictv6();
 
 ExtCommunity::ExtCommunity(Logger *logPtr, std::string peerAddr, bool enable_debug) {
     logger = logPtr;
@@ -48,7 +50,6 @@ void ExtCommunity::parseExtCommunities(int attr_len, u_char *data, bgp_msg::Upda
     uint64_t val64bit = 0;
     struct ext_comm ec;
 
-    bzero((void *)&ec, sizeof(ec));
     for (int i=0; i < attr_len; i += 8) {
         if (i)
             decodeStr.append(" ");
@@ -85,6 +86,7 @@ void ExtCommunity::parseExtCommunities(int attr_len, u_char *data, bgp_msg::Upda
             decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec.data.ext_l2info.mtu) )->str());
         } else { // Treat everything else as an opaque value until we get around to writing formatting rules for the rest
             bgp::SWAP_BYTES(&ec.data.ext_opaque);
+            val64bit  = 0;
             val64bit |= ((uint64_t)ec.data.ext_opaque.val[0] << 32);
             val64bit |= ((uint64_t)ec.data.ext_opaque.val[1] << 16);
             val64bit |= (uint64_t)ec.data.ext_opaque.val[2];
@@ -92,11 +94,30 @@ void ExtCommunity::parseExtCommunities(int attr_len, u_char *data, bgp_msg::Upda
         }
         
     }
-    parsed_data.attrs[ATTR_TYPE_EXT_COMMUNITY] = std::string(decodeStr);
+    parsed_data.attrs[ATTR_TYPE_EXT_COMMUNITY] = decodeStr;
 }
 
 void ExtCommunity::parsev6ExtCommunities(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
-    parsed_data.attrs[ATTR_TYPE_IPV6_EXT_COMMUNITY] = std::string("v6extcomm");
+    std::string decodeStr = "";
+    char ipv6_char[40];
+    struct v6ext_comm ec6;
+
+    for (int i=0; i < attr_len; i += 20) {
+        if (i)
+            decodeStr.append(" ");
+
+        memcpy((void *)&ec6, data+i, 20);
+        decodeStr.append((tdict6.find(ec6.type)->second).find(ec6.subtype)->second);
+        decodeStr.append(":");
+
+        bgp::SWAP_BYTES(&ec6.addr);
+        inet_ntop(AF_INET6, &ec6.addr, ipv6_char, sizeof(ipv6_char));
+        decodeStr.append(ipv6_char);
+
+        bgp::SWAP_BYTES(&ec6.val);
+        decodeStr.append(static_cast<std::ostringstream*>( &(std::ostringstream() << ec6.val ))->str());
+    }
+    parsed_data.attrs[ATTR_TYPE_IPV6_EXT_COMMUNITY] = decodeStr;
 }
 
 ExtCommunity::subtypemap ExtCommunity::create_evpnsubtype(void) {
@@ -224,26 +245,26 @@ ExtCommunity::subtypemap ExtCommunity::create_tafields(void) {
     return m;
 }
 
-ExtCommunity::v6typemap ExtCommunity::create_tip6types(void) {
-    ExtCommunity::v6typemap m;
+ExtCommunity::subtypemap ExtCommunity::create_tip6subtype(void) {
+    ExtCommunity::subtypemap m;
 
-    m[0x0002] = std::string("tgt");
-    m[0x0003] = std::string("soo");
-    m[0x0004] = std::string("ora");
-    m[0x000b] = std::string("vrfimport");
-    m[0x0010] = std::string("cisco-vpnd");
-    m[0x0011] = std::string("uuid-tgt");
-    m[0x0012] = std::string("iap2mpsnh");
+    m[0x02] = std::string("tgt");
+    m[0x03] = std::string("soo");
+    m[0x04] = std::string("ora");
+    m[0x0b] = std::string("vrfimport");
+    m[0x10] = std::string("cisco-vpnd");
+    m[0x11] = std::string("uuid-tgt");
+    m[0x12] = std::string("iap2mpsnh");
+
     return m;
 }
 
-ExtCommunity::v6typemap ExtCommunity::create_ntip6types(void) {
-    ExtCommunity::v6typemap m;
+ExtCommunity::subtypemap ExtCommunity::create_ntip6subtype(void) {
+    ExtCommunity::subtypemap m;
 
-    // None assigned at this time.
-
+    // Nothing assigned at this time
+    
     return m;
-
 }
 
 ExtCommunity::typedict ExtCommunity::create_typedict(void) {
@@ -263,7 +284,15 @@ ExtCommunity::typedict ExtCommunity::create_typedict(void) {
     m[0x42] = ExtCommunity:: nt4osubtype;
     m[0x43] = ExtCommunity:: ntopsubtype;
     //m[0x44] no subtypes for QoS marking
+    
     return m;
+}
+
+ExtCommunity::typedict ExtCommunity::create_typedictv6(void) {
+    ExtCommunity::typedict m;
+
+    m[0x00] = ExtCommunity:: tip6subtype;
+
 }
 
 }

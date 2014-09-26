@@ -59,14 +59,19 @@ public:
                 uint16_t       mtu;
                 uint16_t       reserved;
             }         ext_l2info;
+            struct __attribute__ ((__packed__)) evpn_esilabel {
+                uint8_t	       flags;
+                uint16_t       reserved;
+                uint8_t        label[3]; 
+            }         evpn_esilabel;
         }       data;
      } __attribute__ ((__packed__));
 
      struct v6ext_comm {
          unsigned char   type;
          unsigned char   subtype;
-         struct in6_addr global_admin;
-         uint16_t	 local_admin;
+         struct in6_addr addr;
+         uint16_t	 val;
      } __attribute__ ((__packed__));
 	
     /**
@@ -116,9 +121,8 @@ private:
 
     typedef std::map<unsigned char, std::string> subtypemap;
     typedef std::map<unsigned char, subtypemap>  typedict;
-    typedef std::map<uint16_t, std::string>      v6typemap; 
 
-    static typedict    create_typedict(void);
+    static typedict   create_typedict(void);
     static subtypemap create_evpnsubtype(void);
     static subtypemap create_t2osubtype(void);
     static subtypemap create_nt2osubtype(void);
@@ -130,6 +134,10 @@ private:
     static subtypemap create_ntopsubtype(void);
     static subtypemap create_gtesubtype(void);
     static subtypemap create_tafields(void);
+
+    static typedict   create_typedictv6(void);
+    static subtypemap create_tip6subtype(void);
+    static subtypemap create_ntip6subtype(void);
 
     static const typedict   tdict;
     static const subtypemap evpnsubtype;
@@ -144,31 +152,10 @@ private:
     static const subtypemap gtesubtype;
     static const subtypemap tafields;
 
-    // IPv6 specific extended communities use a single type field
-    static v6typemap  create_tip6types(void);
-    static v6typemap  create_ntip6types(void);
+    static const typedict   tdict6;
+    static const subtypemap tip6subtype;
+    static const subtypemap ntip6subtype;
 
-    static const v6typemap tip6types;
-    static const v6typemap ntip6types;
-
-    /**
-     * String representation of type/subtype
-     *
-     * \details Creates prefixes for string representations of extended community types.
-     *
-     * \param [in]   type	Extended Community type
-     * \param [in]   subtype	Extended Community subtype
-     */
-    std::string subTypeStr(unsigned char type, unsigned char subtype);
-
-    /**
-     * String representation of IPv6 address specific types
-     *
-     * \details Creates prefixes for string representations of IPv6 specific extended community types.
-     *
-     * \param [in]   type	IPv6 Specific Extended Community type
-     */ 
-    std::string ip6TypeStr(uint16_t type);
 };
 
 } /* namespace bgp_msg */
