@@ -61,6 +61,8 @@ BMPReader::~BMPReader() {
  * \param [in]  dbi_ptr     The database pointer referencer - DB should be already initialized
  *
  * \return true if more to read, false if the connection is done/closed
+ *
+ * \throw (char const *str) message indicate error
  */
 bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *dbi_ptr) {
     bool rval = true;
@@ -80,10 +82,8 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
     char bmp_type = 0;
 
     DbInterface::tbl_router r_entry;
-    bzero(r_entry.term_reason_text, sizeof(r_entry.term_reason_text));
-    bzero(r_entry.descr, sizeof(r_entry.descr));
-    bzero(r_entry.initiate_data, sizeof(r_entry.initiate_data));
-    bzero(r_entry.term_data, sizeof(r_entry.term_data));
+    bzero(&r_entry, sizeof(r_entry));
+    memcpy(r_entry.hash_id, router_hash_id, sizeof(r_entry.hash_id));
 
     // Setup the router record table object
     r_entry.isConnected = 1;
@@ -98,6 +98,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
          */
 
         dbi_ptr->add_Router(r_entry);         // add the router entry
+        memcpy(router_hash_id, r_entry.hash_id, sizeof(router_hash_id));            // Cache the hash ID
 
         // only process the peering info if the message includes it
         if (bmp_type < 4) {
@@ -163,6 +164,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
                 } else {
                     LOG_ERR("Error with client socket %d", client->c_sock);
+                    // Make sure to free the resource
                     throw "BMPReader: Unable to read from client socket";
                 }
                 break;
@@ -246,8 +248,9 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
         }
 
-    } catch (const char *str) {
+    } catch (char const *str) {
         // Mark the router as disconnected and update the error to be a local disconnect (no term message received)
+        SELF_DEBUG("%s: Caught, disconnecting router", client->c_ipv4);
         r_entry.term_reason_code = 65535;
         snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text), "%s", str);
         dbi_ptr->disconnect_Router(r_entry);

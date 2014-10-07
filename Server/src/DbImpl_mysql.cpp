@@ -66,7 +66,6 @@ mysqlBMP::~mysqlBMP() {
     for (router_list_iter it = router_list.begin(); it != router_list.end(); it++) {
         try {
 
-
             // Build the query
             snprintf(buf, sizeof(buf),
                     "UPDATE %s SET isConnected=0,term_reason_code=65535,term_reason_text=\"OpenBMP server stopped\" where hash_id = '%s'",
@@ -277,7 +276,7 @@ void mysqlBMP::add_Router(tbl_router &r_entry) {
                 r_entry.name, r_entry.descr, r_entry.src_addr, initData.c_str());
 
         // Add the on duplicate statement
-        strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1,name=values(name),description=values(description),init_data=values(init_data)");
+        strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1,name=values(name),description=values(description),init_data=values(init_data),term_reason_code=0,term_reason_text=''");
 
         // Run the query to add the record
         stmt = con->createStatement();
@@ -565,6 +564,9 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
         hash.update((unsigned char *) &path_entry.med, sizeof(path_entry.med));
         hash.update((unsigned char *) &path_entry.local_pref,
                 sizeof(path_entry.local_pref));
+
+        hash.update((unsigned char *) path_entry.community_list, strlen(path_entry.community_list));
+        hash.update((unsigned char *) path_entry.ext_community_list, strlen(path_entry.ext_community_list));
         hash.finalize();
 
         // Save the hash

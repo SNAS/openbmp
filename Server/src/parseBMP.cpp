@@ -164,9 +164,7 @@ void parseBMP::parsePeerHdr(int sock) {
     peer_hdr_v3 p_hdr = { 0 };
     int i;
 
-    bzero(peer_addr, sizeof(peer_addr));
-    bzero(peer_bgp_id, sizeof(peer_bgp_id));
-    bzero(peer_rd, sizeof(peer_rd));
+    bzero(&p_hdr, sizeof(p_hdr));
 
     if ((i = recv(sock, &p_hdr, BMP_PEER_HDR_LEN, MSG_WAITALL))
             != BMP_PEER_HDR_LEN) {
@@ -215,7 +213,8 @@ void parseBMP::parsePeerHdr(int sock) {
     inet_ntop(AF_INET, p_hdr.peer_bgp_id, peer_bgp_id, sizeof(peer_bgp_id));
 
     // Format based on the type of RD
-    switch (p_hdr.peer_dist_id[0] << 8 | p_hdr.peer_dist_id[1]) {
+    SELF_DEBUG("sock=%d : Peer RD type = %d %d", sock, p_hdr.peer_dist_id[0], p_hdr.peer_dist_id[1]);
+    switch ( p_hdr.peer_dist_id[1]) {
         case 1: // admin = 4bytes (IP address), assign number = 2bytes
             snprintf(peer_rd, sizeof(peer_rd), "%d.%d.%d.%d:%d",
                     p_hdr.peer_dist_id[2], p_hdr.peer_dist_id[3],
@@ -230,13 +229,12 @@ void parseBMP::parsePeerHdr(int sock) {
                             | p_hdr.peer_dist_id[4] << 8 | p_hdr.peer_dist_id[5]),
                     p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]);
             break;
-        default: // admin = 2 bytes, sub field = 4 bytes
+        default: // Type 0:  // admin = 2 bytes, sub field = 4 bytes
             snprintf(peer_rd, sizeof(peer_rd), "%d:%lu",
-                    p_hdr.peer_dist_id[1] << 8 | p_hdr.peer_dist_id[2],
-                    (unsigned long) (p_hdr.peer_dist_id[3] << 24
-                            | p_hdr.peer_dist_id[4] << 16
-                            | p_hdr.peer_dist_id[5] << 8 | p_hdr.peer_dist_id[6]
-                            | p_hdr.peer_dist_id[7]));
+                    p_hdr.peer_dist_id[2] << 8 | p_hdr.peer_dist_id[3],
+                    (unsigned long) (p_hdr.peer_dist_id[4] << 24
+                            | p_hdr.peer_dist_id[5] << 16
+                            | p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]));
             break;
     }
 

@@ -87,7 +87,7 @@ public:
         unsigned char peer_type;           ///< 1 byte
         unsigned char peer_flags;          ///< 1 byte
 
-        unsigned char peer_dist_id[8];     ///< 8 byte peer distinguisher
+        unsigned char peer_dist_id[8];     ///< 8 byte peer route distinguisher
         unsigned char peer_addr[16];       ///< 16 bytes
         unsigned char peer_as[4];          ///< 4 byte
         unsigned char peer_bgp_id[4];      ///< 4 byte peer bgp id

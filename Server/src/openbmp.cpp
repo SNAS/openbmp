@@ -376,8 +376,13 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Initialize logging
-    logger = new Logger(log_filename, debug_filename);
+    try {
+        // Initialize logging
+        logger = new Logger(log_filename, debug_filename);
+    } catch (char const *str) {
+        cout << "Failed to open log file for read/write : " << str << endl;
+        return 2;
+    }
 
     // Set up defaults for logging
     logger->setWidthFilename(15);

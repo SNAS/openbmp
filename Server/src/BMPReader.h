@@ -65,6 +65,8 @@ public:
 private:
     Cfg_Options *cfg;                       ///< Config pointer
     bool        debug;                      ///< debug flag to indicate debugging
+    u_char      router_hash_id[16];         ///< Router hash ID
+
 };
 
 #endif /* BMPReader_H_ */

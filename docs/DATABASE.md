@@ -46,9 +46,12 @@ LocalPref | int | BGP local preference
 AS_Path | varchar | AS Path in string format
 ASPath_Count | int | Count of ASN's in the path
 Communities | varchar | Standard Communities in string format
+ExtCommunities | varchar | Extended Communities in string format
 ClusterList | varchar | Cluster list in string format
 Aggregator | varchar | Aggregator AS and IP address in printed format
 PeerAddress | varchar | Peer IP address in printed format
+isPeerIPv4 | bool | Indicates if the peer is IPv4 or IPv6
+isPeerVPN | bool | Indicates if the peer is a VPN/VRF peer
 LastModified | timestamp | Timestamp of when last modified/udpated
 
 
@@ -69,9 +72,12 @@ LocalPref | int | BGP local preference
 AS_Path | varchar | AS Path in string format
 ASPath_Count | int | Count of ASN's in the path
 Communities | varchar | Standard Communities in string format
+ExtCommunities | varchar | Extended Communities in string format
 ClusterList | varchar | Cluster list in string format
 Aggregator | varchar | Aggregator AS and IP address in printed format
 PeerAddress | varchar | Peer IP address in printed format
+isPeerIPv4 | bool | Indicates if the peer is IPv4 or IPv6
+isPeerVPN | bool | Indicates if the peer is a VPN/VRF peer
 LastModified | timestamp | Timestamp of when last modified/udpated
 
 ### v_peers
