@@ -43,6 +43,8 @@ enum UPDATE_ATTR_TYPES {
             ATTR_TYPE_AS4_PATH=17,
             ATTR_TYPE_AS4_AGGREGATOR=18,
 
+            ATTR_TYPE_IPV6_EXT_COMMUNITY=25,
+
             ATTR_TYPE_BGP_LS=29,                    // BGP LS attribute draft-ietf-idr-ls-distribution
 
             ATTR_TYPE_BGP_LINK_STATE=99,            // BGP link state Older
@@ -111,7 +113,7 @@ public:
     /**
      * Parsed update data - decoded data from complete update parse
      */
-    struct parsed_udpate_data {
+    struct parsed_update_data {
         parsed_attrs_map              attrs;              /// Parsed attrbutes
         std::list<bgp::prefix_tuple>  withdrawn;          ///< List of withdrawn prefixes
         std::list<bgp::prefix_tuple>  advertised;         ///< List of advertised prefixes
@@ -140,11 +142,11 @@ public:
       *
       * \param [in]   data           Pointer to raw bgp payload data, starting at the notification message
       * \param [in]   size           Size of the data available to read; prevent overrun when reading
-      * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+      * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
       *
       * \return ZERO is error, otherwise a positive value indicating the number of bytes read from update message
       */
-     size_t parseUpdateMsg(u_char *data, size_t size, parsed_udpate_data &parsed_data);
+     size_t parseUpdateMsg(u_char *data, size_t size, parsed_update_data &parsed_data);
 
 
 private:
@@ -175,9 +177,9 @@ private:
      *
      * \param [in]   data       Pointer to the start of the prefixes to be parsed
      * \param [in]   len        Length of the data in bytes to be read
-     * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
      */
-    void parseAttributes(u_char *data, uint16_t len, parsed_udpate_data &parsed_data);
+    void parseAttributes(u_char *data, uint16_t len, parsed_update_data &parsed_data);
 
     /**
      * Parse attribute data based on attribute type
@@ -189,9 +191,9 @@ private:
      * \param [in]   attr_type      Attribute type
      * \param [in]   attr_len       Length of the attribute data
      * \param [in]   data           Pointer to the attribute data
-     * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
      */
-    void parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_udpate_data &parsed_data);
+    void parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_update_data &parsed_data);
 
     /**
      * Parse attribute AS_PATH data

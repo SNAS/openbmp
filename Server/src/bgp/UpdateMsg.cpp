@@ -13,6 +13,7 @@
 #include <sstream>
 #include <arpa/inet.h>
 
+#include "ExtCommunity.h"
 #include "MPReachAttr.h"
 #include "MPUnReachAttr.h"
 
@@ -48,11 +49,11 @@ UpdateMsg::~UpdateMsg() {
  *
  * \param [in]   data           Pointer to raw bgp payload data, starting at the notification message
  * \param [in]   size           Size of the data available to read; prevent overrun when reading
- * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+ * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  *
  * \return ZERO is error, otherwise a positive value indicating the number of bytes read from update message
  */
-size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_udpate_data &parsed_data) {
+size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &parsed_data) {
     size_t      read_size       = 0;
     u_char      *bufPtr         = data;
 
@@ -210,9 +211,9 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
  *
  * \param [in]   data       Pointer to the start of the prefixes to be parsed
  * \param [in]   len        Length of the data in bytes to be read
- * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+ * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void UpdateMsg::parseAttributes(u_char *data, uint16_t len, parsed_udpate_data &parsed_data) {
+void UpdateMsg::parseAttributes(u_char *data, uint16_t len, parsed_update_data &parsed_data) {
     /*
      * Per RFC4271 Section 4.3, flat indicates if the length is 1 or 2 octets
      */
@@ -282,9 +283,9 @@ void UpdateMsg::parseAttributes(u_char *data, uint16_t len, parsed_udpate_data &
  * \param [in]   attr_type      Attribute type
  * \param [in]   attr_len       Length of the attribute data
  * \param [in]   data           Pointer to the attribute data
- * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+ * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_udpate_data &parsed_data) {
+void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_update_data &parsed_data) {
     std::string decodeStr       = "";
     u_char      ipv4_raw[4];
     char        ipv4_char[16];
@@ -377,10 +378,19 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
             break;
 
-
         case ATTR_TYPE_EXT_COMMUNITY : // extended community list (RFC 4360)
-            parseAttr_ExtCommunities(attr_len, data, parsed_data.attrs);
+        {
+           ExtCommunity ec(logger, peer_addr, debug);
+           ec.parseExtCommunities(attr_len, data, parsed_data);
+           break;
+        } 
+            
+        case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)
+        { 
+            ExtCommunity ec6(logger, peer_addr, debug);
+            ec6.parsev6ExtCommunities(attr_len, data, parsed_data);
             break;
+        }
 
         case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
         {

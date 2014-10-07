@@ -81,7 +81,7 @@ parseBGP::~parseBGP() {
  * \returns True if error, false if no error.
  */
 bool parseBGP::handleUpdate(u_char *data, size_t size) {
-    bgp_msg::UpdateMsg::parsed_udpate_data parsed_data;
+    bgp_msg::UpdateMsg::parsed_update_data parsed_data;
     int read_size = 0;
 
     if (parseBgpHeader(data, size) == BGP_MSG_UPDATE) {
@@ -321,7 +321,7 @@ u_char parseBGP::parseBgpHeader(u_char *data, size_t size) {
  *
  * \param  parsed_data          Reference to the parsed update data
  */
-void parseBGP::UpdateDB(bgp_msg::UpdateMsg::parsed_udpate_data &parsed_data) {
+void parseBGP::UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
     /*
      * Update the path attributes
      */

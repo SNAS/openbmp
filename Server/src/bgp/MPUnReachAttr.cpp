@@ -44,9 +44,9 @@ MPUnReachAttr::~MPUnReachAttr() {
  *
  * \param [in]   attr_len       Length of the attribute data
  * \param [in]   data           Pointer to the attribute data
- * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+ * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPUnReachAttr::parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_udpate_data &parsed_data) {
+void MPUnReachAttr::parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
     mp_unreach_nlri nlri;
     /*
      * Set the MP Unreach NLRI struct
@@ -84,9 +84,9 @@ void MPUnReachAttr::parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::Up
  *          be performed to further parse the message.
  *
  * \param [in]   nlri           Reference to parsed Unreach NLRI struct
- * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+ * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_udpate_data &parsed_data) {
+void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
 
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6
@@ -107,9 +107,9 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_udpate_dat
  * \details Will handle parsing the SAFI's for address family ipv6
  *
  * \param [in]   nlri           Reference to parsed Unreach NLRI struct
- * \param [out]  parsed_data    Reference to parsed_udpate_data; will be updated with all parsed data
+ * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPUnReachAttr::parseAfiUnicstIPv6(mp_unreach_nlri &nlri, UpdateMsg::parsed_udpate_data &parsed_data) {
+void MPUnReachAttr::parseAfiUnicstIPv6(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
 
     /*
      * Decode based on SAFI
