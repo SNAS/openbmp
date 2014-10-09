@@ -36,6 +36,8 @@ public:
             BGP_CAP_OUTBOUND_FILTER,
             BGP_CAP_MULTI_ROUTES_DEST,
 
+            BGP_CAP_EXT_NEXTHOP=5,                  // RFC 5549
+
             BGP_CAP_GRACEFUL_RESTART=64,
             BGP_CAP_4OCTET_ASN,
 
