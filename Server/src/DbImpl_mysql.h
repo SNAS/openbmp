@@ -93,6 +93,16 @@ private:
      */
     void mysqlConnect(char *hostURL, char *username, char *password, char *db);
 
+    /**
+    * \brief Method to resolve the IP address to a hostname
+    *
+    *  \param [in]   name      String name (ip address)
+    *  \param [out]  hostname  String reference for hostname
+    *
+    *  \returns true if error, false if no error
+    */
+    bool resolveIp(std::string name, std::string &hostname);
+
 };
 
 #endif /* MYSQLBMP_H_ */

@@ -28,6 +28,7 @@ void ClientThread_cancel(void *arg) {
     close (cInfo->client->c_sock);
 
     delete cInfo->mysql;
+    cInfo->mysql = NULL;
 }
 
 /**
@@ -45,11 +46,9 @@ void *ClientThread(void *arg) {
 
     // Setup the client thread info struct
     ClientThreadInfo cInfo;
+    cInfo.mysql = NULL;
     cInfo.client = &thr->client;
     cInfo.log = thr->log;
-
-    // connect to mysql
-    cInfo.mysql = new mysqlBMP(logger, thr->cfg->dbURL,thr->cfg->username, thr->cfg->password, thr->cfg->dbName);
 
     /*
      * Setup the cleanup routine for when the thread is canceled.
@@ -57,10 +56,14 @@ void *ClientThread(void *arg) {
      */
     pthread_cleanup_push(ClientThread_cancel, &cInfo);
 
-    if (thr->cfg->debug_mysql)
-        cInfo.mysql->enableDebug();
-
     try {
+
+        // connect to mysql
+        cInfo.mysql = new mysqlBMP(logger, thr->cfg->dbURL,thr->cfg->username, thr->cfg->password, thr->cfg->dbName);
+
+        if (thr->cfg->debug_mysql)
+            cInfo.mysql->enableDebug();
+
         BMPReader rBMP(logger, thr->cfg);
         LOG_INFO("Thread started to monitor BMP from router %s using socket %d",
                 cInfo.client->c_ipv4, cInfo.client->c_sock);
@@ -78,7 +81,8 @@ void *ClientThread(void *arg) {
     pthread_cleanup_pop(0);
 
     // Delete mysql
-    delete cInfo.mysql;
+    if (cInfo.mysql != NULL)
+       delete cInfo.mysql;
 
     // close the socket
     shutdown(cInfo.client->c_sock, SHUT_RDWR);

@@ -21,6 +21,7 @@
 #include <cppconn/exception.h>
 #include <cppconn/resultset.h>
 #include <cppconn/statement.h>
+#include <netdb.h>
 
 #include "DbImpl_mysql.h"
 #include "md5.h"
@@ -128,7 +129,7 @@ void mysqlBMP::mysqlConnect(char *hostURL, char *username, char *password,
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
-                e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+                e.what(), e.getErrorCode(), e.getSQLStateCStr());
         /*
         cout << "mysqlBMP: # ERR: SQLException in " << __FILE__;
         cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
@@ -136,7 +137,7 @@ void mysqlBMP::mysqlConnect(char *hostURL, char *username, char *password,
         cout << " (MySQL error code: " << e.getErrorCode();
         cout << ", SQLState: " << e.getSQLState() << " )" << endl;
         */
-        throw "ERROR: Cannot connect to mysql.  Check mysql server host and credentials.";
+        throw "ERROR: Cannot connect to mysql.";
     }
 
 }
@@ -182,17 +183,21 @@ void mysqlBMP::add_Peer(tbl_bgp_peer &p_entry) {
             return;
         }
 
+        // Get the hostname using DNS
+        string hostname;
+        resolveIp(p_entry.peer_addr, hostname);
+
         // Insert/Update map entry
         peer_list[p_hash_str] = time(NULL);
 
         // Build the query
         snprintf(buf, sizeof(buf),
-                "REPLACE into %s (%s) values ('%s','%s','%s',%d, '%s', '%s', %u, %d, %d, current_timestamp,1)",
+                "REPLACE into %s (%s) values ('%s','%s','%s',%d, '%s', '%s', %u, %d, %d, current_timestamp,1, '%s')",
                 TBL_NAME_BGP_PEERS,
-                "hash_id,router_hash_id, peer_rd,isIPv4,peer_addr,peer_bgp_id,peer_as,isL3VPNpeer,isPrePolicy,timestamp,state",
+                "hash_id,router_hash_id, peer_rd,isIPv4,peer_addr,peer_bgp_id,peer_as,isL3VPNpeer,isPrePolicy,timestamp,state,name",
                 p_hash_str.c_str(), r_hash_str.c_str(), p_entry.peer_rd,
                 p_entry.isIPv4, p_entry.peer_addr, p_entry.peer_bgp_id,
-                p_entry.peer_as, p_entry.isL3VPN, p_entry.isPrePolicy);
+                p_entry.peer_as, p_entry.isL3VPN, p_entry.isPrePolicy, hostname.c_str());
 
         SELF_DEBUG("QUERY=%s", buf);
 
@@ -268,6 +273,13 @@ void mysqlBMP::add_Router(tbl_router &r_entry) {
         // Convert the init data to string for storage
         string initData(r_entry.initiate_data);
         std::replace(initData.begin(), initData.end(), '\'', '"');
+
+        // Get the hostname
+        if (strlen((char *)r_entry.name) <= 0) {
+            string hostname;
+            resolveIp((char *) r_entry.src_addr, hostname);
+            snprintf((char *)r_entry.name, sizeof(r_entry.name), "%s", hostname.c_str());
+        }
 
         // Build the query
         snprintf(buf, sizeof(buf),
@@ -737,6 +749,33 @@ void mysqlBMP::add_PeerUpEvent(DbInterface::tbl_peer_up_event &up_event) {
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
     }
 }
+
+/**
+* \brief Method to resolve the IP address to a hostname
+*
+*  \param [in]   name      String name (ip address)
+*  \param [out]  hostname  String reference for hostname
+*
+*  \returns true if error, false if no error
+*/
+bool mysqlBMP::resolveIp(string name, string &hostname) {
+    addrinfo *ai;
+    char host[255];
+
+    if (!getaddrinfo(name.c_str(), NULL, NULL, &ai) and
+            !getnameinfo(ai->ai_addr,ai->ai_addrlen, host, sizeof(host), NULL, 0, NI_NAMEREQD)) {
+
+        hostname.assign(host);
+        LOG_INFO("resovle: %s to %s", name.c_str(), hostname.c_str());
+
+        freeaddrinfo(ai);
+        return false;
+    }
+
+    return true;
+}
+
+
 
 /*
  * Enable/disable debugs
