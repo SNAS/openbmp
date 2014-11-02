@@ -20,6 +20,9 @@ The database is tuned to support high transactional rates and storage for millio
 
 News
 ----
+### Nov-1-2014 
+Added back BMPv1 support.  BMPv1 is supported best effort since it's missing the INIT, PEER UP, and TERM messages. Most things will work, but some of the DB views might need to be updated.  We'll update those as needed/requested. 
+
 ### Oct-29-2014
 Added DNS PTR lookup for peers and routers.  Fixed minor issues and updated docs.  
 Added [DB REST](docs/DBREST.md)

@@ -79,10 +79,12 @@ char parseBMP::handleMessage(int sock) {
     if (ver == 3) { // draft-ietf-grow-bmp-04 - 07
         parseBMPv3(sock);
 
-        // Handle the older versions
-    } else if (ver == 1 || ver == 2) {
-        LOG_ERR("Unsupported BMP message version of %d, upgrade router to support latest BMP draft", ver);
-        throw "BMP router is running older version of BMP, upgrade it to support latest BMP draft";
+    }
+
+    // Handle the older versions
+    else if (ver == 1 || ver == 2) {
+        SELF_DEBUG("Older BMP version of %d, consider upgrading the router to support BMPv3", ver);
+        parseBMPv2(sock);
 
     } else
         throw "ERROR: Unsupported BMP message version";
@@ -90,6 +92,170 @@ char parseBMP::handleMessage(int sock) {
     SELF_DEBUG("BMP version = %d\n", ver);
 
     return bmp_type;
+}
+
+/**
+* Parse v1 and v2 BMP header
+*
+* \details
+*      v2 uses the same common header, but adds the Peer Up message type.
+*
+* \param [in]  sock        Socket to read the message from
+*/
+void parseBMP::parseBMPv2(int sock) {
+    struct common_hdr_old c_hdr = { 0 };
+    ssize_t i = 0;
+    char buf[256] = {0};
+
+    SELF_DEBUG("parseBMP: sock=%d: Reading %d bytes", sock, BMP_HDRv1v2_LEN);
+
+    bmp_len = 0;
+
+    if ((i = recv(sock, &c_hdr, BMP_HDRv1v2_LEN, MSG_WAITALL))
+            != BMP_HDRv1v2_LEN) {
+        SELF_DEBUG("sock=%d: Couldn't read all bytes, read %zd bytes",
+                sock, i);
+        throw "ERROR: Cannot read v1/v2 BMP common header.";
+    }
+    // Process the message based on type
+    bmp_type = c_hdr.type;
+    switch (c_hdr.type) {
+        case 0: // Route monitoring
+            SELF_DEBUG("sock=%d : BMP MSG : route monitor", sock);
+
+            // Get the length of the remaining message by reading the BGP length
+            if ((i=recv(sock, buf, 18, MSG_PEEK | MSG_WAITALL)) == 18) {
+                uint16_t len;
+                memcpy(&len, (buf+16), 2);
+                bgp::SWAP_BYTES(&len);
+                bmp_len = len;
+
+            } else {
+                LOG_ERR("sock=%d: Failed to read BGP message to get length of BMP message", sock);
+                throw "Failed to read BGP message for BMP length";
+            }
+            break;
+
+        case 1: // Statistics Report
+            SELF_DEBUG("sock=%d : BMP MSG : stats report", sock);
+            LOG_INFO("sock=%d : BMP MSG : stats report", sock);
+            break;
+
+        case 2: // Peer down notification
+            LOG_INFO("sock=%d: BMP MSG: Peer down", sock);
+
+            // Get the length of the remaining message by reading the BGP length
+            if ((i=recv(sock, buf, 1, MSG_PEEK)) != 1) {
+
+                // Is there a BGP message
+                if (buf[0] == 1 or buf[0] == 3) {
+                    if ((i = recv(sock, buf, 18, MSG_PEEK | MSG_WAITALL)) == 18) {
+                        memcpy(&bmp_len, buf + 16, 2);
+                        bgp::SWAP_BYTES(&bmp_len);
+
+                    } else {
+                        LOG_ERR("sock=%d: Failed to read peer down BGP message to get length of BMP message", sock);
+                        throw "Failed to read BGP message for BMP length";
+                    }
+                }
+            } else {
+                LOG_ERR("sock=%d: Failed to read peer down reason", sock);
+                throw "Failed to read BMP peer down reason";
+            }
+
+            SELF_DEBUG("sock=%d : BMP MSG : peer down", sock);
+            break;
+
+        case 3: // Peer Up notification
+            LOG_ERR("sock=%d: Peer UP not supported with older BMP version since no one has implemented it", sock);
+
+            SELF_DEBUG("sock=%d : BMP MSG : peer up", sock);
+            throw "ERROR: Will need to add support for peer up if it's really used.";
+            break;
+    }
+
+    SELF_DEBUG("sock=%d : Peer Type is %d", sock, c_hdr.peer_type);
+
+    if (c_hdr.peer_flags & 0x80) { // V flag of 1 means this is IPv6
+        p_entry->isIPv4 = false;
+        inet_ntop(AF_INET6, c_hdr.peer_addr, peer_addr, sizeof(peer_addr));
+
+        SELF_DEBUG("sock=%d : Peer address is IPv6", sock);
+
+    } else {
+        p_entry->isIPv4 = true;
+        snprintf(peer_addr, sizeof(peer_addr), "%d.%d.%d.%d",
+                c_hdr.peer_addr[12], c_hdr.peer_addr[13], c_hdr.peer_addr[14],
+                c_hdr.peer_addr[15]);
+
+        SELF_DEBUG("sock=%d : Peer address is IPv4", sock);
+    }
+
+    if (c_hdr.peer_flags & 0x40) { // L flag of 1 means this is Loc-RIP and not Adj-RIB-In
+        SELF_DEBUG("sock=%d : Msg is for Loc-RIB", sock);
+    } else {
+        SELF_DEBUG("sock=%d : Msg is for Adj-RIB-In", sock);
+    }
+
+    // convert the BMP byte messages to human readable strings
+    snprintf(peer_as, sizeof(peer_as), "0x%04x%04x",
+            c_hdr.peer_as[0] << 8 | c_hdr.peer_as[1],
+            c_hdr.peer_as[2] << 8 | c_hdr.peer_as[3]);
+    snprintf(peer_bgp_id, sizeof(peer_bgp_id), "%d.%d.%d.%d",
+            c_hdr.peer_bgp_id[0], c_hdr.peer_bgp_id[1], c_hdr.peer_bgp_id[2],
+            c_hdr.peer_bgp_id[3]);
+
+    // Format based on the type of RD
+    switch (c_hdr.peer_dist_id[0] << 8 | c_hdr.peer_dist_id[1]) {
+        case 1: // admin = 4bytes (IP address), assign number = 2bytes
+            snprintf(peer_rd, sizeof(peer_rd), "%d.%d.%d.%d:%d",
+                    c_hdr.peer_dist_id[2], c_hdr.peer_dist_id[3],
+                    c_hdr.peer_dist_id[4], c_hdr.peer_dist_id[5],
+                    c_hdr.peer_dist_id[6] << 8 | c_hdr.peer_dist_id[7]);
+            break;
+        case 2: // admin = 4bytes (ASN), assing number = 2bytes
+            snprintf(peer_rd, sizeof(peer_rd), "%lu:%d",
+                    (unsigned long) (c_hdr.peer_dist_id[2] << 24
+                            | c_hdr.peer_dist_id[3] << 16
+                            | c_hdr.peer_dist_id[4] << 8 | c_hdr.peer_dist_id[5]),
+                    c_hdr.peer_dist_id[6] << 8 | c_hdr.peer_dist_id[7]);
+            break;
+        default: // admin = 2 bytes, sub field = 4 bytes
+            snprintf(peer_rd, sizeof(peer_rd), "%d:%lu",
+                    c_hdr.peer_dist_id[1] << 8 | c_hdr.peer_dist_id[2],
+                    (unsigned long) (c_hdr.peer_dist_id[3] << 24
+                            | c_hdr.peer_dist_id[4] << 16
+                            | c_hdr.peer_dist_id[5] << 8 | c_hdr.peer_dist_id[6]
+                            | c_hdr.peer_dist_id[7]));
+            break;
+    }
+
+    // Update the MySQL peer entry struct
+    strncpy(p_entry->peer_addr, peer_addr, sizeof(peer_addr));
+    p_entry->peer_as = strtoll(peer_as, NULL, 16);
+    strncpy(p_entry->peer_bgp_id, peer_bgp_id, sizeof(peer_bgp_id));
+    strncpy(p_entry->peer_rd, peer_rd, sizeof(peer_rd));
+
+    // Save the advertised timestamp
+    uint32_t ts = c_hdr.ts_secs;
+    bgp::SWAP_BYTES(&ts);
+    if (ts != 0)
+        p_entry->timestamp_secs = ts;
+    else
+        p_entry->timestamp_secs = time(NULL);
+
+    // Is peer type L3VPN peer or global instance
+    if (c_hdr.type == 1) // L3VPN
+        p_entry->isL3VPN = 1;
+    else
+        // Global Instance
+        p_entry->isL3VPN = 0;
+
+    SELF_DEBUG("sock=%d : Peer Address = %s", sock, peer_addr);
+    SELF_DEBUG("sock=%d : Peer AS = (%x-%x)%x:%x", sock,
+            c_hdr.peer_as[0], c_hdr.peer_as[1], c_hdr.peer_as[2],
+            c_hdr.peer_as[3]);
+    SELF_DEBUG("sock=%d : Peer RD = %s", sock, peer_rd);
 }
 
 /**

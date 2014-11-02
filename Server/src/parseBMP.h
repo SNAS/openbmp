@@ -121,6 +121,24 @@ public:
      } __attribute__ ((__packed__));
 
     /**
+    *  BMP headers for older versions (BMPv1)
+    */
+    struct common_hdr_old {
+        //unsigned char ver;               // 1 byte -- Not part of struct since it's read before
+        unsigned char type;                // 1 byte
+        unsigned char peer_type;           // 1 byte
+        unsigned char peer_flags;          // 1 byte
+
+        unsigned char peer_dist_id[8];     // 8 byte peer distinguisher
+        unsigned char peer_addr[16];       // 16 bytes
+        unsigned char peer_as[4];          // 4 byte
+        unsigned char peer_bgp_id[4];      // 4 byte peer bgp id
+        unsigned long ts_secs : 32;        // 4 byte timestamp in seconds
+        unsigned long ts_usecs : 32;       // 4 byte timestamp microseconds
+    } __attribute__ ((__packed__));
+
+
+    /**
      * BMP message buffer
      *      BMP data message is read into this buffer so that it can be passed to the BGP parser for handling.
      *      Complete BGP message is read, otherwise error is generated.
