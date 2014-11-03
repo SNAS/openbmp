@@ -380,15 +380,15 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_EXT_COMMUNITY : // extended community list (RFC 4360)
         {
-           ExtCommunity ec(logger, peer_addr, debug);
-           ec.parseExtCommunities(attr_len, data, parsed_data);
+           //ExtCommunity ec(logger, peer_addr, debug);
+           //ec.parseExtCommunities(attr_len, data, parsed_data);
            break;
         } 
             
         case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)
         { 
-            ExtCommunity ec6(logger, peer_addr, debug);
-            ec6.parsev6ExtCommunities(attr_len, data, parsed_data);
+            //ExtCommunity ec6(logger, peer_addr, debug);
+            //ec6.parsev6ExtCommunities(attr_len, data, parsed_data);
             break;
         }
 
@@ -412,23 +412,6 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
             break;
 
     } // END OF SWITCH ATTR TYPE
-}
-
-/**
- * Parse attribute Extended Community data
- *
- * \param [in]   attr_len       Length of the attribute data
- * \param [in]   data           Pointer to the attribute data
- * \param [out]  attrs          Reference to the parsed attr map - will be updated
- */
-void UpdateMsg::parseAttr_ExtCommunities(uint16_t attr_len, u_char *data, parsed_attrs_map &attrs) {
-    /*
-     * Two classes of Type Field are introduced: Regular type and Extended type.
-     *  The size of Type Field for Regular types is 1 octet, and the size of the
-     *  Type Field for Extended types is 2 octets.
-     */
-    // TODO: Need to add code to parse the extended communities, which requires
-    //       mapping the IANA assigned types so we know how to read the value.
 }
 
 /**
