@@ -249,7 +249,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
         }
 
         // PID filename
-        else if (!strcmp(argv[i], "-p")) {
+        else if (!strcmp(argv[i], "-pid")) {
             // We expect the next arg to be the filename
             if (i + 1 >= argc) {
                 cout << "INVALID ARG: -p expects the filename to be specified" << endl;

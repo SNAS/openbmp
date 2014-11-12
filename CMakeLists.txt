@@ -3,8 +3,9 @@
 # Define the version
 set (OPENBMP_VER_MAJOR "0")
 set (OPENBMP_VER_MINOR "8")
-set (OPENBMP_VER_PATCH "0-pre5")
-set (OPENBMPD_VERSION "${OPENBMP_VER_MAJOR}.${OPENBMP_VER_MINOR}.${OPENBMP_VER_PATCH}")
+set (OPENBMP_VER_PATCH "0")
+set (OPENBMP_VER_RELEASE "pre7")
+set (OPENBMPD_VERSION "${OPENBMP_VER_MAJOR}.${OPENBMP_VER_MINOR}.${OPENBMP_VER_PATCH}-${OPENBMP_VER_RELEASE}")
 
 cmake_minimum_required (VERSION 2.6)
 project (OPENBMP)
@@ -27,4 +28,8 @@ IF(DPKG_CMD)
   add_subdirectory (deb_package)
 ENDIF(DPKG_CMD)
 
+FIND_PROGRAM(RPKG_CMD rpmbuild)
+IF(RPKG_CMD)
+  add_subdirectory (rpm_package)
+ENDIF(RPKG_CMD)
 
