@@ -380,15 +380,15 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_EXT_COMMUNITY : // extended community list (RFC 4360)
         {
-           //ExtCommunity ec(logger, peer_addr, debug);
-           //ec.parseExtCommunities(attr_len, data, parsed_data);
+           ExtCommunity ec(logger, peer_addr, debug);
+           ec.parseExtCommunities(attr_len, data, parsed_data);
            break;
         } 
             
         case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)
         { 
-            //ExtCommunity ec6(logger, peer_addr, debug);
-            //ec6.parsev6ExtCommunities(attr_len, data, parsed_data);
+            ExtCommunity ec6(logger, peer_addr, debug);
+            ec6.parsev6ExtCommunities(attr_len, data, parsed_data);
             break;
         }
 

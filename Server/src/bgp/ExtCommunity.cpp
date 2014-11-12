@@ -55,8 +55,16 @@ void ExtCommunity::parseExtCommunities(int attr_len, u_char *data, bgp_msg::Upda
             decodeStr.append(" ");
 
         memcpy((void *)&ec, data+i, 8);
+        if (tdict.find(ec.type) != tdict.end()) {
+            if (tdict.find(ec.type)->second.find(ec.subtype) != tdict.find(ec.type)->second.end()) {
+                 decodeStr.append(tdict.find(ec.type)->second.find(ec.subtype)->second);
+            } else {
+                 decodeStr.append("opaque");
+            }
+        } else {
+            decodeStr.append("opaque");
+        }
         
-        decodeStr.append((tdict.find(ec.type)->second).find(ec.subtype)->second);
         decodeStr.append(":");
         if (ec.type == 0x00 || ec.type == 0x40) {
             bgp::SWAP_BYTES(&ec.data.ext_as.as);
@@ -107,7 +115,16 @@ void ExtCommunity::parsev6ExtCommunities(int attr_len, u_char *data, bgp_msg::Up
             decodeStr.append(" ");
 
         memcpy((void *)&ec6, data+i, 20);
-        decodeStr.append((tdict6.find(ec6.type)->second).find(ec6.subtype)->second);
+
+        if (tdict.find(ec6.type) != tdict.end()) {
+            if (tdict.find(ec6.type)->second.find(ec6.subtype) != tdict.find(ec6.type)->second.end()) {
+                decodeStr.append(tdict6.find(ec6.type)->second.find(ec6.subtype)->second);
+            } else {
+                decodeStr.append("opaque");
+            }
+        } else {
+            decodeStr.append("opaque");
+        }
         decodeStr.append(":");
 
         bgp::SWAP_BYTES(&ec6.addr);
@@ -134,7 +151,7 @@ ExtCommunity::subtypemap ExtCommunity::create_evpnsubtype(void) {
 ExtCommunity::subtypemap ExtCommunity::create_t2osubtype(void) {
     ExtCommunity::subtypemap m;
 
-    m[0x02] = std::string("tgt");
+    m[0x02] = std::string("rt");
     m[0x03] = std::string("soo");
     m[0x05] = std::string("odi");
     m[0x08] = std::string("bdc");
@@ -156,7 +173,7 @@ ExtCommunity::subtypemap ExtCommunity::create_nt2osubtype(void) {
 ExtCommunity::subtypemap ExtCommunity::create_t4osubtype(void) {
     ExtCommunity::subtypemap m;
 
-    m[0x02] = std::string("tgt");
+    m[0x02] = std::string("rt");
     m[0x03] = std::string("soo");
     m[0x05] = std::string("odi");
     m[0x08] = std::string("bdc");
@@ -178,7 +195,7 @@ ExtCommunity::subtypemap ExtCommunity::create_nt4osubtype(void) {
 ExtCommunity::subtypemap ExtCommunity::create_tip4subtype(void) {
     ExtCommunity::subtypemap m;
 
-    m[0x02] = std::string("tgt");
+    m[0x02] = std::string("rt");
     m[0x03] = std::string("soo");
     m[0x05] = std::string("odi");
     m[0x07] = std::string("ori");
@@ -248,12 +265,12 @@ ExtCommunity::subtypemap ExtCommunity::create_tafields(void) {
 ExtCommunity::subtypemap ExtCommunity::create_tip6subtype(void) {
     ExtCommunity::subtypemap m;
 
-    m[0x02] = std::string("tgt");
+    m[0x02] = std::string("rt");
     m[0x03] = std::string("soo");
     m[0x04] = std::string("ora");
     m[0x0b] = std::string("vrfimport");
     m[0x10] = std::string("cisco-vpnd");
-    m[0x11] = std::string("uuid-tgt");
+    m[0x11] = std::string("uuid-rt");
     m[0x12] = std::string("iap2mpsnh");
 
     return m;
@@ -296,3 +313,4 @@ ExtCommunity::typedict ExtCommunity::create_typedictv6(void) {
 }
 
 }
+
