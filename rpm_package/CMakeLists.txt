@@ -50,6 +50,13 @@ set (CPACK_RPM_PACKAGE_SUGGESTS ON)
 # Define the extras (post/pre install, etc.)
 #
 
+#
+# Define the user file list to ingore files - this is only needed for cmake 2.8 since 3.x has auto exclude
+#
+SET(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
+SET(CPACK_RPM_USER_FILELIST "%ignore /usr" "%ignore /usr/bin")
+
+
 # 
 # Set the package config filename
 #
