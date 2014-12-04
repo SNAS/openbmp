@@ -406,6 +406,11 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
             break;
         }
 
+        case ATTR_TYPE_AS_PATHLIMIT : // deprecated
+        {
+            break;
+        }
+
         default:
             LOG_INFO("%s: rtr=%s: attribute type %d is not yet implemented, skipping for now.",
                     peer_addr.c_str(), router_addr.c_str(), attr_type);
