@@ -46,7 +46,7 @@ sudo apt-get install mysql-client-5.6 mysql-common-5.6 libmysqlcppconn7
       **dpkg -i openbmp-0.8.0-pre4.deb**
   
 ```
-ubuntu@demo:~# sudo -i openbmp-0.8.0-pre4.deb
+ubuntu@demo:~# sudo dpkg -i openbmp-0.8.0-pre4.deb
 Selecting previously unselected package openbmp.
 (Reading database ... 51367 files and directories currently installed.)
 Preparing to unpack openbmp-0.8.0-pre4.deb ...
@@ -137,13 +137,15 @@ innodb_file_per_table     = ON
 * sudo service mysql restart
 
 ### Load the schema
-Load the openbmp DB schema
+Load the openbmp DB schema by downloading it from www.openbmp.org.  You can also get the 
+latest from [GitHub OpenBMP](https://github.com/OpenBMP/openbmp)
 
 ```
-mysql -u openbmp -p openBMP < database/mysql-openbmp-current.db 
+curl -o mysql-openbmp-current.db http://www.openbmp.org/docs/mysql-openbmp-current.db
+mysql -u root -p openBMP < mysql-openbmp-current.db 
 ```
 
-> Use the password for openbmp, which should be **openbmp** at this point.
+> Use the password for root user that was created when mysql was installed. 
 
 
 ### Run the openbmp server
@@ -175,8 +177,11 @@ MySQL should be installed now and it should be running.   OpenBMP is ready to ru
 
 Below starts openbmp on port 5555 for inbound BMP connections. 
 ```
-openbmpd -dburl tcp://127.0.0.1:3306 -dbu openbmp -dbp openbmp -p 5555 -pid /var/run/openbmpd.pid
+sudo openbmpd -dburl tcp://127.0.0.1:3306 -dbu openbmp -dbp openbmp -p 5555 -l /var/log/openbmpd.log -pid /var/run/openbmpd.pid
 ```
+> **NOTE** 
+> The above command uses 'sudo' because openbmp is creating the log file /var/log/openbmp.log and updating the pid file /var/run/openbmp.pid, which normally are not writable to normal users.  If the log and pid files are writable by the user running openbmpd, then sudo is not required. 
+
 
 
 ## User Interface
