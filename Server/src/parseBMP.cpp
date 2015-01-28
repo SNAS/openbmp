@@ -283,6 +283,9 @@ void parseBMP::parseBMPv3(int sock) {
     // Adjust length to remove common header size
     c_hdr.len -= 1 + BMP_HDRv3_LEN;
 
+    if (c_hdr.len > BGP_MAX_MSG_SIZE)
+        throw "ERROR: BMP length is larger than max possible BGP size";
+
     // Parse additional headers based on type
     bmp_type = c_hdr.type;
     bmp_len = c_hdr.len;
@@ -316,7 +319,8 @@ void parseBMP::parseBMPv3(int sock) {
             break;
 
         default:
-            SELF_DEBUG("ERROR: Unknown BMP message type of %d", c_hdr.type);
+            LOG_ERR("ERROR: Unknown BMP message type of %d", c_hdr.type);
+            throw "ERROR: BMP message type is not supported";
             break;
     }
 }

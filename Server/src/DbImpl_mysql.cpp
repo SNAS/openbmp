@@ -233,10 +233,12 @@ bool mysqlBMP::update_Peer(tbl_bgp_peer &p_entry) {
     return false;
 }
 
+
+
 /**
  * Abstract method Implementation - See DbInterface.hpp for details
  */
-void mysqlBMP::add_Router(tbl_router &r_entry) {
+void mysqlBMP::add_Router(tbl_router &r_entry, bool incConnectCount) {
     try {
         char buf[4096]; // Misc working buffer
 
@@ -283,12 +285,15 @@ void mysqlBMP::add_Router(tbl_router &r_entry) {
 
         // Build the query
         snprintf(buf, sizeof(buf),
-                "INSERT into %s (%s) values ('%s', '%s', '%s','%s','%s')",
-                TBL_NAME_ROUTERS, "hash_id,name,description,ip_address,init_data", r_hash_str.c_str(),
+                "INSERT into %s (%s) values ('%s', '%s', '%s','%s','%s', 1)",
+                TBL_NAME_ROUTERS, "hash_id,name,description,ip_address,init_data,conn_count", r_hash_str.c_str(),
                 r_entry.name, r_entry.descr, r_entry.src_addr, initData.c_str());
 
         // Add the on duplicate statement
-        strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1,name=values(name),description=values(description),init_data=values(init_data),term_reason_code=0,term_reason_text=''");
+        if (incConnectCount)
+            strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1,name=values(name),description=values(description),init_data=values(init_data),term_reason_code=0,conn_count=conn_count+1,term_reason_text=''");
+        else
+            strcat(buf, " ON DUPLICATE KEY UPDATE timestamp=current_timestamp,isConnected=1,name=values(name),description=values(description),init_data=values(init_data),term_reason_code=0,term_reason_text=''");
 
         // Run the query to add the record
         stmt = con->createStatement();
@@ -320,7 +325,7 @@ bool mysqlBMP::update_Router(tbl_router &r_entry) {
     if (router_list.find(r_hash_str) != router_list.end()) {
         router_list.erase(r_hash_str);
 
-        add_Router(r_entry);
+        add_Router(r_entry, false);
 
         return true;
     }
@@ -348,7 +353,7 @@ bool mysqlBMP::disconnect_Router(tbl_router &r_entry) {
 
             // Build the query
             snprintf(buf, sizeof(buf),
-                    "UPDATE %s SET isConnected=0,term_reason_code=%" PRIu16 ",term_reason_text=\"%s\",term_data='%s' where hash_id = '%s'",
+                    "UPDATE %s SET isConnected=if(conn_count > 1, 1, 0),conn_count=conn_count - 1,term_reason_code=%" PRIu16 ",term_reason_text=\"%s\",term_data='%s' where hash_id = '%s'",
                     TBL_NAME_ROUTERS,
                     r_entry.term_reason_code, r_entry.term_reason_text, termData.c_str(),
                     r_hash_str.c_str());

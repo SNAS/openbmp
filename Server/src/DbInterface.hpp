@@ -296,7 +296,9 @@ public:
      * \details     Will add a new router or update an existing
      *              router.
      *
-     * \param[in,out]   router      Router entry
+     * \param[in,out]   router          Router entry
+     * \param[in]       incConnectcount Indicates true to update the connection count
+     *                                  Default is true, to update the count.
      *
      * \returns     The router.hash_id will be updated based on the
      *              supplied data.
@@ -304,7 +306,7 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void add_Router(struct tbl_router &r_entry) = 0;
+    virtual void add_Router(struct tbl_router &r_entry, bool incConnectCount = true) = 0;
 
     /*****************************************************************//**
      * \brief       Update a router entry

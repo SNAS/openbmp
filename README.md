@@ -20,21 +20,24 @@ The database is tuned to support high transactional rates and storage for millio
 
 News
 ----
+### Jan-27-2015
+**Release 0.8.0 is available.**   See [release-0.8.0](docs/release_notes/release-0.8.0.md) for more details.
+
+> #### UPGRADE YOUR SCHEMA
+> There have been schema changes, so please update your database.  Currently there isn't a migration
+> script, so upgrading will require a drop of the current database. Routers will resend all data
+> so all current/active info will come back, but the history will be lost. 
+> 
+> If you are concerned with the history being lost, please email me with the schema version you are 
+> using and I can provide you the alter table syntax to migrate the tables without loss. 
+
+
 ### Nov-1-2014 
 Added back BMPv1 support.  BMPv1 is supported best effort since it's missing the INIT, PEER UP, and TERM messages. Most things will work, but some of the DB views might need to be updated.  We'll update those as needed/requested. 
 
 ### Oct-29-2014
 Added DNS PTR lookup for peers and routers.  Fixed minor issues and updated docs.  
 Added [DB REST](docs/DBREST.md)
-
-### Sep-24-2014
-Fixed some minor issues and updated documentation based on feedback.   MacOS builds should
-work as well. 
-
-A new binary package is available for Ubuntu 14.04 per the updated [INSTALL](docs/INSTALL.md) instructions.
-
-### Sep-12-2014
-Refactored BGP parsing to make way for upcoming changes to support BGP-LS and MPLS/VPN's.
 
 
 ### Sep-10-2014

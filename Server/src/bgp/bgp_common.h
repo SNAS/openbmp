@@ -16,7 +16,7 @@
 #include <cstring>
 
 namespace bgp {
-
+    #define BGP_MAX_MSG_SIZE        65535                   // Max payload size - Larger than RFC4271 of 4096
     #define BGP_MSG_HDR_LEN         19                      // BGP message header size
     #define BGP_OPEN_MSG_MIN_LEN    29                      // Includes the expected header size
     #define BGP_VERSION             4

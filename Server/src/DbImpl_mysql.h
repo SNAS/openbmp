@@ -56,6 +56,7 @@ public:
     void add_Peer(tbl_bgp_peer &peer);
     bool update_Peer(tbl_bgp_peer &peer);
     void add_Router(struct tbl_router &r_entry);
+    void add_Router(struct tbl_router &r_entry, bool incConnectCount = true);
     bool update_Router(struct tbl_router &r_entry);
     bool disconnect_Router(struct tbl_router &r_entry);
     void add_Rib(std::vector<tbl_rib> &rib);
