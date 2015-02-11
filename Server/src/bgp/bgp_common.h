@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <cinttypes>
 #include <cstring>
+#include <sys/types.h>
 
 namespace bgp {
     #define BGP_MAX_MSG_SIZE        65535                   // Max payload size - Larger than RFC4271 of 4096
