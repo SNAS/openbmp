@@ -1,6 +1,6 @@
 Open BGP Monitoring Protocol (OpenBMP) Collector
 ================================================
-![Build Status](https://build-jenkins.openbmp.org:8443/buildStatus/icon?job=openbmp-server-ubuntu-trusty)
+![Build Status](http://build-jenkins.openbmp.org/buildStatus/icon?job=openbmp-server-ubuntu-trusty)
 
 
 OpenBMP is an open source project that implements **draft-ietf-grow-bmp-07**.  BMP protocol version 3 is defined in draft 07, while versions 1 and 2 are defined in the previous revisions of the draft.
