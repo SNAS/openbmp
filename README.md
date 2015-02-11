@@ -1,11 +1,12 @@
 Open BGP Monitoring Protocol (OpenBMP) Collector
 ================================================
+![Build Status](https://build-jenkins.openbmp.org:8443/buildStatus/icon?job=openbmp-server-ubuntu-trusty)
+
 
 OpenBMP is an open source project that implements **draft-ietf-grow-bmp-07**.  BMP protocol version 3 is defined in draft 07, while versions 1 and 2 are defined in the previous revisions of the draft.
 
 JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR, and JunOS 13.3 implement version 3 (draft 07).
 
-![Build Status](https://build-jenkins.openbmp.org:8443/buildStatus/icon?job=openbmp-server-ubuntu-trusty)
 
 ### Daemon
 OpenBMP daemon is a BMP receiver for devices that implement BMP, such as Cisco and Juniper routers.  Collected BMP messages are decoded and stored in a SQL database.
