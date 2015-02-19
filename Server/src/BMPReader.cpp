@@ -122,7 +122,9 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
 
                     // Prepare the BGP parser
-                    pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr);
+                    pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr,
+                                        &peer_info_map[string(reinterpret_cast<char*>(p_entry.hash_id))]);
+
                     if (cfg->debug_bgp)
                        pBGP->enableDebug();
 
@@ -173,6 +175,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
             case parseBMP::TYPE_PEER_UP : // Peer up type
             {
                 DbInterface::tbl_peer_up_event up_event = {};
+                peer_info pInfo = {};
 
                 if (pBMP->parsePeerUpEventHdr(client->c_sock, up_event)) {
                     LOG_INFO("%s: PEER UP Received, local addr=%s:%hu remote addr=%s:%hu", client->c_ipv4,
@@ -181,7 +184,9 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
                     pBMP->bufferBMPMessage(client->c_sock);
 
                     // Prepare the BGP parser
-                    pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr);
+                    pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr,
+                                        &peer_info_map[string(reinterpret_cast<char*>(p_entry.hash_id))]);
+
                     if (cfg->debug_bgp)
                        pBGP->enableDebug();
 
@@ -207,7 +212,8 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
                  * Read and parse the the BGP message from the client.
                  *     parseBGP will update mysql directly
                  */
-                pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr);
+                pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr,
+                                    &peer_info_map[string(reinterpret_cast<char*>(p_entry.hash_id))]);
                 if (cfg->debug_bgp)
                     pBGP->enableDebug();
 

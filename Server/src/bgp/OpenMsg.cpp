@@ -51,12 +51,12 @@ OpenMsg::~OpenMsg() {
  * \return ZERO is error, otherwise a positive value indicating the number of bytes read for the open message
  */
 size_t OpenMsg::parseOpenMsg(u_char *data, size_t size,
-                            uint32_t &asn, uint16_t &holdTime, std::string &bgp_id, std::list<std::string> &capabilties) {
+                            uint32_t &asn, uint16_t &holdTime, std::string &bgp_id, std::list<std::string> &capabilities) {
     char        bgp_id_char[16];
     size_t      read_size       = 0;
     u_char      *bufPtr         = data;
     open_bgp_hdr open_hdr       = {0};
-    capabilties.clear();
+    capabilities.clear();
 
     /*
      * Make sure available size is large enough for an open message
@@ -92,7 +92,7 @@ size_t OpenMsg::parseOpenMsg(u_char *data, size_t size,
         return 0;
     }
 
-    if (!parseCapabilities(bufPtr, open_hdr.param_len, asn, capabilties)) {
+    if (!parseCapabilities(bufPtr, open_hdr.param_len, asn, capabilities)) {
         LOG_WARN("%s: Could not read capabilities correctly in buffer, message is invalid.", peer_addr.c_str());
         return 0;
     }
@@ -117,7 +117,7 @@ size_t OpenMsg::parseOpenMsg(u_char *data, size_t size,
  *
  * \return ZERO is error, otherwise a positive value indicating the number of bytes read
  */
-size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std::list<std::string> &capabilties)
+size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std::list<std::string> &capabilities)
 {
     size_t      read_size   = 0;
     u_char      *bufPtr     = data;
@@ -157,7 +157,7 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
                             memcpy(&asn, cap_ptr + 2, 4);
                             bgp::SWAP_BYTES(&asn);
                             snprintf(capStr, sizeof(capStr), "4 Octet ASN (%d)", BGP_CAP_4OCTET_ASN);
-                            capabilties.push_back(capStr);
+                            capabilities.push_back(capStr);
                         } else {
                             LOG_NOTICE("%s: 4 octet ASN capability length is invalid %d expected 4", peer_addr.c_str(), cap->len);
                         }
@@ -166,43 +166,43 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
                     case BGP_CAP_ROUTE_REFRESH:
                         SELF_DEBUG("%s: supports route-refresh", peer_addr.c_str());
                         snprintf(capStr, sizeof(capStr), "Route Refresh (%d)", BGP_CAP_ROUTE_REFRESH);
-                                                    capabilties.push_back(capStr);
+                        capabilities.push_back(capStr);
                         break;
 
                     case BGP_CAP_ROUTE_REFRESH_ENHANCED:
                         SELF_DEBUG("%s: supports route-refresh enhanced", peer_addr.c_str());
                         snprintf(capStr, sizeof(capStr), "Route Refresh Enhanced (%d)", BGP_CAP_ROUTE_REFRESH_ENHANCED);
-                        capabilties.push_back(capStr);
+                        capabilities.push_back(capStr);
                         break;
 
                     case BGP_CAP_ROUTE_REFRESH_OLD:
                         SELF_DEBUG("%s: supports OLD route-refresh", peer_addr.c_str());
                         snprintf(capStr, sizeof(capStr), "Route Refresh Old (%d)", BGP_CAP_ROUTE_REFRESH_OLD);
-                                                    capabilties.push_back(capStr);
+                        capabilities.push_back(capStr);
                         break;
 
                     case BGP_CAP_ADD_PATH:
                         SELF_DEBUG("%s: supports add-path", peer_addr.c_str());
                         snprintf(capStr, sizeof(capStr), "ADD Path (%d)", BGP_CAP_ADD_PATH);
-                        capabilties.push_back(capStr);
+                        capabilities.push_back(capStr);
                         break;
 
                     case BGP_CAP_GRACEFUL_RESTART:
                         SELF_DEBUG("%s: supports graceful restart", peer_addr.c_str());
                         snprintf(capStr, sizeof(capStr), "Graceful Restart (%d)", BGP_CAP_GRACEFUL_RESTART);
-                        capabilties.push_back(capStr);
+                        capabilities.push_back(capStr);
                         break;
 
                     case BGP_CAP_OUTBOUND_FILTER:
                         SELF_DEBUG("%s: supports outbound filter", peer_addr.c_str());
                         snprintf(capStr, sizeof(capStr), "Outbound Filter (%d)", BGP_CAP_OUTBOUND_FILTER);
-                        capabilties.push_back(capStr);
+                        capabilities.push_back(capStr);
                         break;
 
                     case BGP_CAP_MULTI_SESSION:
                         SELF_DEBUG("%s: supports multi-session", peer_addr.c_str());
                         snprintf(capStr, sizeof(capStr), "Multi-session (%d)", BGP_CAP_MULTI_SESSION);
-                        capabilties.push_back(capStr);
+                        capabilities.push_back(capStr);
                         break;
 
                     case BGP_CAP_MPBGP:
@@ -299,7 +299,7 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
                                     break;
                             }
 
-                            capabilties.push_back(decodedStr);
+                            capabilities.push_back(decodedStr);
 
                         }
                         else {
@@ -313,7 +313,7 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
 
                     default :
                         snprintf(capStr, sizeof(capStr), "%d", cap->code);
-                        capabilties.push_back(capStr);
+                        capabilities.push_back(capStr);
 
                         SELF_DEBUG("%s: Ignoring capability %d, not implemented", peer_addr.c_str(), cap->code);
                         break;

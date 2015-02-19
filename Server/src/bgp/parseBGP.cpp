@@ -41,8 +41,10 @@ using namespace std;
  * \param [in]     dbi_ptr     Pointer to exiting dB implementation
  * \param [in,out] peer_entry  Pointer to peer entry
  * \param [in]     routerAddr  The router IP address - used for logging
+ * \param [in,out] peer_info   Persistent peer information
  */
-parseBGP::parseBGP(Logger *logPtr, DbInterface *dbi_ptr, DbInterface::tbl_bgp_peer *peer_entry, string routerAddr) {
+parseBGP::parseBGP(Logger *logPtr, DbInterface *dbi_ptr, DbInterface::tbl_bgp_peer *peer_entry, string routerAddr,
+                   BMPReader::peer_info *peer_info) {
     debug = false;
 
     logger = logPtr;
@@ -57,9 +59,7 @@ parseBGP::parseBGP(Logger *logPtr, DbInterface *dbi_ptr, DbInterface::tbl_bgp_pe
 
     // Set our peer entry
     p_entry = peer_entry;
-
-    // Set the default ASN size
-    peer_asn_len = 4;
+    p_info = peer_info;
 
     router_addr = routerAddr;
 }
@@ -84,13 +84,16 @@ bool parseBGP::handleUpdate(u_char *data, size_t size) {
     bgp_msg::UpdateMsg::parsed_update_data parsed_data;
     int read_size = 0;
 
+    bool four_octet_asn = p_info->recv_four_octet_asn and p_info->sent_four_octet_asn;
+
     if (parseBgpHeader(data, size) == BGP_MSG_UPDATE) {
         data += BGP_MSG_HDR_LEN;
 
         /*
          * Parse the update message - stored results will be in parsed_data
          */
-        bgp_msg::UpdateMsg uMsg(logger, p_entry->peer_addr, router_addr, debug);
+        bgp_msg::UpdateMsg uMsg(logger, p_entry->peer_addr, router_addr, four_octet_asn, debug);
+
         if ((read_size=uMsg.parseUpdateMsg(data, data_bytes_remaining, parsed_data)) != (size - BGP_MSG_HDR_LEN)) {
             LOG_NOTICE("%s: rtr=%s: Failed to parse the update message, read %d expected %d", p_entry->peer_addr,
                         router_addr.c_str(), read_size, (size - read_size));
@@ -159,7 +162,6 @@ bool parseBGP::handleDownEvent(u_char *data, size_t size, DbInterface::tbl_peer_
  *
  * \param [in]     data             Pointer to the raw BGP message header
  * \param [in]     size             length of the data buffer (used to prevent overrun)
- * \param [in,out] peer_up_event    Updated with details from the peer up message (sent/recv open msg)
  *
  * \returns True if error, false if no error.
  */
@@ -194,6 +196,10 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, DbInterface::tbl_peer_up
         for (list<string>::iterator it = cap_list.begin(); it != cap_list.end(); it++) {
             if ( it != cap_list.begin())
                 cap_str.append(", ");
+
+            // Check for 4 octet ASN support
+            if ((*it).find("4 Octet ASN") != std::string::npos)
+                p_info->sent_four_octet_asn = true;
 
             cap_str.append((*it));
         }
@@ -232,6 +238,10 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, DbInterface::tbl_peer_up
         for (list<string>::iterator it = cap_list.begin(); it != cap_list.end(); it++) {
             if ( it != cap_list.begin())
                 cap_str.append(", ");
+
+            // Check for 4 octet ASN support - reset to false if
+            if ((*it).find("4 Octet ASN") != std::string::npos)
+                p_info->recv_four_octet_asn = true;
 
             cap_str.append((*it));
         }

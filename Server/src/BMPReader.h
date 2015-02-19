@@ -11,11 +11,12 @@
 #define BMPREADER_H_
 
 #include "BMPListener.h"
+#include "BMPReader.h"
 #include "DbInterface.hpp"
 #include "Logger.h"
 #include "Config.h"
 
-using namespace std;
+#include <map>
 
 /**
  * \class   BMPReader
@@ -31,6 +32,17 @@ public:
         ADDR_IPV4, ADDR_IPV6, DNS
     };
 */
+
+    /**
+     * Persistent peer information structure
+     *
+     *   OPEN and other updates can add/change persistent peer information.
+     */
+    struct peer_info {
+        bool sent_four_octet_asn;               ///< Indicates if 4 (true) or 2 (false) octet ASN is being used (sent cap)
+        bool recv_four_octet_asn;               ///< Indicates if 4 (true) or 2 (false) octet ASN is being used (recv cap)
+    };
+
 
     /**
      * Class constructor
@@ -66,6 +78,13 @@ private:
     Cfg_Options *cfg;                       ///< Config pointer
     bool        debug;                      ///< debug flag to indicate debugging
     u_char      router_hash_id[16];         ///< Router hash ID
+
+
+    /**
+     * Persistent peer info map, Key is the peer_hash_id.
+     */
+    std::map<std::string, peer_info> peer_info_map;
+    typedef std::map<std::string, peer_info>::iterator peer_info_map_iter;
 
 };
 

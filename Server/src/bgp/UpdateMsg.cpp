@@ -24,17 +24,21 @@ namespace bgp_msg {
  *
  * \details Handles bgp update messages
  *
- * \param [in]     logPtr       Pointer to existing Logger for app logging
- * \param [in]     pperAddr     Printed form of peer address used for logging
- * \param [in]     routerAddr   The router IP address - used for logging
- * \param [in]     enable_debug Debug true to enable, false to disable
+ * \param [in]     logPtr           Pointer to existing Logger for app logging
+ * \param [in]     pperAddr         Printed form of peer address used for logging
+ * \param [in]     routerAddr       The router IP address - used for logging
+ * \param [in]     four_octet_asn   True if 4-octet ASN should be used, false for 2-octet
+ * \param [in]     enable_debug     Debug true to enable, false to disable
  */
-UpdateMsg::UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAddr, bool enable_debug) {
+UpdateMsg::UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAddr, bool four_octet_asn,
+                     bool enable_debug) {
     logger = logPtr;
     debug = enable_debug;
 
     peer_addr = peerAddr;
     router_addr = routerAddr;
+
+    this->four_octet_asn = four_octet_asn;
 }
 
 UpdateMsg::~UpdateMsg() {
@@ -422,7 +426,7 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
         }
 
         default:
-            LOG_INFO("%s: rtr=%s: attribute type %d is not yet implemented, skipping for now.",
+            LOG_INFO("%s: rtr=%s: attribute type %d is not yet implemented or intentionally ignored, skipping for now.",
                     peer_addr.c_str(), router_addr.c_str(), attr_type);
             break;
 
@@ -488,6 +492,16 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
     uint32_t    seg_asn;
 
     /*
+     * Per draft-ietf-grow-bmp-07, UPDATES must be sent as 4-octet, but this requires the
+     *    UPDATE to be modified.  IOS XE/XR does not modify the UPDATE and therefore a peer
+     *    that is using 2-octet ASN's will not be parsed correctly.  Global instance var
+     *    four_octet_asn is used to check if the OPEN cap sent/recv 4-octet or not. A compliant
+     *    BMP implementation will still use 4-octet even if the peer is 2-octet, so we default
+     *    to 4.  If that fails, we switch to 2.
+     */
+    char asn_octet_size = 4;
+
+    /*
      * Loop through each path segment
      */
     while (path_len > 0) {
@@ -500,36 +514,49 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
            decoded_path.append(" {");
        }
 
-       /*
-        * All paths are 4 octet ASN via BMP (latest draft)
-        */
-       SELF_DEBUG("%s: rtr=%s: as_path seg_len = %d seg_type = %d, path_len = %d total_len = %d", peer_addr.c_str(), router_addr.c_str(),
+
+        SELF_DEBUG("%s: rtr=%s: as_path seg_len = %d seg_type = %d, path_len = %d total_len = %d", peer_addr.c_str(), router_addr.c_str(),
                    seg_len, seg_type, path_len, attr_len);
+        if ((seg_len * asn_octet_size) > path_len){
 
-       if ((seg_len * 4) > path_len) {
-           LOG_NOTICE("%s: rtr=%s: Could not parse the AS PATH due to update message buffer being too short, or path contains 2 octet ASN's when it should be 4.",
-                   peer_addr.c_str(), router_addr.c_str());
-           return;
-       }
+            if (four_octet_asn) {
+                LOG_NOTICE("%s: rtr=%s: Could not parse the AS PATH due to update message buffer being too short when using 4-octet ASN's",
+                           peer_addr.c_str(), router_addr.c_str());
+                return;
+            }
 
-       // The rest of the data is the as path sequence, in blocks of 2 or 4 bytes
-       for (; seg_len > 0; seg_len--) {
-           memcpy(&seg_asn, data, 4);  data += 4;
-           path_len -= 4;                               // Adjust the path length for what was read
+            else {
+                asn_octet_size = 2;                                  // Change to use 2 and see if that works
 
-           bgp::SWAP_BYTES(&seg_asn);
-           decoded_path.append(" ");
-           std::ostringstream numString;
-           numString << seg_asn;
-           decoded_path.append(numString.str());
+                if ((seg_len * asn_octet_size) > path_len) {
+                    LOG_NOTICE("%s: rtr=%s: Could not parse the AS PATH due to update message buffer being too short when using 2-octet ASN's",
+                               peer_addr.c_str(), router_addr.c_str());
+                    return;
+                }
+                else
+                    SELF_DEBUG("%s: rtr=%s: Using 2-octet ASN path parsing", peer_addr.c_str(), router_addr.c_str());
+            }
+        }
 
-           // Increase the as path count
-           ++as_path_cnt;
-       }
+        // The rest of the data is the as path sequence, in blocks of 2 or 4 bytes
+        for (; seg_len > 0; seg_len--) {
+            seg_asn = 0;
+            memcpy(&seg_asn, data, asn_octet_size);  data += asn_octet_size;
+            path_len -= asn_octet_size;                               // Adjust the path length for what was read
 
-       if (seg_type == 1) {            // If AS-SET close with a brace
-           decoded_path.append(" }");
-       }
+            bgp::SWAP_BYTES(&seg_asn, asn_octet_size);
+            decoded_path.append(" ");
+            std::ostringstream numString;
+            numString << seg_asn;
+            decoded_path.append(numString.str());
+
+            // Increase the as path count
+            ++as_path_cnt;
+        }
+
+        if (seg_type == 1) {            // If AS-SET close with a brace
+            decoded_path.append(" }");
+        }
     }
 
     SELF_DEBUG("%s: rtr=%s: Parsed AS_PATH count %hu : %s", peer_addr.c_str(), router_addr.c_str(), as_path_cnt, decoded_path.c_str());

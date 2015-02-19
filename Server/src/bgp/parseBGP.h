@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <list>
+#include <BMPReader.h>
 #include "DbInterface.hpp"
 #include "Logger.h"
 #include "bgp_common.h"
@@ -76,8 +77,10 @@ public:
      * \param [in]     dbi_ptr     Pointer to exiting dB implementation
      * \param [in,out] peer_entry  Pointer to peer entry
      * \param [in]     routerAddr  The router IP address - used for logging
+     * \param [in,out] peer_info   Persistent peer information
      */
-    parseBGP(Logger *logPtr, DbInterface *dbi_ptr, DbInterface::tbl_bgp_peer *peer_entry, string routerAddr);
+    parseBGP(Logger *logPtr, DbInterface *dbi_ptr, DbInterface::tbl_bgp_peer *peer_entry, string routerAddr,
+             BMPReader::peer_info *peer_info);
 
     virtual ~parseBGP();
 
@@ -88,6 +91,7 @@ public:
      *
      * \param [in]     data             Pointer to the raw BGP message header
      * \param [in]     size             length of the data buffer (used to prevent overrun)
+
      *
      * \returns True if error, false if no error.
      */
@@ -116,7 +120,6 @@ public:
      *
      * \param [in]     data             Pointer to the raw BGP message header
      * \param [in]     size             length of the data buffer (used to prevent overrun)
-     * \param [in,out] peer_up_event    Updated with details from the peer up message (sent/recv open msg)
      *
      * \returns True if error, false if no error.
      */
@@ -148,9 +151,9 @@ private:
     DbInterface::tbl_bgp_peer        *p_entry;       ///< peer table entry - will be updated with BMP info
     DbInterface                      *dbi_ptr;       ///< Pointer to open DB implementation
     string                           router_addr;    ///< Router IP address - used for logging
+    BMPReader::peer_info             *p_info;        ///< Persistent Peer information
 
     unsigned char path_hash_id[16];                  ///< current path hash ID
-    unsigned char peer_asn_len;                      ///< The PEER asn length in octets (either 2 or 4 (RFC4893))
 
     bool            debug;                           ///< debug flag to indicate debugging
     Logger          *logger;                         ///< Logging class pointer

@@ -131,7 +131,7 @@ public:
      * \return ZERO is error, otherwise a positive value indicating the number of bytes read for the open message
      */
     size_t parseOpenMsg(u_char *data, size_t size,
-                                uint32_t &asn, uint16_t &holdTime, std::string &bgp_id, std::list<std::string> &capabilties);
+                                uint32_t &asn, uint16_t &holdTime, std::string &bgp_id, std::list<std::string> &capabilities);
 
 
 private:
@@ -154,7 +154,7 @@ private:
      *
      * \return ZERO is error, otherwise a positive value indicating the number of bytes read
      */
-    size_t parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std::list<std::string> &capabilties);
+    size_t parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std::list<std::string> &capabilities);
 };
 
 } /* namespace bgp */
