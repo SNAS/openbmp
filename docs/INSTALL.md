@@ -141,7 +141,7 @@ Load the openbmp DB schema by downloading it from www.openbmp.org.  You can also
 latest from [GitHub OpenBMP](https://github.com/OpenBMP/openbmp)
 
 ```
-curl -o mysql-openbmp-current.db http://www.openbmp.org/docs/mysql-openbmp-current.db
+curl -o mysql-openbmp-current.db https://raw.githubusercontent.com/OpenBMP/openbmp/master/database/mysql-openbmp-current.db
 mysql -u root -p openBMP < mysql-openbmp-current.db 
 ```
 
