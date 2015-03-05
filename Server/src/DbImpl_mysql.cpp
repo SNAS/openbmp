@@ -69,7 +69,7 @@ mysqlBMP::~mysqlBMP() {
 
             // Build the query
             snprintf(buf, sizeof(buf),
-                    "UPDATE %s SET isConnected=0,term_reason_code=65535,term_reason_text=\"OpenBMP server stopped\" where hash_id = '%s'",
+                    "UPDATE %s SET isConnected=0,conn_count=0,term_reason_code=65535,term_reason_text=\"OpenBMP server stopped\" where hash_id = '%s'",
                     TBL_NAME_ROUTERS,
                     it->first.c_str());
 
@@ -285,8 +285,8 @@ void mysqlBMP::add_Router(tbl_router &r_entry, bool incConnectCount) {
 
         // Build the query
         snprintf(buf, sizeof(buf),
-                "INSERT into %s (%s) values ('%s', '%s', '%s','%s','%s', 1)",
-                TBL_NAME_ROUTERS, "hash_id,name,description,ip_address,init_data,conn_count", r_hash_str.c_str(),
+                "INSERT into %s (%s) values ('%s', '%s', '%s','%s','%s', 1, 1)",
+                TBL_NAME_ROUTERS, "hash_id,name,description,ip_address,init_data,isConnected,conn_count", r_hash_str.c_str(),
                 r_entry.name, r_entry.descr, r_entry.src_addr, initData.c_str());
 
         // Add the on duplicate statement
