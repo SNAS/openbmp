@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -379,17 +379,15 @@ bool mysqlBMP::disconnect_Router(tbl_router &r_entry) {
  * Abstract method Implementation - See DbInterface.hpp for details
  */
 void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
-    char    *buf = new char[800000];            // Misc working buffer
-    char    buf2[4096];                         // Second working buffer
-    size_t  buf_len = 0;                        // query buffer length
+    char    *buf = new char[1800000];            // Misc working buffer
+    char    buf2[8192];                          // Second working buffer
+    size_t  buf_len = 0;                         // query buffer length
 
     try {
 
         // Build the initial part of the query
-        //buf_len = sprintf(buf, "REPLACE into %s (%s) values ", TBL_NAME_RIB,
-        //        "hash_id,path_attr_hash_id,peer_hash_id,prefix, prefix_len");
         buf_len = sprintf(buf, "INSERT into %s (%s) values ", TBL_NAME_RIB,
-                "hash_id,path_attr_hash_id,peer_hash_id,prefix, prefix_len,timestamp");
+                          "hash_id,path_attr_hash_id,peer_hash_id,prefix,prefix_len,isIPv4,prefix_bin,prefix_bcast_bin,timestamp");
 
         string rib_hash_str;
         string path_hash_str;
@@ -423,14 +421,37 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
             hash_toStr(rib_entry[i].path_attr_hash_id, path_hash_str);
             hash_toStr(rib_entry[i].peer_hash_id, p_hash_str);
 
-            buf_len += snprintf(buf2, sizeof(buf2),
-                    " ('%s','%s','%s','%s', %d, from_unixtime(%u)),", rib_hash_str.c_str(),
-                    path_hash_str.c_str(), p_hash_str.c_str(),
-                    rib_entry[i].prefix, rib_entry[i].prefix_len,
-                    rib_entry[i].timestamp_secs);
+            if (rib_entry[i].isIPv4) {
+                // IPv4
+                buf_len += snprintf(buf2, sizeof(buf2),
+                        " ('%s','%s','%s','%s', %d, 1, X'%02hX%02hX%02hX%02hX', X'%02hX%02hX%02hX%02hX', from_unixtime(%u)),",
+                        rib_hash_str.c_str(),
+                        path_hash_str.c_str(), p_hash_str.c_str(),
+                        rib_entry[i].prefix, rib_entry[i].prefix_len,
+                        rib_entry[i].prefix_bin[0], rib_entry[i].prefix_bin[1], rib_entry[i].prefix_bin[2], rib_entry[i].prefix_bin[3],
+                        rib_entry[i].prefix_bcast_bin[0], rib_entry[i].prefix_bcast_bin[1],
+                        rib_entry[i].prefix_bcast_bin[2], rib_entry[i].prefix_bcast_bin[3],
+                        rib_entry[i].timestamp_secs);
+            } else {
+                // IPv6
+                buf_len += snprintf(buf2, sizeof(buf2),
+                        " ('%s','%s','%s','%s', %d, 0, X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX', X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX', from_unixtime(%u)),",
+                        rib_hash_str.c_str(),
+                        path_hash_str.c_str(), p_hash_str.c_str(),
+                        rib_entry[i].prefix, rib_entry[i].prefix_len,
+                        rib_entry[i].prefix_bin[0], rib_entry[i].prefix_bin[1], rib_entry[i].prefix_bin[2], rib_entry[i].prefix_bin[3],
+                        rib_entry[i].prefix_bin[4], rib_entry[i].prefix_bin[5], rib_entry[i].prefix_bin[6], rib_entry[i].prefix_bin[7],
+                        rib_entry[i].prefix_bin[8], rib_entry[i].prefix_bin[9], rib_entry[i].prefix_bin[10], rib_entry[i].prefix_bin[11],
+                        rib_entry[i].prefix_bin[12], rib_entry[i].prefix_bin[13], rib_entry[i].prefix_bin[14], rib_entry[i].prefix_bin[15],
+                        rib_entry[i].prefix_bcast_bin[0], rib_entry[i].prefix_bcast_bin[1], rib_entry[i].prefix_bcast_bin[2], rib_entry[i].prefix_bcast_bin[3],
+                        rib_entry[i].prefix_bcast_bin[4], rib_entry[i].prefix_bcast_bin[5], rib_entry[i].prefix_bcast_bin[6], rib_entry[i].prefix_bcast_bin[7],
+                        rib_entry[i].prefix_bcast_bin[8], rib_entry[i].prefix_bcast_bin[9], rib_entry[i].prefix_bcast_bin[10], rib_entry[i].prefix_bcast_bin[11],
+                        rib_entry[i].prefix_bcast_bin[12], rib_entry[i].prefix_bcast_bin[13], rib_entry[i].prefix_bcast_bin[14], rib_entry[i].prefix_bcast_bin[15],
+                        rib_entry[i].timestamp_secs);
+            }
 
             // Cat the entry to the query buff
-            if (buf_len < 800000 /* size of buf */)
+            if (buf_len < 1800000 /* size of buf */)
                 strcat(buf, buf2);
         }
 
@@ -448,6 +469,7 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
         // Run the query to add the record
         stmt = con->createStatement();
         stmt->execute(buf);
+
 
         // Free the query statement
         delete stmt;

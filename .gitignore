@@ -1,0 +1,5 @@
+.idea
+deb_package
+rpm_package
+build
+mac_build

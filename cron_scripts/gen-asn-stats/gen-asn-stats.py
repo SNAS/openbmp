@@ -49,7 +49,7 @@ QUERY_ORIGIN_AS_PREFIXES = (
         "  from (select origin_as,prefix,prefix_len,if(prefix regexp '^[0-9a-f]:', 'IPv6', 'IPv4') as Type"
         "        from rib join path_attrs force index (primary) ON (rib.path_attr_hash_id = path_attrs.hash_id)"
         "        where if(prefix  regexp '^[0-9a-f]+:', 'IPv6', 'IPv4') = '%(type)s'"
-        "        group by prefix,prefix_len order by null) s"
+        "        group by prefix,prefix_len,origin_as order by null) s"
         "  group by origin_as"
         )
 

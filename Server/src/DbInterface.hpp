@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -224,8 +224,11 @@ public:
         u_char      hash_id[16];            ///< hash of attr hash prefix, and prefix len
         u_char      path_attr_hash_id[16];  ///< path attrs hash_id
         u_char      peer_hash_id[16];       ///< BGP peer hash ID, need it here for withdraw routes support
+        u_char      isIPv4;                 ///< 0 if IPv6, 1 if IPv4
         char        prefix[40];             ///< IPv4/IPv6 prefix in printed form
         u_char      prefix_len;             ///< Length of prefix in bits
+        uint8_t     prefix_bin[16];         ///< Prefix in binary form
+        uint8_t     prefix_bcast_bin[16];   ///< Broadcast address/last address in binary form
         uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
     };
 

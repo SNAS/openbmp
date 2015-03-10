@@ -1,6 +1,6 @@
 Databases Supported
 ===================
-Currently MySQL/MariaDB **5.5.17** (and greater) is supported.   Any Linux distribution that uses an
+Currently MySQL/MariaDB **5.6** (and greater) is supported.   Any Linux distribution that uses an
 older version should install the latest 5.6 or 5.7 via [MySQL Download](http://dev.mysql.com/downloads/mysql/) or via [MariaDB Download](https://downloads.mariadb.org/)
 
 Interaction with the Database
@@ -52,7 +52,12 @@ Aggregator | varchar | Aggregator AS and IP address in printed format
 PeerAddress | varchar | Peer IP address in printed format
 isPeerIPv4 | bool | Indicates if the peer is IPv4 or IPv6
 isPeerVPN | bool | Indicates if the peer is a VPN/VRF peer
-LastModified | timestamp | Timestamp of when last modified/udpated
+LastModified | timestamp | Timestamp of when last modified/updated
+prefix_bin | varbinary | Binary (inet_ntoa/inet6_ntoa) representation of the prefix address
+rib_hash_id | char | RIB hash ID
+path_hash_id | char | Path attribute hash ID
+peer_hash_id | char | Peer hash ID
+router_hash_id | char | Router hash ID
 
 
 ### v_routes_history
@@ -101,6 +106,8 @@ LocalHoldTime | int | BGP holdtime sent to peer
 PeerHoldTime | int | BGP holdtime received from peer
 isUp | boolean | True if peer is up, or false if peer is down
 isBMPConnected | boolean | True if the router BMP session is connected, false if not
+isPeerVPN | boolean | True if the peer is a VPN peer (e.g. within a VRF)
+isPrePolicy | boolean | True if the peer updates are pre-policy, false if post-policy/loc-rib
 LastBMPReasonCode | varchar | BMP Reason code (Down message contains reason text)
 LastDownCode | int | BGP error code of the last down notification
 LastDownSubCode | int | BGP error subcode of the last down notification
@@ -108,7 +115,80 @@ LastDownMessage | varchar | Meaning of last peer down notification
 LastDownTimestamp | timestamp | Timestamp of the last time peer down was sent
 LastUpTimestamp | timestamp | Timestamp of the last time peer up was sent
 SentCapabilities | varchar(variable) | String list of sent capabilities
-RecvCapabilities | varchar(variable) | String list of received capabilties
+RecvCapabilities | varchar(variable) | String list of received capabilities
+peer_hash_id | char | Peer hash ID
+router_hash_id | char | Router hash ID
+
+### v_peer_prefix_report
+Each peer sends statistic reports on the router configured interval.  This view shows
+the peer statistics.  Each interval will be shown.  
+
+Column | DataType | Description 
+------ | -------- | -----------
+RouterName | varchar | Name of the router or IP if name is not set 
+PeerName | varchar | Name of the peer or IP if name not set
+TS | timestamp of the internal
+Rejected | unsigned int 32bit | Number of prefixes rejected by inbound policy
+ConfedLoop | unsigned int 32bit | Number of updates invalidated due to AS_CONFED loop
+ASLoop | unsigned int 32bit | Number of updates invalidated due to AS_PATH loop
+InvalidClusterList | unsigned int 32bit | Number of updates invalidated due to CLUSTER_LIST loop
+InvalidOriginator | unsigned int 32bit | Number of updates invalidated due to ORIGINATOR_ID
+KnownPrefix_DUP | unsigned int 32bit | Number of (known) duplicate prefix advertisements
+KnownWithdraw_DUP | unsigned int 32bit | Number of (known) duplicate withdraws
+Pre_RIB | unsigned int 64bit | Number of routes in Adj-RIBs-In
+Post RIB | unsigned int 64bit | Number of routes in Loc-RIB
+router_hash_id | char | Router hash ID
+peer_hash_id | char | Peer hash ID
+
+### v_peer_prefix_report_last
+Each peer sends statistic reports on the router configured interval.  This view shows
+the peer statistics for the last (most current) interval. 
+
+Column | DataType | Description 
+------ | -------- | -----------
+RouterName | varchar | Name of the router or IP if name is not set 
+PeerName | varchar | Name of the peer or IP if name not set
+TS | timestamp of the internval
+Rejected | unsigned int 32bit | Number of prefixes rejected by inbound policy
+ConfedLoop | unsigned int 32bit | Number of updates invalidated due to AS_CONFED loop
+ASLoop | unsigned int 32bit | Number of updates invalidated due to AS_PATH loop
+InvalidClusterList | unsigned int 32bit | Number of updates invalidated due to CLUSTER_LIST loop
+InvalidOriginator | unsigned int 32bit | Number of updates invalidated due to ORIGINATOR_ID
+KnownPrefix_DUP | unsigned int 32bit | Number of (known) duplicate prefix advertisements
+KnownWithdraw_DUP | unsigned int 32bit | Number of (known) duplicate withdraws
+Pre_RIB | unsigned int 64bit | Number of routes in Adj-RIBs-In
+Post RIB | unsigned int 64bit | Number of routes in Loc-RIB
+router_hash_id | char | Router hash ID
+peer_hash_id | char | Peer hash ID
+
+### v_geo_ip
+Geolocation information view. DB-IP, MaxMind, IP 2 Location, etc. provide
+CSV dumps that can be imported into the DB.  Search this view using something like:
+
+    SELECT * FROM v_geo_ip
+                WHERE ip_end_bin >= inet6_aton('72.163.4.161')
+                    and ip_start_bin <= inet6_aton('72.163.4.161')
+                ORDER BY ip_end_bin asc limit 1;
+
+
+Column | DataType | Description 
+------ | -------- | -----------
+ip_start | varchar | Printed representation of the **starting** IP address
+ip_end | varchar | Printed representation of the IP **ending** IP address
+addr_type | varchar | enum of either '**ipv4**' or '**ipv6**'
+country | char(2) | Two byte country abbreviation
+stateprov | varchar | State or province
+city | varchar | City
+latitude | float | Latitude (e.g. 37.4309)
+longitude | float | long (e.g. -121.953)
+timezone_offset | float | Timezone offset from UTC
+timezone_name | varchar | Timezone name 
+isp_name | varchar | ISP Name
+connection_type | varchar | enum of '**dialup**' '**isdn**', '**cable**', '**dsl**', '**fttx**', '**wireless**'
+organization_name | varchar | Organization name
+ip_start_bin | varbinary | Binary (inet_ntoa/inet6_ntoa) representation of the **starting** IP address
+ip_end_bin | varbinary | Binary (inet_ntoa/inet6_ntoa) representation of the **ending** IP address
+
 
 
 Schema for Stored Procedures
@@ -190,6 +270,8 @@ path_attr_hash_id | char(32) | Hash ID of the path_attrs table
 peer_hash_id | char(32) | Hash ID of the bgp_peers table
 prefix | varchar(40) | Prefix in printed format
 prefix_len | int | Length of prefix in bits
+prefix_bin | varbinary | Binary (inet_ntoa/inet6_ntoa) representation of the prefix address
+prefix_bcast_bin | varbinary | Binary (inet_ntoa/inet6_ntoa) representation of the prefix ending address (broadcast)
 timestamp | timestamp | RIB entry timestmap from BMP sender (normally this is the receive time of the entry on the router) - seconds since EPOCH
 db_timestamp | timestamp | DB timestamp when the recorder was added/modified in the DB - seconds since EPOCH
 

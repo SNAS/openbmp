@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -172,11 +172,12 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
     // TODO: Can extend this to support multicast, but right now we set it to unicast v4
     // Set the type for all to be unicast V4
     tuple.type = bgp::PREFIX_UNICAST_V4;
+    tuple.isIPv4 = true;
 
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
-
         bzero(ipv4_raw, sizeof(ipv4_raw));
+        bzero(tuple.prefix_bin, sizeof(tuple.prefix_bin));
 
         // set the address in bits length
         tuple.len = *data++;
@@ -200,6 +201,9 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
             tuple.prefix.assign(ipv4_char);
             SELF_DEBUG("%s: rtr=%s: Adding prefix %s len %d", peer_addr.c_str(),
                         router_addr.c_str(), ipv4_char, tuple.len);
+
+            // set the raw/binary address
+            memcpy(tuple.prefix_bin, ipv4_raw, sizeof(ipv4_raw));
 
             // Add tuple to prefix list
             prefixes.push_back(tuple);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -119,6 +119,8 @@ namespace bgp {
          PREFIX_TYPE   type;                 ///< Prefix type - RIB type
          unsigned char len;                  ///< Length of prefix in bits
          std::string   prefix;               ///< Printed form of the IP address
+         uint8_t       prefix_bin[16];       ///< Prefix in binary form
+         bool          isIPv4;               ///< True if IPv4, false if IPv6
      };
 
     /*********************************************************************//**

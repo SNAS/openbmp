@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -14,7 +14,6 @@
 #include <cstdio>
 #include <unistd.h>
 #include <sys/socket.h>
-
 #include <cstring>
 #include <string>
 #include <list>
@@ -440,6 +439,8 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
 void parseBGP::UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes) {
     vector<DbInterface::tbl_rib> rib_list;
     DbInterface::tbl_rib         rib_entry;
+    uint32_t                     value_32bit;
+    uint64_t                     value_64bit;
 
     /*
      * Loop through all prefixes and add/update them in the DB
@@ -456,6 +457,55 @@ void parseBGP::UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes) {
 
         rib_entry.prefix_len     = tuple.len;
         rib_entry.timestamp_secs = p_entry->timestamp_secs;
+
+        rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
+
+        memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
+
+        // Add the ending IP for the prefix based on bits
+        if (rib_entry.isIPv4) {
+            if (tuple.len < 32) {
+                memcpy(&value_32bit, tuple.prefix_bin, 4);
+                bgp::SWAP_BYTES(&value_32bit);
+
+                value_32bit |= 0xFFFFFFFF >> tuple.len;
+                bgp::SWAP_BYTES(&value_32bit);
+                memcpy(rib_entry.prefix_bcast_bin, &value_32bit, 4);
+
+            } else
+                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
+
+        } else {
+            if (tuple.len < 128) {
+                if (tuple.len >= 64) {
+                    // High order bytes are left alone
+                    memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, 8);
+
+                    // Low order bytes are updated
+                    memcpy(&value_64bit, &tuple.prefix_bin[8], 8);
+                    bgp::SWAP_BYTES(&value_64bit);
+
+                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> (tuple.len - 64);
+                    bgp::SWAP_BYTES(&value_64bit);
+                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
+
+                } else {
+                    // Low order types are all ones
+                    value_64bit = 0xFFFFFFFFFFFFFFFF;
+                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
+
+                    // High order bypes are updated
+                    memcpy(&value_64bit, tuple.prefix_bin, 8);
+                    bgp::SWAP_BYTES(&value_64bit);
+
+                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> tuple.len;
+                    bgp::SWAP_BYTES(&value_64bit);
+                    memcpy(rib_entry.prefix_bcast_bin, &value_64bit, 8);
+                }
+            } else
+                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
+        }
+
 
         SELF_DEBUG("%s: Adding prefix=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -94,7 +94,7 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
 
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6
-            parseAfiUnicstIPv6(nlri, parsed_data);
+            parseAfiIPv6(nlri, parsed_data);
             break;
 
         // TODO: Add other AFI parsing
@@ -113,7 +113,7 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
  * \param [in]   nlri           Reference to parsed NLRI struct
  * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPReachAttr::parseAfiUnicstIPv6(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
+void MPReachAttr::parseAfiIPv6(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
     u_char      ipv6_raw[16];
     char        ipv6_char[40];
 
@@ -163,6 +163,7 @@ void MPReachAttr::parseNlriData_v6(u_char *data, uint16_t len, std::list<bgp::pr
     // TODO: Can extend this to support multicast, but right now we set it to unicast v6
     // Set the type for all to be unicast V6
     tuple.type = bgp::PREFIX_UNICAST_V6;
+    tuple.isIPv4 = false;
 
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
@@ -185,6 +186,9 @@ void MPReachAttr::parseNlriData_v6(u_char *data, uint16_t len, std::list<bgp::pr
             // Convert the IP to string printed format
             inet_ntop(AF_INET6, ipv6_raw, ipv6_char, sizeof(ipv6_char));
             tuple.prefix.assign(ipv6_char);
+
+            // set the raw/binary address
+            memcpy(tuple.prefix_bin, ipv6_raw, sizeof(ipv6_raw));
 
             // Add tuple to prefix list
             prefixes.push_back(tuple);

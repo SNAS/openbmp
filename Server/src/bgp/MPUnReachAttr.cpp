@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -90,7 +90,7 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_dat
 
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6
-            parseAfiUnicstIPv6(nlri, parsed_data);
+            parseAfiIPv6(nlri, parsed_data);
             break;
 
         // TODO: Add other AFI parsing
@@ -109,7 +109,7 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_dat
  * \param [in]   nlri           Reference to parsed Unreach NLRI struct
  * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPUnReachAttr::parseAfiUnicstIPv6(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
+void MPUnReachAttr::parseAfiIPv6(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
 
     /*
      * Decode based on SAFI

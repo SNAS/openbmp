@@ -1,8 +1,10 @@
 /*
- * client_thread.h
+ * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
  *
- *  Created on: Aug 26, 2014
- *      Author: tievens
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
  */
 
 #ifndef CLIENT_THREAD_H_
