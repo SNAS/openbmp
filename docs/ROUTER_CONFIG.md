@@ -67,6 +67,7 @@ routing-options {
     bmp {
         station BMPServer1 {
             initiation-message "Development/LAB";
+            local-address 172.20.160.24;
             connection-mode active;
             monitor enable;
             route-monitoring {
