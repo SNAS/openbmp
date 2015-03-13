@@ -4,12 +4,8 @@ See the various requirements and suggested system configurations at [Requirement
 
 ### Recommended Current Linux Distributions
   1. Ubuntu 14.04/Trusty
-  1. CentOS 7/RHEL 7 - Coming soon
+  1. CentOS 7/RHEL 7
   
-### Older Linux Distributions - but verified/tested
-  1. Ubuntu 12.04/Precise - Coming soon
-  1. Centos 6/RHEL 6 - Coming soon
-
 
 Ubuntu 14.04
 ------------
@@ -40,10 +36,13 @@ sudo apt-get install mysql-client-5.6 mysql-common-5.6 libmysqlcppconn7
 ```
 
 ### Install openbmp via package
-  1. Download the openbmp [package for Ubuntu 14.04](/packages/openbmp-0.8.0-pre4.deb)
+  1. Download the openbmp
+      
+      [package for Ubuntu 14.04](http://www.openbmp.org/#!download.md)
+      
   1. Install the package  - *You should have the depends already installed if you applied the above step.*
       
-      **dpkg -i openbmp-0.8.0-pre4.deb**
+      **dpkg -i openbmp-VERSION.deb**
   
 ```
 ubuntu@demo:~# sudo dpkg -i openbmp-0.8.0-pre4.deb
@@ -139,6 +138,12 @@ innodb_file_per_table     = ON
 ### Load the schema
 Load the openbmp DB schema by downloading it from www.openbmp.org.  You can also get the 
 latest from [GitHub OpenBMP](https://github.com/OpenBMP/openbmp)
+
+> #### Choose the right schema
+> See the [download](http://www.openbmp.org/#!download.md)
+ page for details on which schema to use for which package.
+
+**Latest/Current DEB package uses the current schema as below**
 
 ```
 curl -o mysql-openbmp-current.db https://raw.githubusercontent.com/OpenBMP/openbmp/master/database/mysql-openbmp-current.db
