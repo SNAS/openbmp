@@ -29,7 +29,7 @@ if (NOT MYSQLCONNECTORCPP_INCLUDE_DIR OR NOT MYSQLCONNECTORCPP_LIBRARY)
 endif()
 
 # Update the include dir
-include_directories(${MYSQLCONNECTORCPP_INCLUDE_DIR} src/ src/bgp)
+include_directories(${MYSQLCONNECTORCPP_INCLUDE_DIR} src/ src/bgp src/bgp/linkstate)
 
 
 # Define the source files to compile
@@ -48,7 +48,9 @@ set (SRC_FILES
 	src/bgp/UpdateMsg.cpp
 	src/bgp/MPReachAttr.cpp
 	src/bgp/MPUnReachAttr.cpp
-        src/bgp/ExtCommunity.cpp
+    src/bgp/ExtCommunity.cpp
+    src/bgp/linkstate/MPLinkState.cpp
+    src/bgp/linkstate/MPLinkStateAttr.cpp
 	) 
 
 # Disable warnings

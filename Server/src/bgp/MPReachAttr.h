@@ -65,7 +65,7 @@ public:
      * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
      *
      */
-    void parseReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
+    void parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::parsed_update_data &parsed_data);
 
     /**
      * Parses mp_reach_nlri and mp_unreach_nlri

@@ -8,7 +8,7 @@
  */
 
 #include "MPUnReachAttr.h"
-#include "UpdateMsg.h"
+#include "MPLinkState.h"
 
 #include <arpa/inet.h>
 
@@ -93,8 +93,12 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_dat
             parseAfiIPv6(nlri, parsed_data);
             break;
 
-        // TODO: Add other AFI parsing
-
+        case bgp::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
+        {
+            MPLinkState ls(logger, peer_addr, &parsed_data, debug);
+            ls.parseUnReachLinkState(nlri);
+            break;
+        }
         default : // Unknown
             LOG_INFO("%s: MP_UNREACH AFI=%d is not implemented yet, skipping", peer_addr.c_str(), nlri.afi);
             return;

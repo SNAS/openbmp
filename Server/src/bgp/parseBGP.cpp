@@ -18,6 +18,7 @@
 #include <string>
 #include <list>
 #include <arpa/inet.h>
+#include <bgp/linkstate/MPLinkStateAttr.h>
 
 #include "DbInterface.hpp"
 #include "NotificationMsg.h"
@@ -337,6 +338,12 @@ void parseBGP::UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
     UpdateDBAttrs(parsed_data.attrs);
 
     /*
+     * Update the bgp-ls data
+     */
+    UpdateDbBgpLs(false, parsed_data.ls, parsed_data.ls_attrs);
+    UpdateDbBgpLs(true, parsed_data.ls_withdrawn, parsed_data.ls_attrs);
+
+    /*
      * Update the advertised prefixes (both ipv4 and ipv6)
      */
     UpdateDBAdvPrefixes(parsed_data.advertised);
@@ -357,6 +364,13 @@ void parseBGP::UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
  */
 void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     DbInterface::tbl_path_attr  record;
+
+    /*
+     * Skip adding path attribute if next hop is missing
+     */
+    if (attrs.find(bgp_msg::ATTR_TYPE_NEXT_HOP) == attrs.end()) {
+        return;
+    }
 
     /*
      * Setup the record
@@ -407,8 +421,12 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
 
     if ( ((string)attrs[bgp_msg::ATTR_TYPE_NEXT_HOP]).length() > 0)
         strncpy(record.next_hop, ((string)attrs[bgp_msg::ATTR_TYPE_NEXT_HOP]).c_str(), sizeof(record.next_hop));
-    else
-        bzero(record.next_hop, sizeof(record.next_hop));
+
+    else {
+        // Skip adding path attributes if next hop is missing
+        return;
+        //bzero(record.next_hop, sizeof(record.next_hop));
+    }
 
     if ( ((string)attrs[bgp_msg::ATTR_TYPE_AGGEGATOR]).length() > 0)
         strncpy(record.aggregator, ((string)attrs[bgp_msg::ATTR_TYPE_AGGEGATOR]).c_str(), sizeof(record.aggregator));
@@ -556,6 +574,160 @@ void parseBGP::UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefi
         dbi_ptr->delete_Rib(rib_list);
 
     rib_list.clear();
+}
+
+/**
+ * Update the Database for bgp-ls
+ *
+ * \details This method will update the database for the BGP-LS information
+ *
+ * \note    MUST BE called after adding the attributes since the path_hash_id must be set first.
+ *
+ * \param [in] remove      True if the records should be deleted, false if they are to be added/updated
+ * \param [in] ls_data     Reference to the parsed link state nlri information
+ * \param [in] ls_attrs    Reference to the parsed link state attribute information
+ */
+void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_data,
+                             bgp_msg::UpdateMsg::parsed_ls_attrs_map &ls_attrs) {
+    /*
+     * Update table entry with attributes based on NLRI
+     */
+    if (ls_data.nodes.size() > 0) {
+        SELF_DEBUG("%s: Updating DB BGP-LS: Nodes %d", p_entry->peer_addr, ls_data.nodes.size());
+
+        // Merge attributes to each table entry
+        for (list<DbInterface::tbl_ls_node>::iterator it = ls_data.nodes.begin();
+                it != ls_data.nodes.end(); it++) {
+
+            // Update the path attribute hash ID
+            memcpy((*it).path_atrr_hash_id, path_hash_id, sizeof((*it).path_atrr_hash_id));
+
+            // Update the peer hash ID
+            memcpy((*it).peer_hash_id, p_entry->hash_id, sizeof((*it).peer_hash_id));
+
+            (*it).timestamp_secs = p_entry->timestamp_secs;
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_NAME) != ls_attrs.end())
+                memcpy((*it).name, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_NAME].data(), sizeof((*it).name));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL) != ls_attrs.end())
+                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL].data(), 4);
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL) != ls_attrs.end()) {
+                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL].data(), 16);
+                (*it).isIPv4 = false;
+            }
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID) != ls_attrs.end())
+                memcpy(&(*it).mt_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID].data(), 4);
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_FLAG) != ls_attrs.end())
+                memcpy((*it).flags, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_FLAG].data(), sizeof((*it).flags));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID) != ls_attrs.end())
+                memcpy((*it).isis_area_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID].data(), sizeof((*it).isis_area_id));
+        }
+
+        if (remove)
+            dbi_ptr->del_LsNodes(ls_data.nodes);
+        else
+            dbi_ptr->add_LsNodes(ls_data.nodes);
+    }
+
+    if (ls_data.links.size() > 0) {
+        SELF_DEBUG("%s: Updating DB BGP-LS: Links %d ", p_entry->peer_addr, ls_data.links.size());
+
+        // Merge attributes to each table entry
+        for (list<DbInterface::tbl_ls_link>::iterator it = ls_data.links.begin();
+             it != ls_data.links.end(); it++) {
+
+            // Update the path attribute hash ID
+            memcpy((*it).path_atrr_hash_id, path_hash_id, sizeof((*it).path_atrr_hash_id));
+
+            // Update the peer hash ID
+            memcpy((*it).peer_hash_id, p_entry->hash_id, sizeof((*it).peer_hash_id));
+
+            (*it).timestamp_secs = p_entry->timestamp_secs;
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_ADMIN_GROUP) != ls_attrs.end())
+                memcpy((*it).admin_group, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_ADMIN_GROUP].data(), sizeof((*it).admin_group));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_LINK_BW) != ls_attrs.end())
+                memcpy(&(*it).max_link_bw, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_LINK_BW].data(), sizeof((*it).max_link_bw));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_RESV_BW) != ls_attrs.end())
+                memcpy(&(*it).max_resv_bw, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_RESV_BW].data(), sizeof((*it).max_resv_bw));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_UNRESV_BW) != ls_attrs.end())
+                memcpy(&(*it).unreserved_bw, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_UNRESV_BW].data(), sizeof((*it).unreserved_bw));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_TE_DEF_METRIC) != ls_attrs.end())
+                memcpy(&(*it).te_def_metric, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_TE_DEF_METRIC].data(), sizeof((*it).te_def_metric));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PROTECTION_TYPE) != ls_attrs.end())
+                memcpy((*it).protection_type, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PROTECTION_TYPE].data(), sizeof((*it).protection_type));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_MPLS_PROTO_MASK) != ls_attrs.end())
+                memcpy((*it).mpls_proto_mask, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_MPLS_PROTO_MASK].data(), sizeof((*it).mpls_proto_mask));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_IGP_METRIC) != ls_attrs.end())
+                memcpy(&(*it).igp_metric, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_IGP_METRIC].data(), sizeof((*it).igp_metric));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_SRLG) != ls_attrs.end())
+                memcpy((*it).srlg, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_SRLG].data(), sizeof((*it).srlg));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME) != ls_attrs.end())
+                memcpy((*it).name, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME].data(), sizeof((*it).name));
+        }
+
+        if (remove)
+            dbi_ptr->del_LsLinks(ls_data.links);
+        else
+            dbi_ptr->add_LsLinks(ls_data.links);
+    }
+
+    if (ls_data.prefixes.size() > 0) {
+        SELF_DEBUG("%s: Updating DB BGP-LS: Prefixes %d ", p_entry->peer_addr, ls_data.prefixes.size());
+
+        // Merge attributes to each table entry
+        for (list<DbInterface::tbl_ls_prefix>::iterator it = ls_data.prefixes.begin();
+             it != ls_data.prefixes.end(); it++) {
+
+            // Update the path attribute hash ID
+            memcpy((*it).path_atrr_hash_id, path_hash_id, sizeof((*it).path_atrr_hash_id));
+
+            // Update the peer hash ID
+            memcpy((*it).peer_hash_id, p_entry->hash_id, sizeof((*it).peer_hash_id));
+
+            (*it).timestamp_secs = p_entry->timestamp_secs;
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_IGP_FLAGS) != ls_attrs.end())
+                memcpy((*it).igp_flags, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_IGP_FLAGS].data(), sizeof((*it).igp_flags));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_ROUTE_TAG) != ls_attrs.end())
+                memcpy(&(*it).route_tag, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_ROUTE_TAG].data(), sizeof((*it).route_tag));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_EXTEND_TAG) != ls_attrs.end())
+                memcpy(&(*it).ext_route_tag, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_EXTEND_TAG].data(), sizeof((*it).ext_route_tag));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_PREFIX_METRIC) != ls_attrs.end())
+                memcpy(&(*it).metric, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_PREFIX_METRIC].data(), sizeof((*it).metric));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_OSPF_FWD_ADDR) != ls_attrs.end())
+                memcpy((*it).ospf_fwd_addr, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_OSPF_FWD_ADDR].data(), sizeof((*it).ospf_fwd_addr));
+        }
+
+        if (remove)
+            dbi_ptr->del_LsPrefixes(ls_data.prefixes);
+        else
+            dbi_ptr->add_LsPrefixes(ls_data.prefixes);
+    }
+
+    // Data stored, no longer needed, purge it
+    ls_attrs.clear();
+    ls_data.prefixes.clear();
+    ls_data.links.clear();
+    ls_data.nodes.clear();
 }
 
 

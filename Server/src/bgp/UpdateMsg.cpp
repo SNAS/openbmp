@@ -16,6 +16,7 @@
 #include "ExtCommunity.h"
 #include "MPReachAttr.h"
 #include "MPUnReachAttr.h"
+#include "MPLinkStateAttr.h"
 
 namespace bgp_msg {
 
@@ -426,6 +427,13 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_AS_PATHLIMIT : // deprecated
         {
+            break;
+        }
+
+        case ATTR_TYPE_BGP_LS:
+        {
+            MPLinkStateAttr ls(logger, peer_addr, &parsed_data, debug);
+            ls.parseAttrLinkState(attr_len, data);
             break;
         }
 

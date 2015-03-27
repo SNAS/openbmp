@@ -12,9 +12,11 @@
 
 #include "Logger.h"
 #include "bgp_common.h"
+#include "DbInterface.hpp"
 
 #include <string>
 #include <list>
+#include <array>
 #include <map>
 
 namespace bgp_msg {
@@ -49,7 +51,7 @@ enum UPDATE_ATTR_TYPES {
 
             ATTR_TYPE_BGP_LS=29,                    // BGP LS attribute draft-ietf-idr-ls-distribution
 
-            ATTR_TYPE_BGP_LINK_STATE=99,            // BGP link state Older
+            ATTR_TYPE_BGP_LINK_STATE_OLD=99,        // BGP link state Older
             ATTR_TYPE_BGP_ATTRIBUTE_SET=128,
 
             /*
@@ -105,20 +107,36 @@ public:
         u_char *nlriPtr;
     };
 
-     /**
+    /**
      * parsed path attributes map
      */
     std::map<bgp_msg::UPDATE_ATTR_TYPES, std::string>            parsed_attrs;
     typedef std::pair<bgp_msg::UPDATE_ATTR_TYPES, std::string>   parsed_attrs_pair;
     typedef std::map<bgp_msg::UPDATE_ATTR_TYPES, std::string>    parsed_attrs_map;
 
+    // Parsed bgp-ls attributes map
+    typedef  std::map<uint16_t, std::array<uint8_t, 255>>        parsed_ls_attrs_map;
+
+    /**
+     * Parsed data structure for BGP-LS
+     */
+    struct parsed_data_ls {
+        std::list<DbInterface::tbl_ls_node>   nodes;        ///< List of Link state nodes
+        std::list<DbInterface::tbl_ls_link>   links;        ///< List of link state links
+        std::list<DbInterface::tbl_ls_prefix> prefixes;     ///< List of link state prefixes
+    };
+
     /**
      * Parsed update data - decoded data from complete update parse
      */
     struct parsed_update_data {
-        parsed_attrs_map              attrs;              /// Parsed attrbutes
+        parsed_attrs_map              attrs;              ///< Parsed attrbutes
         std::list<bgp::prefix_tuple>  withdrawn;          ///< List of withdrawn prefixes
         std::list<bgp::prefix_tuple>  advertised;         ///< List of advertised prefixes
+
+        parsed_ls_attrs_map           ls_attrs;           ///< BGP-LS specific attributes
+        parsed_data_ls                ls;                 ///< REACH: Link state parsed data
+        parsed_data_ls                ls_withdrawn;       ///< UNREACH: Parsed Withdrawn data
     };
 
 

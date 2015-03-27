@@ -209,6 +209,19 @@ private:
      */
     void UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefixes);
 
+    /**
+     * Update the Database for bgp-ls
+     *
+     * \details This method will update the database for the BGP-LS information
+     *
+     * \param [in] remove      True if the records should be deleted, false if they are to be added/updated
+     * \param [in] ls_data     Reference to the parsed link state nlri information
+     * \param [in] ls_attrs    Reference to the parsed link state attribute information
+     */
+    void UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_data,
+                                 bgp_msg::UpdateMsg::parsed_ls_attrs_map &ls_attrs);
+
+
 };
 
 #endif /* PARSEBGP_H_ */

@@ -65,6 +65,12 @@ public:
     void add_StatReport(tbl_stats_report &stats);
     void add_PeerDownEvent(tbl_peer_down_event &down_event);
     void add_PeerUpEvent(tbl_peer_up_event &up_event);
+    void add_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes);
+    void del_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes);
+    void add_LsLinks(std::list<DbInterface::tbl_ls_link> &links);
+    void del_LsLinks(std::list<DbInterface::tbl_ls_link> &links);
+    void add_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes);
+    void del_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes);
 
     // Debug methods
     void enableDebug();

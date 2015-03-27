@@ -23,6 +23,11 @@ The database is tuned to support high transactional rates and storage for millio
 
 News
 ----
+### Mar-37-2015
+> #### UPGRADE YOUR SCHEMA if using BGP-LS (link-state)
+
+BGP-LS is now supported.   New tables and views have been created for BGP LS data.
+
 ### Jan-27-2015
 **Release 0.8.0 is available.**   See [release-0.8.0](docs/release_notes/release-0.8.0.md) for more details.
 
@@ -75,6 +80,8 @@ Database | Access to all collected data via standard ODBC/DB drivers
 IPv4 | IPv4 Unicast routing table information
 IPv6 | IPv6 Unicast routing table information
 VPNv4 | L3VPN routing information
+bgp-ls| draft-ietf-idr-ls-distribution
+Extended Communities | Roughly all of them
 Prefix Log| Tracking of withdraws and updates by prefix, including path attributes
 Advanced Reporting| Built-in views for common reports, such as route tables, prefixes as paths, and route table history of changes
 
@@ -89,6 +96,8 @@ There are many reasons to use OpenBMP, but to highlight a few common ones:
 * **Traffic Engineering Analytics**  - Adapt dynamically to change and know what is the best shift
 
 * **BGP pre-policy What-Ifs** - Pre-policy routing information provides insight into all path attributes from various points in the network allowing nonintrusive what-if topology views for new policy validations
+
+* **IGP Topology** - BGP-LS (link-state) provides the complete topology of the IGP (OSPF and/or IS-IS).  The IGP topology provides node, link, and prefix level information.  This includes all BGP next-hops.   It is now possible to do a BGP best path selection with IGP metric for **Adj-In-RIB** information.  It is also possible to monitor the IGP itself as it pertains to links, nodes, prefixes, and BGP.
 
 * *many more*
 
@@ -121,7 +130,7 @@ Check the release notes for changes by release.
 
 Road Map
 --------
-Below are a list of features/changes that are targetted in the next release:
+Below are a list of features/changes that are targeted in the next release:
 
 ### OpenBMP Daemon
 * Inbound message caching to offload socket buffers
@@ -133,11 +142,8 @@ Below are a list of features/changes that are targetted in the next release:
 * Add postgres DB support
 * Implement RFC5424 logging with configuration options to fine tune
 
-### OpenBMP UI
-* Add configuration tuning/modification support
-* Add OpenBMP statistics
-* Add Router and Peering Summary report
-
+### BMP UI
+Currently the UI is being developed.  Please contact **tievens@cisco.com** or **serpil@cisco.com** for more information. 
 
 Building from Source
 --------------------

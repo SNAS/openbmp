@@ -778,6 +778,493 @@ void mysqlBMP::add_PeerUpEvent(DbInterface::tbl_peer_up_event &up_event) {
 }
 
 /**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+void mysqlBMP::add_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes) {
+    char    *buf = new char[1800000];            // Misc working buffer
+    char    buf2[8192];                          // Second working buffer
+    int     buf_len = 0;                         // query buffer length
+
+    try {
+
+        // Build the initial part of the query
+        buf_len = sprintf(buf, "REPLACE into %s (%s) values ", TBL_NAME_LS_NODE,
+                          "hash_id,path_attr_hash_id,peer_hash_id,id,asn,bgp_ls_id,igp_router_id,ospf_area_id,"
+                          "protocol,router_id,isIPv4,isis_area_id,flags,name,timestamp");
+
+        string hash_str;
+        string path_hash_str;
+        string peer_hash_str;
+
+        // Loop through the vector array of entries
+        for (std::list<DbInterface::tbl_ls_node>::iterator it = nodes.begin();
+                it != nodes.end(); it++) {
+
+            DbInterface::tbl_ls_node &node = (*it);
+
+            // Build the query
+            hash_toStr(node.hash_id, hash_str);
+            hash_toStr(node.path_atrr_hash_id, path_hash_str);
+            hash_toStr(node.peer_hash_id, peer_hash_str);
+
+
+            buf_len += snprintf(buf2, sizeof(buf2),
+                    " ('%s','%s','%s',%" PRIu64 ",%u,%u,X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX',X'%02hX%02hX%02hX%02hX',"
+                            "'%s',X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX',"
+                            "%d,X'%02hX%02hX%02hX%02hX','%s','%s',from_unixtime(%u)),",
+                    hash_str.c_str(),path_hash_str.c_str(),peer_hash_str.c_str(), node.id, node.asn, node.bgp_ls_id,
+                    node.igp_router_id[0], node.igp_router_id[1],node.igp_router_id[2],node.igp_router_id[3],
+                    node.igp_router_id[4], node.igp_router_id[5],node.igp_router_id[6],node.igp_router_id[7],
+                    node.ospf_area_Id[0], node.ospf_area_Id[1],node.ospf_area_Id[2], node.ospf_area_Id[3],
+                    node.protocol,
+                    node.router_id[0],node.router_id[1],node.router_id[2],node.router_id[3],node.router_id[4],node.router_id[5],
+                    node.router_id[6],node.router_id[7],node.router_id[8],node.router_id[9],node.router_id[10],node.router_id[11],
+                    node.router_id[12],node.router_id[13],node.router_id[14],node.router_id[15],
+                    node.isIPv4, node.isis_area_id[3], node.isis_area_id[2],node.isis_area_id[1],node.isis_area_id[0],
+                    node.flags, node.name, node.timestamp_secs
+            );
+
+
+            // Cat the entry to the query buff
+            if (buf_len < 1800000 /* size of buf */)
+                strcat(buf, buf2);
+        }
+
+        // Remove the last comma since we don't need it
+        buf[buf_len - 1] = 0;
+
+        SELF_DEBUG("QUERY=%s", buf);
+
+        // Run the query to add the record
+        stmt = con->createStatement();
+        stmt->execute(buf);
+
+
+        // Free the query statement
+        delete stmt;
+
+    } catch (sql::SQLException &e) {
+        LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+    }
+
+    // Free the large buffer
+    delete[] buf;
+}
+
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+void mysqlBMP::del_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes) {
+    char    *buf = new char[1800000];            // Misc working buffer
+
+    string  IN_node_hash_list;                   // List of node hashes
+
+    try {
+        string hash_str;
+        string peer_hash_str;
+
+        // build a IN where clause list of node hash ids
+        for (std::list<DbInterface::tbl_ls_node>::iterator it = nodes.begin();
+             it != nodes.end(); it++) {
+
+            DbInterface::tbl_ls_node &node = (*it);
+
+            // Get the node hash
+            hash_toStr(node.hash_id, hash_str);
+            hash_toStr(node.peer_hash_id, peer_hash_str);
+
+            if (IN_node_hash_list.size() < 1800000) {
+                IN_node_hash_list.append("'").append(hash_str).append("',");
+            }
+        }
+
+        // Erase/drop the last comma
+        IN_node_hash_list.erase(IN_node_hash_list.end()-1);
+
+        // Delete nodes
+        snprintf(buf, 1800000,  "DELETE FROM %s WHERE hash_id IN (%s) AND peer_hash_id = '%s'",
+                 TBL_NAME_LS_NODE, IN_node_hash_list.c_str(), peer_hash_str.c_str());
+
+        SELF_DEBUG("QUERY=%s", buf);
+
+        // Run the query to add the record
+        stmt = con->createStatement();
+        stmt->execute(buf);
+
+        // Delete associated links
+        snprintf(buf, 1800000,  "DELETE FROM %s WHERE local_node_hash_id IN (%s) AND peer_hash_id = '%s'",
+                 TBL_NAME_LS_LINK, IN_node_hash_list.c_str(), peer_hash_str.c_str());
+
+        SELF_DEBUG("QUERY=%s", buf);
+
+        // Run the query to add the record
+        stmt = con->createStatement();
+        stmt->execute(buf);
+
+        // Delete associated prefixes
+        snprintf(buf, 1800000,  "DELETE FROM %s WHERE local_node_hash_id IN (%s) AND peer_hash_id = '%s'",
+                 TBL_NAME_LS_PREFIX, IN_node_hash_list.c_str(), peer_hash_str.c_str());
+
+        SELF_DEBUG("QUERY=%s", buf);
+
+        // Run the query to add the record
+        stmt = con->createStatement();
+        stmt->execute(buf);
+
+        // Free the query statement
+        delete stmt;
+
+    } catch (sql::SQLException &e) {
+        LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+    }
+
+    // Free the large buffer
+    delete[] buf;
+}
+
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+void mysqlBMP::add_LsLinks(std::list<DbInterface::tbl_ls_link> &links) {
+    char    *buf = new char[1800000];            // Misc working buffer
+    char    buf2[8192];                          // Second working buffer
+    int     buf_len = 0;                         // query buffer length
+
+    try {
+
+        // Build the initial part of the query
+        buf_len = sprintf(buf, "REPLACE into %s (%s) values ", TBL_NAME_LS_LINK,
+                "hash_id,path_attr_hash_id,peer_hash_id,id,mt_id,interface_addr,neighbor_addr,isIPv4,"
+                "protocol,local_link_id,remote_link_id,local_node_hash_id,remote_node_hash_id,"
+                "admin_group,max_link_bw,max_resv_bw,unreserved_bw,te_def_metric,protection_type,"
+                "mpls_proto_mask,igp_metric,srlg,name,timestamp"
+        );
+
+        string hash_str;
+        string path_hash_str;
+        string peer_hash_str;
+        string local_node_hash_id;
+        string remote_node_hash_id;
+
+        // Loop through the vector array of entries
+        for (std::list<DbInterface::tbl_ls_link>::iterator it = links.begin();
+             it != links.end(); it++) {
+
+            DbInterface::tbl_ls_link &link = (*it);
+
+            MD5 hash;
+
+            hash.update(link.intf_addr, sizeof(link.intf_addr));
+            hash.update(link.nei_addr, sizeof(link.nei_addr));
+            hash.update((unsigned char *)&link.id, sizeof(link.id));
+            hash.update(link.local_node_hash_id, sizeof(link.local_node_hash_id));
+            hash.update(link.remote_node_hash_id, sizeof(link.remote_node_hash_id));
+            hash.update((unsigned char *)&link.local_link_id, sizeof(link.local_link_id));
+            hash.update((unsigned char *)&link.remote_link_id, sizeof(link.remote_link_id));
+            hash.finalize();
+
+            // Save the hash
+            unsigned char *hash_bin = hash.raw_digest();
+            memcpy(link.hash_id, hash_bin, 16);
+            delete[] hash_bin;
+
+            // Build the query
+            hash_toStr(link.hash_id, hash_str);
+            hash_toStr(link.path_atrr_hash_id, path_hash_str);
+            hash_toStr(link.peer_hash_id, peer_hash_str);
+            hash_toStr(link.local_node_hash_id, local_node_hash_id);
+            hash_toStr(link.remote_node_hash_id, remote_node_hash_id);
+
+            buf_len += snprintf(buf2, sizeof(buf2),
+                    " ('%s','%s','%s',%" PRIu64 ",%u,X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX',"
+                    "X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX',%d,'%s',%u,%u,"
+                    "'%s','%s',X'%02hX%02hX%02hX%02hX',%lf,%lf,"
+                    "X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX',"
+                    "%u,'%s','%s',%u,'%s','%s',from_unixtime(%u)),",
+
+                    hash_str.c_str(),path_hash_str.c_str(),peer_hash_str.c_str(),link.id, link.mt_id,
+                    link.intf_addr[0],link.intf_addr[1],link.intf_addr[2],link.intf_addr[3],link.intf_addr[4],link.intf_addr[5],
+                    link.intf_addr[6],link.intf_addr[7],link.intf_addr[8],link.intf_addr[9],link.intf_addr[10],link.intf_addr[11],
+                    link.intf_addr[12],link.intf_addr[13],link.intf_addr[14],link.intf_addr[15],
+                    link.nei_addr[0],link.nei_addr[1],link.nei_addr[2],link.nei_addr[3],link.nei_addr[4],link.nei_addr[5],
+                    link.nei_addr[6],link.nei_addr[7],link.nei_addr[8],link.nei_addr[9],link.nei_addr[10],link.nei_addr[11],
+                    link.nei_addr[12],link.nei_addr[13],link.nei_addr[14],link.nei_addr[15],
+                    link.isIPv4, link.protocol,link.local_link_id,link.remote_link_id,local_node_hash_id.c_str(), remote_node_hash_id.c_str(),
+                    link.admin_group[0],link.admin_group[1],link.admin_group[2],link.admin_group[3],
+                    link.max_link_bw,link.max_resv_bw,
+                    link.unreserved_bw[0],link.unreserved_bw[1],link.unreserved_bw[2],link.unreserved_bw[3],link.unreserved_bw[4],link.unreserved_bw[5],
+                    link.unreserved_bw[6],link.unreserved_bw[7],link.unreserved_bw[8],link.unreserved_bw[9],link.unreserved_bw[10],link.unreserved_bw[11],
+                    link.unreserved_bw[12],link.unreserved_bw[13],link.unreserved_bw[14],link.unreserved_bw[15],link.unreserved_bw[16],link.unreserved_bw[17],
+                    link.unreserved_bw[18],link.unreserved_bw[19],link.unreserved_bw[20],link.unreserved_bw[21],link.unreserved_bw[22],link.unreserved_bw[23],
+                    link.unreserved_bw[24],link.unreserved_bw[25],link.unreserved_bw[26],link.unreserved_bw[27],link.unreserved_bw[28],link.unreserved_bw[29],
+                    link.unreserved_bw[30],link.unreserved_bw[31],link.te_def_metric,link.protection_type,
+                    link.mpls_proto_mask,link.igp_metric,link.srlg,link.name,link.timestamp_secs
+            );
+
+
+            // Cat the entry to the query buff
+            if (buf_len < 1800000 /* size of buf */)
+                strcat(buf, buf2);
+        }
+
+        // Remove the last comma since we don't need it
+        buf[buf_len - 1] = 0;
+
+        SELF_DEBUG("QUERY=%s", buf);
+
+        // Run the query to add the record
+        stmt = con->createStatement();
+        stmt->execute(buf);
+
+
+        // Free the query statement
+        delete stmt;
+
+    } catch (sql::SQLException &e) {
+        LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+    }
+
+    // Free the large buffer
+    delete[] buf;
+}
+
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+void mysqlBMP::del_LsLinks(std::list<DbInterface::tbl_ls_link> &links) {
+    char    *buf = new char[1800000];            // Misc working buffer
+
+    string  IN_link_hash_list;                   // List of link hashes
+
+    try {
+        string hash_str;
+        string peer_hash_str;
+
+
+        // build a IN where clause list of node hash ids
+        for (std::list<DbInterface::tbl_ls_link>::iterator it = links.begin();
+             it != links.end(); it++) {
+
+            DbInterface::tbl_ls_link &link = (*it);
+
+            MD5 hash;
+
+            hash.update(link.intf_addr, sizeof(link.intf_addr));
+            hash.update(link.nei_addr, sizeof(link.nei_addr));
+            hash.update((unsigned char *)&link.id, sizeof(link.id));
+            hash.update(link.local_node_hash_id, sizeof(link.local_node_hash_id));
+            hash.update(link.remote_node_hash_id, sizeof(link.remote_node_hash_id));
+            hash.update((unsigned char *)&link.local_link_id, sizeof(link.local_link_id));
+            hash.update((unsigned char *)&link.remote_link_id, sizeof(link.remote_link_id));
+            hash.finalize();
+
+            // Save the hash
+            unsigned char *hash_bin = hash.raw_digest();
+            memcpy(link.hash_id, hash_bin, 16);
+            delete[] hash_bin;
+
+            hash_toStr(link.hash_id, hash_str);
+            hash_toStr(link.peer_hash_id, peer_hash_str);
+
+            if (IN_link_hash_list.size() < 1800000) {
+                IN_link_hash_list.append("'").append(hash_str).append("',");
+            }
+        }
+
+        // Erase/drop the last comma
+        IN_link_hash_list.erase(IN_link_hash_list.end()-1);
+
+        // Delete links
+        snprintf(buf, 1800000,  "DELETE FROM %s WHERE hash_id IN (%s) AND peer_hash_id = '%s'",
+                 TBL_NAME_LS_LINK, IN_link_hash_list.c_str(), peer_hash_str.c_str());
+
+        SELF_DEBUG("QUERY=%s", buf);
+
+        // Run the query to add the record
+        stmt = con->createStatement();
+        stmt->execute(buf);
+
+        // Free the query statement
+        delete stmt;
+
+    } catch (sql::SQLException &e) {
+        LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+    }
+
+    // Free the large buffer
+    delete[] buf;
+}
+
+
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+void mysqlBMP::add_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes) {
+    char    *buf = new char[1800000];            // Misc working buffer
+    char    buf2[8192];                          // Second working buffer
+    int     buf_len = 0;                         // query buffer length
+
+    try {
+
+        // Build the initial part of the query
+        buf_len = sprintf(buf, "REPLACE into %s (%s) values ", TBL_NAME_LS_PREFIX,
+                "hash_id,path_attr_hash_id,peer_hash_id,id,local_node_hash_id,mt_id,protocol,prefix_len,"
+                "prefix_bin,prefix_bcast_bin,ospf_route_type,igp_flags,isIPv4,route_tag,"
+                "ext_route_tag,metric,ospf_fwd_addr,timestamp"
+        );
+
+        string hash_str;
+        string path_hash_str;
+        string peer_hash_str;
+        string local_node_hash_id;
+
+        // Loop through the vector array of entries
+        for (std::list<DbInterface::tbl_ls_prefix>::iterator it = prefixes.begin();
+             it != prefixes.end(); it++) {
+
+            DbInterface::tbl_ls_prefix &prefix = (*it);
+
+            MD5 hash;
+
+            hash.update(prefix.prefix_bin, sizeof(prefix.prefix_bin));
+            hash.update(&prefix.prefix_len, 1);
+            hash.update((unsigned char *)&prefix.id, sizeof(prefix.id));
+            hash.update(prefix.local_node_hash_id, sizeof(prefix.local_node_hash_id));
+            hash.finalize();
+
+            // Save the hash
+            unsigned char *hash_bin = hash.raw_digest();
+            memcpy(prefix.hash_id, hash_bin, 16);
+            delete[] hash_bin;
+
+            // Build the query
+            hash_toStr(prefix.hash_id, hash_str);
+            hash_toStr(prefix.path_atrr_hash_id, path_hash_str);
+            hash_toStr(prefix.peer_hash_id, peer_hash_str);
+            hash_toStr(prefix.local_node_hash_id, local_node_hash_id);
+
+            buf_len += snprintf(buf2, sizeof(buf2),
+                    " ('%s','%s','%s',%" PRIu64 ",'%s',%u,'%s',%d,"
+                            "X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX',"
+                            "X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX',"
+                            "'%s','%s',%d,%u,%" PRIu64 ",%u,"
+                            "X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX',"
+                            "from_unixtime(%u)),",
+
+                    hash_str.c_str(),path_hash_str.c_str(),peer_hash_str.c_str(),prefix.id,
+                    local_node_hash_id.c_str(), prefix.mt_id,prefix.protocol, prefix.prefix_len,
+                    prefix.prefix_bin[0],prefix.prefix_bin[1],prefix.prefix_bin[2],prefix.prefix_bin[3],prefix.prefix_bin[4],prefix.prefix_bin[5],
+                    prefix.prefix_bin[6],prefix.prefix_bin[7],prefix.prefix_bin[8],prefix.prefix_bin[9],prefix.prefix_bin[10],prefix.prefix_bin[11],
+                    prefix.prefix_bin[12],prefix.prefix_bin[13],prefix.prefix_bin[14],prefix.prefix_bin[15],
+                    prefix.prefix_bcast_bin[0],prefix.prefix_bcast_bin[1],prefix.prefix_bcast_bin[2],prefix.prefix_bcast_bin[3],prefix.prefix_bcast_bin[4],prefix.prefix_bcast_bin[5],
+                    prefix.prefix_bcast_bin[6],prefix.prefix_bcast_bin[7],prefix.prefix_bcast_bin[8],prefix.prefix_bcast_bin[9],prefix.prefix_bcast_bin[10],prefix.prefix_bcast_bin[11],
+                    prefix.prefix_bcast_bin[12],prefix.prefix_bcast_bin[13],prefix.prefix_bcast_bin[14],prefix.prefix_bcast_bin[15],
+                    prefix.ospf_route_type, prefix.igp_flags,prefix.isIPv4,prefix.route_tag, prefix.ext_route_tag,
+                    prefix.metric,
+                    prefix.ospf_fwd_addr[0],prefix.ospf_fwd_addr[1],prefix.ospf_fwd_addr[2],prefix.ospf_fwd_addr[3],prefix.ospf_fwd_addr[4],prefix.ospf_fwd_addr[5],
+                    prefix.ospf_fwd_addr[6],prefix.ospf_fwd_addr[7],prefix.ospf_fwd_addr[8],prefix.ospf_fwd_addr[9],prefix.ospf_fwd_addr[10],prefix.ospf_fwd_addr[11],
+                    prefix.ospf_fwd_addr[12],prefix.ospf_fwd_addr[13],prefix.ospf_fwd_addr[14],prefix.ospf_fwd_addr[15],
+                    prefix.timestamp_secs
+            );
+
+            // Cat the entry to the query buff
+            if (buf_len < 1800000 /* size of buf */)
+                strcat(buf, buf2);
+        }
+
+        // Remove the last comma since we don't need it
+        buf[buf_len - 1] = 0;
+
+        SELF_DEBUG("QUERY=%s", buf);
+
+        // Run the query to add the record
+        stmt = con->createStatement();
+        stmt->execute(buf);
+
+
+        // Free the query statement
+        delete stmt;
+
+    } catch (sql::SQLException &e) {
+        LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+    }
+
+    // Free the large buffer
+    delete[] buf;
+}
+
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+void mysqlBMP::del_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes) {
+    char    *buf = new char[1800000];            // Misc working buffer
+
+    string  IN_prefix_hash_list;                 // List of prefix hashes
+
+    try {
+        string hash_str;
+        string peer_hash_str;
+
+
+        // build a IN where clause list of node hash ids
+        for (std::list<DbInterface::tbl_ls_prefix>::iterator it = prefixes.begin();
+             it != prefixes.end(); it++) {
+
+            DbInterface::tbl_ls_prefix &prefix = (*it);
+
+            MD5 hash;
+
+            hash.update(prefix.prefix_bin, sizeof(prefix.prefix_bin));
+            hash.update(&prefix.prefix_len, 1);
+            hash.update((unsigned char *)&prefix.id, sizeof(prefix.id));
+            hash.update(prefix.local_node_hash_id, sizeof(prefix.local_node_hash_id));
+            hash.finalize();
+
+            // Save the hash
+            unsigned char *hash_bin = hash.raw_digest();
+            memcpy(prefix.hash_id, hash_bin, 16);
+            delete[] hash_bin;
+
+            // Build the query
+            hash_toStr(prefix.hash_id, hash_str);
+            hash_toStr(prefix.peer_hash_id, peer_hash_str);
+
+            if (IN_prefix_hash_list.size() < 1800000) {
+                IN_prefix_hash_list.append("'").append(hash_str).append("',");
+            }
+        }
+
+        // Erase/drop the last comma
+        IN_prefix_hash_list.erase(IN_prefix_hash_list.end()-1);
+
+        // Delete links
+        snprintf(buf, 1800000,  "DELETE FROM %s WHERE hash_id IN (%s) AND peer_hash_id = '%s'",
+                 TBL_NAME_LS_PREFIX, IN_prefix_hash_list.c_str(), peer_hash_str.c_str());
+
+        SELF_DEBUG("QUERY=%s", buf);
+
+        // Run the query to add the record
+        stmt = con->createStatement();
+        stmt->execute(buf);
+
+        // Free the query statement
+        delete stmt;
+
+    } catch (sql::SQLException &e) {
+        LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+    }
+
+    // Free the large buffer
+    delete[] buf;
+}
+
+/**
 * \brief Method to resolve the IP address to a hostname
 *
 *  \param [in]   name      String name (ip address)

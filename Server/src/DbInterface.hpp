@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <vector>
+#include <list>
 #include <string>
 #include <cstdio>
 
@@ -258,6 +259,91 @@ public:
         uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
     };
 
+    /**
+     * TABLE: ls_node
+     *
+     * BGP-LS Node table schema
+     */
+    #define TBL_NAME_LS_NODE "ls_nodes"
+    struct tbl_ls_node {
+        u_char      hash_id[16];            ///< hash id for the entry
+        u_char      path_atrr_hash_id[16];  ///< Path attribute hash ID
+        u_char      peer_hash_id[16];       ///< Peer table hash_id
+        uint64_t    id;                     ///< Routing universe identifier
+        bool        isIPv4;                 ///< True if interface/neighbor is IPv4, false otherwise
+        uint32_t    asn;                    ///< BGP ASN
+        uint32_t    bgp_ls_id;              ///< BGP-LS Identifier
+        uint8_t     igp_router_id[8];       ///< IGP router ID
+        uint8_t     ospf_area_Id[4];        ///< OSPF area ID
+        char        protocol[32];           ///< String representation of the protocol name
+        uint8_t     router_id[16];          ///< IPv4 or IPv6 router ID
+        uint8_t     isis_area_id[8];        ///< IS-IS area ID
+        char        flags[32];              ///< String representation of the flag bits
+        char        name[255];              ///< Name of router
+        uint32_t    mt_id;                  ///< Multi-Topology ID
+        uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
+    };
+
+    /**
+     * TABLE: ls_link
+     *
+     * BGP-LS Link table schema
+     */
+    #define TBL_NAME_LS_LINK "ls_links"
+    struct tbl_ls_link {
+        u_char      hash_id[16];            ///< hash id for the entry
+        u_char      path_atrr_hash_id[16];  ///< Path attribute hash ID
+        u_char      peer_hash_id[16];       ///< Peer table hash_id
+        uint64_t    id;                     ///< Routing universe identifier
+        uint32_t    mt_id;                  ///< Multi-Topology ID
+        char        protocol[32];           ///< String representation of the protocol name
+        uint8_t     intf_addr[16];          ///< Interface binary address
+        uint8_t     nei_addr[16];           ///< Neighbor binary address
+        uint32_t    local_link_id;          ///< Local Link ID (IS-IS)
+        uint32_t    remote_link_id;         ///< Remote Link ID (IS-IS)
+        bool        isIPv4;                 ///< True if interface/neighbor is IPv4, false otherwise
+        u_char      local_node_hash_id[16]; ///< Local node hash ID
+        u_char      remote_node_hash_id[16]; ///< Remove node hash ID
+        uint8_t     admin_group[4];         ///< Admin group
+        double      max_link_bw;            ///< Maximum link bandwidth
+        double      max_resv_bw;            ///< Maximum reserved bandwidth
+        uint8_t     unreserved_bw[32];      ///< Binary string for unreserved bandwidth, a set of 8 uint32_t values
+
+        uint32_t    te_def_metric;          ///< Default TE metric
+        char        protection_type[60];    ///< String representation for the protection types
+        char        mpls_proto_mask[32];    ///< Either LDP or RSVP-TE
+        uint32_t    igp_metric;             ///< IGP metric
+        char        srlg[128];              ///< String representation of the shared risk link group values
+        char        name[255];              ///< Name of router
+        uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
+    };
+
+    /**
+     * TABLE: ls_prefix
+     *
+     * BGP-LS Prefix table schema
+     */
+    #define TBL_NAME_LS_PREFIX "ls_prefixes"
+    struct tbl_ls_prefix {
+        u_char      hash_id[16];            ///< hash for the entry
+        u_char      path_atrr_hash_id[16];  ///< Path attribute hash ID
+        u_char      peer_hash_id[16];       ///< Peer table hash_id
+        uint64_t    id;                     ///< Routing universe identifier
+        char        protocol[32];           ///< String representation of the protocol name
+        u_char      local_node_hash_id[16]; ///< Local node hash ID
+        uint32_t    mt_id;                  ///< Multi-Topology ID
+        uint32_t    metric;                 ///< Prefix metric
+        bool        isIPv4;                 ///< True if interface/neighbor is IPv4, false otherwise
+        u_char      prefix_len;             ///< Length of prefix in bits
+        char        ospf_route_type[32];    ///< String representation of the OSPF route type
+        uint8_t     prefix_bin[16];         ///< Prefix in binary form
+        uint8_t     prefix_bcast_bin[16];   ///< Broadcast address/last address in binary form
+        char        igp_flags[32];          ///< String representation of the IGP flags
+        uint32_t    route_tag;              ///< Route tag
+        uint64_t    ext_route_tag;          ///< Extended route tag
+        uint8_t     ospf_fwd_addr[16];      ///< IPv4/IPv6 OSPF forwarding address
+        uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
+    };
 
     /* ---------------------------------------------------------------------------
      * Abstract methods
@@ -412,6 +498,68 @@ public:
      *              safe to do so when this method returns.
      *****************************************************************/
     virtual void add_PeerUpEvent(tbl_peer_up_event &up_event) = 0;
+
+    /*****************************************************************//**
+     * \brief       Add/Update BGP-LS nodes
+     *
+     * \details     Will add/update BGP-LS nodes.
+     *
+     * \param[in]   nodes      List of one or more node tables
+     *****************************************************************/
+    virtual void add_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes) = 0;
+
+    /*****************************************************************//**
+     * \brief       Delete BGP-LS nodes
+     *
+     * \details     Will delete BGP-LS nodes, including associated links and prefixes.
+     *
+     * \param[in]   nodes      List of one or more node tables
+     *****************************************************************/
+    virtual void del_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes) = 0;
+
+    /*****************************************************************//**
+     * \brief       Add/Update BGP-LS links
+     *
+     * \details     Will add/update BGP-LS links.
+     *
+     * \param[in]   links      List of one or more link tables
+     *
+     * \returns     The hash_id will be updated based on the
+     *              supplied data for each entry.
+     *****************************************************************/
+    virtual void add_LsLinks(std::list<DbInterface::tbl_ls_link> &links) = 0;
+
+    /*****************************************************************//**
+     * \brief       Delete BGP-LS links
+     *
+     * \details     Will delete BGP-LS links.
+     *
+     * \param[in]   links      List of one or more link tables
+     *****************************************************************/
+    virtual void del_LsLinks(std::list<DbInterface::tbl_ls_link> &links) = 0;
+
+    /*****************************************************************//**
+     * \brief       Add/Update BGP-LS prefixes
+     *
+     * \details     Will add/update BGP-LS prefixes.
+     *
+     * \param[in/out]  prefixes      List of one or more node tables
+     *
+     * \returns     The hash_id will be updated based on the
+     *              supplied data for each entry.
+     *****************************************************************/
+    virtual void add_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes) = 0;
+
+    /*****************************************************************//**
+     * \brief       Delete BGP-LS prefixes
+     *
+     * \details     Will delete BGP-LS prefixes.
+     *
+     * \param[in/out]   prefixes      List of one or more prefixes tables
+     *****************************************************************/
+    virtual void del_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes) = 0;
+
+
 
     /* ---------------------------------------------------------------------------
      * Commonly used methods

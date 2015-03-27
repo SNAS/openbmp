@@ -8,7 +8,7 @@
  */
 
 #include "MPReachAttr.h"
-#include "UpdateMsg.h"
+#include "MPLinkState.h"
 
 #include <arpa/inet.h>
 
@@ -46,7 +46,7 @@ MPReachAttr::~MPReachAttr() {
  * \param [in]   data           Pointer to the attribute data
  * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
+void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::parsed_update_data &parsed_data) {
     mp_reach_nlri nlri;
     /*
      * Set the MP NLRI struct
@@ -97,7 +97,13 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
             parseAfiIPv6(nlri, parsed_data);
             break;
 
-        // TODO: Add other AFI parsing
+        case bgp::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
+        {
+            MPLinkState ls(logger, peer_addr, &parsed_data, debug);
+            ls.parseReachLinkState(nlri);
+
+            break;
+        }
 
         default : // Unknown
             LOG_INFO("%s: MP_REACH AFI=%d is not implemented yet, skipping", peer_addr.c_str(), nlri.afi);
@@ -126,7 +132,7 @@ void MPReachAttr::parseAfiIPv6(mp_reach_nlri &nlri, UpdateMsg::parsed_update_dat
         case bgp::BGP_SAFI_UNICAST: // Unicast IPv6 address prefix
 
             // Next-hop is an IPv6 address - Change/set the next-hop attribute in parsed data to use this next-hop
-            memcpy(ipv6_raw, nlri.nlri_data, nlri.nh_len);
+            memcpy(ipv6_raw, nlri.next_hop, nlri.nh_len);
             inet_ntop(AF_INET6, ipv6_raw, ipv6_char, sizeof(ipv6_char));
             parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ipv6_char);
 
