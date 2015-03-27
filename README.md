@@ -23,7 +23,7 @@ The database is tuned to support high transactional rates and storage for millio
 
 News
 ----
-### Mar-37-2015
+### Mar-27-2015
 > #### UPGRADE YOUR SCHEMA if using BGP-LS (link-state)
 
 BGP-LS is now supported.   New tables and views have been created for BGP LS data.
