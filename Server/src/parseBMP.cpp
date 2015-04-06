@@ -668,12 +668,12 @@ bool parseBMP::handleStatsReport(int sock, DbInterface::tbl_stats_report &stats)
                         if (stat_len == 8) {
                             memcpy((void*)&value64bit, (void *)b, 8);
 
-                            LOG_INFO("%s: sock=%d: stat type %d length of %d value of %lu is not yet implemented",
+                            SELF_DEBUG("%s: sock=%d: stat type %d length of %d value of %lu is not yet implemented",
                                     p_entry->peer_addr, sock, stat_type, stat_len, value64bit);
                         } else {
                             memcpy((void*)&value32bit, (void *)b, 4);
 
-                            LOG_INFO("%s: sock=%d: stat type %d length of %d value of %lu is not yet implemented",
+                            SELF_DEBUG("%s: sock=%d: stat type %d length of %d value of %lu is not yet implemented",
                                      p_entry->peer_addr, sock, stat_type, stat_len, value32bit);
                         }
                     }

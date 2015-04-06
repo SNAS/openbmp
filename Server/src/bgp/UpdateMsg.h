@@ -48,6 +48,7 @@ enum UPDATE_ATTR_TYPES {
             ATTR_TYPE_AS_PATHLIMIT=21,              // Deprecated - draft-ietf-idr-as-pathlimit, JunOS will send this
 
             ATTR_TYPE_IPV6_EXT_COMMUNITY=25,
+            ATTR_TYPE_AIGP,                         ///< RFC7311 - Accumulated IGP metric
 
             ATTR_TYPE_BGP_LS=29,                    // BGP LS attribute draft-ietf-idr-ls-distribution
 
