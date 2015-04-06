@@ -16,9 +16,41 @@ from time import time
 #:    therefore all the updates should have the timestamp of when this script started
 INTERVAL_TIMESTAMP = time()
 
+#: Record dictionary
+RECORD_DICT = {}
+
 # ----------------------------------------------------------------
 # Tables schema
 # ----------------------------------------------------------------
+
+#: Insert trigger for gen_asn_stats"
+TRIGGER_INSERT_STATUS_NAME = "ins_gen_asn_stats"
+TRIGGER_CREATE_INSERT_STATUS_DEF = (
+#        "delimiter //\n"
+        "CREATE TRIGGER " + TRIGGER_INSERT_STATUS_NAME + " BEFORE INSERT ON gen_asn_stats\n"
+        "FOR EACH ROW\n"
+        "    BEGIN\n"
+        "        declare last_ts timestamp;\n"
+        "        declare v4_o_count bigint(20) unsigned;\n"
+        "        declare v6_o_count bigint(20) unsigned;\n"
+        "        declare v4_t_count bigint(20) unsigned;\n"
+        "        declare v6_t_count bigint(20) unsigned;\n"
+
+        "        SELECT transit_v4_prefixes,transit_v6_prefixes,origin_v4_prefixes,\n"
+        "                    origin_v6_prefixes,timestamp\n"
+        "            INTO v4_t_count,v6_t_count,v4_o_count,v6_o_count,last_ts\n"
+        "            FROM gen_asn_stats WHERE asn = new.asn \n"
+        "            ORDER BY timestamp DESC limit 1;\n"
+
+        "        IF (new.transit_v4_prefixes = v4_t_count AND new.transit_v6_prefixes = v6_t_count\n"
+        "                AND new.origin_v4_prefixes = v4_o_count AND new.origin_v6_prefixes = v6_o_count) THEN\n"
+
+                    # everything is the same, cause the insert to fail (duplicate)
+        "            set new.timestamp = last_ts;\n"
+        "        END IF;\n"
+        "    END;\n"
+#        "delimiter ;\n"
+)
 
 #: 'gen_asn_stats' table schema
 TBL_GEN_ASN_STATS_NAME = "gen_asn_stats"
@@ -31,6 +63,7 @@ TBL_GEN_ASN_STATS_SCHEMA = (
         "  transit_v6_prefixes bigint unsigned not null default 0,"
         "  origin_v4_prefixes bigint unsigned not null default 0,"
         "  origin_v6_prefixes bigint unsigned not null default 0,"
+         " repeats bigint unsigned not null default 0,"
         "  timestamp timestamp not null default current_timestamp on update current_timestamp,"
         "  PRIMARY KEY (asn,timestamp) "
         "  ) ENGINE=InnoDB DEFAULT CHARSET=latin1 "
@@ -43,45 +76,28 @@ TBL_GEN_ASN_STATS_SCHEMA = (
 #: IPv4 or IPv6 unique prefixes originated by AS
 #:
 #: Below are the query parameters that must be supplied. (e.g. { 'type':'IPv4'})
-#:    %(type)s         - Replaced by IPv4 or IPv6
+#:    %(type)d         - Replaced by 1 for IPv4 or 0 for IPv6
 QUERY_ORIGIN_AS_PREFIXES = (
-        "select origin_as as asn,count(prefix) as prefixes"
-        "  from (select origin_as,prefix,prefix_len,if(prefix regexp '^[0-9a-f]:', 'IPv6', 'IPv4') as Type"
-        "        from rib join path_attrs force index (primary) ON (rib.path_attr_hash_id = path_attrs.hash_id)"
-        "        where if(prefix  regexp '^[0-9a-f]+:', 'IPv6', 'IPv4') = '%(type)s'"
-        "        group by prefix,prefix_len,origin_as order by null) s"
-        "  group by origin_as"
-        )
+        "select origin_as,count(distinct prefix_bin,prefix_len)"
+        "        from rib r join path_attrs p"
+        "        on (r.path_attr_hash_id = p.hash_id)"
+        "        where r.isIPv4 = %(type)d"
+        "        group by origin_as"
+    )
 
-#: Returns a list of all distinct prefixes with the origin trimmed off
+#: Returns a list of appended AS_PATHs for distinct prefix/len.
 #:
 #: Below are the query parameters that must be supplied. (e.g. { 'type':'IPv4'})
 #:    %(type)s         - Replaced by IPv4 or IPv6
-QUERY_ASPATH_DISTINCT_TRIM = (
-        "select distinct trim(trim(trailing origin_as from as_path)) as as_path_trim,"
-        "          if(prefix regexp '^[0-9a-f]+:', 'IPv6', 'IPv4') as Type,prefix,prefix_len"
-        "   from rib straight_join path_attrs p"
-        "   ON (rib.path_attr_hash_id = p.hash_id and rib.peer_hash_id = p.peer_hash_id)"
-        "   where if(prefix regexp '^[0-9a-f]+:', 'IPv6', 'IPv4') = '%(type)s'"
+QUERY_ASPATHS_DISTINCT_BY_PREFIXES = (
+        "select group_concat(distinct as_path SEPARATOR ' ') as as_paths, origin_as"
+        "   from rib join path_attrs p"
+        "          ON (rib.path_attr_hash_id = p.hash_id)"
+        "   where isIPv4 = '%(type)d'"
+        "   group by prefix_bin,prefix_len"
+        "   order by prefix_bin,prefix_len"
         )
 
-#: Below are the query parameters that must be supplied. (e.g. { 'type':'IPv4'})
-#:    %(type)s         - Replaced by IPv4 or IPv6
-QUERY_ASPATH_DISTINCT_TRIM2 = (
-        "select distinct trim(substr(trim(trailing origin_as from as_path), LOCATE(' ', as_path, 2))) as as_path_trim,"
-        "          if(prefix regexp '^[0-9a-f]:', 'IPv6', 'IPv4') as Type"
-        "   from rib straight_join path_attrs p"
-        "   ON (rib.path_attr_hash_id = p.hash_id and rib.peer_hash_id = p.peer_hash_id)"
-        "   where if(prefix regexp '^[0-9a-f]:', 'IPv6', 'IPv4') = '%(type)s'"
-        )
-
-QUERY_ASPATH_DISTINCT_TRIM3 = (
-        "select distinct trim(substr(trim(trailing origin_as from as_path), LOCATE(' ', as_path, 2))) as as_path_trim,"
-        "          if(prefix regexp '^[0-9a-f]+:', 'IPv6', 'IPv4') as Type,prefix,prefix_len"
-        "   from rib straight_join path_attrs p"
-        "   ON (rib.path_attr_hash_id = p.hash_id and rib.peer_hash_id = p.peer_hash_id)"
-        "   where if(prefix regexp '^[0-9a-f]+:', 'IPv6', 'IPv4') = '%(type)s'"
-        )
 
 # ----------------------------------------------------------------
 # Insert statements
@@ -160,16 +176,17 @@ class dbAcccess:
         except mysql.Error as err:
             print("ERROR: Failed to create table - " + str(err))
             #raise err
-
+            return False
 
         return True
 
-    def createTable(self, tableName, tableSchema, dropIfExists = True):
-        """ Create table schema
+    def createTrigger(self, trigger_def, trigger_name, dropIfExists = True):
+        """ Create trigger
 
-            :param tablename:    The table name that is being created
-            :param tableSchema:  Create table syntax as it would be to create it in SQL
-            :param dropIfExists: True to drop the table, false to not drop it.
+            :param trigger_def:     Trigger definition
+            :param trigger_name:    Trigger name
+
+            :param dropIfExists:    True to drop the table, false to not drop it.
 
             :return: True if the table successfully was created, false otherwise
         """
@@ -179,13 +196,12 @@ class dbAcccess:
 
         try:
             if (dropIfExists == True):
-               self.cursor.execute("DROP TABLE IF EXISTS %s" % tableName)
+               self.cursor.execute("DROP TRIGGER IF EXISTS %s" % trigger_name)
 
-            self.cursor.execute(tableSchema)
+            self.cursor.execute(trigger_def)
 
         except mysql.Error as err:
-            print("ERROR: Failed to create table - " + str(err))
-            #raise err
+            print("ERROR: Failed to create trigger - " + str(err))
             return False
 
         return True
@@ -265,14 +281,15 @@ class dbAcccess:
 def UpdateOriginPrefixesCounts(db, IPv4=True):
     """ Update the origin prefix counts
 
+        :param db:      Pointer to DB access class (db should already be connected and ready)
         :param IPv4:    True if IPv4, set to False to update the IPv6 counts
     """
     colName = "origin_v4_prefixes"
-    type = "IPv4"
+    type = 1
 
     if (IPv4 == False):
         colName = "origin_v6_prefixes"
-        type = "IPv6"
+        type = 0
 
     # Run query and store data
     rows = db.query(QUERY_ORIGIN_AS_PREFIXES, {'type': type})
@@ -281,23 +298,16 @@ def UpdateOriginPrefixesCounts(db, IPv4=True):
     # Process the data and update the gen table
     totalRows = len(rows)
 
-    query = ("INSERT INTO %s "
-              "    (asn, %s,isOrigin,timestamp) VALUES ") % (TBL_GEN_ASN_STATS_NAME, colName)
+    for row in rows:
+        if (not row[0] in RECORD_DICT):
+            RECORD_DICT[row[0]] = {'transit_v4_prefixes': 0,
+                                   'transit_v6_prefixes': 0,
+                                   'origin_v4_prefixes': 0,
+                                   'origin_v6_prefixes': 0}
 
-    VALUE_fmt=" ('%(asn)s','%(value)s',1,from_unixtime(%(timestamp)s))"
+        RECORD_DICT[row[0]][colName] = int(row[1])
 
-    for idx,row in enumerate(rows):
-        query += VALUE_fmt % { 'asn': str(row[0]), 'value': str(row[1]), 'timestamp': str(INTERVAL_TIMESTAMP)}
-        if (idx < totalRows -1):
-            query += ','
-
-    query += "   ON DUPLICATE KEY UPDATE %s=values(%s),isOrigin=1,timestamp=values(timestamp)" % (colName, colName)
-
-    print "Running bulk insert/update for %s" % colName
-
-    db.queryNoResults(query)
-
-    print "Insert/Update for %s took %r seconds" % (colName, db.last_query_time)
+    print "Calculation for %s took %r seconds" % (colName, db.last_query_time)
 
 
 def UpdateTransitPrefixesCounts(db, IPv4=True):
@@ -305,108 +315,169 @@ def UpdateTransitPrefixesCounts(db, IPv4=True):
 
         A Transit AS is any AS right of the right most ASN, excluding private ASN's
 
+        Below is an example query of prefixes that would be counted as transit for the given ASN  (15169)
+            select prefix,prefix_len,as_Path
+                from rib r join path_attrs p
+                    on (r.path_attr_hash_id = p.hash_id)
+                WHERE as_path like "% 15169 %" and not as_path like "% 15169"
+                group by prefix_bin,prefix_len
+                order by prefix_bin,prefix_len
+
+        :param db:      Pointer to DB access class (db should already be connected and ready)
         :param IPv4:    True if IPv4, set to False to update the IPv6 counts
     """
     colName = "transit_v4_prefixes"
-    type = "IPv4"
+    type = 1
 
     if (IPv4 == False):
         colName = "transit_v6_prefixes"
-        type = "IPv6"
+        type = 0
 
     # Run query and store data
-    rows = db.query(QUERY_ASPATH_DISTINCT_TRIM, {'type': type})
+    rows = db.query(QUERY_ASPATHS_DISTINCT_BY_PREFIXES, {'type': type})
     print "Query for %s took %r seconds" % (colName, db.last_query_time)
 
     asnCounts = { }
 
     # Loop through the results and create a new dictionary of ASN's and a count
     for row in rows:
-        as_path = cleanAsPath(str(row[0]))
+        as_path = conditionAsPath(str(row[0]), long(row[1]))
 
-        for idx,asn in enumerate(as_path.split(' ')):
-            # Make sure ASN is not empty and skip the first/peering ASN (left most)
-            if (len(asn) and idx > 0):
-                try:
-                    if (not asn in asnCounts):
-                        asnCounts[asn] = 1
-                    else:
-                        asnCounts[asn] += 1
+        for asn_str in as_path.split(' '):
 
-                except Exception as e:
-                    print "problem : %r" % e
-                    pass
+            try:
+                asn = long(asn_str)
+            except:
+                # Ignore empty as paths (which are expected when the conditioning leaves nothing left)
+                pass
+
+            try:
+                if (not asn in asnCounts):
+                    asnCounts[asn] = 1
+                else:
+                    asnCounts[asn] += 1
+
+            except Exception as e:
+                print "problem : %r" % e
+                pass
 
     # Process the data and update the gen table
     totalAsn = len(asnCounts)
 
-    query = ("INSERT INTO %s "
-              "    (asn, %s,isTransit,timestamp) VALUES ") % (TBL_GEN_ASN_STATS_NAME, colName)
+    for asn in asnCounts:
+        if (not asn in RECORD_DICT):
+            RECORD_DICT[asn] = {'transit_v4_prefixes': 0,
+                                 'transit_v6_prefixes': 0,
+                                 'origin_v4_prefixes': 0,
+                                 'origin_v6_prefixes': 0}
 
-    VALUE_fmt=" ('%(asn)s','%(value)s',1,from_unixtime(%(timestamp)s))"
+        RECORD_DICT[asn][colName] = asnCounts[asn]
 
-    for idx,asn in enumerate(asnCounts):
-        query += VALUE_fmt % { 'asn': asn, 'value': str(asnCounts[asn]), 'timestamp': str(INTERVAL_TIMESTAMP)}
-        if (idx < totalAsn -1):
+    print "Calculation for %s took %r seconds" % (colName, db.last_query_time)
+
+
+def UpdateDB(db):
+    """ Update DB with RECORD_DICT information
+
+        Updates the DB for every record in RECORD_DICT
+
+        :param db:  Pointer to DB access class (db should already be connected and ready)
+    """
+    query = ("INSERT IGNORE INTO %s "
+              "    (asn, isTransit,isOrigin,transit_v4_prefixes,transit_v6_prefixes,"
+                    "origin_v4_prefixes,origin_v6_prefixes,timestamp,repeats) "
+                  " VALUES ") % (TBL_GEN_ASN_STATS_NAME)
+
+    VALUE_fmt=" ('%s',%d,%d,'%s','%s','%s','%s',from_unixtime(%s),0)"
+
+    isTransit = 0
+    isOrigin = 0
+    totalRecords = len(RECORD_DICT)
+
+    for idx,asn in enumerate(RECORD_DICT):
+        if (RECORD_DICT[asn]['transit_v4_prefixes'] > 0 or RECORD_DICT[asn]['transit_v6_prefixes'] > 0):
+            isTransit = 1
+        else:
+            isTransit = 0
+
+        if (RECORD_DICT[asn]['origin_v4_prefixes'] > 0 or RECORD_DICT[asn]['origin_v6_prefixes'] > 0):
+            isOrigin = 1
+        else:
+            isOrigin = 0
+
+        query += VALUE_fmt % (asn,isTransit,isOrigin, RECORD_DICT[asn]['transit_v4_prefixes'], 
+                              RECORD_DICT[asn]['transit_v6_prefixes'],RECORD_DICT[asn]['origin_v4_prefixes'],
+                              RECORD_DICT[asn]['origin_v6_prefixes'], str(INTERVAL_TIMESTAMP))
+        if (idx <  totalRecords-1):
             query += ','
 
-    query += "   ON DUPLICATE KEY UPDATE %s=values(%s),isTransit=1,timestamp=values(timestamp)" % (colName, colName)
+    query += " ON DUPLICATE KEY UPDATE repeats=repeats+1"
 
-    print "Running bulk insert/update for %s" % colName
+    print "Running bulk insert/update"
 
     db.queryNoResults(query)
 
-    print "Insert/Update for %s took %r seconds" % (colName, db.last_query_time)
 
+def conditionAsPath(as_path, origin_as, removePeerAS=True):
+    """ Condition/clean up the AS PATH
 
-def cleanAsPath(as_path):
-    """ Cleans up the AS PATH
+        Removes AS-SET chars, repeated/prepended ASN's, and private/reserved ASN's
 
-        Removes AS-SET chars, prepended ASN's, and private/reserved ASN's
+        :param as_path:     (string) The AS_PATH in string format
+        :param origin_as:   (int) The originating ASN (This will be stripped/excluded)
+        :param removePeerAS If true, remove the peer AS from the as PATH
 
-        :param as_path:     The AS_PATH in string format
-
-        :return: AS path with the privates removed
+        :return: Returns conditioned deduped AS PATH (order is not maintained, list is sorted)
     """
     # Remove AS-SET '{' and '}' from path
     as_path = as_path.translate(None, '{}')
 
-    new_as_path = ""
-    prev_asn = ""
+    # Remove the peer AS
+    foundPeerAS = False
 
-    for asn in as_path.split(' '):
-        if (prev_asn != asn):
-            try:
-                asn_int = long(asn)
+    new_as_path = set()
 
-                if (asn_int == 0 or asn_int == 23456 or
-                        (asn_int >= 64496 and asn_int <= 65535) or
-                        (asn_int >= 65536 and asn_int <= 131071) or
-                        asn_int >= 4200000000 ):
-                    pass
-                else:
-                    new_as_path += " " + asn
+    for asn in as_path.strip().split(' '):
+        try:
+            asn_int = long(asn)
 
-            except:
+            if (asn_int == 0 or asn_int == 23456 or
+                    (asn_int >= 64496 and asn_int <= 65535) or
+                    (asn_int >= 65536 and asn_int <= 131071) or
+                    asn_int >= 4200000000):
                 pass
+            elif asn_int >= 1 and asn_int != origin_as:
+                if (not foundPeerAS):
+                    foundPeerAS = True
 
-        prev_asn = asn
+                    if (removePeerAS):
+                        continue
 
-    return new_as_path.strip()
+                new_as_path.add(asn)
+        except:
+            pass
+
+    return ' '.join(sorted(list(new_as_path), key=int)).strip()
 
 def main():
     """
     """
     db = dbAcccess()
-    db.connectDb("openbmp", "openbmpNow", "db2.openbmp.org", "openBMP")
+    db.connectDb("openbmp", "openbmpNow", "localhost", "openBMP")
 
     # Create the table
     db.createTable(TBL_GEN_ASN_STATS_NAME, TBL_GEN_ASN_STATS_SCHEMA, False)
+
+    # Create trigger
+    db.createTrigger(TRIGGER_CREATE_INSERT_STATUS_DEF, TRIGGER_INSERT_STATUS_NAME, False)
 
     UpdateOriginPrefixesCounts(db, IPv4=True)
     UpdateOriginPrefixesCounts(db, IPv4=False)  # IPv6
     UpdateTransitPrefixesCounts(db, IPv4=True)
     UpdateTransitPrefixesCounts(db, IPv4=False) # IPv6
+
+    # RECORD_DICT now has all information, ready to update DB
+    UpdateDB(db)
 
     db.close()
 
