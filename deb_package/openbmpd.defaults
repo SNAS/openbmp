@@ -1,2 +1,5 @@
 LOGFILE=/var/log/openbmpd.log
-OPENBMPD_OPTS="-l $LOGFILE -dburl tcp://localhost:3306 -dbu openbmp -dbp openbmp -p 5000"
+OPENBMP_DB_HOST=${OPENBMP_DB_HOST:='localhost:3306'}
+OPENBMP_DB_USER=${OPENBMP_DB_USER:='openbmp'}
+OPENBMP_DB_PASSWORD=${OPENBMP_DB_PASSWORD:='openbmp'}
+OPENBMPD_OPTS="-l $LOGFILE -dburl tcp://$OPENBMP_DB_HOST -dbu $OPENBMP_DB_USER -dbp $OPENBMP_DB_PASSWORD -p 5000"

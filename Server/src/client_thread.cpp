@@ -13,6 +13,9 @@
 #include "BMPReader.h"
 #include "Logger.h"
 
+#include <cxxabi.h>
+
+
 /**
  * Client thread cancel
  * @param arg       Pointer to ClientThreadInfo struct
@@ -76,6 +79,13 @@ void *ClientThread(void *arg) {
 
     } catch (char const *str) {
         LOG_INFO("%s: %s - Thread for sock [%d] ended", cInfo.client->c_ipv4, str, cInfo.client->c_sock);
+
+    } catch (abi::__forced_unwind&) {
+        throw;
+
+    } catch (...) {
+        LOG_INFO("%s: Thread for sock [%d] ended abnormally: ", cInfo.client->c_ipv4, cInfo.client->c_sock);
+
     }
 
     pthread_cleanup_pop(0);

@@ -496,7 +496,8 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
          * Update the current RIB entry state
          */
         // Build the initial part of the query
-        buf_len = sprintf(buf, "DELETE from %s WHERE ", TBL_NAME_RIB);
+        //buf_len = sprintf(buf, "DELETE from %s WHERE ", TBL_NAME_RIB);
+        buf_len = sprintf(buf, "UPDATE IGNORE %s SET isWithdrawn=True WHERE ", TBL_NAME_RIB);
 
         string p_hash_str;
 
@@ -887,6 +888,7 @@ void mysqlBMP::del_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes) {
                  TBL_NAME_LS_NODE, IN_node_hash_list.c_str(), peer_hash_str.c_str());
 
         SELF_DEBUG("QUERY=%s", buf);
+        //LOG_INFO("QUERY=%s", buf);
 
         // Run the query to add the record
         stmt = con->createStatement();
@@ -897,6 +899,7 @@ void mysqlBMP::del_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes) {
                  TBL_NAME_LS_LINK, IN_node_hash_list.c_str(), peer_hash_str.c_str());
 
         SELF_DEBUG("QUERY=%s", buf);
+        //LOG_INFO("QUERY=%s", buf);
 
         // Run the query to add the record
         stmt = con->createStatement();

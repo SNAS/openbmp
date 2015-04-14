@@ -53,6 +53,11 @@ install(FILES openbmpd.init
         DESTINATION /etc/init.d
         RENAME openbmpd
 )
+install(FILES openbmpd.logrotate
+        PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
+        DESTINATION /etc/logrotate.d
+        RENAME openbmpd
+)
 
 
 #
