@@ -1,5 +1,5 @@
 .idea
-deb_package
-rpm_package
 build
+deb_package/*.cmake
+rpm_package/*.cmake
 mac_build
