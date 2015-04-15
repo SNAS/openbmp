@@ -9,6 +9,8 @@
   .. moduleauthor:: Tim Evens <tievens@cisco.com>
 """
 import mysql.connector as mysql
+import subprocess
+import os
 from time import time
 
 #: Interval Timestamp
@@ -462,8 +464,17 @@ def conditionAsPath(as_path, origin_as, removePeerAS=True):
 def main():
     """
     """
+    cmd = ['bash', '-c', "source /etc/default/openbmpd && set"]
+    proc = subprocess.Popen(cmd, stdout = subprocess.PIPE)
+
+    for line in proc.stdout:
+       (key, _, value) = line.partition("=")
+       os.environ[key] = value.rstrip()
+
+    proc.communicate()
+
     db = dbAcccess()
-    db.connectDb("openbmp", "openbmpNow", "localhost", "openBMP")
+    db.connectDb(os.environ["OPENBMP_DB_USER"], os.environ["OPENBMP_DB_PASSWORD"], "localhost", "openBMP")
 
     # Create the table
     db.createTable(TBL_GEN_ASN_STATS_NAME, TBL_GEN_ASN_STATS_SCHEMA, False)

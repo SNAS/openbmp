@@ -1,14 +1,13 @@
 #!/bin/bash
 
-MYSQL_USER=openbmp
-MYSQL_PASSWORD=openbmpNow
 MYSQL_HOST=localhost
+source /etc/default/openbmpd
 
 # Log file to log command output
 LOG_FILE=/var/log/openbmp-db-maint.log
 
 # Command for mysql to run the statements
-MYSQL_CMD="/usr/bin/mysql -u $MYSQL_USER --password=$MYSQL_PASSWORD -h $MYSQL_HOST openBMP"
+MYSQL_CMD="/usr/bin/mysql -u $OPENBMP_DB_USER --password=$OPENBMP_DB_PASSWORD -h $MYSQL_HOST openBMP"
 
 #
 # Order matters, becare of on changing the order 
