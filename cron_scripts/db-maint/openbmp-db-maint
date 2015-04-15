@@ -1,0 +1,26 @@
+#!/bin/bash
+
+MYSQL_USER=openbmp
+MYSQL_PASSWORD=openbmpNow
+MYSQL_HOST=localhost
+
+# Log file to log command output
+LOG_FILE=/var/log/openbmp-db-maint.log
+
+# Command for mysql to run the statements
+MYSQL_CMD="/usr/bin/mysql -u $MYSQL_USER --password=$MYSQL_PASSWORD -h $MYSQL_HOST openBMP"
+
+#
+# Order matters, becare of on changing the order 
+#
+
+
+# Clean the RIB table
+$MYSQL_CMD -e 'DELETE r FROM rib r JOIN bgp_peers p ON (r.peer_hash_id = p.hash_id) WHERE r.db_timestamp < p.timestamp;' > $LOG_FILE 2>&1
+
+# Clean the Path table
+$MYSQL_CMD -e 'delete p from path_attrs p left join rib on (p.hash_id = rib.path_attr_hash_id) where isnull(rib.hash_id);' >> $LOG_FILE 2>&1
+
+
+# Clean the path attribute log table
+$MYSQL_CMD -e 'delete l from path_attr_log l left join rib on (rib.hash_id = l.rib_hash_id) where isnull(rib.hash_id);' >> $LOG_FILE 2>&1
