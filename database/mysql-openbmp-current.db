@@ -301,7 +301,7 @@ CREATE TABLE `peer_down_events` (
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_error` (`peer_hash_id`,`bmp_reason`),
   KEY `idx_bgp_errors` (`bgp_err_code`,`bgp_err_subcode`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -447,7 +447,7 @@ CREATE TABLE `stat_reports` (
   `num_routes_local_rib` bigint(20) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_ts` (`timestamp`)
-) ENGINE=InnoDB AUTO_INCREMENT=83448 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
@@ -617,6 +617,7 @@ SET character_set_client = utf8;
  1 AS `LastDownTimestamp`,
  1 AS `SentCapabilities`,
  1 AS `RecvCapabilities`,
+ 1 AS `as_name`,
  1 AS `peer_hash_id`,
  1 AS `router_hash_id`,
  1 AS `geo_ip_start`*/;
@@ -653,7 +654,7 @@ SET character_set_client = @saved_cs_client;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_routes_history` AS SELECT 
- 1 AS `hash_id`,
+ 1 AS `path_attr_hash_id`,
  1 AS `RouterName`,
  1 AS `PeerName`,
  1 AS `Prefix`,
@@ -673,7 +674,10 @@ SET character_set_client = utf8;
  1 AS `PeerASN`,
  1 AS `isPeerIPv4`,
  1 AS `isPeerVPN`,
- 1 AS `LastModified`*/;
+ 1 AS `LastModified`,
+ 1 AS `path_hash_id`,
+ 1 AS `peer_hash_id`,
+ 1 AS `router_hash_id`*/;
 SET character_set_client = @saved_cs_client;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -686,7 +690,7 @@ CREATE TABLE `withdrawn_log` (
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_prefix` (`prefix`,`prefix_len`),
   KEY `idx_ts` (`timestamp`)
-) ENGINE=InnoDB AUTO_INCREMENT=661079 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
 /*!50100 PARTITION BY KEY (peer_hash_id)
 PARTITIONS 64 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -798,12 +802,12 @@ PARTITIONS 64 */;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8 */;
-/*!50001 SET character_set_results     = utf8 */;
-/*!50001 SET collation_connection      = utf8_general_ci */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`openbmp`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_peers` AS select if((length(`rtr`.`name`) > 0),`rtr`.`name`,`rtr`.`ip_address`) AS `RouterName`,`rtr`.`ip_address` AS `RouterIP`,`u`.`local_ip` AS `LocalIP`,`u`.`local_port` AS `LocalPort`,`u`.`local_asn` AS `LocalASN`,`u`.`local_bgp_id` AS `LocalBGPId`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `PeerName`,`p`.`peer_addr` AS `PeerIP`,`u`.`remote_port` AS `PeerPort`,`p`.`peer_as` AS `PeerASN`,`p`.`peer_bgp_id` AS `PeerBGPId`,`u`.`local_hold_time` AS `LocalHoldTime`,`u`.`remote_hold_time` AS `PeerHoldTime`,`p`.`state` AS `isUp`,`rtr`.`isConnected` AS `isBMPConnected`,`p`.`isIPv4` AS `isPeerIPv4`,`p`.`isL3VPNpeer` AS `isPeerVPN`,`p`.`isPrePolicy` AS `isPrePolicy`,`p`.`timestamp` AS `LastModified`,`d`.`bmp_reason` AS `LastBMPReasonCode`,`d`.`bgp_err_code` AS `LastDownCode`,`d`.`bgp_err_subcode` AS `LastdownSubCode`,`d`.`error_text` AS `LastDownMessage`,`d`.`timestamp` AS `LastDownTimestamp`,`u`.`sent_capabilities` AS `SentCapabilities`,`u`.`recv_capabilities` AS `RecvCapabilities`,`p`.`hash_id` AS `peer_hash_id`,`rtr`.`hash_id` AS `router_hash_id`,`p`.`geo_ip_start` AS `geo_ip_start` from (((`bgp_peers` `p` join `routers` `rtr` on((`p`.`router_hash_id` = `rtr`.`hash_id`))) left join `peer_up_events` `u` on((`p`.`hash_id` = `u`.`peer_hash_id`))) left join `peer_down_events` `d` on((`p`.`hash_id` = `d`.`peer_hash_id`))) where (`d`.`id` in (select max(`peer_down_events`.`id`) AS `id` from `peer_down_events` group by `peer_down_events`.`peer_hash_id`) or isnull(`d`.`id`)) */;
+/*!50001 VIEW `v_peers` AS select if((length(`rtr`.`name`) > 0),`rtr`.`name`,`rtr`.`ip_address`) AS `RouterName`,`rtr`.`ip_address` AS `RouterIP`,`u`.`local_ip` AS `LocalIP`,`u`.`local_port` AS `LocalPort`,`u`.`local_asn` AS `LocalASN`,`u`.`local_bgp_id` AS `LocalBGPId`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `PeerName`,`p`.`peer_addr` AS `PeerIP`,`u`.`remote_port` AS `PeerPort`,`p`.`peer_as` AS `PeerASN`,`p`.`peer_bgp_id` AS `PeerBGPId`,`u`.`local_hold_time` AS `LocalHoldTime`,`u`.`remote_hold_time` AS `PeerHoldTime`,`p`.`state` AS `isUp`,`rtr`.`isConnected` AS `isBMPConnected`,`p`.`isIPv4` AS `isPeerIPv4`,`p`.`isL3VPNpeer` AS `isPeerVPN`,`p`.`isPrePolicy` AS `isPrePolicy`,`p`.`timestamp` AS `LastModified`,`d`.`bmp_reason` AS `LastBMPReasonCode`,`d`.`bgp_err_code` AS `LastDownCode`,`d`.`bgp_err_subcode` AS `LastdownSubCode`,`d`.`error_text` AS `LastDownMessage`,`d`.`timestamp` AS `LastDownTimestamp`,`u`.`sent_capabilities` AS `SentCapabilities`,`u`.`recv_capabilities` AS `RecvCapabilities`,`w`.`as_name` AS `as_name`,`p`.`hash_id` AS `peer_hash_id`,`rtr`.`hash_id` AS `router_hash_id`,`p`.`geo_ip_start` AS `geo_ip_start` from ((((`bgp_peers` `p` join `routers` `rtr` on((`p`.`router_hash_id` = `rtr`.`hash_id`))) left join `peer_up_events` `u` on((`p`.`hash_id` = `u`.`peer_hash_id`))) left join `peer_down_events` `d` on((`p`.`hash_id` = `d`.`peer_hash_id`))) left join `gen_whois_asn` `w` on((`p`.`peer_as` = `w`.`asn`))) where (`d`.`id` in (select max(`peer_down_events`.`id`) AS `id` from `peer_down_events` group by `peer_down_events`.`peer_hash_id`) or isnull(`d`.`id`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -824,12 +828,12 @@ PARTITIONS 64 */;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8 */;
-/*!50001 SET character_set_results     = utf8 */;
-/*!50001 SET collation_connection      = utf8_general_ci */;
+/*!50001 SET character_set_client      = latin1 */;
+/*!50001 SET character_set_results     = latin1 */;
+/*!50001 SET collation_connection      = latin1_swedish_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`openbmp`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_routes_history` AS select `path`.`hash_id` AS `hash_id`,if((length(`rtr`.`name`) > 0),`rtr`.`name`,`rtr`.`ip_address`) AS `RouterName`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `PeerName`,`r`.`prefix` AS `Prefix`,`r`.`prefix_len` AS `PrefixLen`,`path`.`origin` AS `Origin`,`path`.`origin_as` AS `Origin_AS`,`path`.`med` AS `MED`,`path`.`local_pref` AS `LocalPref`,`path`.`next_hop` AS `NH`,`path`.`as_path` AS `AS_Path`,`path`.`as_path_count` AS `ASPath_Count`,`path`.`community_list` AS `Communities`,`path`.`ext_community_list` AS `ExtCommunities`,`path`.`cluster_list` AS `ClusterList`,`path`.`aggregator` AS `Aggregator`,`p`.`peer_addr` AS `PeerAddress`,`p`.`peer_as` AS `PeerASN`,`p`.`isIPv4` AS `isPeerIPv4`,`p`.`isL3VPNpeer` AS `isPeerVPN`,if(isnull(`pathlog`.`timestamp`),`r`.`timestamp`,`pathlog`.`timestamp`) AS `LastModified` from ((((`rib` `r` left join `path_attr_log` `pathlog` FORCE INDEX (`idx_rib_hash_id`) on((`r`.`hash_id` = `pathlog`.`rib_hash_id`))) straight_join `bgp_peers` `p` on((`r`.`peer_hash_id` = `p`.`hash_id`))) straight_join `routers` `rtr` on((`p`.`router_hash_id` = `rtr`.`hash_id`))) straight_join `path_attrs` `path` on(((`pathlog`.`path_attr_hash_id` = `path`.`hash_id`) or (isnull(`pathlog`.`timestamp`) and (`r`.`path_attr_hash_id` = `path`.`hash_id`))))) where (isnull(`pathlog`.`timestamp`) or (`pathlog`.`timestamp` <= now())) */;
+/*!50001 VIEW `v_routes_history` AS select `path`.`hash_id` AS `path_attr_hash_id`,if((length(`rtr`.`name`) > 0),`rtr`.`name`,`rtr`.`ip_address`) AS `RouterName`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `PeerName`,`r`.`prefix` AS `Prefix`,`r`.`prefix_len` AS `PrefixLen`,`path`.`origin` AS `Origin`,`path`.`origin_as` AS `Origin_AS`,`path`.`med` AS `MED`,`path`.`local_pref` AS `LocalPref`,`path`.`next_hop` AS `NH`,`path`.`as_path` AS `AS_Path`,`path`.`as_path_count` AS `ASPath_Count`,`path`.`community_list` AS `Communities`,`path`.`ext_community_list` AS `ExtCommunities`,`path`.`cluster_list` AS `ClusterList`,`path`.`aggregator` AS `Aggregator`,`p`.`peer_addr` AS `PeerAddress`,`p`.`peer_as` AS `PeerASN`,`p`.`isIPv4` AS `isPeerIPv4`,`p`.`isL3VPNpeer` AS `isPeerVPN`,`pathlog`.`timestamp` AS `LastModified`,`r`.`path_attr_hash_id` AS `path_hash_id`,`path`.`peer_hash_id` AS `peer_hash_id`,`rtr`.`hash_id` AS `router_hash_id` from ((((`rib` `r` join `path_attr_log` `pathlog`) join `path_attrs` `path` on(((`r`.`hash_id` = `pathlog`.`rib_hash_id`) and (`pathlog`.`path_attr_hash_id` = `path`.`hash_id`)))) straight_join `bgp_peers` `p` on((`r`.`peer_hash_id` = `p`.`hash_id`))) straight_join `routers` `rtr` on((`p`.`router_hash_id` = `rtr`.`hash_id`))) order by `pathlog`.`timestamp` desc */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;

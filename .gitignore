@@ -1,4 +1,5 @@
 .idea
+cron_scripts/.idea
 build
 deb_package/*.cmake
 rpm_package/*.cmake
