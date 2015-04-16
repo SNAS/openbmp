@@ -127,7 +127,7 @@ void MPUnReachAttr::parseAfiIPv6(mp_unreach_nlri &nlri, UpdateMsg::parsed_update
 
         default :
             LOG_INFO("%s: MP_UNREACH AFI=ipv6 SAFI=%d is not implemented yet, skipping for now",
-                     peer_addr.c_str(), nlri.afi, nlri.safi);
+                     peer_addr.c_str(), nlri.safi);
             return;
     }
 }

@@ -132,7 +132,11 @@ void MPReachAttr::parseAfiIPv6(mp_reach_nlri &nlri, UpdateMsg::parsed_update_dat
         case bgp::BGP_SAFI_UNICAST: // Unicast IPv6 address prefix
 
             // Next-hop is an IPv6 address - Change/set the next-hop attribute in parsed data to use this next-hop
-            memcpy(ipv6_raw, nlri.next_hop, nlri.nh_len);
+            if (nlri.nh_len > 16)
+                memcpy(ipv6_raw, nlri.next_hop, 16);
+            else
+                memcpy(ipv6_raw, nlri.next_hop, nlri.nh_len);
+
             inet_ntop(AF_INET6, ipv6_raw, ipv6_char, sizeof(ipv6_char));
             parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ipv6_char);
 
@@ -142,7 +146,7 @@ void MPReachAttr::parseAfiIPv6(mp_reach_nlri &nlri, UpdateMsg::parsed_update_dat
 
         default :
             LOG_INFO("%s: MP_REACH AFI=ipv6 SAFI=%d is not implemented yet, skipping for now",
-                     peer_addr.c_str(), nlri.afi, nlri.safi);
+                     peer_addr.c_str(), nlri.safi);
             return;
     }
 }
