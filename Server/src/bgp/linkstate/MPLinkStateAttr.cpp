@@ -123,6 +123,7 @@ namespace bgp_msg {
 
             case ATTR_NODE_ISIS_AREA_ID:
                 if (len <= 4) {
+                    value_32bit = 0;
                     memcpy(&value_32bit, data, len);
                     bgp::SWAP_BYTES(&value_32bit);
                     value_32bit >>= 8;
@@ -155,6 +156,7 @@ namespace bgp_msg {
 
             case ATTR_LINK_IGP_METRIC:
                 if (len <= 4) {
+                    value_32bit = 0;
                     memcpy(&value_32bit, data, len);
                     bgp::SWAP_BYTES(&value_32bit, len);
                 }
@@ -248,6 +250,7 @@ namespace bgp_msg {
 
             case ATTR_PREFIX_PREFIX_METRIC:
                 if (len <= 4) {
+                    value_32bit = 0;
                     memcpy(&value_32bit, data, len);
                     bgp::SWAP_BYTES(&value_32bit, len);
                 }
