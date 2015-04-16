@@ -162,8 +162,15 @@ void mysqlBMP::add_Peer(tbl_bgp_peer &p_entry) {
         hash.update((unsigned char *) p_entry.peer_rd, strlen(p_entry.peer_rd));
         hash.update((unsigned char *) p_entry.peer_addr,
                 strlen(p_entry.peer_addr));
+
+        /* TODO: Uncomment once this is fixed in XR
+         * Disable hashing the bgp peer ID since XR has an issue where it sends 0.0.0.0 on subsequent PEER_UP's
+         *    This will be fixed in XR, but for now we can disable hashing on it.
+         *
         hash.update((unsigned char *) p_entry.peer_bgp_id,
                 strlen(p_entry.peer_bgp_id));
+        */
+        
         hash.finalize();
 
         // Save the hash
