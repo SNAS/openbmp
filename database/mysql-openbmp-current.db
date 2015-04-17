@@ -1,3 +1,25 @@
+-- MySQL dump 10.13  Distrib 5.6.19, for debian-linux-gnu (x86_64)
+--
+-- Host: 127.0.0.1    Database: openBMP
+-- ------------------------------------------------------
+-- Server version	5.6.19-0ubuntu0.14.04.1
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `bgp_peers`
+--
+
+DROP TABLE IF EXISTS `bgp_peers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `bgp_peers` (
@@ -50,6 +72,12 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `gen_asn_stats`
+--
+
+DROP TABLE IF EXISTS `gen_asn_stats`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `gen_asn_stats` (
@@ -97,6 +125,12 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `gen_whois_asn`
+--
+
+DROP TABLE IF EXISTS `gen_whois_asn`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `gen_whois_asn` (
@@ -115,6 +149,12 @@ CREATE TABLE `gen_whois_asn` (
   PRIMARY KEY (`asn`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `geo_ip`
+--
+
+DROP TABLE IF EXISTS `geo_ip`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `geo_ip` (
@@ -140,6 +180,12 @@ CREATE TABLE `geo_ip` (
   KEY `idx_ip_range` (`ip_start`,`ip_end`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `ls_links`
+--
+
+DROP TABLE IF EXISTS `ls_links`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `ls_links` (
@@ -174,6 +220,12 @@ CREATE TABLE `ls_links` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1
 /*!50100 PARTITION BY KEY (local_node_hash_id) */;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `ls_nodes`
+--
+
+DROP TABLE IF EXISTS `ls_nodes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `ls_nodes` (
@@ -199,6 +251,12 @@ CREATE TABLE `ls_nodes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1
 /*!50100 PARTITION BY KEY (hash_id) */;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `ls_prefixes`
+--
+
+DROP TABLE IF EXISTS `ls_prefixes`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `ls_prefixes` (
@@ -227,6 +285,12 @@ CREATE TABLE `ls_prefixes` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1
 /*!50100 PARTITION BY KEY (local_node_hash_id) */;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `path_attr_log`
+--
+
+DROP TABLE IF EXISTS `path_attr_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `path_attr_log` (
@@ -260,6 +324,12 @@ CREATE TABLE `path_attr_log` (
  PARTITION p2015_12_16 VALUES LESS THAN ('2015-12-16') ENGINE = InnoDB,
  PARTITION pOther VALUES LESS THAN (MAXVALUE) ENGINE = InnoDB) */;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `path_attrs`
+--
+
+DROP TABLE IF EXISTS `path_attrs`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `path_attrs` (
@@ -288,6 +358,12 @@ CREATE TABLE `path_attrs` (
 /*!50100 PARTITION BY KEY (hash_id)
 PARTITIONS 48 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `peer_down_events`
+--
+
+DROP TABLE IF EXISTS `peer_down_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `peer_down_events` (
@@ -303,6 +379,12 @@ CREATE TABLE `peer_down_events` (
   KEY `idx_bgp_errors` (`bgp_err_code`,`bgp_err_subcode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `peer_up_events`
+--
+
+DROP TABLE IF EXISTS `peer_up_events`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `peer_up_events` (
@@ -320,6 +402,13 @@ CREATE TABLE `peer_up_events` (
   PRIMARY KEY (`peer_hash_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Temporary view structure for view `prefix_aspath`
+--
+
+DROP TABLE IF EXISTS `prefix_aspath`;
+/*!50001 DROP VIEW IF EXISTS `prefix_aspath`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `prefix_aspath` AS SELECT 
@@ -331,6 +420,12 @@ SET character_set_client = utf8;
  1 AS `AS_Path`,
  1 AS `NH`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `rib`
+--
+
+DROP TABLE IF EXISTS `rib`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `rib` (
@@ -379,6 +474,12 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `routers`
+--
+
+DROP TABLE IF EXISTS `routers`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `routers` (
@@ -430,6 +531,12 @@ DELIMITER ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Table structure for table `stat_reports`
+--
+
+DROP TABLE IF EXISTS `stat_reports`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `stat_reports` (
@@ -447,8 +554,15 @@ CREATE TABLE `stat_reports` (
   `num_routes_local_rib` bigint(20) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_ts` (`timestamp`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=14193 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Temporary view structure for view `v_geo_ip`
+--
+
+DROP TABLE IF EXISTS `v_geo_ip`;
+/*!50001 DROP VIEW IF EXISTS `v_geo_ip`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_geo_ip` AS SELECT 
@@ -468,6 +582,13 @@ SET character_set_client = utf8;
  1 AS `ip_start_bin`,
  1 AS `ip_end_bin`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_ls_links`
+--
+
+DROP TABLE IF EXISTS `v_ls_links`;
+/*!50001 DROP VIEW IF EXISTS `v_ls_links`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_ls_links` AS SELECT 
@@ -502,6 +623,13 @@ SET character_set_client = utf8;
  1 AS `path_attr_hash_id`,
  1 AS `peer_hash_id`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_ls_nodes`
+--
+
+DROP TABLE IF EXISTS `v_ls_nodes`;
+/*!50001 DROP VIEW IF EXISTS `v_ls_nodes`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_ls_nodes` AS SELECT 
@@ -527,6 +655,13 @@ SET character_set_client = utf8;
  1 AS `path_attr_hash_id`,
  1 AS `peer_hash_id`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_ls_prefixes`
+--
+
+DROP TABLE IF EXISTS `v_ls_prefixes`;
+/*!50001 DROP VIEW IF EXISTS `v_ls_prefixes`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_ls_prefixes` AS SELECT 
@@ -546,6 +681,13 @@ SET character_set_client = utf8;
  1 AS `path_attr_hash_id`,
  1 AS `peer_hash_id`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_peer_prefix_report`
+--
+
+DROP TABLE IF EXISTS `v_peer_prefix_report`;
+/*!50001 DROP VIEW IF EXISTS `v_peer_prefix_report`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_peer_prefix_report` AS SELECT 
@@ -564,6 +706,13 @@ SET character_set_client = utf8;
  1 AS `router_hash_id`,
  1 AS `peer_hash_id`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_peer_prefix_report_last`
+--
+
+DROP TABLE IF EXISTS `v_peer_prefix_report_last`;
+/*!50001 DROP VIEW IF EXISTS `v_peer_prefix_report_last`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_peer_prefix_report_last` AS SELECT 
@@ -582,12 +731,26 @@ SET character_set_client = utf8;
  1 AS `router_hash_id`,
  1 AS `peer_hash_id`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_peer_prefix_report_last_id`
+--
+
+DROP TABLE IF EXISTS `v_peer_prefix_report_last_id`;
+/*!50001 DROP VIEW IF EXISTS `v_peer_prefix_report_last_id`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_peer_prefix_report_last_id` AS SELECT 
  1 AS `id`,
  1 AS `peer_hash_id`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_peers`
+--
+
+DROP TABLE IF EXISTS `v_peers`;
+/*!50001 DROP VIEW IF EXISTS `v_peers`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_peers` AS SELECT 
@@ -622,6 +785,13 @@ SET character_set_client = utf8;
  1 AS `router_hash_id`,
  1 AS `geo_ip_start`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_routes`
+--
+
+DROP TABLE IF EXISTS `v_routes`;
+/*!50001 DROP VIEW IF EXISTS `v_routes`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_routes` AS SELECT 
@@ -651,6 +821,13 @@ SET character_set_client = utf8;
  1 AS `peer_hash_id`,
  1 AS `router_hash_id`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_routes_history`
+--
+
+DROP TABLE IF EXISTS `v_routes_history`;
+/*!50001 DROP VIEW IF EXISTS `v_routes_history`*/;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_routes_history` AS SELECT 
@@ -679,6 +856,12 @@ SET character_set_client = utf8;
  1 AS `peer_hash_id`,
  1 AS `router_hash_id`*/;
 SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `withdrawn_log`
+--
+
+DROP TABLE IF EXISTS `withdrawn_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `withdrawn_log` (
@@ -690,10 +873,15 @@ CREATE TABLE `withdrawn_log` (
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_prefix` (`prefix`,`prefix_len`),
   KEY `idx_ts` (`timestamp`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
+) ENGINE=InnoDB AUTO_INCREMENT=129454 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
 /*!50100 PARTITION BY KEY (peer_hash_id)
 PARTITIONS 64 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Final view structure for view `prefix_aspath`
+--
+
 /*!50001 DROP VIEW IF EXISTS `prefix_aspath`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -707,6 +895,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_geo_ip`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_geo_ip`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -720,6 +913,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_ls_links`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_ls_links`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -733,6 +931,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_ls_nodes`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_ls_nodes`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -746,6 +949,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_ls_prefixes`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_ls_prefixes`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -759,6 +967,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_peer_prefix_report`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_peer_prefix_report`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -772,6 +985,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_peer_prefix_report_last`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_peer_prefix_report_last`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -785,6 +1003,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_peer_prefix_report_last_id`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_peer_prefix_report_last_id`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -798,6 +1021,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_peers`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_peers`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -811,6 +1039,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_routes`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_routes`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -824,6 +1057,11 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_routes_history`
+--
+
 /*!50001 DROP VIEW IF EXISTS `v_routes_history`*/;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
@@ -837,3 +1075,14 @@ PARTITIONS 64 */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2015-04-17 21:34:26
