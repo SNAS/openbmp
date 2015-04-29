@@ -78,10 +78,14 @@ mysqlBMP::~mysqlBMP() {
             stmt->execute(buf);
 
             // Free the query statement
+            stmt->close();
             delete stmt;
+
         } catch (sql::SQLException &e) {
             LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                     e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+            if (stmt != NULL)
+                delete stmt;
         }
     }
 
@@ -137,6 +141,8 @@ void mysqlBMP::mysqlConnect(char *hostURL, char *username, char *password,
         cout << " (MySQL error code: " << e.getErrorCode();
         cout << ", SQLState: " << e.getSQLState() << " )" << endl;
         */
+        if (stmt != NULL)
+            delete stmt;
         throw "ERROR: Cannot connect to mysql.";
     }
 
@@ -170,7 +176,7 @@ void mysqlBMP::add_Peer(tbl_bgp_peer &p_entry) {
         hash.update((unsigned char *) p_entry.peer_bgp_id,
                 strlen(p_entry.peer_bgp_id));
         */
-        
+
         hash.finalize();
 
         // Save the hash
@@ -213,11 +219,14 @@ void mysqlBMP::add_Peer(tbl_bgp_peer &p_entry) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 }
 
@@ -312,11 +321,14 @@ void mysqlBMP::add_Router(tbl_router &r_entry, bool incConnectCount) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
 
     }
 }
@@ -370,12 +382,15 @@ bool mysqlBMP::disconnect_Router(tbl_router &r_entry) {
             stmt->execute(buf);
 
             // Free the query statement
+            stmt->close();
             delete stmt;
 
             return true;
         } catch (sql::SQLException &e) {
             LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                     e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+            if (stmt != NULL)
+                delete stmt;
         }
     }
 
@@ -479,11 +494,14 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
 
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 
     // Free the large buffer
@@ -565,11 +583,14 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 
     // Free the large buffer
@@ -659,11 +680,14 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 }
 
@@ -699,11 +723,14 @@ void mysqlBMP::add_PeerDownEvent(tbl_peer_down_event &down_event) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 }
 
@@ -737,11 +764,14 @@ void mysqlBMP::add_StatReport(tbl_stats_report &stats) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 }
 
@@ -777,11 +807,14 @@ void mysqlBMP::add_PeerUpEvent(DbInterface::tbl_peer_up_event &up_event) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 }
 
@@ -849,11 +882,14 @@ void mysqlBMP::add_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes) {
 
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 
     // Free the large buffer
@@ -923,11 +959,14 @@ void mysqlBMP::del_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 
     // Free the large buffer
@@ -1030,11 +1069,14 @@ void mysqlBMP::add_LsLinks(std::list<DbInterface::tbl_ls_link> &links) {
 
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 
     // Free the large buffer
@@ -1098,11 +1140,14 @@ void mysqlBMP::del_LsLinks(std::list<DbInterface::tbl_ls_link> &links) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 
     // Free the large buffer
@@ -1195,13 +1240,15 @@ void mysqlBMP::add_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes) {
         stmt = con->createStatement();
         stmt->execute(buf);
 
-
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 
     // Free the large buffer
@@ -1263,11 +1310,14 @@ void mysqlBMP::del_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes) {
         stmt->execute(buf);
 
         // Free the query statement
+        stmt->close();
         delete stmt;
 
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLState().c_str() );
+        if (stmt != NULL)
+            delete stmt;
     }
 
     // Free the large buffer

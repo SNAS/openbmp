@@ -55,7 +55,7 @@ void MPUnReachAttr::parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::Up
     memcpy(&nlri.afi, data, 2); data += 2; attr_len -= 2;
     bgp::SWAP_BYTES(&nlri.afi);                     // change to host order
 
-    nlri.safi = *data++; attr_len--;                 // Set the SAFI - 1 octe
+    nlri.safi = *data++; attr_len--;                // Set the SAFI - 1 octe
     nlri.nlri_data = data;                          // Set pointer position for nlri data
     nlri.nlri_len = attr_len;                       // Remaining attribute length is for NLRI data
 
@@ -69,11 +69,16 @@ void MPUnReachAttr::parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::Up
 
     SELF_DEBUG("%s: afi=%d safi=%d", peer_addr.c_str(), nlri.afi, nlri.safi);
 
-    /*
-     * NLRI data depends on the AFI & SAFI
-     *  Parse data based on AFI + SAFI
-     */
-    parseAfi(nlri, parsed_data);
+    if (nlri.nlri_len == 0) {
+        LOG_INFO("%s: End-Of-RIB marker (mp_unreach len=0)", peer_addr.c_str());
+
+    } else {
+        /*
+         * NLRI data depends on the AFI & SAFI
+         *  Parse data based on AFI + SAFI
+         */
+        parseAfi(nlri, parsed_data);
+    }
 }
 
 
