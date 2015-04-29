@@ -25,6 +25,10 @@
 #include <cppconn/resultset.h>
 #include <cppconn/statement.h>
 
+#include <thread>
+#include "safeQueue.hpp"
+
+#define MYSQL_BULK_STMTS_ALLOWED        10000             // Number of statements allowed between START TRANSACTION/COMMIT
 
 /**
  * \class   mysqlMBP
@@ -71,6 +75,8 @@ public:
     void del_LsLinks(std::list<DbInterface::tbl_ls_link> &links);
     void add_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes);
     void del_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes);
+    void startTransaction();
+    void commitTransaction();
 
     // Debug methods
     void enableDebug();
@@ -90,6 +96,18 @@ private:
     std::map<std::string, time_t> router_list;
     std::map<std::string, time_t> peer_list;
     typedef std::map<std::string, time_t>::iterator peer_list_iter;
+
+    /**
+     * FIFO queue for MySQL thread to handle all transactions
+     */
+    std::safeQueue<std::string> sql_writeQueue;
+
+    /**
+     * SQL Writer thread pointer
+     */
+    std::thread  *sql_writer_thread;
+    bool         sql_writer_thread_run;                 ///< Indicates if the writer thread should run or not
+
     /**
      * Connects to mysql server
      *
@@ -99,6 +117,12 @@ private:
      * \param [in]  db          DB name, such as openBMP
      */
     void mysqlConnect(char *hostURL, char *username, char *password, char *db);
+
+    /**
+     * SQL Writer thread function
+     */
+    void writerThreadLoop();
+
 
     /**
     * \brief Method to resolve the IP address to a hostname

@@ -560,6 +560,25 @@ public:
     virtual void del_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes) = 0;
 
 
+    /*****************************************************************//**
+     * \brief       Start transaction
+     *
+     * \details     See https://dev.mysql.com/doc/refman/5.6/en/commit.html or
+     *              http://www.postgresql.org/docs/9.4/static/sql-start-transaction.html
+     *              for more details.
+     *
+     *              Make sure to call "commitTransaction()" method when ready to commit.
+     *****************************************************************/
+    virtual void startTransaction() = 0;
+
+    /*****************************************************************//**
+     * \brief       Commit transaction
+     *
+     * \details     See https://dev.mysql.com/doc/refman/5.6/en/commit.html or
+     *              http://www.postgresql.org/docs/9.4/static/sql-start-transaction.html
+     *              for more details.
+     *****************************************************************/
+    virtual void commitTransaction() = 0;
 
     /* ---------------------------------------------------------------------------
      * Commonly used methods
