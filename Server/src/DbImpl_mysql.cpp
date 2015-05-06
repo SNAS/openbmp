@@ -215,21 +215,22 @@ void mysqlBMP::writerThreadLoop() {
 
                 // Only retry if this was a bulk query, otherwise the query is still in queue
                 if (bulk_queries.size()) {
-                    try {
-                        stmt->execute(query);
-                    } catch (sql::SQLException &e) {
-                        LOG_ERR("mysql error: %s, error Code = %d, state = %s (2nd)",
-                                e.what(), e.getErrorCode(), e.getSQLState().c_str());
-
-                        //LOG_INFO("   query = %s", query.c_str());
-                        if (stmt != NULL)
-                            delete stmt;
+                    for (int i = 0; i < 15; i++) {
+                        try {
+                            stmt->execute(query);
+                            break;
+                        } catch (sql::SQLException &e) {
+                            // ignore
+                        }
                     }
+                }
 
+                if (stmt != NULL) {
                     stmt->close();
                     delete stmt;
                     stmt = NULL;
                 }
+
             }
             else {
                 LOG_ERR("mysql error: %s, error Code = %d, state = %s",
