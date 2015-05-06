@@ -106,20 +106,21 @@ public:
         // Lock
         pthread_mutex_lock (&mutex);
 
-        // Add
-        queue<type>::pop();
+        // Before getting element, check if there are any
+        if (queue<type>::size() > 0) {
+            queue<type>::pop();
 
-        // Unlock the limit wait lock
-        if (limitWaitOn and size() < limit) {
-            pthread_mutex_unlock(&mutex_limitWait);
-            pthread_mutex_lock(&mutex_limitWait);
-            limitWaitOn = false;
-        }
+            // Unlock the limit wait lock
+            if (limitWaitOn and size() < limit) {
+                pthread_mutex_unlock(&mutex_limitWait);
+                pthread_mutex_lock(&mutex_limitWait);
+            }
 
-        // Set the wait lock if the queue is empty
-        if (queue<type>::size() <= 0 && !waitOn) {
-            pthread_mutex_lock(&mutex_wait);
-            waitOn = true;
+            // Set the wait lock if the queue is empty
+            if (queue<type>::size() <= 0 && !waitOn) {
+                pthread_mutex_lock(&mutex_wait);
+                waitOn = true;
+            }
         }
 
         // Unlock
@@ -146,17 +147,24 @@ public:
     *     true if the value was updated, false if not
     */
     bool front(type &value) {
+        bool rval = true;
 
         // Lock
         pthread_mutex_lock (&mutex);
 
-        // get front
-        value = queue<type>::front();
+        // Before getting element, check if there are any
+        if (queue<type>::size() > 0) {
+
+            // get front
+            value = queue<type>::front();
+
+        } else
+            rval = false;
 
         // Unlock
         pthread_mutex_unlock (&mutex);
 
-        return true;
+        return rval;
     }
 
 

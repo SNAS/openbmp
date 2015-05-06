@@ -127,8 +127,13 @@ mysqlBMP::~mysqlBMP() {
  */
 void mysqlBMP::writerThreadLoop() {
     string query;
+    string key;
+    string value;
     int i;
     int pop_num;
+    size_t pos1;
+    size_t pos2;
+    map<int,string> bulk_queries;
 
     SELF_DEBUG("SQL writer thread started");
 
@@ -137,19 +142,65 @@ void mysqlBMP::writerThreadLoop() {
 
         sql_writeQueue.wait();                      // Block till there are messages
 
-        pop_num = sql_writeQueue.size() < MYSQL_BULK_STMTS_ALLOWED ? sql_writeQueue.size() : MYSQL_BULK_STMTS_ALLOWED;
+        bulk_queries.clear();
+        pop_num = sql_writeQueue.size() < MYSQL_MAX_BULK_INSERT ? sql_writeQueue.size() : MYSQL_MAX_BULK_INSERT;
         SELF_DEBUG("got message, going to pop %d", pop_num);
 
         // Loop to process as many messages we can in one commit transaction
-        startTransaction();
+        //startTransaction();
 
         try {
             // Run the query to add the record
             stmt = con->createStatement();
 
             for (i = 0; i < pop_num; i++ ) {
-                if (sql_writeQueue.popFront(query) and query.size() > 0) {
-                    SELF_DEBUG("QUERY=%s", query.c_str());
+                if (sql_writeQueue.front(query) and query.size() > 0) {
+
+                    // If not tagged as bulk, process one by one
+                    if (query[0] != 'B') {
+                        if (i == 0) {
+                            SELF_DEBUG("QUERY=%s", query.c_str());
+                            stmt->execute(query);
+                            sql_writeQueue.pop();
+                        } else
+                            break;
+                    }
+                    else {
+                        sql_writeQueue.pop();
+
+                        // Process as bulk
+                        bulk_queries[query[1]] += query.substr(2) + ",";
+                    }
+                }
+            }
+
+            // Perform a bulk insert
+            if (bulk_queries.size()) {
+                // Loop through the keys (queries)
+                for (map<int,string>::iterator it = bulk_queries.begin();
+                        it != bulk_queries.end();  it++) {
+                    int a = (*it).first;
+                    string b = (*it).second;
+                    b.erase(b.size() - 1);                              // Remove last comma
+
+                    switch (a) {
+                        case '1' : // Add RIB
+                            query = "INSERT into " +  string(TBL_NAME_RIB) +
+                                    " (hash_id,path_attr_hash_id,peer_hash_id,prefix,prefix_len,isIPv4,prefix_bin,prefix_bcast_bin,timestamp)" +
+                                    " VALUES " + b +
+                                    " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),path_attr_hash_id=values(path_attr_hash_id),isWithdrawn=0,db_timestamp=current_timestamp";
+                            break;
+
+                        case '2' : // Add Path
+                            query = "INSERT into " + string(TBL_NAME_PATH_ATTRS) +
+                                    " (hash_id,peer_hash_id,origin,as_path,next_hop,med,local_pref,isAtomicAgg,aggregator,community_list,ext_community_list," +
+                                    "cluster_list,originator_id,origin_as,as_path_count,nexthop_isIPv4,timestamp)" +
+                                    " VALUES " + b +
+                                    " ON DUPLICATE KEY UPDATE timestamp=values(timestamp)  ";
+                            break;
+                    }
+
+                    //LOG_INFO("QUERy[%d]=%s", a, query.c_str());
                     stmt->execute(query);
                 }
             }
@@ -160,14 +211,37 @@ void mysqlBMP::writerThreadLoop() {
             stmt = NULL;
 
         } catch (sql::SQLException &e) {
-            LOG_ERR("mysql error: %s, error Code = %d, state = %s",
-                    e.what(), e.getErrorCode(), e.getSQLState().c_str());
-            if (stmt != NULL)
-                delete stmt;
+            if (e.getErrorCode() == 1213) {                     // deadlock
 
+                // Only retry if this was a bulk query, otherwise the query is still in queue
+                if (bulk_queries.size()) {
+                    try {
+                        stmt->execute(query);
+                    } catch (sql::SQLException &e) {
+                        LOG_ERR("mysql error: %s, error Code = %d, state = %s (2nd)",
+                                e.what(), e.getErrorCode(), e.getSQLState().c_str());
+
+                        //LOG_INFO("   query = %s", query.c_str());
+                        if (stmt != NULL)
+                            delete stmt;
+                    }
+
+                    stmt->close();
+                    delete stmt;
+                    stmt = NULL;
+                }
+            }
+            else {
+                LOG_ERR("mysql error: %s, error Code = %d, state = %s",
+                        e.what(), e.getErrorCode(), e.getSQLState().c_str());
+
+                //LOG_INFO("   query=%s", query.c_str());
+                if (stmt != NULL)
+                    delete stmt;
+            }
         }
 
-        commitTransaction();
+        //commitTransaction();
     }
 
     SELF_DEBUG("SQL writer thread stopped");
@@ -324,7 +398,7 @@ void mysqlBMP::add_Peer(tbl_bgp_peer &p_entry) {
 
     // Build the query
     snprintf(buf, sizeof(buf),
-            "REPLACE into %s (%s) values ('%s','%s','%s',%d, '%s', '%s', %u, %d, %d, current_timestamp,1, '%s')",
+            "REPLACE into %s (%s) VALUES ('%s','%s','%s',%d, '%s', '%s', %u, %d, %d, current_timestamp,1, '%s')",
             TBL_NAME_BGP_PEERS,
             "hash_id,router_hash_id, peer_rd,isIPv4,peer_addr,peer_bgp_id,peer_as,isL3VPNpeer,isPrePolicy,timestamp,state,name",
             p_hash_str.c_str(), r_hash_str.c_str(), p_entry.peer_rd,
@@ -407,7 +481,7 @@ void mysqlBMP::add_Router(tbl_router &r_entry, bool incConnectCount) {
 
     // Build the query
     snprintf(buf, sizeof(buf),
-            "INSERT into %s (%s) values ('%s', '%s', '%s','%s','%s', 1, 1)",
+            "INSERT into %s (%s) VALUES ('%s', '%s', '%s','%s','%s', 1, 1)",
             TBL_NAME_ROUTERS, "hash_id,name,description,ip_address,init_data,isConnected,conn_count", r_hash_str.c_str(),
             r_entry.name, r_entry.descr, r_entry.src_addr, initData.c_str());
 
@@ -484,8 +558,7 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
     size_t  buf_len = 0;                         // query buffer length
 
     // Build the initial part of the query
-    buf_len = sprintf(buf, "INSERT into %s (%s) values ", TBL_NAME_RIB,
-                      "hash_id,path_attr_hash_id,peer_hash_id,prefix,prefix_len,isIPv4,prefix_bin,prefix_bcast_bin,timestamp");
+    buf_len = sprintf(buf, "B1");
 
     string rib_hash_str;
     string path_hash_str;
@@ -556,12 +629,6 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
     // Remove the last comma since we don't need it
     buf[buf_len - 1] = 0;
 
-    // Add the on duplicate statement
-    snprintf(buf2, sizeof(buf2),
-            " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),path_attr_hash_id=values(path_attr_hash_id),db_timestamp=current_timestamp");
-    strcat(buf, buf2);
-
-
     sql_writeQueue.push(buf);
 
     // Free the large buffer
@@ -577,25 +644,23 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
 
     char    *buf = new char[800000];            // Misc working buffer
 
+    string p_hash_str;
+    hash_toStr(rib_entry[0].peer_hash_id, p_hash_str);
+
     /*
      * Update the current RIB entry state
      */
     // Build the initial part of the query
     //buf_len = sprintf(buf, "DELETE from %s WHERE ", TBL_NAME_RIB);
-    buf_len = sprintf(buf, "UPDATE IGNORE %s SET isWithdrawn=True WHERE ", TBL_NAME_RIB);
-
-    string p_hash_str;
+    buf_len = sprintf(buf, "UPDATE IGNORE %s SET isWithdrawn=True WHERE peer_hash_id = '%s' AND (",
+                      TBL_NAME_RIB,p_hash_str.c_str());
 
     // Loop through the vector array of rib entries
     for (size_t i = 0; i < rib_entry.size(); i++) {
-
-        hash_toStr(rib_entry[i].peer_hash_id, p_hash_str);
-
         buf_len +=
                 snprintf(buf2, sizeof(buf2),
-                        " (peer_hash_id = '%s' and prefix = '%s' and prefix_len = %d) OR ",
-                        p_hash_str.c_str(), rib_entry[i].prefix,
-                        rib_entry[i].prefix_len);
+                        " (prefix = '%s' and prefix_len = %d) OR ",
+                        rib_entry[i].prefix, rib_entry[i].prefix_len);
 
         // Cat the entry to the query buff
         if (buf_len < 800000 /* size of buf */)
@@ -603,8 +668,9 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
 
     }
 
-    // Remove the last OR since we don't need it
-    buf[buf_len - 3] = 0;
+    // Remove the last OR since we don't need it and add closing ')'
+    buf[buf_len - 3] = ')';
+    buf[buf_len - 2] = 0;
 
     sql_writeQueue.push(buf);
 
@@ -612,7 +678,7 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
      * Insert a new withdrawn log entry
      */
     // Build the initial part of the query
-    buf_len = sprintf(buf, "INSERT into %s (%s) values ",
+    buf_len = sprintf(buf, "INSERT into %s (%s) VALUES ",
             TBL_NAME_WITHDRAWN_LOG, "peer_hash_id,prefix, prefix_len");
 
     // Loop through the vector array of rib entries
@@ -648,9 +714,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
     size_t  buf_len;                    // size of the query buff
 
     // Setup the initial MySQL query
-    buf_len =
-            sprintf(buf, "INSERT into %s (%s) values ", TBL_NAME_PATH_ATTRS,
-                    "hash_id,peer_hash_id,origin,as_path,next_hop,med,local_pref,isAtomicAgg,aggregator,community_list,ext_community_list,cluster_list,originator_id,origin_as,as_path_count,nexthop_isIPv4,timestamp");
+    buf_len = sprintf(buf, "B2");
 
     /*
      * Generate router table hash from the following fields
@@ -709,11 +773,6 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
     // Remove the last comma since we don't need it
     buf[buf_len - 1] = 0;
 
-    // Add the on duplicate statement
-    snprintf(buf2, sizeof(buf2),
-            " ON DUPLICATE KEY UPDATE timestamp=values(timestamp)  ");
-    strcat(buf, buf2);
-
     sql_writeQueue.push(buf);
 }
 
@@ -729,7 +788,7 @@ void mysqlBMP::add_PeerDownEvent(tbl_peer_down_event &down_event) {
 
     // Insert the bgp peer down event
     snprintf(buf, sizeof(buf),
-            "INSERT into %s (%s) values ('%s', %d, %d, %d, '%s')",
+            "INSERT into %s (%s) VALUES ('%s', %d, %d, %d, '%s')",
             TBL_NAME_PEER_DOWN,
             "peer_hash_id,bmp_reason,bgp_err_code,bgp_err_subcode,error_text",
             p_hash_str.c_str(), down_event.bmp_reason,
@@ -755,7 +814,7 @@ void mysqlBMP::add_StatReport(tbl_stats_report &stats) {
     hash_toStr(stats.peer_hash_id, p_hash_str);
 
     snprintf(buf, sizeof(buf),
-             "INSERT into %s (%s%s%s) values ('%s', %u, %u, %u, %u, %u, %u, %u, %" PRIu64 ", %" PRIu64 ")",
+             "INSERT into %s (%s%s%s) VALUES ('%s', %u, %u, %u, %u, %u, %u, %u, %" PRIu64 ", %" PRIu64 ")",
              TBL_NAME_STATS_REPORT,
              "peer_hash_id,prefixes_rejected,known_dup_prefixes,known_dup_withdraws,",
              "updates_invalid_by_cluster_list,updates_invalid_by_as_path_loop,updates_invalid_by_originagtor_id,",
@@ -782,7 +841,7 @@ void mysqlBMP::add_PeerUpEvent(DbInterface::tbl_peer_up_event &up_event) {
 
     // Insert the bgp peer up event
     snprintf(buf, sizeof(buf),
-            "REPLACE into %s (%s) values ('%s','%s','%s',%" PRIu16 ",%" PRIu16 ",%" PRIu32 ",%" PRIu16 ",%" PRIu16 ",'%s','%s')",
+            "REPLACE into %s (%s) VALUES ('%s','%s','%s',%" PRIu16 ",%" PRIu16 ",%" PRIu32 ",%" PRIu16 ",%" PRIu16 ",'%s','%s')",
             TBL_NAME_PEER_UP,
             "peer_hash_id,local_ip,local_bgp_id,local_port,local_hold_time,local_asn,remote_port,remote_hold_time,sent_capabilities,recv_capabilities",
             p_hash_str.c_str(), up_event.local_ip, up_event.local_bgp_id, up_event.local_port,up_event.local_hold_time,
@@ -806,7 +865,7 @@ void mysqlBMP::add_LsNodes(std::list<DbInterface::tbl_ls_node> &nodes) {
     int     buf_len = 0;                         // query buffer length
 
     // Build the initial part of the query
-    buf_len = sprintf(buf, "REPLACE into %s (%s) values ", TBL_NAME_LS_NODE,
+    buf_len = sprintf(buf, "REPLACE into %s (%s) VALUES ", TBL_NAME_LS_NODE,
                       "hash_id,path_attr_hash_id,peer_hash_id,id,asn,bgp_ls_id,igp_router_id,ospf_area_id,"
                       "protocol,router_id,isIPv4,isis_area_id,flags,name,timestamp");
 
@@ -919,7 +978,7 @@ void mysqlBMP::add_LsLinks(std::list<DbInterface::tbl_ls_link> &links) {
     int     buf_len = 0;                         // query buffer length
 
     // Build the initial part of the query
-    buf_len = sprintf(buf, "REPLACE into %s (%s) values ", TBL_NAME_LS_LINK,
+    buf_len = sprintf(buf, "REPLACE into %s (%s) VALUES ", TBL_NAME_LS_LINK,
             "hash_id,path_attr_hash_id,peer_hash_id,id,mt_id,interface_addr,neighbor_addr,isIPv4,"
             "protocol,local_link_id,remote_link_id,local_node_hash_id,remote_node_hash_id,"
             "admin_group,max_link_bw,max_resv_bw,unreserved_bw,te_def_metric,protection_type,"
@@ -1067,7 +1126,7 @@ void mysqlBMP::add_LsPrefixes(std::list<DbInterface::tbl_ls_prefix> &prefixes) {
     int     buf_len = 0;                         // query buffer length
 
     // Build the initial part of the query
-    buf_len = sprintf(buf, "REPLACE into %s (%s) values ", TBL_NAME_LS_PREFIX,
+    buf_len = sprintf(buf, "REPLACE into %s (%s) VALUES ", TBL_NAME_LS_PREFIX,
             "hash_id,path_attr_hash_id,peer_hash_id,id,local_node_hash_id,mt_id,protocol,prefix_len,"
             "prefix_bin,prefix_bcast_bin,ospf_route_type,igp_flags,isIPv4,route_tag,"
             "ext_route_tag,metric,ospf_fwd_addr,timestamp"

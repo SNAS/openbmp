@@ -28,7 +28,7 @@
 #include <thread>
 #include "safeQueue.hpp"
 
-#define MYSQL_BULK_STMTS_ALLOWED        10000             // Number of statements allowed between START TRANSACTION/COMMIT
+#define MYSQL_MAX_BULK_INSERT        2000             // Number of values for a single insert allowed
 
 /**
  * \class   mysqlMBP
