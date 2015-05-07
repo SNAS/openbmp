@@ -83,6 +83,8 @@ public:
             pthread_mutex_unlock(&mutex_limitWait);
 
             pthread_mutex_lock (&mutex);
+            limitWaitOn = false;
+            pthread_mutex_lock(&mutex_limitWait);
         }
 
 
@@ -113,7 +115,6 @@ public:
             // Unlock the limit wait lock
             if (limitWaitOn and size() < limit) {
                 pthread_mutex_unlock(&mutex_limitWait);
-                pthread_mutex_lock(&mutex_limitWait);
             }
 
             // Set the wait lock if the queue is empty

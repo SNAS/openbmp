@@ -58,7 +58,7 @@ mysqlBMP::mysqlBMP(Logger *logPtr, char *hostURL, char *username, char *password
     mysqlConnect(hostURL, username, password, db);
 
     // Set the writer queue limit
-    sql_writeQueue.setLimit(200000);
+    sql_writeQueue.setLimit(100000);
 
     /*
      * Create and start the SQL writer thread
