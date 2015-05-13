@@ -256,8 +256,8 @@ void mysqlBMP::writerThreadLoop() {
 
             retries = 0;
 
-            if (sql_writeQueue.size() > 1000)
-                LOG_INFO("  popped  %d (queue=%d)", i, sql_writeQueue.size());
+            //if (sql_writeQueue.size() > 1000)
+            //    LOG_INFO("  popped  %d (queue=%d)", i, sql_writeQueue.size());
 
         } catch (sql::SQLException &e) {
             if (e.getErrorCode() == 1213 or e.getErrorCode() == 1205) {     // deadlock or lock exceeded timeout
