@@ -28,7 +28,7 @@
 #include <thread>
 #include "safeQueue.hpp"
 
-#define MYSQL_MAX_BULK_INSERT        2000             // Number of values for a single insert allowed
+#define MYSQL_MAX_BULK_INSERT        5000             // Number of values for a single insert allowed
 
 /**
  * \class   mysqlMBP
@@ -109,6 +109,17 @@ private:
     bool         sql_writer_thread_run;                 ///< Indicates if the writer thread should run or not
 
     /**
+     * Bulk queries
+     *      Values are grouped by range to distinguish like statements
+     */
+    enum SQL_BULK_QUERIES {
+            SQL_BULK_ADD_RIB       = 1,
+            SQL_BULK_ADD_PATH      = 2,
+            SQL_BULK_WITHDRAW_INS  = 8,
+            SQL_BULK_WITHDRAW_UPD  = 16
+    };
+
+    /**
      * Connects to mysql server
      *
      * \param [in]  hostURL     Host URL, such as tcp://127.0.0.1:3306
@@ -123,6 +134,12 @@ private:
      */
     void writerThreadLoop();
 
+    /**
+     * SQL Writer bulk insert/update
+     *
+     * \param [in] bulk_queries     Reference to bulk queries map (statements)
+     */
+    void writerBulkQuery(std::map<int,std::string> &bulk_queries);
 
     /**
     * \brief Method to resolve the IP address to a hostname
@@ -133,6 +150,7 @@ private:
     *  \returns true if error, false if no error
     */
     bool resolveIp(std::string name, std::string &hostname);
+
 
 };
 

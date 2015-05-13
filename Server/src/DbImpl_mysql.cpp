@@ -58,7 +58,7 @@ mysqlBMP::mysqlBMP(Logger *logPtr, char *hostURL, char *username, char *password
     mysqlConnect(hostURL, username, password, db);
 
     // Set the writer queue limit
-    sql_writeQueue.setLimit(100000);
+    sql_writeQueue.setLimit(500000);
 
     /*
      * Create and start the SQL writer thread
@@ -123,16 +123,74 @@ mysqlBMP::~mysqlBMP() {
 }
 
 /**
+ * SQL Writer bulk insert/update
+ *
+ * \param [in] bulk_queries     Reference to bulk queries map (statements)
+ */
+void mysqlBMP::writerBulkQuery(std::map<int,std::string> &bulk_queries) {
+    string query;
+
+    // Perform a bulk insert/update
+    if (bulk_queries.size()) {
+        // Loop through the keys (queries)
+        for (map<int,string>::iterator it = bulk_queries.begin();
+             it != bulk_queries.end();  it++) {
+            int a = (*it).first;
+            string b = (*it).second;
+
+
+            switch (a) {
+                case SQL_BULK_ADD_RIB : // Add RIB
+                    b.erase(b.size() - 1);                              // Remove last comma
+                    query = "INSERT into " +  string(TBL_NAME_RIB) +
+                            " (hash_id,path_attr_hash_id,peer_hash_id,prefix,prefix_len,isIPv4,prefix_bin,prefix_bcast_bin,timestamp)" +
+                            " VALUES " + b +
+                            " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),path_attr_hash_id=values(path_attr_hash_id),isWithdrawn=0,db_timestamp=current_timestamp";
+                    break;
+
+                case SQL_BULK_ADD_PATH : // Add Path
+                    b.erase(b.size() - 1);                              // Remove last comma
+                    query = "INSERT into " + string(TBL_NAME_PATH_ATTRS) +
+                            " (hash_id,peer_hash_id,origin,as_path,next_hop,med,local_pref,isAtomicAgg,aggregator,community_list,ext_community_list," +
+                            "cluster_list,originator_id,origin_as,as_path_count,nexthop_isIPv4,timestamp)" +
+                            " VALUES " + b +
+                            " ON DUPLICATE KEY UPDATE timestamp=values(timestamp)  ";
+                    break;
+
+                case SQL_BULK_WITHDRAW_UPD : // Update RIB for withdraw
+                    b.erase(b.size() - 1);                              // Remove last comma
+                    //query = "UPDATE IGNORE " +  string(TBL_NAME_RIB) + " SET isWithdrawn=True WHERE " + b;
+                    query = "INSERT into " +  string(TBL_NAME_RIB) +
+                            " (hash_id,peer_hash_id,prefix,prefix_len,timestamp,path_attr_hash_id)" +
+                            " VALUES " + b +
+                            " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),isWithdrawn=True,db_timestamp=current_timestamp";
+
+                    break;
+
+                case SQL_BULK_WITHDRAW_INS : // Insert into withdraw log
+                    b.erase(b.size() - 1);                              // Remove last comma
+                    query = "INSERT into " + string(TBL_NAME_WITHDRAWN_LOG) +
+                            " (peer_hash_id,prefix, prefix_len) VALUES " + b;
+                    break;
+            }
+
+            SELF_DEBUG("BULK QUERY[%d]=%s", a, query.c_str());
+            stmt->execute(query);
+        }
+
+        bulk_queries.clear();
+    }
+}
+
+/**
  * SQL Writer thread function
  */
 void mysqlBMP::writerThreadLoop() {
     string query;
-    string key;
-    string value;
     int i;
     int pop_num;
-    size_t pos1;
-    size_t pos2;
+    int retries = 0;
+    int last_bulk_key = 0;
     map<int,string> bulk_queries;
 
     SELF_DEBUG("SQL writer thread started");
@@ -140,114 +198,93 @@ void mysqlBMP::writerThreadLoop() {
     while (sql_writer_thread_run) {
         SELF_DEBUG("Pending wait for message");
 
-        sql_writeQueue.wait();                      // Block till there are messages
-
-        bulk_queries.clear();
+        //bulk_queries.clear();
         pop_num = sql_writeQueue.size() < MYSQL_MAX_BULK_INSERT ? sql_writeQueue.size() : MYSQL_MAX_BULK_INSERT;
+
         SELF_DEBUG("got message, going to pop %d", pop_num);
 
-        // Loop to process as many messages we can in one commit transaction
-        //startTransaction();
+        //if (sql_writeQueue.size() > 1000)
+        //    LOG_INFO("queue size = %d (pop num=%d)", sql_writeQueue.size(), pop_num);
 
+        // Loop to process as many messages we can in one commit transaction
         try {
+
+            startTransaction();
             // Run the query to add the record
             stmt = con->createStatement();
 
             for (i = 0; i < pop_num; i++ ) {
+
                 if (sql_writeQueue.front(query) and query.size() > 0) {
 
                     // If not tagged as bulk, process one by one
                     if (query[0] != 'B') {
-                        if (i == 0) {
-                            SELF_DEBUG("QUERY=%s", query.c_str());
-                            stmt->execute(query);
-                            sql_writeQueue.pop();
-                        } else
-                            break;
+                        SELF_DEBUG("QUERY=%s", query.c_str());
+
+                        // Process the current pending bulk queries since they need to be done
+                        // in order of non-bulk statements, namely the withdraws/unreach
+                        writerBulkQuery(bulk_queries);
+                        stmt->execute(query);
                     }
                     else {
-                        sql_writeQueue.pop();
+                        // Process the current pending bulk queries since the current one requires order to be maintained
+                        if (last_bulk_key >= 16 and query[1] < 8) {
+                            writerBulkQuery(bulk_queries);
+                            commitTransaction();
+                            startTransaction();
+                        }
 
-                        // Process as bulk
+                        // Add statement to the bulk queries map
                         bulk_queries[query[1]] += query.substr(2) + ",";
+
+                        last_bulk_key = query[1];
                     }
+
+                    sql_writeQueue.pop();
                 }
             }
 
-            // Perform a bulk insert
-            if (bulk_queries.size()) {
-                // Loop through the keys (queries)
-                for (map<int,string>::iterator it = bulk_queries.begin();
-                        it != bulk_queries.end();  it++) {
-                    int a = (*it).first;
-                    string b = (*it).second;
-                    b.erase(b.size() - 1);                              // Remove last comma
-
-                    switch (a) {
-                        case '1' : // Add RIB
-                            query = "INSERT into " +  string(TBL_NAME_RIB) +
-                                    " (hash_id,path_attr_hash_id,peer_hash_id,prefix,prefix_len,isIPv4,prefix_bin,prefix_bcast_bin,timestamp)" +
-                                    " VALUES " + b +
-                                    " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),path_attr_hash_id=values(path_attr_hash_id),isWithdrawn=0,db_timestamp=current_timestamp";
-                            break;
-
-                        case '2' : // Add Path
-                            query = "INSERT into " + string(TBL_NAME_PATH_ATTRS) +
-                                    " (hash_id,peer_hash_id,origin,as_path,next_hop,med,local_pref,isAtomicAgg,aggregator,community_list,ext_community_list," +
-                                    "cluster_list,originator_id,origin_as,as_path_count,nexthop_isIPv4,timestamp)" +
-                                    " VALUES " + b +
-                                    " ON DUPLICATE KEY UPDATE timestamp=values(timestamp)  ";
-                            break;
-                    }
-
-                    //LOG_INFO("QUERy[%d]=%s", a, query.c_str());
-                    stmt->execute(query);
-                }
-            }
+            // Run bulk query
+            writerBulkQuery(bulk_queries);
 
             // Free the query statement
             stmt->close();
             delete stmt;
             stmt = NULL;
 
+            commitTransaction();
+
+            retries = 0;
+
+            if (sql_writeQueue.size() > 1000)
+                LOG_INFO("  popped  %d (queue=%d)", i, sql_writeQueue.size());
+
         } catch (sql::SQLException &e) {
-            if (e.getErrorCode() == 1213) {                     // deadlock
+            if (e.getErrorCode() == 1213 or e.getErrorCode() == 1205) {     // deadlock or lock exceeded timeout
+                // Message is still in queue, next pass will be the retry
+                SELF_DEBUG("Deadlock/lock exceeded: %d", e.getErrorCode());
+                if (retries < 10) {
+                    retries++;
 
-                // Only retry if this was a bulk query, otherwise the query is still in queue
-                if (bulk_queries.size()) {
-                    for (int i = 0; i < 15; i++) {
-                        try {
-                            stmt->execute(query);
-                            break;
-                        } catch (sql::SQLException &e) {
-                            // ignore
-                        }
-                    }
+                } else {
+                    LOG_ERR("retries failed, skipping: %s, error Code = %d, state = %s",
+                            e.what(), e.getErrorCode(), e.getSQLState().c_str());
                 }
-
-                if (stmt != NULL) {
-                    stmt->close();
-                    delete stmt;
-                    stmt = NULL;
-                }
-
             }
             else {
                 LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                         e.what(), e.getErrorCode(), e.getSQLState().c_str());
 
-                //LOG_INFO("   query=%s", query.c_str());
-                if (stmt != NULL)
-                    delete stmt;
+                sql_writeQueue.pop();
             }
-        }
 
-        //commitTransaction();
+            SELF_DEBUG("   query=%s", query.c_str());
+            if (stmt != NULL)
+                delete stmt;
+        }
     }
 
     SELF_DEBUG("SQL writer thread stopped");
-
-    return;
 }
 
 /**
@@ -559,7 +596,7 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
     size_t  buf_len = 0;                         // query buffer length
 
     // Build the initial part of the query
-    buf_len = sprintf(buf, "B1");
+    buf_len = sprintf(buf, "B%c", SQL_BULK_ADD_RIB);
 
     string rib_hash_str;
     string path_hash_str;
@@ -645,33 +682,55 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
 
     char    *buf = new char[800000];            // Misc working buffer
 
+
     string p_hash_str;
     hash_toStr(rib_entry[0].peer_hash_id, p_hash_str);
+
+    string rib_hash_str;
+    MD5 hash;
 
     /*
      * Update the current RIB entry state
      */
     // Build the initial part of the query
-    //buf_len = sprintf(buf, "DELETE from %s WHERE ", TBL_NAME_RIB);
-    buf_len = sprintf(buf, "UPDATE IGNORE %s SET isWithdrawn=True WHERE peer_hash_id = '%s' AND (",
-                      TBL_NAME_RIB,p_hash_str.c_str());
+    buf_len = sprintf(buf, "B%c", SQL_BULK_WITHDRAW_UPD);
 
     // Loop through the vector array of rib entries
     for (size_t i = 0; i < rib_entry.size(); i++) {
+        MD5 hash;
+
+        // Generate the hash
+        hash.update(rib_entry[i].peer_hash_id, HASH_SIZE);
+        hash.update((unsigned char *) rib_entry[i].prefix,  strlen(rib_entry[i].prefix));
+        hash.update(&rib_entry[i].prefix_len, sizeof(rib_entry[i].prefix_len));
+        hash.finalize();
+
+        // Save the hash
+        unsigned char *hash_raw = hash.raw_digest();
+        memcpy(rib_entry[i].hash_id, hash_raw, 16);
+        delete[] hash_raw;
+
+        // Build the query
+        hash_toStr(rib_entry[i].hash_id, rib_hash_str);
+
         buf_len +=
                 snprintf(buf2, sizeof(buf2),
-                        " (prefix = '%s' and prefix_len = %d) OR ",
-                        rib_entry[i].prefix, rib_entry[i].prefix_len);
+                        " ('%s','%s','%s',%d,from_unixtime(%u),''),",
+                         rib_hash_str.c_str(), p_hash_str.c_str(), rib_entry[i].prefix,
+                        rib_entry[i].prefix_len,rib_entry[i].timestamp_secs);
 
         // Cat the entry to the query buff
         if (buf_len < 800000 /* size of buf */)
             strcat(buf, buf2);
-
     }
 
-    // Remove the last OR since we don't need it and add closing ')'
-    buf[buf_len - 3] = ')';
-    buf[buf_len - 2] = 0;
+    // Remove the last comma since we don't need it
+    buf[buf_len - 1] = 0;
+
+    // Remove the last OR since we don't need it
+    //buf[buf_len - 3] = '0';
+    //buf[buf_len - 2] = ')';
+    //buf[buf_len - 1] = 0;
 
     sql_writeQueue.push(buf);
 
@@ -679,8 +738,7 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
      * Insert a new withdrawn log entry
      */
     // Build the initial part of the query
-    buf_len = sprintf(buf, "INSERT into %s (%s) VALUES ",
-            TBL_NAME_WITHDRAWN_LOG, "peer_hash_id,prefix, prefix_len");
+    buf_len = sprintf(buf, "B%c", SQL_BULK_WITHDRAW_INS);
 
     // Loop through the vector array of rib entries
     for (size_t i = 0; i < rib_entry.size(); i++) {
@@ -715,7 +773,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
     size_t  buf_len;                    // size of the query buff
 
     // Setup the initial MySQL query
-    buf_len = sprintf(buf, "B2");
+    buf_len = sprintf(buf, "B%c", SQL_BULK_ADD_PATH);
 
     /*
      * Generate router table hash from the following fields

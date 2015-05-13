@@ -133,7 +133,10 @@ class dbAcccess:
                                host=host,
                                database=database)
 
-            self.cursor = self.conn.cursor()
+
+            self.conn.set_autocommit(True)
+            self.cursor = self.conn.cursor(buffered=True)
+
 
         except mysql.Error as err:
             if err.errno == mysql.errorcode.ER_ACCESS_DENIED_ERROR:
@@ -268,8 +271,6 @@ class dbAcccess:
                 self.cursor.execute(query % queryParams)
             else:
                 self.cursor.execute(query)
-
-            self.conn.commit()
 
             self.last_query_time = time() - startTime
 
@@ -474,7 +475,7 @@ def main():
     proc.communicate()
 
     db = dbAcccess()
-    db.connectDb(os.environ["OPENBMP_DB_USER"], os.environ["OPENBMP_DB_PASSWORD"], "localhost", "openBMP")
+    db.connectDb(os.environ["OPENBMP_DB_USER"], os.environ["OPENBMP_DB_PASSWORD"], "localhost", os.environ["OPENBMP_DB_NAME"])
 
     # Create the table
     db.createTable(TBL_GEN_ASN_STATS_NAME, TBL_GEN_ASN_STATS_SCHEMA, False)

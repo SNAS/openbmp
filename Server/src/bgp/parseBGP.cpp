@@ -536,6 +536,7 @@ void parseBGP::UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes) {
         dbi_ptr->add_Rib(rib_list);
 
     rib_list.clear();
+    adv_prefixes.clear();
 }
 
 /**
@@ -555,6 +556,7 @@ void parseBGP::UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefi
     for (std::list<bgp::prefix_tuple>::iterator it = wdrawn_prefixes.begin();
                                                 it != wdrawn_prefixes.end();
                                                 it++) {
+
         bgp::prefix_tuple &tuple = (*it);
         memcpy(rib_entry.path_attr_hash_id, path_hash_id, sizeof(rib_entry.path_attr_hash_id));
         memcpy(rib_entry.peer_hash_id, p_entry->hash_id, sizeof(rib_entry.peer_hash_id));
@@ -574,6 +576,7 @@ void parseBGP::UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefi
         dbi_ptr->delete_Rib(rib_list);
 
     rib_list.clear();
+    wdrawn_prefixes.clear();
 }
 
 /**

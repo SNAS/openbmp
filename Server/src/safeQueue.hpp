@@ -25,11 +25,6 @@ template <typename type>
 class safeQueue : public queue<type> {
 private:
     pthread_mutex_t mutex;              // Pthread mutex lock for reading and modifying the trie.
-    pthread_mutex_t mutex_wait;         // Pthread mutex lock for a controlled block/wait when the tree is empty
-    pthread_mutex_t mutex_limitWait;    // Pthread mutex lock for a controlled block/wait when limit has been reached
-
-    bool            waitOn;             // Indicator that the wait lock is on
-    bool            limitWaitOn;        // Indicator that the wait lock is being used and should be unlocked
 
     uint32_t        limit;
 
@@ -43,29 +38,17 @@ public:
      *                  is unlimited.
      */
 
-    safeQueue(int limit=0) : queue<type>() {
+    safeQueue(uint32_t limit=0) : queue<type>() {
 
         this->limit = limit;
 
         // Initialize the mutex variable
         pthread_mutex_init(&mutex, NULL);
-        pthread_mutex_init(&mutex_wait, NULL);
-        pthread_mutex_init(&mutex_limitWait, NULL);
-
-        // Indicate that the wait is on since the queue is empty
-        pthread_mutex_lock(&mutex_wait);
-        waitOn = true;
-
-        // This lock should always be set
-        pthread_mutex_lock(&mutex_limitWait);
-        limitWaitOn = false;
     }
 
     ~safeQueue(){
         // Free the mutex
         pthread_mutex_destroy(&mutex);
-        pthread_mutex_destroy(&mutex_wait);
-        pthread_mutex_destroy(&mutex_limitWait);
     }
 
     void push(type const &elem) {
@@ -76,28 +59,17 @@ public:
          * Wait/block if limit has been reached
          */
         if (limit and size() >= limit) {
-            limitWaitOn = true;
             pthread_mutex_unlock (&mutex);
 
-            pthread_mutex_lock(&mutex_limitWait);
-            pthread_mutex_unlock(&mutex_limitWait);
+            while (size() >= limit) {
+                usleep(25000);
+            }
 
             pthread_mutex_lock (&mutex);
-            limitWaitOn = false;
-            pthread_mutex_lock(&mutex_limitWait);
         }
-
 
         // Add
         queue<type>::push(elem);
-
-        /*
-         * If a new entry is added, release the lock if it's on
-         */
-        if (waitOn) {
-            pthread_mutex_unlock(&mutex_wait);
-            waitOn = false;
-        }
 
         // Unlock
         pthread_mutex_unlock (&mutex);
@@ -111,17 +83,6 @@ public:
         // Before getting element, check if there are any
         if (queue<type>::size() > 0) {
             queue<type>::pop();
-
-            // Unlock the limit wait lock
-            if (limitWaitOn and size() < limit) {
-                pthread_mutex_unlock(&mutex_limitWait);
-            }
-
-            // Set the wait lock if the queue is empty
-            if (queue<type>::size() <= 0 && !waitOn) {
-                pthread_mutex_lock(&mutex_wait);
-                waitOn = true;
-            }
         }
 
         // Unlock
@@ -129,11 +90,7 @@ public:
     }
 
     size_t size() {
-        size_t size;
-
-        size = queue<type>::size();
-
-        return size;
+        return  queue<type>::size();
     }
 
    /**
@@ -194,8 +151,6 @@ public:
         return true;
     }
 
-
-
     /**
      * PopFront is a bit different in that the mutex lock handles getting
      *    the object and then pop'ing it afterwards.
@@ -220,18 +175,6 @@ public:
             // pop the front object
             queue<type>::pop();
 
-            // Unlock the limit wait lock
-            if (limitWaitOn and size() < limit) {
-                pthread_mutex_unlock(&mutex_limitWait);
-                pthread_mutex_lock(&mutex_limitWait);
-            }
-
-            // Set the wait lock if the queue is empty
-            if (queue<type>::size() <= 0 && !waitOn) {
-                pthread_mutex_lock(&mutex_wait);
-                waitOn = true;
-            }
-
         } else
             rval = false;
 
@@ -246,8 +189,10 @@ public:
      *    calling this method will cause the caller to block until there are new entries
      */
     bool wait() {
-        pthread_mutex_lock(&mutex_wait);
-        pthread_mutex_unlock(&mutex_wait);
+        while (size() <= 0) {
+            usleep(25000);
+        }
+
         return true;
     }
 

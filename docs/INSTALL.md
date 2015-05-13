@@ -70,15 +70,6 @@ sudo apt-get install mysql-server-5.6
 * After install, mysql should be running
 
 
-You might benefit from tuning the read-ahead setting for the disk.  Normally this defaults to 256, but it's suggested to use 4096. 
-
-Below is an example of how to set the read-ahead on the root disk /dev/vda1
-
-```
-sudo blockdev --setra 4096 /dev/vda1
-```
-
-
 ### Login to mysql and create the openbmp database and user account
 Apply the below to create the database and user that will be used by the openbmp daemon
 
@@ -96,39 +87,76 @@ mysql -u root -p
    grant all on openBMP.* to 'openbmp'@'%';
 ```
 
+### MySQL Temporary Table Space
+Large queries or queries that involve sorting/counting/... will use a temporary table on disk.   We have found that using a **tmpfs** will improve performance. 
+
+
+#### Create tmpfs (as root)
+The below will also configure the tmpfs to be mounted upon restart/boot.
+
+    mkdir -p /var/mysqltmp
+    echo "tmpfs /var/mysqltmp tmpfs defaults,gid=mysql,uid=mysql,size=2400M,mode=0777 0 0" >> /etc/fstab
+    mount /var/mysqltmp
+
 
 ### Update the /etc/my.cnf file to enable InnoDB and tune memory
 The below **MUST** but adjusted based on your memory available.  Ideally it should be set as high as possible. Below is for a system that has 16G of RAM and 8vCPU.
+
+> #### IMPORTANT
+> You must define **max\_allowed\_packet** to **384M** or greater to support
+> the bulk inserts/updates, otherwise you will get errors that indicate packet is
+> is too large or that the server connection has gone away. 
 
 * sudo vi /etc/mysql/my.cnf
 
 Under **[mysqld]** section
 
 ```
-# Set this to roughly 20% of system memory
-key_buffer_size         = 3G
+# use the tmpfs mount point
+tmpdir      = /var/mysqltmp
+
+key_buffer_size     = 128M
+
+# This is very IMPORTANT, must be high to handle bulk inserts/updates
+max_allowed_packet  = 384M
+
+net_read_timeout    = 45
+thread_stack        = 192K
+thread_cache_size   = 8
 
 # This value should be roughly 80% of system memory
 innodb_buffer_pool_size = 12G
 
-# This value should be innodb_buffer_pool_size in GB divide by 1
-innodb_buffer_pool_instances =  10
+# This value should be the GB value of the innodb_buffer_pool_size
+#   Ideally one instance per GB
+innodb_buffer_pool_instances =  12
 
-#innodb_additional_mem_pool_size = 50M
-innodb_flush_log_at_trx_commit  = 2
+transaction-isolation        = READ-UNCOMMITTED
+innodb_flush_log_at_trx_commit  = 0
 innodb_random_read_ahead        = 1
 innodb_read_ahead_threshold     = 10
-innodb_log_file_size      = 384M
+innodb_log_buffer_size    = 16M
+innodb_log_file_size      = 2G
+query_cache_limit         = 1G
 query_cache_size          = 1G
-sort_buffer_size          = 1G
-join_buffer_size          = 1G
-read_rnd_buffer_size      = 256M
+query_cache_type          = ON
+join_buffer_size          = 128M
+sort_buffer_size          = 128M
+innodb_sort_buffer_size   = 16M
+myisam_sort_buffer_size   = 128M
+read_rnd_buffer_size      = 128M
 innodb_thread_concurrency = 0
-innodb_read_io_threads    = 24
-innodb_write_io_threads   = 24
-max_heap_table_size       = 256000000
-tmp_table_size            = 256000000
+
+max_heap_table_size       = 2M
+tmp_table_size            = 2M
 innodb_file_per_table     = ON
+innodb_doublewrite        = OFF
+innodb_spin_wait_delay    = 24
+innodb_io_capacity        = 2000
+
+# Adjust the below to roughly the number of vCPU's times 2
+innodb_read_io_threads    = 16
+innodb_write_io_threads   = 16
 ```
 
 ### Restart Mysql so that the changes to config take effect
