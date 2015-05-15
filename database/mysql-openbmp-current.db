@@ -182,6 +182,256 @@ CREATE TABLE `geo_ip` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `igp_ospf_100_1_1_1`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_100_1_1_1`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_100_1_1_1` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `igp_ospf_100_1_1_2`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_100_1_1_2`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_100_1_1_2` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `igp_ospf_100_1_1_3`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_100_1_1_3`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_100_1_1_3` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `igp_ospf_100_1_1_4`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_100_1_1_4`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_100_1_1_4` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `igp_ospf_192_168_1_22`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_192_168_1_22`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_192_168_1_22` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `igp_ospf_192_168_1_30`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_192_168_1_30`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_192_168_1_30` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `igp_ospf_192_168_1_54`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_192_168_1_54`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_192_168_1_54` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `igp_ospf_1_1_1_1`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_1_1_1_1`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_1_1_1_1` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `igp_ospf_200_1_1_1`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_200_1_1_1`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_200_1_1_1` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `igp_ospf_200_1_1_2`
+--
+
+DROP TABLE IF EXISTS `igp_ospf_200_1_1_2`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `igp_ospf_200_1_1_2` (
+  `prefix` varbinary(16) NOT NULL,
+  `prefix_len` int(8) unsigned NOT NULL,
+  `src_node_hash_id` char(32) NOT NULL,
+  `root_node_hash_id` char(32) DEFAULT NULL,
+  `nh_node_hash_id` char(32) DEFAULT NULL,
+  `ospf_route_type` tinyint(4) NOT NULL,
+  `metric` int(10) NOT NULL,
+  `best` tinyint(4) NOT NULL DEFAULT '0',
+  `path_hash_ids` varchar(4096) NOT NULL DEFAULT '',
+  `path_router_ids` varchar(2048) NOT NULL DEFAULT '',
+  `equal_iter` int(11) NOT NULL DEFAULT '0',
+  `peer_hash_id` char(32) NOT NULL,
+  `ts` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`src_node_hash_id`,`path_router_ids`,`prefix`,`prefix_len`)
+) ENGINE=MEMORY DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `ls_links`
 --
 
