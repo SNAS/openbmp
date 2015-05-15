@@ -565,6 +565,10 @@ void parseBGP::UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefi
         rib_entry.prefix_len     = tuple.len;
         rib_entry.timestamp_secs = p_entry->timestamp_secs;
 
+        rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
+
+        memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
+
         SELF_DEBUG("%s: Removing prefix=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
 
         // Add entry to the list

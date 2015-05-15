@@ -76,7 +76,7 @@ mysqlBMP::~mysqlBMP() {
 
     // Stop the writer thread
     sql_writer_thread_run = false;
-    sql_writeQueue.push("");            // Cause writer to check if it should still continue to run
+    sql_writeQueue.push("");                // Make sure the queue is not empty so it stops
     sql_writer_thread->join();
 
     /*
@@ -99,6 +99,7 @@ mysqlBMP::~mysqlBMP() {
             // Free the query statement
             stmt->close();
             delete stmt;
+            stmt = NULL;
 
         } catch (sql::SQLException &e) {
             LOG_ERR("mysql error: %s, error Code = %d, state = %s",
@@ -107,6 +108,9 @@ mysqlBMP::~mysqlBMP() {
                 delete stmt;
         }
     }
+
+
+    delete sql_writer_thread;
 
     // Disconnect the driver
     driver->threadEnd();
@@ -120,6 +124,7 @@ mysqlBMP::~mysqlBMP() {
     res = NULL;
     stmt = NULL;
     con = NULL;
+
 }
 
 /**
@@ -160,8 +165,8 @@ void mysqlBMP::writerBulkQuery(std::map<int,std::string> &bulk_queries) {
                 case SQL_BULK_WITHDRAW_UPD : // Update RIB for withdraw
                     b.erase(b.size() - 1);                              // Remove last comma
                     //query = "UPDATE IGNORE " +  string(TBL_NAME_RIB) + " SET isWithdrawn=True WHERE " + b;
-                    query = "INSERT into " +  string(TBL_NAME_RIB) +
-                            " (hash_id,peer_hash_id,prefix,prefix_len,timestamp,path_attr_hash_id)" +
+                    query = "INSERT IGNORE into " +  string(TBL_NAME_RIB) +
+                            " (hash_id,peer_hash_id,prefix,prefix_len,timestamp,path_attr_hash_id,isIPv4,prefix_bin,prefix_bcast_bin)" +
                             " VALUES " + b +
                             " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),isWithdrawn=True,db_timestamp=current_timestamp";
 
@@ -191,20 +196,26 @@ void mysqlBMP::writerThreadLoop() {
     int pop_num;
     int retries = 0;
     int last_bulk_key = 0;
+    bool logQueueHigh = false;
     map<int,string> bulk_queries;
 
     SELF_DEBUG("SQL writer thread started");
 
     while (sql_writer_thread_run) {
-        SELF_DEBUG("Pending wait for message");
+
+        sql_writeQueue.wait();
 
         //bulk_queries.clear();
         pop_num = sql_writeQueue.size() < MYSQL_MAX_BULK_INSERT ? sql_writeQueue.size() : MYSQL_MAX_BULK_INSERT;
 
-        SELF_DEBUG("got message, going to pop %d", pop_num);
+        if (not logQueueHigh and sql_writeQueue.size() > 100000) {
+            LOG_INFO("Queue size is above 100,000, this is normal on RIB dump: %d", sql_writeQueue.size());
+            logQueueHigh = true;
 
-        //if (sql_writeQueue.size() > 1000)
-        //    LOG_INFO("queue size = %d (pop num=%d)", sql_writeQueue.size(), pop_num);
+        } else if (logQueueHigh and sql_writeQueue.size() < 90000) {
+            LOG_INFO("Queue size is below 90,000, this is normal: %d", sql_writeQueue.size());
+            logQueueHigh = false;
+        }
 
         // Loop to process as many messages we can in one commit transaction
         try {
@@ -213,7 +224,7 @@ void mysqlBMP::writerThreadLoop() {
             // Run the query to add the record
             stmt = con->createStatement();
 
-            for (i = 0; i < pop_num; i++ ) {
+            for (i = 0; i < pop_num; i++) {
 
                 if (sql_writeQueue.front(query) and query.size() > 0) {
 
@@ -715,9 +726,9 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
 
         buf_len +=
                 snprintf(buf2, sizeof(buf2),
-                        " ('%s','%s','%s',%d,from_unixtime(%u),''),",
+                        " ('%s','%s','%s',%d,from_unixtime(%u),'',%d,0,0),",
                          rib_hash_str.c_str(), p_hash_str.c_str(), rib_entry[i].prefix,
-                        rib_entry[i].prefix_len,rib_entry[i].timestamp_secs);
+                        rib_entry[i].prefix_len,rib_entry[i].timestamp_secs, rib_entry[i].isIPv4);
 
         // Cat the entry to the query buff
         if (buf_len < 800000 /* size of buf */)
