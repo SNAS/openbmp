@@ -314,14 +314,17 @@ DROP TABLE IF EXISTS `path_attr_log`;
 CREATE TABLE `path_attr_log` (
   `rib_hash_id` char(32) NOT NULL,
   `path_attr_hash_id` char(32) NOT NULL,
-  `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `timestamp` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  `peer_hash_id` char(32) NOT NULL DEFAULT '',
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`id`,`peer_hash_id`,`timestamp`),
   KEY `idx_ts` (`timestamp`),
-  KEY `idx_rib_hash_id` (`rib_hash_id`),
-  KEY `idx_path_attr_hash_id` (`path_attr_hash_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 ROW_FORMAT=COMPRESSED
+  KEY `idx_peer_hash_id` (`peer_hash_id`),
+  KEY `idx_rib_hash_id` (`rib_hash_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 ROW_FORMAT=COMPRESSED
 /*!50500 PARTITION BY RANGE  COLUMNS(`timestamp`)
-SUBPARTITION BY HASH (DAY(timestamp))
-SUBPARTITIONS 31
+SUBPARTITION BY KEY (peer_hash_id)
+SUBPARTITIONS 32
 (PARTITION p2015_05 VALUES LESS THAN ('2015-06-01') ENGINE = InnoDB,
  PARTITION p2015_06 VALUES LESS THAN ('2015-07-01') ENGINE = InnoDB,
  PARTITION p2015_07 VALUES LESS THAN ('2015-08-01') ENGINE = InnoDB,
@@ -386,7 +389,7 @@ CREATE TABLE `peer_down_events` (
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_error` (`peer_hash_id`,`bmp_reason`),
   KEY `idx_bgp_errors` (`bgp_err_code`,`bgp_err_subcode`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -470,15 +473,16 @@ PARTITIONS 48 */;
 /*!50003 SET character_set_results = utf8 */ ;
 /*!50003 SET collation_connection  = utf8_general_ci */ ;
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
-/*!50003 SET sql_mode              = 'NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 SET sql_mode              = 'STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
 /*!50003 CREATE*/ /*!50017 DEFINER=`openbmp`@`localhost`*/ /*!50003 TRIGGER rib_pre_update BEFORE UPDATE on rib
      FOR EACH ROW
 
                   
          IF (new.isWithdrawn = False AND old.path_attr_hash_id != new.path_attr_hash_id) THEN
-             INSERT IGNORE INTO path_attr_log (rib_hash_id,path_attr_hash_id) 
-                           VALUES (old.hash_id,old.path_attr_hash_id);
+             INSERT IGNORE INTO path_attr_log (rib_hash_id,path_attr_hash_id,peer_hash_id,timestamp) 
+                           VALUES (old.hash_id,old.path_attr_hash_id,old.peer_hash_id,
+                                   current_timestamp(6));
          END IF */;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -565,7 +569,7 @@ CREATE TABLE `stat_reports` (
   `num_routes_local_rib` bigint(20) unsigned DEFAULT NULL,
   PRIMARY KEY (`id`,`peer_hash_id`),
   KEY `idx_ts` (`timestamp`)
-) ENGINE=InnoDB AUTO_INCREMENT=237786 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -664,7 +668,8 @@ SET character_set_client = utf8;
  1 AS `NH`,
  1 AS `hash_id`,
  1 AS `path_attr_hash_id`,
- 1 AS `peer_hash_id`*/;
+ 1 AS `peer_hash_id`,
+ 1 AS `router_hash_id`*/;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -844,7 +849,6 @@ DROP TABLE IF EXISTS `v_routes_history`;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 /*!50001 CREATE VIEW `v_routes_history` AS SELECT 
- 1 AS `path_attr_hash_id`,
  1 AS `RouterName`,
  1 AS `PeerName`,
  1 AS `Prefix`,
@@ -864,8 +868,9 @@ SET character_set_client = utf8;
  1 AS `PeerASN`,
  1 AS `isPeerIPv4`,
  1 AS `isPeerVPN`,
+ 1 AS `id`,
  1 AS `LastModified`,
- 1 AS `path_hash_id`,
+ 1 AS `path_attr_hash_id`,
  1 AS `peer_hash_id`,
  1 AS `router_hash_id`*/;
 SET character_set_client = @saved_cs_client;
@@ -898,17 +903,29 @@ DROP TABLE IF EXISTS `withdrawn_log`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `withdrawn_log` (
-  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
   `peer_hash_id` char(32) NOT NULL,
   `prefix` varchar(40) NOT NULL,
   `prefix_len` int(10) unsigned NOT NULL,
-  `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`,`peer_hash_id`),
+  `timestamp` datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  PRIMARY KEY (`id`,`peer_hash_id`,`timestamp`),
   KEY `idx_prefix` (`prefix`,`prefix_len`),
-  KEY `idx_ts` (`timestamp`)
-) ENGINE=InnoDB AUTO_INCREMENT=28329134 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
-/*!50100 PARTITION BY KEY (peer_hash_id)
-PARTITIONS 64 */;
+  KEY `idx_ts` (`timestamp`),
+  KEY `idx_peer_hash_id` (`peer_hash_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=latin1 ROW_FORMAT=DYNAMIC
+/*!50500 PARTITION BY RANGE  COLUMNS(`timestamp`)
+SUBPARTITION BY KEY (peer_hash_id)
+SUBPARTITIONS 32
+(PARTITION p2015_05 VALUES LESS THAN ('2015-06-01') ENGINE = InnoDB,
+ PARTITION p2015_06 VALUES LESS THAN ('2015-07-01') ENGINE = InnoDB,
+ PARTITION p2015_07 VALUES LESS THAN ('2015-08-01') ENGINE = InnoDB,
+ PARTITION p2015_08 VALUES LESS THAN ('2015-09-01') ENGINE = InnoDB,
+ PARTITION p2015_09 VALUES LESS THAN ('2015-10-01') ENGINE = InnoDB,
+ PARTITION p2015_10 VALUES LESS THAN ('2015-11-01') ENGINE = InnoDB,
+ PARTITION p2015_11 VALUES LESS THAN ('2015-12-01') ENGINE = InnoDB,
+ PARTITION p2015_12 VALUES LESS THAN ('2016-01-01') ENGINE = InnoDB,
+ PARTITION p2016_01 VALUES LESS THAN ('2016-02-01') ENGINE = InnoDB,
+ PARTITION pOther VALUES LESS THAN (MAXVALUE) ENGINE = InnoDB) */;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -978,7 +995,7 @@ PARTITIONS 64 */;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`openbmp`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_ls_nodes` AS select `r`.`name` AS `RouterName`,`r`.`ip_address` AS `RouterIP`,`p`.`name` AS `PeerName`,`p`.`peer_addr` AS `PeerIP`,if((`ls_nodes`.`protocol` in ('OSPFv2','OSPFv3')),inet6_ntoa(left(`ls_nodes`.`igp_router_id`,4)),hex(`ls_nodes`.`igp_router_id`)) AS `IGP_RouterId`,if(`ls_nodes`.`isIPv4`,inet6_ntoa(left(`ls_nodes`.`router_id`,4)),inet6_ntoa(`ls_nodes`.`router_id`)) AS `RouterId`,`ls_nodes`.`id` AS `id`,hex(`ls_nodes`.`bgp_ls_id`) AS `bgpls_id`,inet6_ntoa(`ls_nodes`.`ospf_area_id`) AS `OspfAreaId`,hex(`ls_nodes`.`isis_area_id`) AS `ISISAreaId`,`ls_nodes`.`protocol` AS `protocol`,`ls_nodes`.`flags` AS `flags`,`ls_nodes`.`timestamp` AS `timestamp`,`ls_nodes`.`asn` AS `asn`,`path_attrs`.`as_path` AS `AS_Path`,`path_attrs`.`local_pref` AS `LocalPref`,`path_attrs`.`med` AS `MED`,`path_attrs`.`next_hop` AS `NH`,`ls_nodes`.`hash_id` AS `hash_id`,`ls_nodes`.`path_attr_hash_id` AS `path_attr_hash_id`,`ls_nodes`.`peer_hash_id` AS `peer_hash_id` from (((`ls_nodes` left join `path_attrs` on((`ls_nodes`.`path_attr_hash_id` = `path_attrs`.`hash_id`))) join `bgp_peers` `p` on((`p`.`hash_id` = `path_attrs`.`peer_hash_id`))) join `routers` `r` on((`p`.`router_hash_id` = `r`.`hash_id`))) */;
+/*!50001 VIEW `v_ls_nodes` AS select `r`.`name` AS `RouterName`,`r`.`ip_address` AS `RouterIP`,`p`.`name` AS `PeerName`,`p`.`peer_addr` AS `PeerIP`,if((`ls_nodes`.`protocol` in ('OSPFv2','OSPFv3')),inet6_ntoa(left(`ls_nodes`.`igp_router_id`,4)),hex(`ls_nodes`.`igp_router_id`)) AS `IGP_RouterId`,if((`ls_nodes`.`protocol` in ('OSPFv2','OSPFv3')),inet6_ntoa(left(`ls_nodes`.`igp_router_id`,4)),if(`ls_nodes`.`isIPv4`,inet6_ntoa(left(`ls_nodes`.`router_id`,4)),inet6_ntoa(`ls_nodes`.`router_id`))) AS `RouterId`,`ls_nodes`.`id` AS `id`,hex(`ls_nodes`.`bgp_ls_id`) AS `bgpls_id`,inet6_ntoa(`ls_nodes`.`ospf_area_id`) AS `OspfAreaId`,hex(`ls_nodes`.`isis_area_id`) AS `ISISAreaId`,`ls_nodes`.`protocol` AS `protocol`,`ls_nodes`.`flags` AS `flags`,`ls_nodes`.`timestamp` AS `timestamp`,`ls_nodes`.`asn` AS `asn`,`path_attrs`.`as_path` AS `AS_Path`,`path_attrs`.`local_pref` AS `LocalPref`,`path_attrs`.`med` AS `MED`,`path_attrs`.`next_hop` AS `NH`,`ls_nodes`.`hash_id` AS `hash_id`,`ls_nodes`.`path_attr_hash_id` AS `path_attr_hash_id`,`ls_nodes`.`peer_hash_id` AS `peer_hash_id`,`r`.`hash_id` AS `router_hash_id` from (((`ls_nodes` left join `path_attrs` on((`ls_nodes`.`path_attr_hash_id` = `path_attrs`.`hash_id`))) join `bgp_peers` `p` on((`p`.`hash_id` = `path_attrs`.`peer_hash_id`))) join `routers` `r` on((`p`.`router_hash_id` = `r`.`hash_id`))) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1099,12 +1116,12 @@ PARTITIONS 64 */;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = latin1 */;
-/*!50001 SET character_set_results     = latin1 */;
-/*!50001 SET collation_connection      = latin1_swedish_ci */;
+/*!50001 SET character_set_client      = utf8 */;
+/*!50001 SET character_set_results     = utf8 */;
+/*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`openbmp`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_routes_history` AS select `path`.`hash_id` AS `path_attr_hash_id`,if((length(`rtr`.`name`) > 0),`rtr`.`name`,`rtr`.`ip_address`) AS `RouterName`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `PeerName`,`r`.`prefix` AS `Prefix`,`r`.`prefix_len` AS `PrefixLen`,`path`.`origin` AS `Origin`,`path`.`origin_as` AS `Origin_AS`,`path`.`med` AS `MED`,`path`.`local_pref` AS `LocalPref`,`path`.`next_hop` AS `NH`,`path`.`as_path` AS `AS_Path`,`path`.`as_path_count` AS `ASPath_Count`,`path`.`community_list` AS `Communities`,`path`.`ext_community_list` AS `ExtCommunities`,`path`.`cluster_list` AS `ClusterList`,`path`.`aggregator` AS `Aggregator`,`p`.`peer_addr` AS `PeerAddress`,`p`.`peer_as` AS `PeerASN`,`p`.`isIPv4` AS `isPeerIPv4`,`p`.`isL3VPNpeer` AS `isPeerVPN`,`pathlog`.`timestamp` AS `LastModified`,`r`.`path_attr_hash_id` AS `path_hash_id`,`path`.`peer_hash_id` AS `peer_hash_id`,`rtr`.`hash_id` AS `router_hash_id` from ((((`rib` `r` join `path_attr_log` `pathlog`) join `path_attrs` `path` on(((`r`.`hash_id` = `pathlog`.`rib_hash_id`) and (`pathlog`.`path_attr_hash_id` = `path`.`hash_id`)))) straight_join `bgp_peers` `p` on((`r`.`peer_hash_id` = `p`.`hash_id`))) straight_join `routers` `rtr` on((`p`.`router_hash_id` = `rtr`.`hash_id`))) order by `pathlog`.`timestamp` desc */;
+/*!50001 VIEW `v_routes_history` AS select if((length(`rtr`.`name`) > 0),`rtr`.`name`,`rtr`.`ip_address`) AS `RouterName`,if((length(`p`.`name`) > 0),`p`.`name`,`p`.`peer_addr`) AS `PeerName`,`r`.`prefix` AS `Prefix`,`r`.`prefix_len` AS `PrefixLen`,`path`.`origin` AS `Origin`,`path`.`origin_as` AS `Origin_AS`,`path`.`med` AS `MED`,`path`.`local_pref` AS `LocalPref`,`path`.`next_hop` AS `NH`,`path`.`as_path` AS `AS_Path`,`path`.`as_path_count` AS `ASPath_Count`,`path`.`community_list` AS `Communities`,`path`.`ext_community_list` AS `ExtCommunities`,`path`.`cluster_list` AS `ClusterList`,`path`.`aggregator` AS `Aggregator`,`p`.`peer_addr` AS `PeerAddress`,`p`.`peer_as` AS `PeerASN`,`p`.`isIPv4` AS `isPeerIPv4`,`p`.`isL3VPNpeer` AS `isPeerVPN`,`pathlog`.`id` AS `id`,`pathlog`.`timestamp` AS `LastModified`,`pathlog`.`path_attr_hash_id` AS `path_attr_hash_id`,`pathlog`.`peer_hash_id` AS `peer_hash_id`,`rtr`.`hash_id` AS `router_hash_id` from ((((`rib` `r` join `path_attr_log` `pathlog` on(((`r`.`hash_id` = `pathlog`.`rib_hash_id`) and (`r`.`peer_hash_id` = `pathlog`.`peer_hash_id`)))) straight_join `path_attrs` `path` on(((`pathlog`.`path_attr_hash_id` = `path`.`hash_id`) and (`pathlog`.`peer_hash_id` = `path`.`peer_hash_id`)))) straight_join `bgp_peers` `p` on((`r`.`peer_hash_id` = `p`.`hash_id`))) straight_join `routers` `rtr` on((`p`.`router_hash_id` = `rtr`.`hash_id`))) order by `pathlog`.`id` desc */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1136,4 +1153,4 @@ PARTITIONS 64 */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-05-15 18:20:59
+-- Dump completed on 2015-05-20 23:28:03
