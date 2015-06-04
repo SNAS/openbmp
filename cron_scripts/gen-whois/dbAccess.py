@@ -181,5 +181,6 @@ class dbAcccess:
 
         except mysql.Error as err:
             print("ERROR: query failed - " + str(err))
+            #print("   QUERY: %s", query)
             return None
 

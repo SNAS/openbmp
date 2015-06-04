@@ -41,7 +41,7 @@ WHOIS_ATTR_MAP = {
         # RADB
         'route': 'prefix',
         'descr': 'descr',
-        'origin': 'origin',
+        'origin': 'origin_as',
     }
 
 # ----------------------------------------------------------------
@@ -54,10 +54,12 @@ TBL_GEN_WHOIS_ROUTE_SCHEMA = (
         "CREATE TABLE IF NOT EXISTS %s ("
         "  prefix varbinary(16) not null,"
         "  prefix_len int unsigned,"
-        "  descr text,"
-        "  origin varchar(32) not null,"
+        "  descr blob,"
+        "  origin_as int not null,"
+        "  source varchar(32) not null,"
         "  timestamp timestamp not null default current_timestamp on update current_timestamp,"
-        "  PRIMARY KEY (prefix,prefix_len,origin) "
+        "  PRIMARY KEY (prefix,prefix_len,origin_as), "
+        "  KEY idx_origin_as (origin_as)"
         "  ) ENGINE=InnoDB DEFAULT CHARSET=latin1 "
         ) % (TBL_GEN_WHOIS_ROUTE_NAME)
 
@@ -70,15 +72,16 @@ MAX_BULK_INSERT_QUEUE_SIZE = 2000
 #: Temp directory
 TMP_DIR = '/tmp/rr_dbase'
 
-def import_rr_db_file(db, db_filename):
+def import_rr_db_file(db, source, db_filename):
     """ Reads RR DB file and imports into database
 
     ..see: http://irr.net/docs/list.html for details of RR FTP/DB files
 
-    :param db:          DbAccess reference
+    :param db:              DbAccess reference
+    :param source:          Source of the data (i.e. key value of RR_DB_FTP dict)
     :param db_filename:     Filename of DB file to import
     """
-    record = {}
+    record = { 'source': source }
     inf = None
 
     print "Parsing %s" % db_filename
@@ -133,7 +136,11 @@ def import_rr_db_file(db, db_filename):
                         record['prefix_len'] = int(a[1])
                         value = a[0]
 
-                    record[WHOIS_ATTR_MAP[attr]] = value
+                    # allow appending duplicate attributes
+                    if (attr == 'descr' and WHOIS_ATTR_MAP[attr] in record):
+                        record[WHOIS_ATTR_MAP[attr]] += ' \n' + value
+                    else:
+                        record[WHOIS_ATTR_MAP[attr]] = value
 
                     prev_attr = attr
 
@@ -147,7 +154,7 @@ def import_rr_db_file(db, db_filename):
                     addRouteToDb(db, record)
                     ##print "record: %r" % record
 
-                record = {}
+                record = { 'source': source }
 
         # Commit any pending items
         addRouteToDb(db, {}, commit=True)
@@ -167,19 +174,20 @@ def addRouteToDb(db, record, commit=False):
     :return: True if updated, False if error
     """
     # Add entry to queue
-    if (len(record) > 3):
+    if (len(record) > 4):
         try:
-            bulk_insert_queue.append("(inet6_aton('%s'),%d,%u,'%s')" % (record['prefix'],
+            bulk_insert_queue.append("(inet6_aton('%s'),%d,%u,'%s', '%s')" % (record['prefix'],
                                                          record['prefix_len'],
-                                                         record['origin'],
-                                                         record['descr']))
+                                                         record['origin_as'],
+                                                         record['descr'],
+                                                         record['source']))
         except:
             pass
 
     # Insert/commit the queue if commit is True or if reached max queue size
     if ((commit == True or len(bulk_insert_queue) > MAX_BULK_INSERT_QUEUE_SIZE) and
         len(bulk_insert_queue)):
-        query = ("REPLACE INTO %s (prefix,prefix_len,origin,descr) VALUES " % TBL_GEN_WHOIS_ROUTE_NAME)
+        query = ("REPLACE INTO %s (prefix,prefix_len,origin_as,descr,source) VALUES " % TBL_GEN_WHOIS_ROUTE_NAME)
 
         try:
             while bulk_insert_queue:
@@ -238,15 +246,16 @@ def parseCmdArgs(argv):
     found_req_args = 0
     cmd_args = { 'user': None,
                  'password': None,
-                 'db_host': None }
+                 'db_host': None,
+                 'db_name': "openBMP" }
 
     if (len(argv) < 3):
         usage(argv[0])
         sys.exit(1)
 
     try:
-        (opts, args) = getopt.getopt(argv[1:], "hu:p:",
-                                       ["help", "user", "password"])
+        (opts, args) = getopt.getopt(argv[1:], "hu:p:d:",
+                                       ["help", "user=", "password=", "dbName="])
 
         for o, a in opts:
             if o in ("-h", "--help"):
@@ -260,6 +269,10 @@ def parseCmdArgs(argv):
             elif o in ("-p", "--password"):
                 found_req_args += 1
                 cmd_args['password'] = a
+
+            elif o in ("-d", "--dbName"):
+                found_req_args += 1
+                cmd_args['db_name'] = a
 
             else:
                 usage(argv[0])
@@ -305,6 +318,8 @@ def usage(prog):
 
     print "OPTIONAL OPTIONS:"
     print "  -h, --help".ljust(30) + "Print this help menu"
+    print "  -d, --dbName".ljust(30) + "Database name, default is 'openBMP'"
+
 
 
 def main():
@@ -316,13 +331,16 @@ def main():
     downloadDataFile()
 
     db = dbAccess.dbAcccess()
-    db.connectDb(cfg['user'], cfg['password'], cfg['db_host'], "openBMP")
+    db.connectDb(cfg['user'], cfg['password'], cfg['db_host'], cfg['db_name'])
 
     # Create the table
     db.createTable(TBL_GEN_WHOIS_ROUTE_NAME, TBL_GEN_WHOIS_ROUTE_SCHEMA, False)
 
+    # disable strict mode for session
+    db.queryNoResults("SET SESSION sql_mode = ''");
+
     for source in RR_DB_FTP:
-        import_rr_db_file(db, "%s/%s" % (TMP_DIR, RR_DB_FTP[source]['filename']))
+        import_rr_db_file(db, source, "%s/%s" % (TMP_DIR, RR_DB_FTP[source]['filename']))
 
     rmtree(TMP_DIR)
 
