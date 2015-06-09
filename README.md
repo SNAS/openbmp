@@ -3,7 +3,7 @@ Open BGP Monitoring Protocol (OpenBMP) Collector
 ![Build Status](http://build-jenkins.openbmp.org/buildStatus/icon?job=openbmp-server-ubuntu-trusty)
 
 
-OpenBMP is an open source project that implements **draft-ietf-grow-bmp-07**.  BMP protocol version 3 is defined in draft 07, while versions 1 and 2 are defined in the previous revisions of the draft.
+OpenBMP is an open source project that implements **draft-ietf-grow-bmp-08**.  BMP protocol version 3 is defined in draft 08, while versions 1 and 2 are defined in the previous revisions of the draft.
 
 JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR, and JunOS 13.3 implement version 3 (draft 07).
 
@@ -11,18 +11,23 @@ JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR, an
 ### Daemon
 OpenBMP daemon is a BMP receiver for devices that implement BMP, such as Cisco and Juniper routers.  Collected BMP messages are decoded and stored in a SQL database.
 
-> Raw dumps are on the roadmap
-
-### UI
-OpenBMP UI is a Web-App UI that interacts with OpenBMP server/daemon.   Multiple OpenBMP daemons can be centrally managed via the same UI.
-
 ### Database
 The SQL/transactional database is designed to be flexible for all types of reporting on the collected data by simply linking tables or by creating views.
 
 The database is tuned to support high transactional rates and storage for millions of prefixes and other BGP information.   OpenBMP statistics track how well the database is performing and will alert if there are any issues.
 
+### UI
+UI is a Web-App that interacts with OpenBMP server/daemon via the API.   Multiple OpenBMP daemons can be centrally managed via the same UI.
+
+
 News
 ----
+### Jun-04-2015
+> #### UPGRADE YOUR SCHEMA for this release
+New release 0.9.0 is available.   See [release-0.9.0](docs/release_notes/release-0.9.0.md) for more details.  
+
+This release includes significant improvements with performance to handle routers with 10 million plus pre-rib prefixes.  Number of peers can be in the hundreds per router.  
+
 ### Mar-27-2015
 > #### UPGRADE YOUR SCHEMA if using BGP-LS (link-state)
 
@@ -62,12 +67,12 @@ Added [DB REST](docs/DBREST.md)
 OpenBMP Flow
 ------------
 
-![OpenBMP High Level Flow](docs/images/openbmp-highlevel-flow.png "OpenBMP High Level Flow")
+![OpenBMP High Level Flow](docs/images/openbmp-flow.png "OpenBMP High Level Flow")
 
-1. BMP devices (e.g. routers) send BMP messages to a OpenBMP collector/daemon.   One OpenBMP daemon can handle many routers and bgp peers, but in a large network with transit links and full internet routing tables, multiple OpenBMP daemons is recommended.   Simply configure on the BMP device (router) which BMP server that should be used.  
-2. Open Daylight (ODL) controller SQL plugin with SQL <-> Yang interfaces with the OpenBMP database.  ODL in this fashion provides an abstract view of all OpenBMP data.
-3. Admins, Network Engineers, automated programs/scripts, etc. interact via ODL northbound interfaces to run various BMP analytics.
-4. Admins, Network Engineers, automated programs/scripts, etc. can also go direct to the BMP database as needed. 
+* BMP devices (e.g. routers) send BMP messages to a OpenBMP collector/daemon.   One OpenBMP daemon can handle many routers and bgp peers, but in a large network with transit links and full internet routing tables, multiple OpenBMP daemons is recommended.   Simply configure on the BMP device (router) which BMP server that should be used.  
+* Open Daylight (ODL) controller SQL plugin with SQL <-> Yang interfaces with the OpenBMP database.  ODL in this fashion provides an abstract view of all OpenBMP data.
+* Admins, Network Engineers, automated programs/scripts, etc. interact via ODL northbound interfaces to run various BMP analytics.
+* Admins, Network Engineers, automated programs/scripts, etc. can also go direct to the BMP database as needed. 
 
 Supported Features
 ------------------

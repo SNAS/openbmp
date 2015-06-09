@@ -81,9 +81,9 @@ TBL_GEN_ASN_STATS_SCHEMA = (
 #:    %(type)d         - Replaced by 1 for IPv4 or 0 for IPv6
 QUERY_ORIGIN_AS_PREFIXES = (
         "select origin_as,count(distinct prefix_bin,prefix_len)"
-        "        from rib r join path_attrs p"
+        "        from rib r straight_join path_attrs p"
         "        on (r.path_attr_hash_id = p.hash_id)"
-        "        where r.isIPv4 = %(type)d"
+        "        where r.isIPv4 = %(type)d and r.isWithDrawn = False"
         "        group by origin_as"
     )
 
@@ -93,9 +93,9 @@ QUERY_ORIGIN_AS_PREFIXES = (
 #:    %(type)s         - Replaced by IPv4 or IPv6
 QUERY_ASPATHS_DISTINCT_BY_PREFIXES = (
         "select group_concat(distinct as_path SEPARATOR ' ') as as_paths, origin_as"
-        "   from rib join path_attrs p"
-        "          ON (rib.path_attr_hash_id = p.hash_id)"
-        "   where isIPv4 = '%(type)d'"
+        "   from rib r straight_join path_attrs p"
+        "          ON (r.path_attr_hash_id = p.hash_id)"
+        "        where r.isIPv4 = %(type)d and r.isWithDrawn = False"
         "   group by prefix_bin,prefix_len"
         "   order by prefix_bin,prefix_len"
         )
