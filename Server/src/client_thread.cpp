@@ -9,13 +9,18 @@
 
 #include <sys/socket.h>
 
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <thread>
+
 #include "client_thread.h"
 #include "BMPReader.h"
 #include "Logger.h"
 
+
 #include <cxxabi.h>
 #include <poll.h>
-#include <thread>
 
 
 /**
@@ -91,8 +96,9 @@ void *ClientThread(void *arg) {
          * Create and start the reader thread to monitor the pipe fd (read end)
          */
         bool bmp_run = true;
-        cInfo.bmp_reader_thread = new std::thread([&] {rBMP.readerThreadLoop(bmp_run,cInfo.client,
-                                                                             (DbInterface *)cInfo.mysql ); } );
+        //cInfo.bmp_reader_thread = new std::thread([&] {rBMP.readerThreadLoop(bmp_run,cInfo.client,
+        cInfo.bmp_reader_thread = new std::thread(&BMPReader::readerThreadLoop, &rBMP, std::ref(bmp_run), cInfo.client,
+                                                                             (DbInterface *)cInfo.mysql );
 
         // Variables to handle circular buffer
         sock_buf = new unsigned char[thr->cfg->bmp_buffer_size];
