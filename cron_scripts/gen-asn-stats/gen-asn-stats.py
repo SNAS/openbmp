@@ -75,30 +75,14 @@ TBL_GEN_ASN_STATS_SCHEMA = (
 # Queries to get data
 # ----------------------------------------------------------------
 
-#: IPv4 or IPv6 unique prefixes originated by AS
-#:
-#: Below are the query parameters that must be supplied. (e.g. { 'type':'IPv4'})
-#:    %(type)d         - Replaced by 1 for IPv4 or 0 for IPv6
-QUERY_ORIGIN_AS_PREFIXES = (
-        "select origin_as,count(distinct prefix_bin,prefix_len)"
-        "        from rib r straight_join path_attrs p"
-        "        on (r.path_attr_hash_id = p.hash_id)"
-        "        where r.isIPv4 = %(type)d and r.isWithDrawn = False"
-        "        group by origin_as"
+#: returns a list of distinct prefix counts for origin and transit asn's
+QUERY_AS_PREFIXES = (
+        "SELECT a.asn,rib.isIPv4,if (a.asn_right = 0, 0, 1) as isTransit, count(distinct prefix_bin,prefix_len)"
+        "        FROM as_path_analysis a join rib on (a.path_attr_hash_id = rib.path_attr_hash_id)"
+        "        WHERE ((a.asn_left != 0 and a.asn_right != 0) or (a.asn_right = 0))"
+        "               AND rib.isWithdrawn = False"
+        "        GROUP BY a.asn,rib.isIPv4,isTransit"
     )
-
-#: Returns a list of appended AS_PATHs for distinct prefix/len.
-#:
-#: Below are the query parameters that must be supplied. (e.g. { 'type':'IPv4'})
-#:    %(type)s         - Replaced by IPv4 or IPv6
-QUERY_ASPATHS_DISTINCT_BY_PREFIXES = (
-        "select group_concat(distinct as_path SEPARATOR ' ') as as_paths, origin_as"
-        "   from rib r straight_join path_attrs p"
-        "          ON (r.path_attr_hash_id = p.hash_id)"
-        "        where r.isIPv4 = %(type)d and r.isWithDrawn = False"
-        "   group by prefix_bin,prefix_len"
-        "   order by prefix_bin,prefix_len"
-        )
 
 
 # ----------------------------------------------------------------
@@ -281,102 +265,50 @@ class dbAcccess:
             return None
 
 
-def UpdateOriginPrefixesCounts(db, IPv4=True):
-    """ Update the origin prefix counts
+def UpdatePrefixesCounts(db):
+    """ Update prefix counts
 
         :param db:      Pointer to DB access class (db should already be connected and ready)
-        :param IPv4:    True if IPv4, set to False to update the IPv6 counts
     """
-    colName = "origin_v4_prefixes"
-    type = 1
+    colName_origin_v4 = "origin_v4_prefixes"
+    colName_origin_v6 = "origin_v6_prefixes"
+    colName_transit_v4 = "transit_v4_prefixes"
+    colName_transit_v6 = "transit_v6_prefixes"
 
-    if (IPv4 == False):
-        colName = "origin_v6_prefixes"
-        type = 0
 
     # Run query and store data
-    rows = db.query(QUERY_ORIGIN_AS_PREFIXES, {'type': type})
-    print "Query for %s took %r seconds" % (colName, db.last_query_time)
+    rows = db.query(QUERY_AS_PREFIXES)
+
+    print "Query took %r seconds" % (db.last_query_time)
 
     # Process the data and update the gen table
     totalRows = len(rows)
 
     for row in rows:
+        # Skip private ASN's
+        asn_int = int(row[0])
+        if (asn_int == 0 or asn_int == 23456 or
+            (asn_int >= 64496 and asn_int <= 65535) or
+            (asn_int >= 65536 and asn_int <= 131071) or
+             asn_int >= 4200000000):
+            continue
+
         if (not row[0] in RECORD_DICT):
             RECORD_DICT[row[0]] = {'transit_v4_prefixes': 0,
                                    'transit_v6_prefixes': 0,
                                    'origin_v4_prefixes': 0,
                                    'origin_v6_prefixes': 0}
+        if (row[2] == 0):  # Origin
+            if (row[1] == 1):   # IPv4
+                RECORD_DICT[row[0]][colName_origin_v4] = int(row[3])
+            else: # IPv6
+                RECORD_DICT[row[0]][colName_origin_v6] = int(row[3])
 
-        RECORD_DICT[row[0]][colName] = int(row[1])
-
-    print "Calculation for %s took %r seconds" % (colName, db.last_query_time)
-
-
-def UpdateTransitPrefixesCounts(db, IPv4=True):
-    """ Update the transit prefix counts
-
-        A Transit AS is any AS right of the right most ASN, excluding private ASN's
-
-        Below is an example query of prefixes that would be counted as transit for the given ASN  (15169)
-            select prefix,prefix_len,as_Path
-                from rib r join path_attrs p
-                    on (r.path_attr_hash_id = p.hash_id)
-                WHERE as_path like "% 15169 %" and not as_path like "% 15169"
-                group by prefix_bin,prefix_len
-                order by prefix_bin,prefix_len
-
-        :param db:      Pointer to DB access class (db should already be connected and ready)
-        :param IPv4:    True if IPv4, set to False to update the IPv6 counts
-    """
-    colName = "transit_v4_prefixes"
-    type = 1
-
-    if (IPv4 == False):
-        colName = "transit_v6_prefixes"
-        type = 0
-
-    # Run query and store data
-    rows = db.query(QUERY_ASPATHS_DISTINCT_BY_PREFIXES, {'type': type})
-    print "Query for %s took %r seconds" % (colName, db.last_query_time)
-
-    asnCounts = { }
-
-    # Loop through the results and create a new dictionary of ASN's and a count
-    for row in rows:
-        as_path = conditionAsPath(str(row[0]), long(row[1]))
-
-        for asn_str in as_path.split(' '):
-
-            try:
-                asn = long(asn_str)
-            except:
-                # Ignore empty as paths (which are expected when the conditioning leaves nothing left)
-                pass
-
-            try:
-                if (not asn in asnCounts):
-                    asnCounts[asn] = 1
-                else:
-                    asnCounts[asn] += 1
-
-            except Exception as e:
-                print "problem : %r" % e
-                pass
-
-    # Process the data and update the gen table
-    totalAsn = len(asnCounts)
-
-    for asn in asnCounts:
-        if (not asn in RECORD_DICT):
-            RECORD_DICT[asn] = {'transit_v4_prefixes': 0,
-                                 'transit_v6_prefixes': 0,
-                                 'origin_v4_prefixes': 0,
-                                 'origin_v6_prefixes': 0}
-
-        RECORD_DICT[asn][colName] = asnCounts[asn]
-
-    print "Calculation for %s took %r seconds" % (colName, db.last_query_time)
+        else:  # Transit
+            if (row[1] == 1):   # IPv4
+                RECORD_DICT[row[0]][colName_transit_v4] = int(row[3])
+            else: # IPv6
+                RECORD_DICT[row[0]][colName_transit_v6] = int(row[3])
 
 
 def UpdateDB(db):
@@ -420,53 +352,11 @@ def UpdateDB(db):
 
     db.queryNoResults(query)
 
-
-def conditionAsPath(as_path, origin_as, removePeerAS=True):
-    """ Condition/clean up the AS PATH
-
-        Removes AS-SET chars, repeated/prepended ASN's, and private/reserved ASN's
-
-        :param as_path:     (string) The AS_PATH in string format
-        :param origin_as:   (int) The originating ASN (This will be stripped/excluded)
-        :param removePeerAS If true, remove the peer AS from the as PATH
-
-        :return: Returns conditioned deduped AS PATH (order is not maintained, list is sorted)
-    """
-    # Remove AS-SET '{' and '}' from path
-    as_path = as_path.translate(None, '{}')
-
-    # Remove the peer AS
-    foundPeerAS = False
-
-    new_as_path = set()
-
-    for asn in as_path.strip().split(' '):
-        try:
-            asn_int = long(asn)
-
-            if (asn_int == 0 or asn_int == 23456 or
-                    (asn_int >= 64496 and asn_int <= 65535) or
-                    (asn_int >= 65536 and asn_int <= 131071) or
-                    asn_int >= 4200000000):
-                pass
-            elif asn_int >= 1 and asn_int != origin_as:
-                if (not foundPeerAS):
-                    foundPeerAS = True
-
-                    if (removePeerAS):
-                        continue
-
-                new_as_path.add(asn)
-        except:
-            pass
-
-    return ' '.join(sorted(list(new_as_path), key=int)).strip()
-
 def main():
     """
     """
     cmd = ['bash', '-c', "source /etc/default/openbmpd && set"]
-    proc = subprocess.Popen(cmd, stdout = subprocess.PIPE)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 
     for line in proc.stdout:
        (key, _, value) = line.partition("=")
@@ -483,10 +373,7 @@ def main():
     # Create trigger
     db.createTrigger(TRIGGER_CREATE_INSERT_STATUS_DEF, TRIGGER_INSERT_STATUS_NAME, False)
 
-    UpdateOriginPrefixesCounts(db, IPv4=True)
-    UpdateOriginPrefixesCounts(db, IPv4=False)  # IPv6
-    UpdateTransitPrefixesCounts(db, IPv4=True)
-    UpdateTransitPrefixesCounts(db, IPv4=False) # IPv6
+    UpdatePrefixesCounts(db)
 
     # RECORD_DICT now has all information, ready to update DB
     UpdateDB(db)
