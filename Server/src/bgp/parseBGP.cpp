@@ -20,6 +20,9 @@
 #include <arpa/inet.h>
 #include <bgp/linkstate/MPLinkStateAttr.h>
 
+#include <sstream>
+#include <algorithm>
+
 #include "DbInterface.hpp"
 #include "NotificationMsg.h"
 #include "OpenMsg.h"
@@ -346,7 +349,7 @@ void parseBGP::UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
     /*
      * Update the advertised prefixes (both ipv4 and ipv6)
      */
-    UpdateDBAdvPrefixes(parsed_data.advertised);
+    UpdateDBAdvPrefixes(parsed_data.advertised, parsed_data.attrs);
 
     /*
      * Update withdraws (both ipv4 and ipv6)
@@ -443,6 +446,63 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     // Update the DB entry
     dbi_ptr->add_PathAttrs(record);
 
+    /*
+     * Analyze the AS Path and update the as path analysis table
+     */
+    std::string path (record.as_path);
+    path.erase(std::remove(path.begin(), path.end(), '{'), path.end());
+    path.erase(std::remove(path.begin(), path.end(), '}'), path.end());
+    std::istringstream ss(path);
+    uint32_t odd_as, even_as;
+
+    DbInterface::tbl_as_path_analysis a_record;
+
+    a_record.asn = 0; a_record.asn_right = 0; a_record.asn_left = 0;
+    memcpy(a_record.path_hash_id, record.hash_id, sizeof(a_record.path_hash_id));
+    memcpy(a_record.peer_hash_id, p_entry->hash_id, sizeof(a_record.peer_hash_id));
+
+    bool done = false;
+    while (not done) {
+        // Get first (odd) AS entry
+        if (not (ss >> odd_as)) {
+            done = true;
+            odd_as = 0;
+        }
+
+        if (a_record.asn) {
+            if (odd_as == a_record.asn_right) {
+                continue;
+            }
+
+            a_record.asn_right = odd_as;
+            dbi_ptr->add_AsPathAnalysis(a_record);
+        }
+
+        if (not done) {
+            // Get next AS to the right which is always the even AS entry
+            if (not (ss >> even_as)) {
+                done = true;
+                even_as = 0;
+            }
+
+            if (odd_as == even_as) {
+                a_record.asn  = odd_as;
+                continue;
+            }
+
+            a_record.asn = odd_as;
+            a_record.asn_right = even_as;
+
+            if (a_record.asn == a_record.asn_right)
+                a_record.asn_right = 0;
+
+            dbi_ptr->add_AsPathAnalysis(a_record);
+
+            a_record.asn_left = a_record.asn;
+            a_record.asn = a_record.asn_right;
+        }
+    }
+
     // Update the class instance variable path_hash_id
     memcpy(path_hash_id, record.hash_id, sizeof(path_hash_id));
 }
@@ -453,8 +513,10 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
  * \details This method will update the database for the supplied advertised prefixes
  *
  * \param  adv_prefixes         Reference to the list<prefix_tuple> of advertised prefixes
+ * \param  attrs            Reference to the parsed attributes map
  */
-void parseBGP::UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes) {
+void parseBGP::UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes,
+                                   bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     vector<DbInterface::tbl_rib> rib_list;
     DbInterface::tbl_rib         rib_entry;
     uint32_t                     value_32bit;
@@ -477,6 +539,11 @@ void parseBGP::UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes) {
         rib_entry.timestamp_secs = p_entry->timestamp_secs;
 
         rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
+
+        if (((string)attrs[bgp_msg::ATTR_TYPE_INTERNAL_AS_ORIGIN]).length() > 0)
+            rib_entry.origin_as = std::stoul(((string)attrs[bgp_msg::ATTR_TYPE_INTERNAL_AS_ORIGIN]));
+        else
+            rib_entry.origin_as = 0;
 
         memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
 

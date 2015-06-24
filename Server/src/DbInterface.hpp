@@ -155,6 +155,20 @@ public:
     };
 
     /**
+     * TABLE: as_path_analysis
+     *      AS Path analysis schema
+     */
+    #define TBL_NAME_AS_PATH_ANALYSIS "as_path_analysis"
+    struct tbl_as_path_analysis {
+        uint32_t    asn;                    ///< ASN being analyzed
+        uint32_t    asn_left;               ///< ASN to the left of the ASN in the AS_PATH
+        uint32_t    asn_right;              ///< ASN to the right of the ASN in the AS_PATH
+        u_char      path_hash_id[16];       ///< Path attribute hash ID the contains the AS_PATH being analyzed
+        u_char      peer_hash_id[16];       ///< Peer hash ID the contains the AS_PATH being analyzed
+
+    };
+
+    /**
      * TABLE: path_attrs
      *
      * Prefix Path attributes table schema
@@ -226,6 +240,7 @@ public:
         u_char      path_attr_hash_id[16];  ///< path attrs hash_id
         u_char      peer_hash_id[16];       ///< BGP peer hash ID, need it here for withdraw routes support
         u_char      isIPv4;                 ///< 0 if IPv6, 1 if IPv4
+        uint32_t    origin_as;              ///< Origin ASN
         char        prefix[40];             ///< IPv4/IPv6 prefix in printed form
         u_char      prefix_len;             ///< Length of prefix in bits
         uint8_t     prefix_bin[16];         ///< Prefix in binary form
@@ -465,6 +480,15 @@ public:
      *              safe to do so when this method returns.
      *****************************************************************/
     virtual void add_PathAttrs(tbl_path_attr &path) = 0;
+
+    /**
+     * \brief       Add/Update AS path analysis entry
+     *
+     * \details     Will add a new AS entry or update an existing one in the analysis table
+     *
+     * \param[in,out]   record      AS analysis entry
+     */
+    virtual void add_AsPathAnalysis(tbl_as_path_analysis &record) = 0;
 
     /*****************************************************************//**
      * \brief       Add a stats report entry

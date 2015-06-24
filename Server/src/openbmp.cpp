@@ -62,10 +62,11 @@ void Usage(char *prog) {
     cout << "     -p <port>         BMP listening port (default is 5000)" << endl;
     cout << "     -dbn <name>       DB name (default is openBMP)" << endl;
     cout << endl;
-    cout << "     -c <filename>        Config filename, default is " << CFG_FILENAME << endl;
-    cout << "     -l <filename>        Log filename, default is STDOUT" << endl;
-    cout << "     -d <filename>        Debug filename, default is log filename" << endl;
-    cout << "     -pid <filename>      PID filename, default is no pid file" << endl;
+    cout << "     -c <filename>     Config filename, default is " << CFG_FILENAME << endl;
+    cout << "     -l <filename>     Log filename, default is STDOUT" << endl;
+    cout << "     -d <filename>     Debug filename, default is log filename" << endl;
+    cout << "     -pid <filename>   PID filename, default is no pid file" << endl;
+    cout << "     -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128" << endl;
 
     cout << endl << "  OTHER OPTIONS:" << endl;
     cout << "     -v                   Version" << endl;
@@ -130,6 +131,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
     cfg.debug_mysql = false;
     cfg.password = NULL;
     cfg.username = NULL;
+    cfg.bmp_buffer_size = 15728640; // 15MB
 
     // Make sure we have the correct number of required args
     if (argc > 1 and !strcmp(argv[1], "-v")) {   // Version
@@ -200,6 +202,24 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
             }
 
             cfg.dbURL = argv[++i];
+
+        } else if (!strcmp(argv[i], "-b")) {
+            // We expect the next arg to be the size in MB
+            if (i+1 >= argc) {
+                cout << "INVALID ARG: -b expects a value between 2 and 15" << endl;
+                return false;
+            }
+
+            cfg.bmp_buffer_size = atoi(argv[++i]);
+
+            // Validate the size
+            if (cfg.bmp_buffer_size < 2 || cfg.bmp_buffer_size > 384) {
+                cout << "INVALID ARG: port '" << cfg.bmp_buffer_size << "' is out of range, expected range is 2 - 384" << endl;
+                return true;
+            }
+
+            // Convert the size to bytes
+            cfg.bmp_buffer_size = cfg.bmp_buffer_size * 1024 * 1024;
 
         } else if (!strcmp(argv[i], "-dbgp")) {
             cfg.debug_bgp = true;

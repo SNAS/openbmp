@@ -58,7 +58,7 @@ mysqlBMP::mysqlBMP(Logger *logPtr, char *hostURL, char *username, char *password
     mysqlConnect(hostURL, username, password, db);
 
     // Set the writer queue limit
-    sql_writeQueue.setLimit(500000);
+    sql_writeQueue.setLimit(30000);
 
     /*
      * Create and start the SQL writer thread
@@ -88,7 +88,7 @@ mysqlBMP::~mysqlBMP() {
 
             // Build the query
             snprintf(buf, sizeof(buf),
-                    "UPDATE %s SET isConnected=0,conn_count=0,term_reason_code=65535,term_reason_text=\"OpenBMP server stopped\" where hash_id = '%s'",
+                    "UPDATE %s SET isConnected=0,conn_count=0,term_reason_code=65535,term_reason_text=\"Connection closed.\" where hash_id = '%s'",
                     TBL_NAME_ROUTERS,
                     it->first.c_str());
 
@@ -145,15 +145,15 @@ void mysqlBMP::writerBulkQuery(std::map<int,std::string> &bulk_queries) {
 
 
             switch (a) {
-                case SQL_BULK_ADD_RIB : // Add RIB
+                case SQL_BULK_ADD_RIB :
                     b.erase(b.size() - 1);                              // Remove last comma
                     query = "INSERT into " +  string(TBL_NAME_RIB) +
-                            " (hash_id,path_attr_hash_id,peer_hash_id,prefix,prefix_len,isIPv4,prefix_bin,prefix_bcast_bin,timestamp)" +
+                            " (hash_id,path_attr_hash_id,peer_hash_id,prefix,prefix_len,isIPv4,prefix_bin,prefix_bcast_bin,timestamp,origin_as)" +
                             " VALUES " + b +
-                            " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),path_attr_hash_id=values(path_attr_hash_id),isWithdrawn=0,db_timestamp=current_timestamp";
+                            " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),path_attr_hash_id=values(path_attr_hash_id),origin_as=values(origin_as),isWithdrawn=0,db_timestamp=current_timestamp ";
                     break;
 
-                case SQL_BULK_ADD_PATH : // Add Path
+                case SQL_BULK_ADD_PATH :
                     b.erase(b.size() - 1);                              // Remove last comma
                     query = "INSERT into " + string(TBL_NAME_PATH_ATTRS) +
                             " (hash_id,peer_hash_id,origin,as_path,next_hop,med,local_pref,isAtomicAgg,aggregator,community_list,ext_community_list," +
@@ -162,20 +162,22 @@ void mysqlBMP::writerBulkQuery(std::map<int,std::string> &bulk_queries) {
                             " ON DUPLICATE KEY UPDATE timestamp=values(timestamp)  ";
                     break;
 
-                case SQL_BULK_WITHDRAW_UPD : // Update RIB for withdraw
-                    b.erase(b.size() - 1);                              // Remove last comma
-                    //query = "UPDATE IGNORE " +  string(TBL_NAME_RIB) + " SET isWithdrawn=True WHERE " + b;
-                    query = "INSERT IGNORE into " +  string(TBL_NAME_RIB) +
-                            " (hash_id,peer_hash_id,prefix,prefix_len,timestamp,path_attr_hash_id,isIPv4,prefix_bin,prefix_bcast_bin)" +
+                case SQL_BULK_ADD_PATH_ANALYSIS:
+                    b.erase(b.size() - 1);
+                    query = "INSERT IGNORE into " + string(TBL_NAME_AS_PATH_ANALYSIS) +
+                            " (asn,asn_left,asn_right,path_attr_hash_id, peer_hash_id)" +
                             " VALUES " + b +
-                            " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),isWithdrawn=True,db_timestamp=current_timestamp";
+                            " ON DUPLICATE KEY UPDATE timestamp=current_timestamp ";
 
                     break;
 
-                case SQL_BULK_WITHDRAW_INS : // Insert into withdraw log
+                case SQL_BULK_WITHDRAW_UPD :
                     b.erase(b.size() - 1);                              // Remove last comma
-                    query = "INSERT into " + string(TBL_NAME_WITHDRAWN_LOG) +
-                            " (peer_hash_id,prefix, prefix_len) VALUES " + b;
+                    query = "INSERT IGNORE into " +  string(TBL_NAME_RIB) +
+                            " (hash_id,peer_hash_id,prefix,prefix_len,timestamp,path_attr_hash_id,isIPv4,prefix_bin,prefix_bcast_bin,isWithdrawn)" +
+                            " VALUES " + b +
+                            " ON DUPLICATE KEY UPDATE timestamp=values(timestamp),isWithdrawn=1,db_timestamp=current_timestamp ";
+
                     break;
             }
 
@@ -208,12 +210,12 @@ void mysqlBMP::writerThreadLoop() {
         //bulk_queries.clear();
         pop_num = sql_writeQueue.size() < MYSQL_MAX_BULK_INSERT ? sql_writeQueue.size() : MYSQL_MAX_BULK_INSERT;
 
-        if (not logQueueHigh and sql_writeQueue.size() > 100000) {
-            LOG_INFO("Queue size is above 100,000, this is normal on RIB dump: %d", sql_writeQueue.size());
+        if (not logQueueHigh and sql_writeQueue.size() > 25000) {
+            LOG_INFO("rtr=%s: Queue size is above 25,000, this is normal on RIB dump: %d", router_ip.c_str(), sql_writeQueue.size());
             logQueueHigh = true;
 
-        } else if (logQueueHigh and sql_writeQueue.size() < 90000) {
-            LOG_INFO("Queue size is below 90,000, this is normal: %d", sql_writeQueue.size());
+        } else if (logQueueHigh and sql_writeQueue.size() < 15000) {
+            LOG_INFO("rtr=%s: Queue size is below 15,000, this is normal: %d", router_ip.c_str(), sql_writeQueue.size());
             logQueueHigh = false;
         }
 
@@ -239,10 +241,15 @@ void mysqlBMP::writerThreadLoop() {
                     }
                     else {
                         // Process the current pending bulk queries since the current one requires order to be maintained
-                        if (last_bulk_key >= 16 and query[1] < 8) {
+                        if (last_bulk_key >= SQL_BULK_WITHDRAW_UPD and query[1] < 8) {
                             writerBulkQuery(bulk_queries);
+
+                            stmt->close();
+                            delete stmt;
+
                             commitTransaction();
                             startTransaction();
+                            stmt = con->createStatement();
                         }
 
                         // Add statement to the bulk queries map
@@ -273,18 +280,18 @@ void mysqlBMP::writerThreadLoop() {
         } catch (sql::SQLException &e) {
             if (e.getErrorCode() == 1213 or e.getErrorCode() == 1205) {     // deadlock or lock exceeded timeout
                 // Message is still in queue, next pass will be the retry
-                SELF_DEBUG("Deadlock/lock exceeded: %d", e.getErrorCode());
+                SELF_DEBUG("rtr=%s: Deadlock/lock exceeded: %d", router_ip.c_str(), e.getErrorCode());
                 if (retries < 10) {
                     retries++;
 
                 } else {
-                    LOG_ERR("retries failed, skipping: %s, error Code = %d, state = %s",
-                            e.what(), e.getErrorCode(), e.getSQLState().c_str());
+                    LOG_ERR("rtr=%s: retries failed, skipping: %s, error Code = %d, state = %s",
+                            router_ip.c_str(), e.what(), e.getErrorCode(), e.getSQLState().c_str());
                 }
             }
             else {
-                LOG_ERR("mysql error: %s, error Code = %d, state = %s",
-                        e.what(), e.getErrorCode(), e.getSQLState().c_str());
+                LOG_ERR("rtr=%s: mysql error: %s, error Code = %d, state = %s",
+                        router_ip.c_str(), e.what(), e.getErrorCode(), e.getSQLState().c_str());
 
                 sql_writeQueue.pop();
             }
@@ -514,6 +521,8 @@ void mysqlBMP::add_Router(tbl_router &r_entry, bool incConnectCount) {
         return;
     }
 
+    router_ip.assign((char *)r_entry.src_addr);                     // Update router IP for logging
+
     // Insert/Update map entry
     router_list[r_hash_str] = time(NULL);
 
@@ -624,7 +633,7 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
 
         // Generate the hash
 
-        hash.update(rib_entry[i].peer_hash_id, HASH_SIZE);
+        //hash.update(rib_entry[i].peer_hash_id, HASH_SIZE);
         hash.update((unsigned char *) rib_entry[i].prefix,
                 strlen(rib_entry[i].prefix));
         hash.update(&rib_entry[i].prefix_len,
@@ -644,18 +653,18 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
         if (rib_entry[i].isIPv4) {
             // IPv4
             buf_len += snprintf(buf2, sizeof(buf2),
-                    " ('%s','%s','%s','%s', %d, 1, X'%02hX%02hX%02hX%02hX', X'%02hX%02hX%02hX%02hX', from_unixtime(%u)),",
+                    " ('%s','%s','%s','%s', %d, 1, X'%02hX%02hX%02hX%02hX', X'%02hX%02hX%02hX%02hX', from_unixtime(%u), %" PRIu32 "),",
                     rib_hash_str.c_str(),
                     path_hash_str.c_str(), p_hash_str.c_str(),
                     rib_entry[i].prefix, rib_entry[i].prefix_len,
                     rib_entry[i].prefix_bin[0], rib_entry[i].prefix_bin[1], rib_entry[i].prefix_bin[2], rib_entry[i].prefix_bin[3],
                     rib_entry[i].prefix_bcast_bin[0], rib_entry[i].prefix_bcast_bin[1],
                     rib_entry[i].prefix_bcast_bin[2], rib_entry[i].prefix_bcast_bin[3],
-                    rib_entry[i].timestamp_secs);
+                    rib_entry[i].timestamp_secs, rib_entry[i].origin_as);
         } else {
             // IPv6
             buf_len += snprintf(buf2, sizeof(buf2),
-                    " ('%s','%s','%s','%s', %d, 0, X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX', X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX', from_unixtime(%u)),",
+                    " ('%s','%s','%s','%s', %d, 0, X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX', X'%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX%02hX', from_unixtime(%u),%" PRIu32 "),",
                     rib_hash_str.c_str(),
                     path_hash_str.c_str(), p_hash_str.c_str(),
                     rib_entry[i].prefix, rib_entry[i].prefix_len,
@@ -667,7 +676,7 @@ void mysqlBMP::add_Rib(vector<tbl_rib> &rib_entry) {
                     rib_entry[i].prefix_bcast_bin[4], rib_entry[i].prefix_bcast_bin[5], rib_entry[i].prefix_bcast_bin[6], rib_entry[i].prefix_bcast_bin[7],
                     rib_entry[i].prefix_bcast_bin[8], rib_entry[i].prefix_bcast_bin[9], rib_entry[i].prefix_bcast_bin[10], rib_entry[i].prefix_bcast_bin[11],
                     rib_entry[i].prefix_bcast_bin[12], rib_entry[i].prefix_bcast_bin[13], rib_entry[i].prefix_bcast_bin[14], rib_entry[i].prefix_bcast_bin[15],
-                    rib_entry[i].timestamp_secs);
+                    rib_entry[i].timestamp_secs, rib_entry[i].origin_as);
         }
 
         // Cat the entry to the query buff
@@ -693,12 +702,10 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
 
     char    *buf = new char[800000];            // Misc working buffer
 
-
     string p_hash_str;
     hash_toStr(rib_entry[0].peer_hash_id, p_hash_str);
 
     string rib_hash_str;
-    MD5 hash;
 
     /*
      * Update the current RIB entry state
@@ -726,7 +733,7 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
 
         buf_len +=
                 snprintf(buf2, sizeof(buf2),
-                        " ('%s','%s','%s',%d,from_unixtime(%u),'',%d,0,0),",
+                        " ('%s','%s','%s',%d,from_unixtime(%u),'',%d,0,0,1),",
                          rib_hash_str.c_str(), p_hash_str.c_str(), rib_entry[i].prefix,
                         rib_entry[i].prefix_len,rib_entry[i].timestamp_secs, rib_entry[i].isIPv4);
 
@@ -738,41 +745,44 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
     // Remove the last comma since we don't need it
     buf[buf_len - 1] = 0;
 
-    // Remove the last OR since we don't need it
-    //buf[buf_len - 3] = '0';
-    //buf[buf_len - 2] = ')';
-    //buf[buf_len - 1] = 0;
-
     sql_writeQueue.push(buf);
 
-    /*
-     * Insert a new withdrawn log entry
-     */
-    // Build the initial part of the query
-    buf_len = sprintf(buf, "B%c", SQL_BULK_WITHDRAW_INS);
-
-    // Loop through the vector array of rib entries
-    for (size_t i = 0; i < rib_entry.size(); i++) {
-
-        hash_toStr(rib_entry[i].peer_hash_id, p_hash_str);
-
-        buf_len += snprintf(buf2, sizeof(buf2), " ('%s','%s',%d),",
-                p_hash_str.c_str(), rib_entry[i].prefix,
-                rib_entry[i].prefix_len);
-
-        // Cat the entry to the query buff
-        if (buf_len < 800000 /* size of buf */)
-            strcat(buf, buf2);
-
-    }
-
-    // Remove the last OR since we don't need it
-    buf[buf_len - 1] = 0;
-
-    sql_writeQueue.push(buf);
 
     // Free the large buffer
     delete[] buf;
+}
+
+/**
+ * Abstract method Implementation - See DbInterface.hpp for details
+ */
+void mysqlBMP::add_AsPathAnalysis(tbl_as_path_analysis &record) {
+    char    buf[8192];                  // Misc working buffer
+    char    buf2[2048] ;                // Second working buffer
+    size_t  buf_len;                    // size of the query buff
+
+    // Setup the initial MySQL query
+    buf_len = sprintf(buf, "B%c", SQL_BULK_ADD_PATH_ANALYSIS);
+
+    // Build the query
+    string path_hash_str;
+    string p_hash_str;
+    hash_toStr(record.path_hash_id, path_hash_str);
+    hash_toStr(record.peer_hash_id, p_hash_str);
+
+    buf_len +=
+            snprintf(buf2, sizeof(buf2),
+                     "('%" PRIu32 "','%" PRIu32 "','%" PRIu32 "','%s','%s'),",
+                     record.asn, record.asn_left, record.asn_right,
+                     path_hash_str.c_str(), p_hash_str.c_str());
+
+    // Cat the string to our query buffer
+    if (buf_len < sizeof(buf))
+        strcat(buf, buf2);
+
+    // Remove the last comma since we don't need it
+    buf[buf_len - 1] = 0;
+
+    sql_writeQueue.push(buf);
 }
 
 /**
@@ -795,7 +805,7 @@ void mysqlBMP::add_PathAttrs(tbl_path_attr &path_entry) {
     MD5 hash;
 
     // Generate the hash
-    hash.update(path_entry.peer_hash_id, HASH_SIZE);
+    //hash.update(path_entry.peer_hash_id, HASH_SIZE);
     hash.update((unsigned char *) path_entry.as_path,
             strlen(path_entry.as_path));
     hash.update((unsigned char *) path_entry.next_hop,

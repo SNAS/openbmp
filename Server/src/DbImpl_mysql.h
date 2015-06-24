@@ -66,6 +66,7 @@ public:
     void add_Rib(std::vector<tbl_rib> &rib);
     void delete_Rib(std::vector<tbl_rib> &rib);
     void add_PathAttrs(tbl_path_attr &path);
+    void add_AsPathAnalysis(tbl_as_path_analysis &record);
     void add_StatReport(tbl_stats_report &stats);
     void add_PeerDownEvent(tbl_peer_down_event &down_event);
     void add_PeerUpEvent(tbl_peer_up_event &up_event);
@@ -97,6 +98,8 @@ private:
     std::map<std::string, time_t> peer_list;
     typedef std::map<std::string, time_t>::iterator peer_list_iter;
 
+    std::string router_ip;                      ///< Router IP in printed format, used for logging
+
     /**
      * FIFO queue for MySQL thread to handle all transactions
      */
@@ -113,10 +116,12 @@ private:
      *      Values are grouped by range to distinguish like statements
      */
     enum SQL_BULK_QUERIES {
-            SQL_BULK_ADD_RIB       = 1,
-            SQL_BULK_ADD_PATH      = 2,
-            SQL_BULK_WITHDRAW_INS  = 8,
-            SQL_BULK_WITHDRAW_UPD  = 16
+            SQL_BULK_ADD_RIB           = 1,
+            SQL_BULK_ADD_PATH          = 2,
+            SQL_BULK_ADD_PATH_ANALYSIS = 3,
+
+            // 8 and above are run in order
+            SQL_BULK_WITHDRAW_UPD      = 16
     };
 
     /**

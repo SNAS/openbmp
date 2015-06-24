@@ -25,6 +25,7 @@
 #include "parseBGP.h"
 #include "DbInterface.hpp"
 
+
 using namespace std;
 
 /**
@@ -52,6 +53,32 @@ BMPReader::~BMPReader() {
 
 }
 
+
+/**
+ * Read messages from BMP stream in a loop
+ *
+ * \param [in]  run         Reference to bool to indicate if loop should continue or not
+ * \param [in]  client      Client information pointer
+ * \param [in]  dbi_ptr     The database pointer referencer - DB should be already initialized
+ *
+ * \return true if more to read, false if the connection is done/closed
+ *
+ * \throw (char const *str) message indicate error
+ */
+void BMPReader::readerThreadLoop(bool &run, BMPListener::ClientInfo *client, DbInterface *dbi_ptr) {
+    while (run) {
+
+        try {
+            if (not ReadIncomingMsg(client, dbi_ptr))
+                break;
+
+        } catch (char const *str) {
+            run = false;
+            break;
+        }
+    }
+}
+
 /**
  * Read messages from BMP stream
  *
@@ -67,6 +94,8 @@ BMPReader::~BMPReader() {
 bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *dbi_ptr) {
     bool rval = true;
     parseBGP *pBGP;                                 // Pointer to BGP parser
+
+    int read_fd = client->pipe_sock > 0 ? client->pipe_sock : client->c_sock;
 
     // Data storage structures
     DbInterface::tbl_bgp_peer p_entry;
@@ -90,7 +119,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
     memcpy(r_entry.src_addr, client->c_ipv4, sizeof(client->c_ipv4));
 
     try {
-        bmp_type = pBMP->handleMessage(client->c_sock);
+        bmp_type = pBMP->handleMessage(read_fd);
 
         /*
          * Now that we have parsed the BMP message...
@@ -117,8 +146,8 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
                 DbInterface::tbl_peer_down_event down_event = {};
 
-                if (pBMP->parsePeerDownEventHdr(client->c_sock,down_event)) {
-                    pBMP->bufferBMPMessage(client->c_sock);
+                if (pBMP->parsePeerDownEventHdr(read_fd,down_event)) {
+                    pBMP->bufferBMPMessage(read_fd);
 
 
                     // Prepare the BGP parser
@@ -165,7 +194,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
                     dbi_ptr->add_PeerDownEvent(down_event);
 
                 } else {
-                    LOG_ERR("Error with client socket %d", client->c_sock);
+                    LOG_ERR("Error with client socket %d", read_fd);
                     // Make sure to free the resource
                     throw "BMPReader: Unable to read from client socket";
                 }
@@ -177,11 +206,11 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
                 DbInterface::tbl_peer_up_event up_event = {};
                 peer_info pInfo = {};
 
-                if (pBMP->parsePeerUpEventHdr(client->c_sock, up_event)) {
+                if (pBMP->parsePeerUpEventHdr(read_fd, up_event)) {
                     LOG_INFO("%s: PEER UP Received, local addr=%s:%hu remote addr=%s:%hu", client->c_ipv4,
                             up_event.local_ip, up_event.local_port, p_entry.peer_addr, up_event.remote_port);
 
-                    pBMP->bufferBMPMessage(client->c_sock);
+                    pBMP->bufferBMPMessage(read_fd);
 
                     // Prepare the BGP parser
                     pBGP = new parseBGP(logger, dbi_ptr, &p_entry, (char *)r_entry.src_addr,
@@ -206,7 +235,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
             }
 
             case parseBMP::TYPE_ROUTE_MON : { // Route monitoring type
-                pBMP->bufferBMPMessage(client->c_sock);
+                pBMP->bufferBMPMessage(read_fd);
 
                 /*
                  * Read and parse the the BGP message from the client.
@@ -225,7 +254,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
             case parseBMP::TYPE_STATS_REPORT : { // Stats Report
                 DbInterface::tbl_stats_report stats = {};
-                if (! pBMP->handleStatsReport(client->c_sock, stats))
+                if (! pBMP->handleStatsReport(read_fd, stats))
                     // Add to mysql
                     dbi_ptr->add_StatReport(stats);
 
@@ -234,7 +263,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
             case parseBMP::TYPE_INIT_MSG : { // Initiation Message
                 LOG_INFO("%s: Init message received with length of %u", client->c_ipv4, pBMP->getBMPLength());
-                pBMP->handleInitMsg(client->c_sock, r_entry);
+                pBMP->handleInitMsg(read_fd, r_entry);
 
                 // Update the router entry with the details
                 dbi_ptr->update_Router(r_entry);
@@ -242,9 +271,12 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
             }
 
             case parseBMP::TYPE_TERM_MSG : { // Termination Message
-                LOG_INFO("%s: Init message received with length of %u", client->c_ipv4, pBMP->getBMPLength());
-                pBMP->handleTermMsg(client->c_sock, r_entry);
+                LOG_INFO("%s: Term message received with length of %u", client->c_ipv4, pBMP->getBMPLength());
 
+
+                pBMP->handleTermMsg(read_fd, r_entry);
+
+                LOG_INFO("Proceeding to disconnect router");
                 dbi_ptr->disconnect_Router(r_entry);
                 close(client->c_sock);
 
@@ -256,10 +288,8 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
 
     } catch (char const *str) {
         // Mark the router as disconnected and update the error to be a local disconnect (no term message received)
-        SELF_DEBUG("%s: Caught, disconnecting router", client->c_ipv4);
-        r_entry.term_reason_code = 65535;
-        snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text), "%s", str);
-        dbi_ptr->disconnect_Router(r_entry);
+        LOG_INFO("%s: Caught: %s", client->c_ipv4, str);
+        disconnect(client, dbi_ptr, 65534, str);
 
         delete pBMP;                    // Make sure to free the resource
         throw str;
@@ -271,6 +301,34 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *db
     return rval;
 }
 
+/**
+ * disconnect/close bmp stream
+ *
+ * Closes the BMP stream and disconnects router as needed
+ *
+ * \param [in]  client      Client information pointer
+ * \param [in]  dbi_ptr     The database pointer referencer - DB should be already initialized
+ * \param [in]  reason_code The reason code for closing the stream/feed
+ * \param [in]  reason_text String detailing the reason for close
+ *
+ */
+void BMPReader::disconnect(BMPListener::ClientInfo *client, DbInterface *dbi_ptr, int reason_code, char const *reason_text) {
+
+    DbInterface::tbl_router r_entry;
+    bzero(&r_entry, sizeof(r_entry));
+    memcpy(r_entry.hash_id, router_hash_id, sizeof(r_entry.hash_id));
+
+    // Mark the router as disconnected and update the error to be a local disconnect (no term message received)
+    LOG_INFO("%s: Disconnecting router", client->c_ipv4);
+
+    r_entry.term_reason_code = reason_code;
+    if (reason_text != NULL)
+        snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text), "%s", reason_text);
+
+    dbi_ptr->disconnect_Router(r_entry);
+
+    close(client->c_sock);
+}
 
 /*
  * Enable/Disable debug

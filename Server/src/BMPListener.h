@@ -43,6 +43,7 @@ public:
     public:
         sockaddr_in c_addr;                 ///< client address info
         int         c_sock;                 ///< Active client socket connection
+        int         pipe_sock;              ///< Piped socket for client stream (buffered) - zero if not buffered
         char        c_port[6];              ///< Client source port
         char        c_ipv4[16];             ///< Client IPv4 source address
     };

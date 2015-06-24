@@ -20,6 +20,8 @@ struct Cfg_Options {
     char *dbName;
     char *bmp_port;
 
+    int  bmp_buffer_size;          ///< BMP buffer size in bytes (min is 2M max is 128M)
+
     bool debug_bgp;
     bool debug_bmp;
     bool debug_mysql;

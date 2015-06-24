@@ -779,7 +779,7 @@ void parseBMP::handleTermMsg(int sock, DbInterface::tbl_router &r_entry) {
     /*
      * Loop through the term message (in buffer) to parse each TLV
      */
-    for (int i=0; i < bmp_len; i += BMP_TERM_MSG_LEN) {
+    for (int i=0; i < bmp_data_len; i += BMP_TERM_MSG_LEN) {
         memcpy(&termMsg, bufPtr, BMP_TERM_MSG_LEN);
         termMsg.info = NULL;
         bgp::SWAP_BYTES(&termMsg.len);
@@ -787,7 +787,6 @@ void parseBMP::handleTermMsg(int sock, DbInterface::tbl_router &r_entry) {
 
         bufPtr += BMP_TERM_MSG_LEN;                // Move pointer past the info header
 
-        // TODO: Change to SELF_DEBUG after IOS supports INIT messages correctly
         LOG_INFO("Term message type %hu and length %hu parsed", termMsg.type, termMsg.len);
 
         if (termMsg.len > 0) {

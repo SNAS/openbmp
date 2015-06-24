@@ -66,6 +66,32 @@ public:
      */
     bool ReadIncomingMsg(BMPListener::ClientInfo *client, DbInterface *dbi_ptr);
 
+    /**
+     * Read messages from BMP stream in a loop
+     *
+     * \param [in]  run         Reference to bool to indicate if loop should continue or not
+     * \param [in]  client      Client information pointer
+     * \param [in]  dbi_ptr     The database pointer referencer - DB should be already initialized
+     *
+     * \return true if more to read, false if the connection is done/closed
+     *
+     * \throw (char const *str) message indicate error
+     */
+    void readerThreadLoop(bool &run, BMPListener::ClientInfo *client, DbInterface *dbi_ptr);
+
+    /**
+     * disconnect/close bmp stream
+     *
+     * Closes the BMP stream and disconnects router as needed
+     *
+     * \param [in]  client      Client information pointer
+     * \param [in]  dbi_ptr     The database pointer referencer - DB should be already initialized
+     * \param [in]  reason_code The reason code for closing the stream/feed
+     * \param [in]  reason_text String detailing the reason for close
+     *
+     */
+    void disconnect(BMPListener::ClientInfo *client, DbInterface *dbi_ptr, int reason_code, char const *reason_text);
+
     // Debug methods
     void enableDebug();
     void disableDebug();

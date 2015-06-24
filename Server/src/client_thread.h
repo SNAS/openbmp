@@ -14,6 +14,7 @@
 #include "BMPListener.h"
 #include "Logger.h"
 #include "Config.h"
+#include <thread>
 
 struct ThreadMgmt {
     pthread_t thr;
@@ -27,6 +28,10 @@ struct ClientThreadInfo {
     mysqlBMP *mysql;
     BMPListener::ClientInfo *client;
     Logger *log;
+
+    std::thread *bmp_reader_thread;
+    int bmp_write_end_sock;
+
 };
 
 /**

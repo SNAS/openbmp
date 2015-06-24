@@ -197,8 +197,9 @@ private:
      * \details This method will update the database for the supplied advertised prefixes
      *
      * \param  adv_prefixes         Reference to the list<prefix_tuple> of advertised prefixes
+     * \param  attrs            Reference to the parsed attributes map
      */
-    void UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes);
+    void UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
 
     /**
      * Update the Database withdrawn prefixes
