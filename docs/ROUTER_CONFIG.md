@@ -53,7 +53,8 @@ bmp server 1
  host 10.20.254.245 port 5000
  description BMP Server - primary
  update-source GigabitEthernet0/0/0/0
- initial-delay 10
+ initial-delay 60
+ initial-refresh delay 60 spread {number of peers * 2}
  stats-reporting-period 300
 !
 ```
