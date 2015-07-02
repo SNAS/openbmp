@@ -11,7 +11,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <thread>
 
 #include "client_thread.h"
@@ -158,7 +157,7 @@ void *ClientThread(void *arg) {
                 // Reached end of buffer, wrap to start
                 write_buf_pos = 0;
                 sock_buf_write_ptr = sock_buf;
-                wrap_state = wrap_state ? false : true;
+                wrap_state = true;
                 //LOG_INFO("write buffer wrapped");
             }
 
@@ -208,7 +207,7 @@ void *ClientThread(void *arg) {
             else if (read_buf_pos >= thr->cfg->bmp_buffer_size) {
                 read_buf_pos = 0;
                 sock_buf_read_ptr = sock_buf;
-                wrap_state = wrap_state ? false : true;
+                wrap_state = false;
                 //LOG_INFO("read buffer wrapped");
             }
         }

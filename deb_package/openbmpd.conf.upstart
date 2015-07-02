@@ -5,6 +5,7 @@ description	"openbmpd collector daemon"
 start on startup
 stop on runlevel [06]
 
+kill timeout 20
 respawn
 
 expect fork

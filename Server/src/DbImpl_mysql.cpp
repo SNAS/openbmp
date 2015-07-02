@@ -207,7 +207,6 @@ void mysqlBMP::writerThreadLoop() {
 
         sql_writeQueue.wait();
 
-        //bulk_queries.clear();
         pop_num = sql_writeQueue.size() < MYSQL_MAX_BULK_INSERT ? sql_writeQueue.size() : MYSQL_MAX_BULK_INSERT;
 
         if (not logQueueHigh and sql_writeQueue.size() > 25000) {
@@ -596,7 +595,7 @@ bool mysqlBMP::disconnect_Router(tbl_router &r_entry) {
 
         // Build the query
         snprintf(buf, sizeof(buf),
-                "UPDATE %s SET isConnected=if(conn_count > 1, 1, 0),conn_count=conn_count - 1,term_reason_code=%" PRIu16 ",term_reason_text=\"%s\",term_data='%s' where hash_id = '%s'",
+                "UPDATE %s SET isConnected=if(conn_count > 1, 1, 0),conn_count=if(conn_count > 1, conn_count - 1, 0),term_reason_code=%" PRIu16 ",term_reason_text=\"%s\",term_data='%s' where hash_id = '%s'",
                 TBL_NAME_ROUTERS,
                 r_entry.term_reason_code, r_entry.term_reason_text, termData.c_str(),
                 r_hash_str.c_str());
@@ -718,7 +717,6 @@ void mysqlBMP::delete_Rib(vector<tbl_rib> &rib_entry) {
         MD5 hash;
 
         // Generate the hash
-        hash.update(rib_entry[i].peer_hash_id, HASH_SIZE);
         hash.update((unsigned char *) rib_entry[i].prefix,  strlen(rib_entry[i].prefix));
         hash.update(&rib_entry[i].prefix_len, sizeof(rib_entry[i].prefix_len));
         hash.finalize();
