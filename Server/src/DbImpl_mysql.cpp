@@ -58,7 +58,7 @@ mysqlBMP::mysqlBMP(Logger *logPtr, char *hostURL, char *username, char *password
     mysqlConnect(hostURL, username, password, db);
 
     // Set the writer queue limit
-    sql_writeQueue.setLimit(30000);
+    sql_writeQueue.setLimit(25000);
 
     /*
      * Create and start the SQL writer thread
@@ -131,8 +131,9 @@ mysqlBMP::~mysqlBMP() {
  * SQL Writer bulk insert/update
  *
  * \param [in] bulk_queries     Reference to bulk queries map (statements)
+ * \param [in/out] query_batch  Batch/multi statement query string (will be appended)
  */
-void mysqlBMP::writerBulkQuery(std::map<int,std::string> &bulk_queries) {
+void mysqlBMP::writerBulkQuery(std::map<int,std::string> &bulk_queries, std::string &query_batch) {
     string query;
 
     // Perform a bulk insert/update
@@ -181,9 +182,19 @@ void mysqlBMP::writerBulkQuery(std::map<int,std::string> &bulk_queries) {
                     break;
             }
 
-            SELF_DEBUG("BULK QUERY[%d]=%s", a, query.c_str());
-            stmt->execute(query);
+            //SELF_DEBUG("BULK QUERY[%d]=%s", a, query.c_str());
+            if (query.size() > 0) {
+                if (query_batch.size() <= 0) {
+                    query_batch.assign(query);
+                } else {
+                    query_batch.append("; ");
+                    query_batch.append(query);
+                }
+            }
         }
+
+        //if (query_batch.size() > 0)
+        //    stmt->executeUpdate(query_batch);
 
         bulk_queries.clear();
     }
@@ -194,6 +205,7 @@ void mysqlBMP::writerBulkQuery(std::map<int,std::string> &bulk_queries) {
  */
 void mysqlBMP::writerThreadLoop() {
     string query;
+    string query_batch;
     int i;
     int pop_num;
     int retries = 0;
@@ -209,19 +221,18 @@ void mysqlBMP::writerThreadLoop() {
 
         pop_num = sql_writeQueue.size() < MYSQL_MAX_BULK_INSERT ? sql_writeQueue.size() : MYSQL_MAX_BULK_INSERT;
 
-        if (not logQueueHigh and sql_writeQueue.size() > 25000) {
-            LOG_INFO("rtr=%s: Queue size is above 25,000, this is normal on RIB dump: %d", router_ip.c_str(), sql_writeQueue.size());
+        if (not logQueueHigh and sql_writeQueue.size() > 20000) {
+            LOG_INFO("rtr=%s: Queue size is above 20,000, this is normal on RIB dump: %d", router_ip.c_str(), sql_writeQueue.size());
             logQueueHigh = true;
 
-        } else if (logQueueHigh and sql_writeQueue.size() < 15000) {
-            LOG_INFO("rtr=%s: Queue size is below 15,000, this is normal: %d", router_ip.c_str(), sql_writeQueue.size());
+        } else if (logQueueHigh and sql_writeQueue.size() < 10000) {
+            LOG_INFO("rtr=%s: Queue size is below 10,000, this is normal: %d", router_ip.c_str(), sql_writeQueue.size());
             logQueueHigh = false;
         }
 
         // Loop to process as many messages we can in one commit transaction
         try {
 
-            startTransaction();
             // Run the query to add the record
             stmt = con->createStatement();
 
@@ -235,20 +246,12 @@ void mysqlBMP::writerThreadLoop() {
 
                         // Process the current pending bulk queries since they need to be done
                         // in order of non-bulk statements, namely the withdraws/unreach
-                        writerBulkQuery(bulk_queries);
-                        stmt->execute(query);
+                        writerBulkQuery(bulk_queries, query_batch);
                     }
                     else {
                         // Process the current pending bulk queries since the current one requires order to be maintained
                         if (last_bulk_key >= SQL_BULK_WITHDRAW_UPD and query[1] < 8) {
-                            writerBulkQuery(bulk_queries);
-
-                            stmt->close();
-                            delete stmt;
-
-                            commitTransaction();
-                            startTransaction();
-                            stmt = con->createStatement();
+                            writerBulkQuery(bulk_queries, query_batch);
                         }
 
                         // Add statement to the bulk queries map
@@ -262,19 +265,22 @@ void mysqlBMP::writerThreadLoop() {
             }
 
             // Run bulk query
-            writerBulkQuery(bulk_queries);
+            writerBulkQuery(bulk_queries, query_batch);
+
+            if (query_batch.size() > 0) {
+                stmt->executeUpdate(query_batch);
+                query_batch.clear();
+            }
 
             // Free the query statement
             stmt->close();
             delete stmt;
             stmt = NULL;
 
-            commitTransaction();
-
             retries = 0;
 
-            //if (sql_writeQueue.size() > 1000)
-            //    LOG_INFO("  popped  %d (queue=%d)", i, sql_writeQueue.size());
+            if (debug and sql_writeQueue.size() > 1000)
+                SELF_DEBUG("rtr=%s:  popped  %d (queue=%d)", router_ip.c_str(), i, sql_writeQueue.size());
 
         } catch (sql::SQLException &e) {
             if (e.getErrorCode() == 1213 or e.getErrorCode() == 1205) {     // deadlock or lock exceeded timeout
@@ -295,7 +301,7 @@ void mysqlBMP::writerThreadLoop() {
                 sql_writeQueue.pop();
             }
 
-            SELF_DEBUG("   query=%s", query.c_str());
+            SELF_DEBUG("rtr=%s: query=%s", router_ip.c_str(), query.c_str());
             if (stmt != NULL)
                 delete stmt;
         }
@@ -328,6 +334,8 @@ void mysqlBMP::mysqlConnect(char *hostURL, char *username, char *password,
         connection_properties["userName"] = sql::SQLString(username);
         connection_properties["password"] = sql::SQLString(password);
         connection_properties["schema"] = sql::SQLString(db);
+        connection_properties["CLIENT_MULTI_STATEMENTS"] = true;
+        connection_properties["CLIENT_COMPRESS"] = true;
 
         //con = driver->connect(hostURL, username,password);
         con = driver->connect(connection_properties);
@@ -335,13 +343,7 @@ void mysqlBMP::mysqlConnect(char *hostURL, char *username, char *password,
     } catch (sql::SQLException &e) {
         LOG_ERR("mysql error: %s, error Code = %d, state = %s",
                 e.what(), e.getErrorCode(), e.getSQLStateCStr());
-        /*
-        cout << "mysqlBMP: # ERR: SQLException in " << __FILE__;
-        cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
-        cout << "mysqlBMP: # ERR: " << e.what();
-        cout << " (MySQL error code: " << e.getErrorCode();
-        cout << ", SQLState: " << e.getSQLState() << " )" << endl;
-        */
+
         if (stmt != NULL)
             delete stmt;
         throw "ERROR: Cannot connect to mysql.";

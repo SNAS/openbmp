@@ -16,6 +16,8 @@
 #include "Config.h"
 #include <thread>
 
+#define CLIENT_WRITE_BUFFER_BLOCK_SIZE    8192        // Number of bytes to write to BMP reader from buffer
+
 struct ThreadMgmt {
     pthread_t thr;
     BMPListener::ClientInfo client;

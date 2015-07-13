@@ -114,7 +114,7 @@ void *ClientThread(void *arg) {
          */
         while (bmp_run) {
 
-            if ((wrap_state and write_buf_pos < read_buf_pos) or
+            if ((wrap_state and (write_buf_pos + 1) < read_buf_pos) or
                     (not wrap_state and write_buf_pos < thr->cfg->bmp_buffer_size)) {
 
                 pfd.fd = cInfo.client->c_sock;
@@ -133,7 +133,7 @@ void *ClientThread(void *arg) {
 
                             else if (read_buf_pos > write_buf_pos) // read is ahead of write in terms of buffer pointer
                                 bytes_read = read(cInfo.client->c_sock, sock_buf_write_ptr,
-                                                  read_buf_pos - write_buf_pos);
+                                                  read_buf_pos - write_buf_pos - 1);
                     }
 
                     if (bytes_read <= 0) {
@@ -161,13 +161,16 @@ void *ClientThread(void *arg) {
                 //LOG_INFO("write buffer wrapped");
             }
 
-            /*
-            else {
-                LOG_INFO("buffer stall, waiting for read to catch up");
-            }*/
+            /** DEBUG ONLY
 
-            //if (write_buf_pos != read_buf_pos)
-            //    LOG_INFO("CHECK: state=%d w=%u r=%u", wrap_state, write_buf_pos, read_buf_pos);
+            else {
+                LOG_INFO("%s: buffer stall, waiting for read to catch up  w=%u r=%u",  cInfo.client->c_ipv4,
+                         write_buf_pos, read_buf_pos);
+            }
+
+            if (write_buf_pos != read_buf_pos)
+                LOG_INFO("%s: CHECK: state=%d w=%u r=%u",  cInfo.client->c_ipv4, wrap_state, write_buf_pos, read_buf_pos);
+            **/
 
             if ((not wrap_state and read_buf_pos < write_buf_pos) or
                     (wrap_state and read_buf_pos < thr->cfg->bmp_buffer_size)) {
@@ -192,11 +195,13 @@ void *ClientThread(void *arg) {
 
                     if (not wrap_state) // Write buffer is a head of read in terms of buffer pointer
                         bytes_read = write(cInfo.bmp_write_end_sock, sock_buf_read_ptr,
-                                           (write_buf_pos - read_buf_pos) > 8192 ? 8192 : (write_buf_pos - read_buf_pos));
+                                           (write_buf_pos - read_buf_pos) > CLIENT_WRITE_BUFFER_BLOCK_SIZE ?
+                                           CLIENT_WRITE_BUFFER_BLOCK_SIZE : (write_buf_pos - read_buf_pos));
 
                     else // Read buffer is ahead of write in terms of buffer pointer
                         bytes_read = write(cInfo.bmp_write_end_sock, sock_buf_read_ptr,
-                                           (thr->cfg->bmp_buffer_size - read_buf_pos) > 8192 ? 8192 : (thr->cfg->bmp_buffer_size - read_buf_pos));
+                                           (thr->cfg->bmp_buffer_size - read_buf_pos) > CLIENT_WRITE_BUFFER_BLOCK_SIZE ?
+                                           CLIENT_WRITE_BUFFER_BLOCK_SIZE : (thr->cfg->bmp_buffer_size - read_buf_pos));
 
                     if (bytes_read > 0) {
                         sock_buf_read_ptr += bytes_read;

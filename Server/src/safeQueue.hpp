@@ -62,7 +62,7 @@ public:
             pthread_mutex_unlock (&mutex);
 
             while (size() >= limit) {
-                usleep(25000);
+                usleep(10000);
             }
 
             pthread_mutex_lock (&mutex);
@@ -190,7 +190,7 @@ public:
      */
     bool wait() {
         while (size() <= 0) {
-            usleep(25000);
+            usleep(10000);
         }
 
         return true;

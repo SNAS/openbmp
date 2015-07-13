@@ -105,6 +105,13 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
             break;
         }
 
+        case bgp::BGP_AFI_IPV4 : // IPv4
+        {
+            // TODO: Add support for IPv4 in MPREACH/UNREACH
+            break;
+
+        }
+
         default : // Unknown
             LOG_INFO("%s: MP_REACH AFI=%d is not implemented yet, skipping", peer_addr.c_str(), nlri.afi);
             return;

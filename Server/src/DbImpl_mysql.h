@@ -143,8 +143,9 @@ private:
      * SQL Writer bulk insert/update
      *
      * \param [in] bulk_queries     Reference to bulk queries map (statements)
+     * \param [in/out] query_batch  Batch/multi statement query string (will be appended)
      */
-    void writerBulkQuery(std::map<int,std::string> &bulk_queries);
+    void writerBulkQuery(std::map<int,std::string> &bulk_queries, std::string &query_batch);
 
     /**
     * \brief Method to resolve the IP address to a hostname
