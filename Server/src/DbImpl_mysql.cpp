@@ -247,6 +247,16 @@ void mysqlBMP::writerThreadLoop() {
                         // Process the current pending bulk queries since they need to be done
                         // in order of non-bulk statements, namely the withdraws/unreach
                         writerBulkQuery(bulk_queries, query_batch);
+                        
+                        if (query.size() > 0) {
+                            if (query_batch.size() <= 0) {
+                                query_batch.assign(query);
+                            } else {
+                                query_batch.append("; ");
+                                query_batch.append(query);
+                            }
+                        }
+
                     }
                     else {
                         // Process the current pending bulk queries since the current one requires order to be maintained
