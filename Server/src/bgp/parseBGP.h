@@ -13,7 +13,7 @@
 #include <vector>
 #include <list>
 #include <BMPReader.h>
-#include "DbInterface.hpp"
+#include "MsgBusInterface.hpp"
 #include "Logger.h"
 #include "bgp_common.h"
 #include "UpdateMsg.h"
@@ -74,12 +74,12 @@ public:
      *    has already been populated.
      *
      * \param [in]     logPtr      Pointer to existing Logger for app logging
-     * \param [in]     dbi_ptr     Pointer to exiting dB implementation
+     * \param [in]     mbus_ptr     Pointer to exiting dB implementation
      * \param [in,out] peer_entry  Pointer to peer entry
      * \param [in]     routerAddr  The router IP address - used for logging
      * \param [in,out] peer_info   Persistent peer information
      */
-    parseBGP(Logger *logPtr, DbInterface *dbi_ptr, DbInterface::tbl_bgp_peer *peer_entry, string routerAddr,
+    parseBGP(Logger *logPtr, MsgBusInterface *mbus_ptr, MsgBusInterface::obj_bgp_peer *peer_entry, string routerAddr,
              BMPReader::peer_info *peer_info);
 
     virtual ~parseBGP();
@@ -110,7 +110,7 @@ public:
      *
      * \returns True if error, false if no error.
      */
-    bool handleDownEvent(u_char *data, size_t size, DbInterface::tbl_peer_down_event &down_event);
+    bool handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_down_event &down_event);
 
     /**
      * Handles the up event by parsing the BGP open messages - Up event will be updated
@@ -123,7 +123,7 @@ public:
      *
      * \returns True if error, false if no error.
      */
-    bool handleUpEvent(u_char *data, size_t size, DbInterface::tbl_peer_up_event *up_event);
+    bool handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event);
 
     /*
      * Debug methods
@@ -148,8 +148,10 @@ private:
 
     common_bgp_hdr common_hdr;                       ///< Current/last pased bgp common header
 
-    DbInterface::tbl_bgp_peer        *p_entry;       ///< peer table entry - will be updated with BMP info
-    DbInterface                      *dbi_ptr;       ///< Pointer to open DB implementation
+    MsgBusInterface::obj_bgp_peer    *p_entry;       ///< peer table entry - will be updated with BMP info
+    MsgBusInterface::obj_path_attr   base_attr;      ///< Base attribute object
+
+    MsgBusInterface *mbus_ptr;       ///< Pointer to open DB implementation
     string                           router_addr;    ///< Router IP address - used for logging
     BMPReader::peer_info             *p_info;        ///< Persistent Peer information
 

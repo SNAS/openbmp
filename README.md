@@ -2,7 +2,6 @@ Open BGP Monitoring Protocol (OpenBMP) Collector
 ================================================
 ![Build Status](http://build-jenkins.openbmp.org/buildStatus/icon?job=openbmp-server-ubuntu-trusty)
 
-
 OpenBMP is an open source project that implements **draft-ietf-grow-bmp-08**.  BMP protocol version 3 is defined in draft 08, while versions 1 and 2 are defined in the previous revisions of the draft.
 
 JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR, and JunOS 13.3 implement version 3 (draft 07).
@@ -10,6 +9,12 @@ JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR, an
 
 ### Daemon
 OpenBMP daemon is a BMP receiver for devices that implement BMP, such as Cisco and Juniper routers.  Collected BMP messages are decoded and stored in a SQL database.
+
+### Message Bus (Kafka)
+Starting in release 0.11.x Apache Kafka is used as the centralized bus for collector message streams.   The collector no longer forwards direct to MySQL. Instead, database consumers are used to integrate the data into MySQL, Cassandra, Postgres, flat files, etc.  Anyone can now can interact with the BGP parsed and RAW data in a centralized fashion via Kafka or via one of the consumers.   A single BMP feed from one router can be made available to many consumers without the collector having to be aware of that.  
+
+> Please stay tuned for more updates on this topic, including complete API specs for the collector feeds (parsed, raw, ...)
+
 
 ### Database
 The SQL/transactional database is designed to be flexible for all types of reporting on the collected data by simply linking tables or by creating views.
@@ -22,6 +27,13 @@ UI is a Web-App that interacts with OpenBMP server/daemon via the API.   Multipl
 
 News
 ----
+### Jul-23-2015
+**New release 0.10.0 is available.** Starting in **0.11.0** the collector will forward all messages (parsed and raw) to Apache Kafka.  Anyone wishing to interact with the data can do so via simple kafka consumer clients.  MySQL is being moved into a consumer app, so same over functionality with MySQL will be maintained.   In addition to MySQL, a flat file example app will be created so others can see how easy it is to interact with the data.  Other apps can be written by anyone, which includes Cassandra, Postgres, Apache Spark, etc.
+
+New branch [0.10-0-mysql](https://github.com/OpenBMP/openbmp/tree/0.10.0-mysql) has been created for support/bug fixes only.  New features will be in the master branch.
+
+Kafka integration is available today via the development branch [0.11.0-kafka-dev](https://github.com/OpenBMP/openbmp/tree/0.11.0-kafka-dev). This will be merged into the master branch after MySQL consumer app is available. 
+
 ### Jun-04-2015
 > #### UPGRADE YOUR SCHEMA for this release
 New release 0.9.0 is available.   See [release-0.9.0](docs/release_notes/release-0.9.0.md) for more details.  

@@ -16,7 +16,7 @@
 
 
 #include "Logger.h"
-#include "DbInterface.hpp"
+#include "MsgBusInterface.hpp"
 #include "UpdateMsg.h"
 
 namespace bgp_msg {

@@ -52,7 +52,7 @@ namespace bgp_msg {
             tlv_len = parseAttrLinkStateTLV(attr_len, data);
             attr_len -= tlv_len;
 
-            if (attr_len > 0);
+            if (attr_len > 0)
                 data += tlv_len;
         }
     }

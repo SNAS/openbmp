@@ -10,6 +10,7 @@
 #define SAFEQUEUE_HPP_
 
 #include <pthread.h>
+#include <unistd.h>
 
 #include <cstdlib>
 #include <queue>

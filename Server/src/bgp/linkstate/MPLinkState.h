@@ -17,7 +17,7 @@
 #include "MPReachAttr.h"
 #include "MPUnReachAttr.h"
 #include "Logger.h"
-#include "DbInterface.hpp"
+#include "MsgBusInterface.hpp"
 
 namespace bgp_msg {
 

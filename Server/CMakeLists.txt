@@ -1,44 +1,56 @@
 # Find and set the env for the mysql c++ connector
-set(MYSQLCONNECTORCPP_ROOT_DIR
-        "${MYSQLCONNECTORCPP_ROOT_DIR}"
+set(HINT_ROOT_DIR
+        "${HINT_ROOT_DIR}"
         CACHE
         PATH
         "Where to start looking for this component.")
 
-find_path(MYSQLCONNECTORCPP_INCLUDE_DIR
-        mysql_connection.h
+find_path(LIBRDKAFKA_INCLUDE_DIR
+        librdkafka/rdkafkacpp.h
         HINTS
-        ${MYSQLCONNECTORCPP_ROOT_DIR}
+        ${HINT_ROOT_DIR}
         PATH_SUFFIXES
         include)
 
-find_library(MYSQLCONNECTORCPP_LIBRARY
+
+find_library(LIBRDKAFKA_LIBRARY
         NAMES
-        mysqlcppconn
-        mysqlcppconn-static
+        rdkafka
         HINTS
-        ${MYSQLCONNECTORCPP_ROOT_DIR}
+        ${HINT_ROOT_DIR}
         PATH_SUFFIXES
         lib64
         lib)
 
-if (NOT MYSQLCONNECTORCPP_INCLUDE_DIR OR NOT MYSQLCONNECTORCPP_LIBRARY)
-	Message (FATAL_ERROR "Mysql connector is not found, cannot proceed.  Try 'apt-get install libmysqlcppconn-dev' or visit http://dev.mysql.com/downloads/connector/cpp/")
+find_library(LIBRDKAFKA_CPP_LIBRARY
+        NAMES
+        rdkafka++
+        HINTS
+        ${HINT_ROOT_DIR}
+        PATH_SUFFIXES
+        lib64
+        lib)
+
+if (NOT LIBRDKAFKA_INCLUDE_DIR OR NOT LIBRDKAFKA_LIBRARY OR NOT LIBRDKAFKA_CPP_LIBRARY)
+	Message (FATAL_ERROR "Librdkafka was not found, cannot proceed.  Visit https://github.com/edenhill/librdkafka for details on how to install it.")
 #else ()
-#	Message ("mysql lib = " ${MYSQLCONNECTORCPP_LIBRARY})
+#	Message ("lib = " ${LIBRDKAFKA_LIBRARY})
 endif()
 
 # Update the include dir
-include_directories(${MYSQLCONNECTORCPP_INCLUDE_DIR} src/ src/bgp src/bgp/linkstate)
+include_directories(${LIBRDKAFKA_INCLUDE_DIR} src/ src/bmp src/bgp src/bgp/linkstate src/kafka)
+#link_directories(${LIBRDKAFKA_LIBRARY})
 
 
 # Define the source files to compile
 set (SRC_FILES
-	src/BMPListener.cpp
-	src/BMPReader.cpp
-	src/DbImpl_mysql.cpp
+	src/bmp/BMPListener.cpp
+	src/bmp/BMPReader.cpp
+	src/kafka/MsgBusImpl_kafka.cpp
+	src/kafka/KafkaEventCallback.cpp
+	src/kafka/KafkaDeliveryReportCallback.cpp
 	src/openbmp.cpp
-	src/parseBMP.cpp
+	src/bmp/parseBMP.cpp
 	src/md5.cpp
 	src/Logger.cpp
 	src/client_thread.cpp
@@ -76,7 +88,7 @@ endif()
 #--not used-- list( APPEND CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Set the libs to link
-set (LIBS pthread ${MYSQLCONNECTORCPP_LIBRARY})
+set (LIBS pthread  ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY})
 
 # Set the binary
 add_executable (openbmpd ${SRC_FILES})
