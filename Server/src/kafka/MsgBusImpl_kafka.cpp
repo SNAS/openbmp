@@ -25,6 +25,8 @@
 #include "KafkaEventCallback.h"
 #include "KafkaDeliveryReportCallback.h"
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include "md5.h"
 #include "safeQueue.hpp"
 
@@ -194,9 +196,10 @@ void msgBus_kafka::connect() {
  * \param [in] topic]        Topic name to lookup in the topic map
  * \param [in] msg           message to produce
  * \param [in] msg_size      Length in bytes of the message
+ * \param [in] rows          Number of rows
  * \param [in] key           Hash key
  */
-void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, string key) {
+void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, int rows, string key) {
 
     while (isConnected == false or topic[topic_name] == NULL) {
         LOG_WARN("rtr=%s: Not connected to Kafka, attempting to reconnect", router_ip.c_str());
@@ -211,7 +214,7 @@ void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, s
     unsigned char *buf = new unsigned char[msg_size + 200];
     char headers[128];
     snprintf(headers, sizeof(headers), "V: 1\nC_HASH_ID: %s\nL: %lu\nR: %d\n\n",
-            collector_hash.c_str(), msg_size, 1);
+            collector_hash.c_str(), msg_size, rows);
 
     memcpy(buf, headers, sizeof(headers));
     memcpy(buf+strlen(headers), msg, msg_size);
@@ -255,11 +258,11 @@ void msgBus_kafka::update_Collector(obj_collector &c_object, collector_action_co
     }
 
     snprintf(buf, sizeof(buf),
-             "%s\t%" PRIu64 "\t%s\t%s\t%s\t%u\t%s",
+             "%s\t%" PRIu64 "\t%s\t%s\t%s\t%u\t%s\n",
              action, collector_seq, c_object.admin_id, collector_hash.c_str(),
              c_object.routers, c_object.router_count, ts.c_str());
 
-    produce(MSGBUS_TOPIC_COLLECTOR, buf, strlen(buf), collector_hash);
+    produce(MSGBUS_TOPIC_COLLECTOR, buf, strlen(buf), 1, collector_hash);
 
     collector_seq++;
 }
@@ -313,13 +316,17 @@ void msgBus_kafka::update_Router(obj_router &r_object, router_action_code code) 
     if (add_to_cache)
         router_list[r_hash_str] = time(NULL);
 
+    string descr((char *)r_object.descr);
+    boost::replace_all(descr, "\n", "\\n");
+    boost::replace_all(descr, "\t", " ");
+
     string initData(r_object.initiate_data);
-    std::replace(initData.begin(), initData.end(), '\t', ' ');
-    std::replace(initData.begin(), initData.end(), '\n', '\r');
+    boost::replace_all(initData, "\n", "\\n");
+    boost::replace_all(initData, "\t", " ");
 
     string termData(r_object.term_data);
-    std::replace(termData.begin(), termData.end(), '\t', ' ');
-    std::replace(termData.begin(), termData.end(), '\n', '\r');
+    boost::replace_all(termData, "\n", "\\n");
+    boost::replace_all(termData, "\t", " ");
 
     string ts;
     getTimestamp(r_object.timestamp_secs, r_object.timestamp_us, ts);
@@ -332,12 +339,12 @@ void msgBus_kafka::update_Router(obj_router &r_object, router_action_code code) 
     }
 
     snprintf(buf, sizeof(buf),
-             "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%" PRIu16 "\t%s\t%s\t\t%s\t%s\t%s\n", action.c_str(),
-             router_seq, r_object.name, r_hash_str.c_str(), r_object.ip_addr, r_object.descr,
+             "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%" PRIu16 "\t%s\t%s\t%s\t%s\n", action.c_str(),
+             router_seq, r_object.name, r_hash_str.c_str(), r_object.ip_addr, descr.c_str(),
              r_object.term_reason_code, r_object.term_reason_text,
-             initData.c_str(), termData.c_str(), ts.c_str(), collector_hash.c_str());
+             initData.c_str(), termData.c_str(), ts.c_str());
 
-    produce(MSGBUS_TOPIC_ROUTER, buf, strlen(buf), r_hash_str);
+    produce(MSGBUS_TOPIC_ROUTER, buf, strlen(buf), 1, r_hash_str);
 
     router_seq++;
 }
@@ -439,8 +446,8 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
 
             string infoData(up->info_data);
             if (up->info_data[0] != 0) {
-                std::replace(infoData.begin(), infoData.end(), '\t', ' ');
-                std::replace(infoData.begin(), infoData.end(), '\n', '\r');
+                boost::replace_all(infoData, "\n", "\\n");
+                boost::replace_all(infoData, "\t", " ");
             }
 
             snprintf(buf, sizeof(buf),
@@ -484,7 +491,7 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
         }
     }
 
-    produce(MSGBUS_TOPIC_PEER, buf, strlen(buf), p_hash_str);
+    produce(MSGBUS_TOPIC_PEER, buf, strlen(buf), 1, p_hash_str);
 
     peer_seq++;
 }
@@ -545,7 +552,7 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
                      attr.local_pref, attr.aggregator, attr.cluster_list, attr.ext_community_list, attr.cluster_list,
                      attr.atomic_agg, attr.nexthop_isIPv4, attr.originator_id);
 
-    produce(MSGBUS_TOPIC_BASE_ATTRIBUTE, buf, buf_len, p_hash_str);
+    produce(MSGBUS_TOPIC_BASE_ATTRIBUTE, buf, buf_len, 1, p_hash_str);
 
     ++base_attr_seq;
 }
@@ -557,6 +564,9 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
 void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib,
                                         obj_path_attr *attr, unicast_prefix_action_code code) {
     char    *buf = new char[1800000];            // Misc working buffer
+    bzero(buf, 1800000);
+
+
     char    buf2[80000];                         // Second working buffer
     size_t  buf_len = 0;                         // query buffer length
 
@@ -613,12 +623,12 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
 
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
-                                            "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
+                                            "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
                                     action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
                                     rib[i].isIPv4, attr->origin,
-                                    attr->as_path, attr->as_path_count, attr->next_hop, attr->med, attr->local_pref,
+                                    attr->as_path, attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
                                     attr->aggregator,
                                     attr->community_list, attr->ext_community_list, attr->cluster_list,
                                     attr->atomic_agg, attr->nexthop_isIPv4,
@@ -627,7 +637,7 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
 
             case UNICAST_PREFIX_ACTION_DEL:
                 buf_len += snprintf(buf2, sizeof(buf2),
-                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t\t\t\t\t\t\t\t\t\t\t\t\t\n",
+                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n",
                                     action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
@@ -643,7 +653,7 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
     }
 
 
-    produce(MSGBUS_TOPIC_UNICAST_PREFIX, buf, strlen(buf), p_hash_str);
+    produce(MSGBUS_TOPIC_UNICAST_PREFIX, buf, strlen(buf), rib.size(), p_hash_str);
 
     // Free the large buffer
     delete[] buf;
@@ -673,7 +683,7 @@ void msgBus_kafka::add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats) {
              stats.routes_adj_rib_in, stats.routes_loc_rib);
 
 
-    produce(MSGBUS_TOPIC_BMP_STAT, buf, strlen(buf), p_hash_str);
+    produce(MSGBUS_TOPIC_BMP_STAT, buf, strlen(buf), 1, p_hash_str);
     ++bmp_stat_seq;
 }
 
@@ -683,13 +693,18 @@ void msgBus_kafka::add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats) {
 void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_node> &nodes,
                                   ls_action_code code) {
     char    *buf = new char[1800000];            // Misc working buffer
+    bzero(buf, 1800000);
+
     char    buf2[8192];                          // Second working buffer
     int     buf_len = 0;                         // query buffer length
+    int     i;
 
     string hash_str;
     string r_hash_str;
     string path_hash_str;
     string peer_hash_str;
+
+    hash_toStr(peer.router_hash_id, r_hash_str);
     hash_toStr(attr.hash_id, path_hash_str);
     hash_toStr(peer.hash_id, peer_hash_str);
 
@@ -708,11 +723,14 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 
     char igp_router_id[46];
     char router_id[46];
+    char ospf_area_id[16] = {0};
+    char isis_area_id[32] = {0};
 
     // Loop through the vector array of entries
+    int rows = 0;
     for (std::list<MsgBusInterface::obj_ls_node>::iterator it = nodes.begin();
             it != nodes.end(); it++) {
-
+        ++rows;
         MsgBusInterface::obj_ls_node &node = (*it);
 
         hash_toStr(node.hash_id, hash_str);
@@ -725,8 +743,21 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 
         if (!strcmp(node.protocol, "OSPFv3") or !strcmp(node.protocol, "OSPFv2") ) {
             inet_ntop(PF_INET, node.igp_router_id, igp_router_id, sizeof(igp_router_id));
+            inet_ntop(PF_INET, node.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
         } else {
-            snprintf(igp_router_id, sizeof(igp_router_id), "%" PRIx64, (uint64_t) &node.igp_router_id);
+            snprintf(igp_router_id, sizeof(igp_router_id),
+                     "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
+                     node.igp_router_id[0], node.igp_router_id[1], node.igp_router_id[2], node.igp_router_id[3],
+                     node.igp_router_id[4], node.igp_router_id[5], node.igp_router_id[6], node.igp_router_id[7]);
+
+            if (node.isis_area_id[8] <= sizeof(node.isis_area_id))
+                for (i=0; i < node.isis_area_id[8]; i++) {
+                    snprintf(buf2, sizeof(buf2), "%02hhX", node.isis_area_id[i]);
+                    strcat(isis_area_id, buf2);
+
+                    if (i == 0)
+                        strcat(isis_area_id, ".");
+                }
         }
 
         buf_len += snprintf(buf2, sizeof(buf2),
@@ -734,7 +765,7 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
                                 "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\n",
                         action.c_str(),ls_node_seq, hash_str.c_str(),path_hash_str.c_str(), r_hash_str.c_str(),
                         router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
-                        igp_router_id, router_id, node.id, node.bgp_ls_id,node.mt_id, node.ospf_area_Id, node.isis_area_id,
+                        igp_router_id, router_id, node.id, node.bgp_ls_id,node.mt_id, ospf_area_id, isis_area_id,
                         node.protocol, node.flags, attr.as_path, attr.local_pref, attr.med, attr.next_hop);
 
         // Cat the entry to the query buff
@@ -745,7 +776,7 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     }
 
 
-    produce(MSGBUS_TOPIC_LS_NODE, buf, buf_len, peer_hash_str);
+    produce(MSGBUS_TOPIC_LS_NODE, buf, buf_len, rows, peer_hash_str);
 
 
     // Free the large buffer
@@ -758,13 +789,18 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_link> &links,
                                  ls_action_code code) {
     char    *buf = new char[1800000];            // Misc working buffer
+    bzero(buf, 1800000);
+
     char    buf2[8192];                          // Second working buffer
     int     buf_len = 0;                         // query buffer length
+    int     i;
 
     string hash_str;
     string r_hash_str;
     string path_hash_str;
     string peer_hash_str;
+
+    hash_toStr(peer.router_hash_id, r_hash_str);
     hash_toStr(attr.hash_id, path_hash_str);
     hash_toStr(peer.hash_id, peer_hash_str);
 
@@ -788,11 +824,15 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     char nei_ip[46];
     char igp_router_id[46];
     char router_id[46];
+    char ospf_area_id[16] = {0};
+    char isis_area_id[32] = {0};
 
     // Loop through the vector array of entries
+    int rows = 0;
     for (std::list<MsgBusInterface::obj_ls_link>::iterator it = links.begin();
          it != links.end(); it++) {
 
+        ++rows;
         MsgBusInterface::obj_ls_link &link = (*it);
 
         MD5 hash;
@@ -828,8 +868,21 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 
         if (!strcmp(link.protocol, "OSPFv3") or !strcmp(link.protocol, "OSPFv2") ) {
             inet_ntop(PF_INET, link.igp_router_id, igp_router_id, sizeof(igp_router_id));
+            inet_ntop(PF_INET, link.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
         } else {
-            snprintf(igp_router_id, sizeof(igp_router_id), "%" PRIx64, (uint64_t) &link.igp_router_id);
+            snprintf(igp_router_id, sizeof(igp_router_id),
+                     "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
+                     link.igp_router_id[0], link.igp_router_id[1], link.igp_router_id[2], link.igp_router_id[3],
+                     link.igp_router_id[4], link.igp_router_id[5], link.igp_router_id[6], link.igp_router_id[7]);
+
+            if (link.isis_area_id[8] <= sizeof(link.isis_area_id))
+                for (i=0; i < link.isis_area_id[8]; i++) {
+                    snprintf(buf2, sizeof(buf2), "%02hhX", link.isis_area_id[i]);
+                    strcat(isis_area_id, buf2);
+
+                    if (i == 0)
+                        strcat(isis_area_id, ".");
+                }
         }
 
         buf_len += snprintf(buf2, sizeof(buf2),
@@ -838,8 +891,8 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
                         "\t%f\t%f\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%s\t%s\n",
                             action.c_str(), ls_link_seq, hash_str.c_str(), path_hash_str.c_str(),r_hash_str.c_str(),
                             router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
-                            igp_router_id, router_id, link.id, link.bgp_ls_id, link.ospf_area_Id,
-                            link.isis_area_id, link.protocol, attr.as_path, attr.local_pref, attr.med, attr.next_hop,
+                            igp_router_id, router_id, link.id, link.bgp_ls_id, ospf_area_id,
+                            isis_area_id, link.protocol, attr.as_path, attr.local_pref, attr.med, attr.next_hop,
                             link.mt_id, link.local_link_id, link.remote_link_id, intf_ip, nei_ip, link.igp_metric,
                             link.admin_group, link.max_link_bw, link.max_resv_bw, link.unreserved_bw, link.te_def_metric,
                             link.protection_type, link.mpls_proto_mask, link.srlg, link.name, remote_node_hash_id.c_str(),
@@ -852,7 +905,7 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
         ++ls_link_seq;
     }
 
-    produce(MSGBUS_TOPIC_LS_LINK, buf, strlen(buf), peer_hash_str);
+    produce(MSGBUS_TOPIC_LS_LINK, buf, strlen(buf), rows, peer_hash_str);
 
     // Free the large buffer
     delete[] buf;
@@ -864,13 +917,18 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
                                    ls_action_code code) {
     char    *buf = new char[1800000];            // Misc working buffer
+    bzero(buf, 1800000);
+
     char    buf2[8192];                          // Second working buffer
     int     buf_len = 0;                         // query buffer length
+    int     i;
 
     string hash_str;
     string r_hash_str;
     string path_hash_str;
     string peer_hash_str;
+
+    hash_toStr(peer.router_hash_id, r_hash_str);
     hash_toStr(attr.hash_id, path_hash_str);
     hash_toStr(peer.hash_id, peer_hash_str);
 
@@ -895,11 +953,15 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
     char router_id[46];
     char ospf_fwd_addr[46];
     char prefix_ip[46];
+    char ospf_area_id[16] = {0};
+    char isis_area_id[32] = {0};
 
     // Loop through the vector array of entries
+    int rows = 0;
     for (std::list<MsgBusInterface::obj_ls_prefix>::iterator it = prefixes.begin();
          it != prefixes.end(); it++) {
 
+        ++rows;
         MsgBusInterface::obj_ls_prefix &prefix = (*it);
 
         MD5 hash;
@@ -924,6 +986,7 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
             inet_ntop(PF_INET, prefix.nei_addr, nei_ip, sizeof(nei_ip));
             inet_ntop(PF_INET, prefix.ospf_fwd_addr, ospf_fwd_addr, sizeof(ospf_fwd_addr));
             inet_ntop(PF_INET, prefix.prefix_bin, prefix_ip, sizeof(prefix_ip));
+            inet_ntop(PF_INET, prefix.router_id, router_id, sizeof(router_id));
         } else {
             inet_ntop(PF_INET6, prefix.intf_addr, intf_ip, sizeof(intf_ip));
             inet_ntop(PF_INET6, prefix.nei_addr, nei_ip, sizeof(nei_ip));
@@ -934,18 +997,31 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
 
         if (!strcmp(prefix.protocol, "OSPFv3") or !strcmp(prefix.protocol, "OSPFv2") ) {
             inet_ntop(PF_INET, prefix.igp_router_id, igp_router_id, sizeof(igp_router_id));
+            inet_ntop(PF_INET, prefix.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
         } else {
-            snprintf(igp_router_id, sizeof(igp_router_id), "%" PRIx64,  (uint64_t)&prefix.igp_router_id);
+            snprintf(igp_router_id, sizeof(igp_router_id),
+                     "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
+                     prefix.igp_router_id[0], prefix.igp_router_id[1], prefix.igp_router_id[2], prefix.igp_router_id[3],
+                     prefix.igp_router_id[4], prefix.igp_router_id[5], prefix.igp_router_id[6], prefix.igp_router_id[7]);
+
+            if (prefix.isis_area_id[8] <= sizeof(prefix.isis_area_id))
+                for (i=0; i < prefix.isis_area_id[8]; i++) {
+                    snprintf(buf2, sizeof(buf2), "%02hhX", prefix.isis_area_id[i]);
+                    strcat(isis_area_id, buf2);
+
+                    if (i == 0)
+                        strcat(isis_area_id, ".");
+                }
         }
 
 
         buf_len += snprintf(buf2, sizeof(buf2),
-                "%s\t\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32
+                "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32
                         "\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%" PRIu32 "\t%" PRIx64
                             "\t%s\t%" PRIu32 "\t%s\t%d\n",
                             action.c_str(), ls_prefix_seq, hash_str.c_str(), path_hash_str.c_str(), r_hash_str.c_str(),
                             router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
-                            igp_router_id, router_id, prefix.id, prefix.bgp_ls_id, prefix.ospf_area_Id, prefix.isis_area_id,
+                            igp_router_id, router_id, prefix.id, prefix.bgp_ls_id, ospf_area_id, isis_area_id,
                             prefix.protocol, attr.as_path, attr.local_pref, attr.med, attr.next_hop, local_node_hash_id.c_str(),
                             prefix.mt_id, prefix.ospf_route_type, prefix.igp_flags, prefix.route_tag, prefix.ext_route_tag,
                             ospf_fwd_addr, prefix.metric, prefix_ip, prefix.prefix_len);
@@ -957,10 +1033,51 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
         ++ls_prefix_seq;
     }
 
-    produce(MSGBUS_TOPIC_LS_PREFIX, buf, strlen(buf), peer_hash_str);
+    produce(MSGBUS_TOPIC_LS_PREFIX, buf, strlen(buf), rows, peer_hash_str);
 
     // Free the large buffer
     delete[] buf;
+}
+
+/**
+ * Abstract method Implementation - See MsgBusInterface.hpp for details
+ */
+void msgBus_kafka::send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len) {
+    string r_hash_str;
+    hash_toStr(r_hash, r_hash_str);
+
+    SELF_DEBUG("rtr=%s: Producing bmp raw message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
+               MSGBUS_TOPIC_BMP_RAW, r_hash, data_len);
+
+    if (data_len == 0)
+        return;
+
+    while (isConnected == false or topic[MSGBUS_TOPIC_BMP_RAW] == NULL) {
+        LOG_WARN("rtr=%s: Not connected to Kafka, attempting to reconnect", router_ip.c_str());
+        connect();
+
+        sleep(2);
+    }
+
+    unsigned char *buf = new unsigned char[data_len + 200];
+    bzero(buf, data_len + 200);
+    char headers[128];
+    snprintf(headers, sizeof(headers), "V: 1\nC_HASH_ID: %s\nR_HASH: %s\nR_IP: %s\nL: %lu\n\n",
+             collector_hash.c_str(), r_hash_str.c_str(), router_ip.c_str(), data_len);
+
+    memcpy(buf, headers, sizeof(headers));
+    memcpy(buf+strlen(headers), data, data_len);
+
+    RdKafka::ErrorCode resp = producer->produce(topic[MSGBUS_TOPIC_BMP_RAW], 0,
+                                                RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
+                                                buf, data_len + strlen(headers),
+                                                (const std::string *)&r_hash_str, NULL);
+
+    delete [] buf;
+    if (resp != RdKafka::ERR_NO_ERROR)
+        LOG_ERR("rtr=%s: Failed to produce bmp raw message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
+
+    producer->poll(0);
 }
 
 /**

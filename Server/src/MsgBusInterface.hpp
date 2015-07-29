@@ -267,7 +267,7 @@ public:
         uint8_t     ospf_area_Id[4];        ///< OSPF area ID
         char        protocol[32];           ///< String representation of the protocol name
         uint8_t     router_id[16];          ///< IPv4 or IPv6 router ID
-        uint8_t     isis_area_id[8];        ///< IS-IS area ID
+        uint8_t     isis_area_id[9];        ///< IS-IS area ID
         char        flags[32];              ///< String representation of the flag bits
         char        name[255];              ///< Name of router
         uint32_t    mt_id;                  ///< Multi-Topology ID
@@ -293,7 +293,7 @@ public:
         uint8_t     igp_router_id[8];       ///< IGP router ID
         uint8_t     ospf_area_Id[4];        ///< OSPF area ID
         uint8_t     router_id[16];          ///< IPv4 or IPv6 router ID
-        uint8_t     isis_area_id[8];        ///< IS-IS area ID
+        uint8_t     isis_area_id[9];        ///< IS-IS area ID
 
         char        protocol[32];           ///< String representation of the protocol name
         uint8_t     intf_addr[16];          ///< Interface binary address
@@ -330,7 +330,7 @@ public:
         uint8_t     igp_router_id[8];       ///< IGP router ID
         uint8_t     ospf_area_Id[4];        ///< OSPF area ID
         uint8_t     router_id[16];          ///< IPv4 or IPv6 router ID
-        uint8_t     isis_area_id[8];        ///< IS-IS area ID
+        uint8_t     isis_area_id[9];        ///< IS-IS area ID
         uint8_t     intf_addr[16];          ///< Interface binary address
         uint8_t     nei_addr[16];           ///< Neighbor binary address
 
@@ -492,6 +492,20 @@ public:
     virtual void update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr,
                                 std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
                                 ls_action_code code) = 0;
+
+    /*****************************************************************//**
+     * \brief       Send BMP packet
+     *
+     * \details     Will generate a message to send the BMP packet data/feed
+     *
+     * \param[in]    r_hash     Router hash
+     * \param[in]    data       Packet raw data
+     * \param[in]    data_len   Length in bytes for the raw data
+     *
+     * \returns     The hash_id will be updated based on the
+     *              supplied data for each object.
+     *****************************************************************/
+    virtual void send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len) = 0;
 
 
     /* ---------------------------------------------------------------------------

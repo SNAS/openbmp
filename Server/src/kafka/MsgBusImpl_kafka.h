@@ -64,7 +64,10 @@ public:
             { MSGBUS_TOPIC_LS_PREFIX,        NULL},
 
             #define MSGBUS_TOPIC_BMP_STAT               "openbmp.parsed.bmp_stat"
-            { MSGBUS_TOPIC_BMP_STAT,         NULL}
+            { MSGBUS_TOPIC_BMP_STAT,         NULL},
+
+            #define MSGBUS_TOPIC_BMP_RAW                "openbmp.bmp_raw"
+            { MSGBUS_TOPIC_BMP_RAW,          NULL}
     };
 
     /******************************************************************//**
@@ -96,6 +99,8 @@ public:
                      ls_action_code code);
     void update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
                       ls_action_code code);
+
+    void send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len);
 
     // Debug methods
     void enableDebug();
@@ -155,9 +160,10 @@ private:
      * \param [in] topic]        Topic name to lookup in the topic map
      * \param [in] msg           message to produce
      * \param [in] msg_size      Length in bytes of the message
+     * \param [in] rows          Number of rows in data
      * \param [in] key           Hash key
      */
-    void produce(const char *topic_name, char *msg, size_t msg_size, std::string key);
+    void produce(const char *topic_name, char *msg, size_t msg_size, int rows, std::string key);
 
     /**
     * \brief Method to resolve the IP address to a hostname

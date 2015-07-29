@@ -21,9 +21,6 @@ The SQL/transactional database is designed to be flexible for all types of repor
 
 The database is tuned to support high transactional rates and storage for millions of prefixes and other BGP information.   OpenBMP statistics track how well the database is performing and will alert if there are any issues.
 
-### UI
-UI is a Web-App that interacts with OpenBMP server/daemon via the API.   Multiple OpenBMP daemons can be centrally managed via the same UI.
-
 
 News
 ----
@@ -82,9 +79,14 @@ OpenBMP Flow
 ![OpenBMP High Level Flow](docs/images/openbmp-flow.png "OpenBMP High Level Flow")
 
 * BMP devices (e.g. routers) send BMP messages to a OpenBMP collector/daemon.   One OpenBMP daemon can handle many routers and bgp peers, but in a large network with transit links and full internet routing tables, multiple OpenBMP daemons is recommended.   Simply configure on the BMP device (router) which BMP server that should be used.  
-* Open Daylight (ODL) controller SQL plugin with SQL <-> Yang interfaces with the OpenBMP database.  ODL in this fashion provides an abstract view of all OpenBMP data.
+
+* Apache Kafka enables many applications the ability to tap into the existing BMP feeds from any number of routers.  A single BMP feed via OpenBMP can feed data into hundreds of consumer apps, such as MySQL, Cassandra, Real-time monitors, Flat file, ELK, Apache Spark, etc.
+
+* Open Daylight (ODL) controller plugins can integrate Kafka feed in both parsed and RAW formats into ODL data store to enable ODL APP's/plugins, making the data available via Netconf/RESTconf. 
+
 * Admins, Network Engineers, automated programs/scripts, etc. interact via ODL northbound interfaces to run various BMP analytics.
-* Admins, Network Engineers, automated programs/scripts, etc. can also go direct to the BMP database as needed. 
+
+* Admins, Network Engineers, automated programs/scripts, etc. can go direct to Kafka, BMP database, RA APi's, etc.
 
 Supported Features
 ------------------
@@ -105,6 +107,10 @@ Advanced Reporting| Built-in views for common reports, such as route tables, pre
 Use-Cases
 ---------
 There are many reasons to use OpenBMP, but to highlight a few common ones:
+
+* **Real-Time Topology Monitoring** - Can monitor and alert on topology change, policy changes or lack of enforcement, route-leaking, hijacking, etc.
+
+* **BGP/Route Security** - Route leaking, hijacking by origination, by better transit paths, or deviation from baseline
 
 * **Looking Glasses**  - IPv4, IPv6, and VPN4
 
@@ -127,40 +133,33 @@ The installation documentation provides step by step instructions for how to ins
 Instructions are for Ubuntu and CentOS/RHEL.   Other Linux distributions should work, but instructions might vary. 
 
 
-Using Open Daylight
--------------------
-See the [docs/ODL.md](docs/ODL.md) documentation for detailed information on how to use Open Daylight with OpenBMP.  
+Using Kafka for Collector Integration
+-------------------------------------
+See the following docs for more details:
 
-This includes details on how to setup ODL to use OpenBMP database(s).
+* [docs/MSGBUS.md](docs/MSGBUS.md) - Details about Kafka and why it was chosen over AMQP. 
+* [docs/MSGBUS-PARSED.md](docs/MSGBUS-PARSED.md) - Detailed API spec for Parsed Messages via Kafka
+* [docs/MSGBUS-BMP.md](docs/MSGBUS-BMP.md) - Detailed API spec for RAW BMP feed messages via Kafka
 
+In the future, other feeds can be made available.  We are thinking of adding RAW BGP feeds as well (BMP headers stripped leaving only BGP RAW messages).  This may be useful but currently nobody has requested this. If you are interested in other types of feeds, please contact **tim@openbmp.org**. 
 
 Interfacing with the Database
 -----------------------------
 See the [docs/DATABASE.md](docs/DATABASE.md) documentation for the database schema and how to interact with it.    
 
 
-Release Notes
-----------
-Check the release notes for changes by release.  
+Using Open Daylight
+-------------------
+ODL integration has been open for awhile due to placement of the collector and analytics via ODL.  With the recent change to Kafka, this makes it very clear and easy on how ODL will be able to integrate.  A simple ODL plugin that implements the OpenBMP Kafka parsed message API can expose real-time BMP messages from hundreds of routers/peers via MD-SAL/Datastore.  Making the data available via Netconf/RESTconf.  ODL can also implement the BMP RAW API to interact natively with the BMP messages for parsing in bgpcep.  
 
+See the [docs/ODL.md](docs/ODL.md) documentation for detailed information on how to use Open Daylight with OpenBMP.  
 
-
-Road Map
---------
-Below are a list of features/changes that are targeted in the next release:
 
 ### OpenBMP Daemon
-* Inbound message caching to offload socket buffers
-* New feature to allow saving raw BGP messages based on filters
-* Add OpenBMP statistic counters to database
-* Add TCP MD5SIG support for BMP sessions
-* Add configuration option to restrict BMP devices to ones provisioned
-* Add support for active BMP connections - OpenBMP makes connections to routers
-* Add postgres DB support
-* Implement RFC5424 logging with configuration options to fine tune
 
 ### BMP UI
-Currently the UI is being developed.  Please contact **tievens@cisco.com** or **serpil@cisco.com** for more information. 
+A BMP UI exists as part of Cisco Value add.  Demos and docker installs are available for trying it out. 
+Please contact **tievens@cisco.com** or **serpil@cisco.com** for more information. 
 
 Building from Source
 --------------------

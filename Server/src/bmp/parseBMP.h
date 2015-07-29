@@ -139,12 +139,23 @@ public:
 
 
     /**
-     * BMP message buffer
+     * BMP message buffer (normally only contains the BGP message)
      *      BMP data message is read into this buffer so that it can be passed to the BGP parser for handling.
      *      Complete BGP message is read, otherwise error is generated.
      */
     u_char      bmp_data[65535];
     size_t      bmp_data_len;              ///< Length/size of data in the data buffer
+
+    /**
+     * BMP packet buffer - This is a copy of the BMP packet.
+     *
+     * Only BMPv3 messages get stored in the packet buffer since it wasn't until
+     * BMPv3 that the length was specified.
+     *
+     * Length of packet is the common header message length (bytes)
+     */
+    u_char      bmp_packet[68000];
+    size_t      bmp_packet_len;
 
     /**
      * Constructor for class
@@ -163,6 +174,10 @@ public:
     // destructor
     virtual ~parseBMP();
 
+    /**
+     * Recv wrapper for recv() to enable packet buffering
+     */
+    ssize_t Recv(int sockfd, void *buf, size_t len, int flags);
 
     /**
      * Process the incoming BMP message
