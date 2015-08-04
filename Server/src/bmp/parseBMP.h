@@ -143,7 +143,7 @@ public:
      *      BMP data message is read into this buffer so that it can be passed to the BGP parser for handling.
      *      Complete BGP message is read, otherwise error is generated.
      */
-    u_char      bmp_data[65535];
+    u_char      bmp_data[67000];
     size_t      bmp_data_len;              ///< Length/size of data in the data buffer
 
     /**

@@ -207,7 +207,7 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
             cap_str.append((*it));
         }
 
-        memcpy(up_event->sent_cap, cap_str.c_str(), sizeof(up_event->sent_cap));
+        strncpy(up_event->sent_cap, cap_str.c_str(), sizeof(up_event->sent_cap));
 
     } else {
         LOG_ERR("%s: rtr=%s: BGP message type is not BGP OPEN, cannot parse the open message",  p_entry->peer_addr, router_addr.c_str());
@@ -249,7 +249,7 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
             cap_str.append((*it));
         }
 
-        memcpy(up_event->recv_cap, cap_str.c_str(), sizeof(up_event->recv_cap));
+        strncpy(up_event->recv_cap, cap_str.c_str(), sizeof(up_event->recv_cap));
 
     } else {
         LOG_ERR("%s: rtr=%s: BGP message type is not BGP OPEN, cannot parse the open message",
