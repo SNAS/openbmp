@@ -549,7 +549,7 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
                      base_attr_seq, path_hash_str.c_str(), r_hash_str.c_str(), router_ip.c_str(), p_hash_str.c_str(),
                      peer.peer_addr,peer.peer_as, ts.c_str(),
                      attr.origin, attr.as_path, attr.as_path_count, attr.origin_as, attr.next_hop, attr.med,
-                     attr.local_pref, attr.aggregator, attr.cluster_list, attr.ext_community_list, attr.cluster_list,
+                     attr.local_pref, attr.aggregator, attr.community_list, attr.ext_community_list, attr.cluster_list,
                      attr.atomic_agg, attr.nexthop_isIPv4, attr.originator_id);
 
     produce(MSGBUS_TOPIC_BASE_ATTRIBUTE, buf, buf_len, 1, p_hash_str);
@@ -622,10 +622,10 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
                     return;
 
                 buf_len += snprintf(buf2, sizeof(buf2),
-                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
+                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
                                             "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
                                     action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
-                                    router_ip.c_str(), p_hash_str.c_str(),
+                                    router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
                                     rib[i].isIPv4, attr->origin,
                                     attr->as_path, attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
@@ -637,7 +637,7 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
 
             case UNICAST_PREFIX_ACTION_DEL:
                 buf_len += snprintf(buf2, sizeof(buf2),
-                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n",
+                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t\t\t\t\t\t\t\t\t\t\t\t\t\t\n",
                                     action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
@@ -762,11 +762,11 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 
         buf_len += snprintf(buf2, sizeof(buf2),
                         "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32 "\t%" PRIu32
-                                "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\n",
+                                "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\n",
                         action.c_str(),ls_node_seq, hash_str.c_str(),path_hash_str.c_str(), r_hash_str.c_str(),
                         router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
                         igp_router_id, router_id, node.id, node.bgp_ls_id,node.mt_id, ospf_area_id, isis_area_id,
-                        node.protocol, node.flags, attr.as_path, attr.local_pref, attr.med, attr.next_hop);
+                        node.protocol, node.flags, attr.as_path, attr.local_pref, attr.med, attr.next_hop, node.name);
 
         // Cat the entry to the query buff
         if (buf_len < 1800000 /* size of buf */)
