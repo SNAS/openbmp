@@ -2,26 +2,79 @@ Open BGP Monitoring Protocol (OpenBMP) Collector
 ================================================
 ![Build Status](http://build-jenkins.openbmp.org/buildStatus/icon?job=openbmp-server-ubuntu-trusty)
 
-
-OpenBMP is an open source project that implements **draft-ietf-grow-bmp-08**.  BMP protocol version 3 is defined in draft 08, while versions 1 and 2 are defined in the previous revisions of the draft.
+OpenBMP is an open source project that implements **draft-ietf-grow-bmp-14**.  BMP protocol version 3 is defined in draft 08, while versions 1 and 2 are defined in the previous revisions of the draft.
 
 JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR, and JunOS 13.3 implement version 3 (draft 07).
 
 
 ### Daemon
-OpenBMP daemon is a BMP receiver for devices that implement BMP, such as Cisco and Juniper routers.  Collected BMP messages are decoded and stored in a SQL database.
+OpenBMP daemon is a BMP receiver for devices/software that implement BMP, such as Cisco and Juniper routers. The collector is a **producer** to Apache Kafka.   Both RAW BMP messages and parsed messages are produced for Kafka consumer consumption.  
 
-### Database
-The SQL/transactional database is designed to be flexible for all types of reporting on the collected data by simply linking tables or by creating views.
+### Flat File Consumer
+A basic file consumer of OpenBMP parsed and RAW BMP Kafka streams. You can use this file consumer in the following ways:
 
-The database is tuned to support high transactional rates and storage for millions of prefixes and other BGP information.   OpenBMP statistics track how well the database is performing and will alert if there are any issues.
+* Working example to develop your own consumer that works with either parsed or RAW BMP binary messages
+* Record BMP feeds (identical as they are sent by the router) so they can be replayed to other BMP parsers/receivers
+* Log parsed BMP and BGP messages in plain flat files
 
-### UI
-UI is a Web-App that interacts with OpenBMP server/daemon via the API.   Multiple OpenBMP daemons can be centrally managed via the same UI.
+See [file-consumer](docs/FILE_CONSUMER.md) for more details.
 
+### MySQL Consumer
+The MySQL consumer implements the OpenBMP Message Bus API parsed messages API to collect and store BMP/BGP data of all collectors, routers, and peers in real-time. The consumer provides the same data storage that OpenBMP collector versions 0.10.x and less implemented.
+
+See [mysql-consumer](docs/MYSQL_CONSUMER.md) for more details about the MySQL consumer. 
+
+### Message Bus (Kafka)
+Starting in release 0.11.x Apache Kafka is used as the centralized bus for collector message streams.   The collector no longer forwards direct to MySQL. Instead, database consumers are used to integrate the data into MySQL, Cassandra, MongoDb, Postgres, flat files, etc.  Anyone can now can interact with the BGP parsed and RAW data in a centralized fashion via Kafka or via one of the consumers.   A single BMP feed from one router can be made available to many consumers without the collector having to be aware of that.  
+
+
+OpenBMP Flow
+------------
+
+![OpenBMP High Level Flow](docs/images/openbmp-flow.png "OpenBMP High Level Flow")
+
+* BMP devices (e.g. routers) send BMP messages to a OpenBMP collector/daemon.   One OpenBMP daemon can handle many routers and bgp peers, but in a large network with transit links and full internet routing tables, multiple OpenBMP collectors are recommended.   Simply configure on the BMP device (router) which BMP server that should be used.  
+
+* Apache Kafka enables many applications the ability to tap into the existing BMP feeds from any number of routers.  A single BMP feed via OpenBMP can feed data into hundreds of consumer apps, such as MySQL, Cassandra, Real-time monitors, Flat file, ELK, Apache Spark, etc.
+
+* Open Daylight (ODL) controller plugins can integrate Kafka feed in both parsed and RAW formats into ODL data store to enable ODL APP's/plugins, making the data available via Netconf/RESTconf. 
+
+* Admins, Network Engineers, automated programs/scripts, etc. interact via ODL northbound interfaces to run various BMP analytics.
+
+* Admins, Network Engineers, automated programs/scripts, etc. can go direct to Kafka, BMP database, RA APi's, etc.
+
+Supported Features Highlights
+-----------------------------
+Below is a list of some key features supported today in OpenBMP.  Many more features exist.
+
+| Feature | Description |
+| -------: | ----------- |
+draft-ietf-grow-bmp-14 | BMP Version 3 with backwards compatibility with older drafts
+Apache Kafka | Producer of parsed and RAW BMP feeds, multiple consumers available
+Database | Access to all collected data via standard ODBC/DB drivers (openbmp-mysql-consumer)
+File Logging | All parsed messages can be logged to files, including BMP binary streams (openbmp-file-consumer)
+IPv4 | IPv4 Unicast routing table information
+IPv6 | IPv6 Unicast routing table information
+VPNv4 | L3VPN routing information (within VRF)
+bgp-ls| draft-ietf-idr-ls-distribution
+Extended Communities | Roughly all of them
+
+So much more...
 
 News
 ----
+### Aug-11-2015
+**Apache Kafka integration available** <br>
+The collector now fully supports Apache Kafka by producing both parsed and BMP raw messages.  [openbmp-mysql-consumer](https://github.com/OpenBMP/openbmp-mysql-consumer) and [openbmp-file-consumer](https://github.com/OpenBMP/openbmp-file-consumer) are available for immediate use.  Please report any bugs/issues via github. 
+
+
+### Jul-23-2015
+**New release 0.10.0 is available.** Starting in **0.11.0** the collector will forward all messages (parsed and raw) to Apache Kafka.  Anyone wishing to interact with the data can do so via simple kafka consumer clients.  MySQL is being moved into a consumer app, so same over functionality with MySQL will be maintained.   In addition to MySQL, a flat file example app will be created so others can see how easy it is to interact with the data.  Other apps can be written by anyone, which includes Cassandra, Postgres, Apache Spark, etc.
+
+New branch [0.10-0-mysql](https://github.com/OpenBMP/openbmp/tree/0.10.0-mysql) has been created for support/bug fixes only.  New features will be in the master branch.
+
+Kafka integration is available today via the development branch [0.11.0-kafka-dev](https://github.com/OpenBMP/openbmp/tree/0.11.0-kafka-dev). This will be merged into the master branch after MySQL consumer app is available. 
+
 ### Jun-04-2015
 > #### UPGRADE YOUR SCHEMA for this release
 New release 0.9.0 is available.   See [release-0.9.0](docs/release_notes/release-0.9.0.md) for more details.  
@@ -64,35 +117,15 @@ Added [DB REST](docs/DBREST.md)
   * OpenBMP UI is being revised using ODL
 
 
-OpenBMP Flow
-------------
-
-![OpenBMP High Level Flow](docs/images/openbmp-flow.png "OpenBMP High Level Flow")
-
-* BMP devices (e.g. routers) send BMP messages to a OpenBMP collector/daemon.   One OpenBMP daemon can handle many routers and bgp peers, but in a large network with transit links and full internet routing tables, multiple OpenBMP daemons is recommended.   Simply configure on the BMP device (router) which BMP server that should be used.  
-* Open Daylight (ODL) controller SQL plugin with SQL <-> Yang interfaces with the OpenBMP database.  ODL in this fashion provides an abstract view of all OpenBMP data.
-* Admins, Network Engineers, automated programs/scripts, etc. interact via ODL northbound interfaces to run various BMP analytics.
-* Admins, Network Engineers, automated programs/scripts, etc. can also go direct to the BMP database as needed. 
-
-Supported Features
-------------------
-Below is a list of features supported today in OpenBMP.  Many more features are on the roadmap, including BGP-LS (draft-ietf-idr-ls-distribution).   See the **roadmap** for more details. 
-
-Feature | Description
--------: | -----------
-draft-ietf-grow-bmp-07| BMP Version 3
-Database | Access to all collected data via standard ODBC/DB drivers
-IPv4 | IPv4 Unicast routing table information
-IPv6 | IPv6 Unicast routing table information
-VPNv4 | L3VPN routing information
-bgp-ls| draft-ietf-idr-ls-distribution
-Extended Communities | Roughly all of them
-Prefix Log| Tracking of withdraws and updates by prefix, including path attributes
-Advanced Reporting| Built-in views for common reports, such as route tables, prefixes as paths, and route table history of changes
-
 Use-Cases
 ---------
 There are many reasons to use OpenBMP, but to highlight a few common ones:
+
+* **Centralized BMP Collector** - OpenBMP is a producer to Apache Kafka.  You can write your own consumer or use an existing one.  Other products can interact with OpenBMP via Apache Kafka for RAW BMP streams or the parsed messages.   See [Message Bus API Specification](docs/MESSAGE_BUS_API.md) for more details.
+
+* **Real-Time Topology Monitoring** - Can monitor and alert on topology change, policy changes or lack of enforcement, route-leaking, hijacking, etc.
+
+* **BGP/Route Security** - Route leaking, hijacking by origination, by better transit paths, or deviation from baseline
 
 * **Looking Glasses**  - IPv4, IPv6, and VPN4
 
@@ -115,43 +148,30 @@ The installation documentation provides step by step instructions for how to ins
 Instructions are for Ubuntu and CentOS/RHEL.   Other Linux distributions should work, but instructions might vary. 
 
 
-Using Open Daylight
--------------------
-See the [docs/ODL.md](docs/ODL.md) documentation for detailed information on how to use Open Daylight with OpenBMP.  
+Using Kafka for Collector Integration
+-------------------------------------
+See the following docs for more details:
 
-This includes details on how to setup ODL to use OpenBMP database(s).
+* [docs/MSGBUS.md](docs/MSGBUS.md) - Details about Kafka and why it was chosen over AMQP. 
+* [docs/MSGBUS-PARSED.md](docs/MSGBUS-PARSED.md) - Detailed API spec for Parsed Messages via Kafka
+* [docs/MSGBUS-BMP.md](docs/MSGBUS-BMP.md) - Detailed API spec for RAW BMP feed messages via Kafka
 
+In the future, other feeds can be made available.  We are thinking of adding RAW BGP feeds as well (BMP headers stripped leaving only BGP RAW messages).  This may be useful but currently nobody has requested this. If you are interested in other types of feeds, please contact **tim@openbmp.org**. 
 
 Interfacing with the Database
 -----------------------------
-See the [docs/DATABASE.md](docs/DATABASE.md) documentation for the database schema and how to interact with it.    
+See the [DB_SCHEMA](docs/DB_SCHEMA.md) documentation for the database schema and how to interact with it.    
 
 
-Release Notes
-----------
-Check the release notes for changes by release.  
+Using Open Daylight
+-------------------
+ODL integration has been open for awhile due to placement of the collector and analytics via ODL.  With the recent change to Kafka, this makes it very clear and easy on how ODL will be able to integrate.  A simple ODL plugin that implements the OpenBMP Kafka parsed message API can expose real-time BMP messages from hundreds of routers/peers via MD-SAL/Datastore.  Making the data available via Netconf/RESTconf.  ODL can also implement the BMP RAW API to interact natively with the BMP messages for parsing in bgpcep.  
 
+See the [ODL](docs/ODL.md) documentation for detailed information on how to use Open Daylight with OpenBMP.  
 
-
-Road Map
---------
-Below are a list of features/changes that are targeted in the next release:
-
-### OpenBMP Daemon
-* Inbound message caching to offload socket buffers
-* New feature to allow saving raw BGP messages based on filters
-* Add OpenBMP statistic counters to database
-* Add TCP MD5SIG support for BMP sessions
-* Add configuration option to restrict BMP devices to ones provisioned
-* Add support for active BMP connections - OpenBMP makes connections to routers
-* Add postgres DB support
-* Implement RFC5424 logging with configuration options to fine tune
-
-### BMP UI
-Currently the UI is being developed.  Please contact **tievens@cisco.com** or **serpil@cisco.com** for more information. 
 
 Building from Source
 --------------------
-See the [docs/BUILD.md](docs/BUILD.md) document for details on how to build OpenBMP from source.  Includes how to create DEB and RPM packages. 
+See the [BUILD](docs/BUILD.md) document for details on how to build OpenBMP from source.  Includes how to create DEB and RPM packages. 
 
 

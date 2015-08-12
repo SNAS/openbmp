@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <thread>
+#include <unistd.h>
 
 #include "client_thread.h"
 #include "BMPReader.h"
@@ -32,7 +33,7 @@ void ClientThread_cancel(void *arg) {
 
     LOG_INFO("Thread terminating due to cancel request.");
 
-    LOG_INFO("Closing client connection to %s:%s", cInfo->client->c_ipv4, cInfo->client->c_port);
+    LOG_INFO("Closing client connection to %s:%s", cInfo->client->c_ip, cInfo->client->c_port);
     shutdown(cInfo->client->c_sock, SHUT_RDWR);
     close (cInfo->client->c_sock);
 
@@ -42,8 +43,8 @@ void ClientThread_cancel(void *arg) {
 
     delete cInfo->bmp_reader_thread;
 
-    delete cInfo->mysql;
-    cInfo->mysql = NULL;
+    delete cInfo->mbus;
+    cInfo->mbus = NULL;
 }
 
 /**
@@ -61,7 +62,7 @@ void *ClientThread(void *arg) {
 
     // Setup the client thread info struct
     ClientThreadInfo cInfo;
-    cInfo.mysql = NULL;
+    cInfo.mbus = NULL;
     cInfo.client = &thr->client;
     cInfo.log = thr->log;
 
@@ -76,15 +77,15 @@ void *ClientThread(void *arg) {
     pthread_cleanup_push(ClientThread_cancel, &cInfo);
 
     try {
-        // connect to mysql
-        cInfo.mysql = new mysqlBMP(logger, thr->cfg->dbURL,thr->cfg->username, thr->cfg->password, thr->cfg->dbName);
+        // connect to message bus
+        cInfo.mbus = new msgBus_kafka(logger, thr->cfg->kafka_brokers, thr->cfg->c_hash_id);
 
-        if (thr->cfg->debug_mysql)
-            cInfo.mysql->enableDebug();
+        if (thr->cfg->debug_msgbus)
+            cInfo.mbus->enableDebug();
 
         BMPReader rBMP(logger, thr->cfg);
         LOG_INFO("Thread started to monitor BMP from router %s using socket %d buffer in bytes = %u",
-                cInfo.client->c_ipv4, cInfo.client->c_sock, thr->cfg->bmp_buffer_size);
+                cInfo.client->c_ip, cInfo.client->c_sock, thr->cfg->bmp_buffer_size);
 
         // Buffer client socket using pipe
         socketpair(PF_LOCAL, SOCK_STREAM, 0, sock_fds);
@@ -97,7 +98,7 @@ void *ClientThread(void *arg) {
         bool bmp_run = true;
         //cInfo.bmp_reader_thread = new std::thread([&] {rBMP.readerThreadLoop(bmp_run,cInfo.client,
         cInfo.bmp_reader_thread = new std::thread(&BMPReader::readerThreadLoop, &rBMP, std::ref(bmp_run), cInfo.client,
-                                                                             (DbInterface *)cInfo.mysql );
+                                                                             (MsgBusInterface *)cInfo.mbus );
 
         // Variables to handle circular buffer
         sock_buf = new unsigned char[thr->cfg->bmp_buffer_size];
@@ -217,24 +218,24 @@ void *ClientThread(void *arg) {
             }
         }
 
-        LOG_INFO("%s: Thread for sock [%d] ended normally", cInfo.client->c_ipv4, cInfo.client->c_sock);
+        LOG_INFO("%s: Thread for sock [%d] ended normally", cInfo.client->c_ip, cInfo.client->c_sock);
 
     } catch (char const *str) {
-        LOG_INFO("%s: %s - Thread for sock [%d] ended", cInfo.client->c_ipv4, str, cInfo.client->c_sock);
+        LOG_INFO("%s: %s - Thread for sock [%d] ended", cInfo.client->c_ip, str, cInfo.client->c_sock);
         close(sock_fds[0]);
         close(sock_fds[1]);
 
+#ifndef __APPLE__
     } catch (abi::__forced_unwind&) {
         close(sock_fds[0]);
         close(sock_fds[1]);
         throw;
+#endif
 
     } catch (...) {
-        LOG_INFO("%s: Thread for sock [%d] ended abnormally: ", cInfo.client->c_ipv4, cInfo.client->c_sock);
+        LOG_INFO("%s: Thread for sock [%d] ended abnormally: ", cInfo.client->c_ip, cInfo.client->c_sock);
         close(sock_fds[0]);
         close(sock_fds[1]);
-
-
     }
 
     if (sock_buf != NULL)
@@ -243,8 +244,8 @@ void *ClientThread(void *arg) {
     pthread_cleanup_pop(0);
 
     // Delete mysql
-    if (cInfo.mysql != NULL)
-       delete cInfo.mysql;
+    if (cInfo.mbus != NULL)
+       delete cInfo.mbus;
 
     // close the socket
     shutdown(cInfo.client->c_sock, SHUT_RDWR);

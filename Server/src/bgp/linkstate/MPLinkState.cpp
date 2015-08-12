@@ -36,12 +36,11 @@ namespace bgp_msg {
     /**
      * MP Reach Link State NLRI parse
      *
-     * \details Will handle parsing the link state NRLI
+     * \details Will handle parsing the link state NLRI
      *
      * \param [in]   nlri           Reference to parsed NLRI struct
      */
     void MPLinkState::parseReachLinkState(MPReachAttr::mp_reach_nlri &nlri) {
-        this->parsed_data = parsed_data;
         ls_data = &parsed_data->ls;
 
         // Process the next hop
@@ -79,12 +78,11 @@ namespace bgp_msg {
     /**
      * MP UnReach Link State NLRI parse
      *
-     * \details Will handle parsing the unreach link state NRLI
+     * \details Will handle parsing the unreach link state NLRI
      *
      * \param [in]   nlri           Reference to parsed NLRI struct
      */
     void MPLinkState::parseUnReachLinkState(MPUnReachAttr::mp_unreach_nlri &nlri) {
-        this->parsed_data = parsed_data;
         ls_data = &parsed_data->ls_withdrawn;
 
         /*
@@ -116,13 +114,13 @@ namespace bgp_msg {
         uint16_t        nlri_len;
         uint16_t        nlri_len_read = 0;
 
-        // Process the NRLI data
+        // Process the NLRI data
         while (nlri_len_read < len) {
 
             SELF_DEBUG("NLRI read=%d total = %d", nlri_len_read, len);
 
             /*
-             * Parse the NRLI TLV
+             * Parse the NLRI TLV
              */
             memcpy(&nlri_type, data, 2);
             data += 2;
@@ -237,7 +235,7 @@ namespace bgp_msg {
     /**********************************************************************************//*
      * Parse NODE NLRI
      *
-     * \details will parse the node NRLI type. Data starts at local node descriptor.
+     * \details will parse the node NLRI type. Data starts at local node descriptor.
      *
      * \param [in]   data           Pointer to the start of the node NLRI data
      * \param [in]   data_len       Length of the data
@@ -245,11 +243,11 @@ namespace bgp_msg {
      * \param [in]   proto_id       NLRI protocol type id
      */
     void MPLinkState::parseNlriNode(u_char *data, int data_len, uint64_t id, uint8_t proto_id) {
-        DbInterface::tbl_ls_node node_tbl;
+        MsgBusInterface::obj_ls_node node_tbl;
         bzero(&node_tbl, sizeof(node_tbl));
 
         if (data_len < 4) {
-            LOG_WARN("%s: bgp-ls: Unable to parse node NRLI since it's too short (invalid)", peer_addr.c_str());
+            LOG_WARN("%s: bgp-ls: Unable to parse node NLRI since it's too short (invalid)", peer_addr.c_str());
             return;
         }
 
@@ -315,7 +313,7 @@ namespace bgp_msg {
     /**********************************************************************************//*
      * Parse LINK NLRI
      *
-     * \details will parse the LINK NRLI type.  Data starts at local node descriptor.
+     * \details will parse the LINK NLRI type.  Data starts at local node descriptor.
      *
      * \param [in]   data           Pointer to the start of the node NLRI data
      * \param [in]   data_len       Length of the data
@@ -323,11 +321,11 @@ namespace bgp_msg {
      * \param [in]   proto_id       NLRI protocol type id
      */
     void MPLinkState::parseNlriLink(u_char *data, int data_len, uint64_t id, uint8_t proto_id) {
-        DbInterface::tbl_ls_link link_tbl;
+        MsgBusInterface::obj_ls_link link_tbl;
         bzero(&link_tbl, sizeof(link_tbl));
 
         if (data_len < 4) {
-            LOG_WARN("%s: bgp-ls: Unable to parse link NRLI since it's too short (invalid)", peer_addr.c_str());
+            LOG_WARN("%s: bgp-ls: Unable to parse link NLRI since it's too short (invalid)", peer_addr.c_str());
             return;
         }
 
@@ -375,6 +373,9 @@ namespace bgp_msg {
             switch (type) {
                 case NODE_DESCR_LOCAL_DESCR:
                     memcpy(link_tbl.local_node_hash_id, info.hash_bin, sizeof(link_tbl.local_node_hash_id));
+                    memcpy(link_tbl.ospf_area_Id, info.ospf_area_Id, sizeof(link_tbl.ospf_area_Id));
+                    link_tbl.bgp_ls_id = info.bgp_ls_id;
+                    memcpy(link_tbl.igp_router_id, info.igp_router_id, sizeof(link_tbl.igp_router_id));
                     break;
 
                 case NODE_DESCR_REMOTE_DESCR:
@@ -417,7 +418,7 @@ namespace bgp_msg {
     /**********************************************************************************//*
      * Parse PREFIX NLRI
      *
-     * \details will parse the PREFIX NRLI type.  Data starts at local node descriptor.
+     * \details will parse the PREFIX NLRI type.  Data starts at local node descriptor.
      *
      * \param [in]   data           Pointer to the start of the node NLRI data
      * \param [in]   data_len       Length of the data
@@ -426,11 +427,11 @@ namespace bgp_msg {
      * \param [in]   isIPv4         Bool value to indicate IPv4(true) or IPv6(false)
      */
     void MPLinkState::parseNlriPrefix(u_char *data, int data_len, uint64_t id, uint8_t proto_id, bool isIPv4) {
-        DbInterface::tbl_ls_prefix prefix_tbl;
+        MsgBusInterface::obj_ls_prefix prefix_tbl;
         bzero(&prefix_tbl, sizeof(prefix_tbl));
 
         if (data_len < 4) {
-            LOG_WARN("%s: bgp-ls: Unable to parse prefix NRLI since it's too short (invalid)", peer_addr.c_str());
+            LOG_WARN("%s: bgp-ls: Unable to parse prefix NLRI since it's too short (invalid)", peer_addr.c_str());
             return;
         }
 
@@ -499,6 +500,9 @@ namespace bgp_msg {
         prefix_tbl.prefix_len   = info.prefix_len;
         prefix_tbl.mt_id        = info.mt_id;
 
+        memcpy(prefix_tbl.ospf_area_Id, local_node.ospf_area_Id, sizeof(prefix_tbl.ospf_area_Id));
+        prefix_tbl.bgp_ls_id = local_node.bgp_ls_id;
+        memcpy(prefix_tbl.igp_router_id, local_node.igp_router_id, sizeof(prefix_tbl.igp_router_id));
         memcpy(prefix_tbl.local_node_hash_id, local_node.hash_bin, sizeof(prefix_tbl.local_node_hash_id));
         memcpy(prefix_tbl.prefix_bin, info.prefix, sizeof(prefix_tbl.prefix_bin));
         memcpy(prefix_tbl.prefix_bcast_bin, info.prefix_bcast, sizeof(prefix_tbl.prefix_bcast_bin));

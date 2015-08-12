@@ -13,26 +13,24 @@ First install either the **Server** or **Cloud** standard Ubuntu image available
 
 ### Required Steps
   1. Update the apt get repo
-  1. Install mysql client and client libraries
   1. Install openbmpd using package or from source
+  1. Install openbmp MySQL consumer
   1. Install mysql DB server
   1. Create mysql database and user
   1. Configure mysql settings
   1. Restart Mysql
   1. Create/update the database schema
   1. Run openbmpd
-  
-  
+  1. Run openbmp-mysql-consumer
+
+
+> #### NOTE
+> Our builds of openbmpd statically links librdkafka so that you do not have to compile/install that. If needed, see [BUILD](BUILD.md) for details on how to build/install librdkafka.
+
 
 ### Before using 'apt-get' do the following to make sure the repositories are up-to-date
 ```
 sudo apt-get update
-```
-
-### On openbmpd server Install the client libraries
-
-```
-sudo apt-get install mysql-client-5.6 mysql-common-5.6 libmysqlcppconn7
 ```
 
 ### Install openbmp via package
@@ -55,6 +53,14 @@ Setting up openbmp (0.8.0-pre) ...
 
 #### If installing from source
 Follow the steps in [BUILD](BUILD.md) to install via source from github.
+
+### Install openbmp mysql consumer
+  1. Download the openbmp-mysql-consumer
+      
+      [Download Page](http://www.openbmp.org/#!download.md)
+      
+> #### NOTE
+> The consumer is a JAR file that is runnable using java -jar \<filename\>.  In the near future this will be packaged in a DEB package so that you start it using 'service openbmp-mysql-consumer start'.  For now, you will need to run this JAR file via shell command.  See the last step regarding running the consumer for how to run it. 
 
 ### On DB server install mysql
 ```
@@ -188,35 +194,47 @@ MySQL should be installed now and it should be running.   OpenBMP is ready to ru
 
 ```
   REQUIRED OPTIONS:
-     -dburl <url>      DB url, must be in url format
-                       Example: tcp://127.0.0.1:3306
-     -dbu <name>       DB Username
-     -dbp <pw>         DB Password
+     -a <string>       Admin ID for collector, this must be unique for this collector.  hostname or IP is good to use
+
 
   OPTIONAL OPTIONS:
-     -p <port>         BMP listening port (default is 5000)
-     -dbn <name>       DB name (default is openBMP)
+     -k <host:port>    Kafka broker list format: host:port[,...]
+                       Default is 127.0.0.1:9092
+     -m <mode>         Mode can be 'v4, v6, or v4v6'
+                       Default is v4.  Enables IPv4 and/or IPv6 BMP listening port
 
-     -c <filename>        Config filename, default is /etc/openbmp/openbmpd.conf
-     -l <filename>        Log filename, default is STDOUT
-     -d <filename>        Debug filename, default is log filename
-     -pid <filename>      PID filename, default is no pid file
+     -p <port>         BMP listening port (default is 5000)
+
+     -c <filename>     Config filename, default is /etc/openbmp/openbmpd.conf
+     -l <filename>     Log filename, default is STDOUT
+     -d <filename>     Debug filename, default is log filename
+     -pid <filename>   PID filename, default is no pid file
+     -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128
+     -hi <minutes>     Collector message heartbeat interval in minutes (default is 240 (4 hrs)
+
+  OTHER OPTIONS:
+     -v                   Version
 
   DEBUG OPTIONS:
      -dbgp             Debug BGP parser
      -dbmp             Debug BMP parser
-     -dmysql           Debug mysql
+     -dmsgbus          Debug message bus
 ```
 
-Below starts openbmp on port 5555 for inbound BMP connections. 
+Below starts openbmp on port 5555 for inbound BMP connections using Kafka server localhost:9092 and buffer of 16MB per router. 
+
 ```
-sudo openbmpd -dburl tcp://127.0.0.1:3306 -dbu openbmp -dbp openbmp -p 5555 -l /var/log/openbmpd.log -pid /var/run/openbmpd.pid
+sudo openbmpd -a $(uname -n) -k localhost -b 16 -p 5555 -l /var/log/openbmpd.log -pid /var/run/openbmpd.pid
 ```
+
 > **NOTE** 
 > The above command uses 'sudo' because openbmp is creating the log file /var/log/openbmp.log and updating the pid file /var/run/openbmp.pid, which normally are not writable to normal users.  If the log and pid files are writable by the user running openbmpd, then sudo is not required. 
 
 
+### Run openbmp-mysql-consumer
+You can unpack the JAR file if you want to modify the logging config.  Otherwise,  you can run as follows:
 
-## User Interface
-
-The interface is being refactored to use ODL.  Please stay tuned for an update. 
+> Consumer can run on any platform
+    
+     java -jar target/openbmp-mysql-consumer-0.1.0.jar -dh db.openbmp.org -dn openBMPdev -du openbmp -dp openbmpNow -zk bmp-dev.openbmp.org
+     

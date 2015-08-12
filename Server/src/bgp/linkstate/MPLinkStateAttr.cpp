@@ -52,7 +52,7 @@ namespace bgp_msg {
             tlv_len = parseAttrLinkStateTLV(attr_len, data);
             attr_len -= tlv_len;
 
-            if (attr_len > 0);
+            if (attr_len > 0)
                 data += tlv_len;
         }
     }
@@ -122,13 +122,9 @@ namespace bgp_msg {
                 break;
 
             case ATTR_NODE_ISIS_AREA_ID:
-                if (len <= 4) {
-                    value_32bit = 0;
-                    memcpy(&value_32bit, data, len);
-                    bgp::SWAP_BYTES(&value_32bit);
-                    value_32bit >>= 8;
-                    memcpy(parsed_data->ls_attrs[ATTR_NODE_ISIS_AREA_ID].data(), &value_32bit, sizeof(value_32bit));
-                }
+                if (len <= 8)
+                    memcpy(parsed_data->ls_attrs[ATTR_NODE_ISIS_AREA_ID].data(), data, len);
+                parsed_data->ls_attrs[ATTR_NODE_ISIS_AREA_ID].data()[8] = len;
 
                 SELF_DEBUG("%s: bgp-ls: parsed node ISIS area id %x (len=%d)", peer_addr.c_str(), value_32bit, len);
                 break;

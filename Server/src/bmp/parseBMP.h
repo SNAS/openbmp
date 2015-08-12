@@ -11,7 +11,7 @@
 #ifndef PARSEBMP_H_
 #define PARSEBMP_H_
 
-#include "DbInterface.hpp"
+#include "MsgBusInterface.hpp"
 #include "Logger.h"
 
 
@@ -139,12 +139,23 @@ public:
 
 
     /**
-     * BMP message buffer
+     * BMP message buffer (normally only contains the BGP message)
      *      BMP data message is read into this buffer so that it can be passed to the BGP parser for handling.
      *      Complete BGP message is read, otherwise error is generated.
      */
-    u_char      bmp_data[65535];
+    u_char      bmp_data[67000];
     size_t      bmp_data_len;              ///< Length/size of data in the data buffer
+
+    /**
+     * BMP packet buffer - This is a copy of the BMP packet.
+     *
+     * Only BMPv3 messages get stored in the packet buffer since it wasn't until
+     * BMPv3 that the length was specified.
+     *
+     * Length of packet is the common header message length (bytes)
+     */
+    u_char      bmp_packet[68000];
+    size_t      bmp_packet_len;
 
     /**
      * Constructor for class
@@ -158,11 +169,15 @@ public:
      * \param [in]     logPtr      Pointer to existing Logger for app logging
      * \param [in,out] peer_entry  Pointer to the peer entry
      */
-    parseBMP(Logger *logPtr, DbInterface::tbl_bgp_peer *peer_entry);
+    parseBMP(Logger *logPtr, MsgBusInterface::obj_bgp_peer *peer_entry);
 
     // destructor
     virtual ~parseBMP();
 
+    /**
+     * Recv wrapper for recv() to enable packet buffering
+     */
+    ssize_t Recv(int sockfd, void *buf, size_t len, int flags);
 
     /**
      * Process the incoming BMP message
@@ -185,7 +200,7 @@ public:
      *
      * \return true if error, false if no error
      */
-    bool handleStatsReport(int sock, DbInterface::tbl_stats_report &stats);
+    bool handleStatsReport(int sock, MsgBusInterface::obj_stats_report &stats);
 
     /**
      * handle the initiation message and udpate the router entry
@@ -193,7 +208,7 @@ public:
      * \param [in]     sock        Socket to read the init message from
      * \param [in/out] r_entry     Already defined router entry reference (will be updated)
      */
-    void handleInitMsg(int sock, DbInterface::tbl_router &r_entry);
+    void handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry);
 
     /**
      * handle the termination message, router entry will be updated
@@ -201,7 +216,7 @@ public:
      * \param [in]     sock        Socket to read the term message from
      * \param [in/out] r_entry     Already defined router entry reference (will be updated)
      */
-    void handleTermMsg(int sock, DbInterface::tbl_router &r_entry);
+    void handleTermMsg(int sock, MsgBusInterface::obj_router &r_entry);
     /**
      * Buffer remaining BMP message
      *
@@ -224,7 +239,7 @@ public:
      *
      * \returns true if successfully parsed the bmp peer down header, false otherwise
      */
-    bool parsePeerDownEventHdr(int sock, DbInterface::tbl_peer_down_event &down_event);
+    bool parsePeerDownEventHdr(int sock, MsgBusInterface::obj_peer_down_event &down_event);
 
     /**
      * Parse the v3 peer up BMP header
@@ -236,7 +251,7 @@ public:
      *
      * \returns true if successfully parsed the bmp peer up header, false otherwise
      */
-    bool parsePeerUpEventHdr(int sock, DbInterface::tbl_peer_up_event &up_event);
+    bool parsePeerUpEventHdr(int sock, MsgBusInterface::obj_peer_up_event &up_event);
 
     /**
      * get current BMP message type
@@ -258,11 +273,11 @@ private:
     bool            debug;                      ///< debug flag to indicate debugging
     Logger          *logger;                    ///< Logging class pointer
 
-    DbInterface::tbl_bgp_peer *p_entry;         ///< peer table entry - will be updated with BMP info
+    MsgBusInterface::obj_bgp_peer *p_entry;         ///< peer table entry - will be updated with BMP info
     char            bmp_type;                   ///< The BMP message type
     uint32_t        bmp_len;                    ///< Length of the BMP message - does not include the common header size
 
-    // Storage for the byte converted strings - This must match the DbInterface bgp_peer struct
+    // Storage for the byte converted strings - This must match the MsgBusInterface bgp_peer struct
     char peer_addr[40];                         ///< Printed format of the peer address (Ipv4 and Ipv6)
     char peer_as[32];                           ///< Printed format of the peer ASN
     char peer_rd[32];                           ///< Printed format of the peer RD

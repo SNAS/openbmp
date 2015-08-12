@@ -16,8 +16,8 @@
  */
 
 #include "BMPListener.h"
-#include "DbImpl_mysql.h"
-#include "DbInterface.hpp"
+#include "MsgBusImpl_kafka.h"
+#include "MsgBusInterface.hpp"
 #include "client_thread.h"
 #include "openbmpd_version.h"
 #include "Config.h"
@@ -26,6 +26,7 @@
 #include <fstream>
 #include <csignal>
 #include <cstring>
+#include "md5.h"
 
 using namespace std;
 
@@ -37,6 +38,7 @@ const char *log_filename    = NULL;                 // Output file to log messag
 const char *debug_filename  = NULL;                 // Debug file to log messages to
 const char *pid_filename    = NULL;                 // PID file to record the daemon pid
 bool        debugEnabled    = false;                // Globally enable/disable dbug
+bool        run             = true;                 // Indicates if server should run
 
 #define CFG_FILENAME "/etc/openbmp/openbmpd.conf"
 
@@ -53,20 +55,23 @@ static Logger *logger;                              // Local source logger refer
 void Usage(char *prog) {
     cout << "Usage: " << prog << " <options>" << endl;
     cout << endl << "  REQUIRED OPTIONS:" << endl;
-    cout << "     -dburl <url>      DB url, must be in url format" << endl;
-    cout << "                       Example: tcp://127.0.0.1:3306" << endl;
-    cout << "     -dbu <name>       DB Username" << endl;
-    cout << "     -dbp <pw>         DB Password" << endl;
+    cout << "     -a <string>       Admin ID for collector, this must be unique for this collector.  hostname or IP is good to use" << endl;
+    cout << endl;
 
     cout << endl << "  OPTIONAL OPTIONS:" << endl;
+    cout << "     -k <host:port>    Kafka broker list format: host:port[,...]" << endl;
+    cout << "                       Default is 127.0.0.1:9092" << endl;
+    cout << "     -m <mode>         Mode can be 'v4, v6, or v4v6'" << endl;
+    cout << "                       Default is v4.  Enables IPv4 and/or IPv6 BMP listening port" << endl;
+    cout << endl;
     cout << "     -p <port>         BMP listening port (default is 5000)" << endl;
-    cout << "     -dbn <name>       DB name (default is openBMP)" << endl;
     cout << endl;
     cout << "     -c <filename>     Config filename, default is " << CFG_FILENAME << endl;
     cout << "     -l <filename>     Log filename, default is STDOUT" << endl;
     cout << "     -d <filename>     Debug filename, default is log filename" << endl;
     cout << "     -pid <filename>   PID filename, default is no pid file" << endl;
     cout << "     -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128" << endl;
+    cout << "     -hi <minutes>     Collector message heartbeat interval in minutes (default is 240 (4 hrs)" << endl;
 
     cout << endl << "  OTHER OPTIONS:" << endl;
     cout << "     -v                   Version" << endl;
@@ -74,7 +79,7 @@ void Usage(char *prog) {
     cout << endl << "  DEBUG OPTIONS:" << endl;
     cout << "     -dbgp             Debug BGP parser" <<  endl;
     cout << "     -dbmp             Debug BMP parser" << endl;
-    cout << "     -dmysql           Debug mysql" << endl;
+    cout << "     -dmsgbus          Debug message bus" << endl;
 
 }
 
@@ -104,6 +109,9 @@ void signal_handler(int signum)
                 pthread_join(thr_list.at(i)->thr, NULL);
             }
 
+            thr_list.clear();
+
+            run = false;
             break;
 
         default:
@@ -123,15 +131,17 @@ void signal_handler(int signum)
 bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
     // Initialize the defaults
-    cfg.bmp_port = const_cast<char *>("5000");
-    cfg.dbName = const_cast<char *>("openBMP");
-    cfg.dbURL = NULL;
-    cfg.debug_bgp = false;
-    cfg.debug_bmp = false;
-    cfg.debug_mysql = false;
-    cfg.password = NULL;
-    cfg.username = NULL;
-    cfg.bmp_buffer_size = 15728640; // 15MB
+    cfg.bmp_port            = const_cast<char *>("5000");
+    cfg.kafka_brokers       =  const_cast<char *>("localhost:9092");
+    cfg.debug_bgp           = false;
+    cfg.debug_bmp           = false;
+    cfg.debug_msgbus        = false;
+    cfg.bmp_buffer_size     = 15728640; // 15MB
+    cfg.svr_ipv6            = false;
+    cfg.svr_ipv4            = true;
+    cfg.heartbeat_interval  = 60 * 60 * 4;   // Default is 4 hours
+
+    bzero(cfg.admin_id, sizeof(cfg.admin_id));
 
     // Make sure we have the correct number of required args
     if (argc > 1 and !strcmp(argv[1], "-v")) {   // Version
@@ -139,42 +149,22 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
         exit(0);
     }
 
-    else if (argc < 4) {
-        cout << "ERROR: Missing required args.";
+    else if (argc < 3) {
+        cout << "ERROR: Missing required args." << endl;
         return true;
     }
 
-
-
-    // Loop thorugh the args
+    // Loop through the args
     for (int i=1; i < argc; i++) {
+
         if (!strcmp(argv[i], "-h")) {   // Help message
             return true;
-        }
-
-        else if (!strcmp(argv[i], "-dbu")) {
-            // We expect the next arg to be a username
-            if (i+1 >= argc) {
-                cout << "INVALID ARG: -dbu expects a username" << endl;
-                return true;
-            }
-
-            cfg.username = argv[++i];
-
-        } else if (!strcmp(argv[i], "-dbp")) {
-            // We expect the next arg to be a password
-            if (i+1 >= argc) {
-                cout << "INVALID ARG: -dbp expects a password" << endl;
-                return true;
-            }
-
-            cfg.password = argv[++i];
 
         } else if (!strcmp(argv[i], "-p")) {
             // We expect the next arg to be a port
             if (i+1 >= argc) {
                 cout << "INVALID ARG: -p expects a port number" << endl;
-                return false;
+                return true;
             }
 
             cfg.bmp_port = argv[++i];
@@ -185,29 +175,62 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
                 return true;
             }
 
-        } else if (!strcmp(argv[i], "-dbn")) {
-            // We expect the next arg to be the database name
+        } else if (!strcmp(argv[i], "-hi")) {
             if (i+1 >= argc) {
-                cout << "INVALID ARG: -dbn expects a database name" << endl;
-                return false;
+                cout << "INVALID ARG: -hi expects minutes" << endl;
+                return true;
             }
 
-            cfg.dbName = argv[++i];
+            cfg.heartbeat_interval = atoi(argv[++i]) * 60;
 
-        } else if (!strcmp(argv[i], "-dburl")) {
-            // We expect the next arg to be the database connection url
-            if (i+1 >= argc) {
-                cout << "INVALID ARG: -dburl expects the database connection url" << endl;
-                return false;
+            // Validate the port
+            if (cfg.heartbeat_interval < 60 || cfg.heartbeat_interval > 86400) {
+                cout << "INVALID ARG: port '" << cfg.heartbeat_interval << "' is out of range, expected range is 1 - 1440" << endl;
+                return true;
             }
 
-            cfg.dbURL = argv[++i];
+        } else if (!strcmp(argv[i], "-m")) {
+            // We expect the next arg to be mode
+            if (i + 1 >= argc) {
+                cout << "INVALID ARG: -m expects mode value" << endl;
+                return true;
+            }
+
+            ++i;
+            if (!strcasecmp(argv[i], "v4")) {
+                cfg.svr_ipv4 = true;
+            } else if (!strcasecmp(argv[i], "v6")) {
+                cfg.svr_ipv6 = true;
+            } else if (!strcasecmp(argv[i], "v4v6")) {
+                cfg.svr_ipv6 = true;
+                cfg.svr_ipv4 = true;
+            } else {
+                cout << "INVALID ARG: mode '" << argv[i] << "' is invalid. Expected v4, v6, or v4v6" << endl;
+                return true;
+            }
+
+        } else if (!strcmp(argv[i], "-k")) {
+            // We expect the next arg to be the kafka broker list hostname:port
+            if (i+1 >= argc) {
+                cout << "INVALID ARG: -k expects the kafka broker list host:port[,...]" << endl;
+                return true;
+            }
+
+            cfg.kafka_brokers = argv[++i];
+
+        } else if (!strcmp(argv[i], "-a")) {
+            if (i+1 >= argc) {
+                cout << "INVALID ARG: -a expects admin ID string" << endl;
+                return true;
+            }
+
+            snprintf(cfg.admin_id, sizeof(cfg.admin_id), "%s", argv[++i]);
 
         } else if (!strcmp(argv[i], "-b")) {
             // We expect the next arg to be the size in MB
             if (i+1 >= argc) {
                 cout << "INVALID ARG: -b expects a value between 2 and 15" << endl;
-                return false;
+                return true;
             }
 
             cfg.bmp_buffer_size = atoi(argv[++i]);
@@ -227,8 +250,8 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
         } else if (!strcmp(argv[i], "-dbmp")) {
             cfg.debug_bmp = true;
             debugEnabled = true;
-        } else if (!strcmp(argv[i], "-dmysql")) {
-            cfg.debug_mysql = true;
+        } else if (!strcmp(argv[i], "-dmsgbus")) {
+            cfg.debug_msgbus = true;
             debugEnabled = true;
         }
 
@@ -282,14 +305,51 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
     }
 
     // Make sure we have the required ARGS
-    if (cfg.dbURL == NULL || cfg.password == NULL || cfg.username == NULL) {
-        cout << "INVALID ARGS: Missing the required args" << endl;
-        return true;
+    if (strlen(cfg.admin_id) <= 0) {
+        cout << "Missing required 'admin ID', use -a <string> to set the collector admin ID" << endl;
+        return false;
     }
 
     return false;
 }
 
+/**
+ * Collector Update Message
+ *
+ * \param [in] kafka                 Pointer to kafka instance
+ * \param [in] cfg                   Reference to configuration
+ * \param [in] client                Reference to client info
+ * \param [in] code                  reason code for the update
+ */
+void collector_update_msg(msgBus_kafka *kafka,  Cfg_Options &cfg, BMPListener::ClientInfo &client,
+                          MsgBusInterface::collector_action_code code) {
+
+    MsgBusInterface::obj_collector oc;
+
+    memcpy(oc.admin_id, cfg.admin_id, sizeof(oc.admin_id));
+
+    oc.router_count = thr_list.size();
+
+    //string hash_str;
+    //string router_hashes;
+    string router_ips;
+    for (int i=0; i < thr_list.size(); i++) {
+        //MsgBusInterface::hash_toStr(thr_list.at(i)->client.hash_id, hash_str);
+        if (router_ips.size() > 0)
+            router_ips.append(", ");
+
+        router_ips.append(thr_list.at(i)->client.c_ip);
+    }
+
+    snprintf(oc.routers, sizeof(oc.routers), "%s", router_ips.c_str());
+
+    timeval tv;
+    gettimeofday(&tv, NULL);
+    oc.timestamp_secs = tv.tv_sec;
+    oc.timestamp_us = tv.tv_usec;
+
+    kafka->update_Collector(oc, code);
+}
 
 /**
  * Run Server loop
@@ -297,22 +357,38 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
  * \param [in]  cfg    Reference to the config options
  */
 void runServer(Cfg_Options &cfg) {
-    mysqlBMP *mysql;
+    msgBus_kafka *kafka;
     int active_connections = 0;                 // Number of active connections/threads
+    time_t last_heartbeat_time = 0;
 
-    LOG_INFO("Starting server");
+    LOG_INFO("Initializing server");
 
     try {
+        // Define the collector hash
+        MD5 hash;
+        hash.update((unsigned char *)cfg.admin_id, strlen(cfg.admin_id));
+        hash.finalize();
 
-        // Test Mysql connection
-        mysql = new mysqlBMP(logger, cfg.dbURL,cfg.username, cfg.password, cfg.dbName);
-        delete mysql;
+        // Save the hash
+        unsigned char *hash_raw = hash.raw_digest();
+        memcpy(cfg.c_hash_id, hash_raw, 16);
+        delete[] hash_raw;
+
+
+        // Test Kafka connection
+        kafka = new msgBus_kafka(logger, cfg.kafka_brokers, cfg.c_hash_id);
 
         // allocate and start a new bmp server
         BMPListener *bmp_svr = new BMPListener(logger, &cfg);
 
+        BMPListener::ClientInfo client;
+        collector_update_msg(kafka, cfg, client, MsgBusInterface::COLLECTOR_ACTION_STARTED);
+        last_heartbeat_time = time(NULL);
+
+        LOG_INFO("Ready. Waiting for connections");
+
         // Loop to accept new connections
-        while (1) {
+        while (run) {
             /*
              * Check for any stale threads/connections
              */
@@ -322,12 +398,16 @@ void runServer(Cfg_Options &cfg) {
 
                     // Join the thread to clean up
                     pthread_join(thr_list.at(i)->thr, NULL);
+                    --active_connections;
+
+                    collector_update_msg(kafka, cfg, thr_list.at(i)->client,
+                                         MsgBusInterface::COLLECTOR_ACTION_CHANGE);
 
                     // free the vector entry
                     delete thr_list.at(i);
                     thr_list.erase(thr_list.begin() + i);
-                    --active_connections;
                 }
+
                 //TODO: Add code to check for a socket that is open, but not really connected/half open
             }
 
@@ -339,38 +419,52 @@ void runServer(Cfg_Options &cfg) {
                 thr->cfg = &cfg;
                 thr->log = logger;
 
-                pthread_attr_t thr_attr;            // thread attribute
-
                 // wait for a new connection and accept
-                LOG_INFO("Waiting for new connection, active connections = %d", active_connections);
-                bmp_svr->accept_connection(thr->client);
+                if (bmp_svr->wait_and_accept_connection(thr->client, 500)) {
+                    // Bump the current thread count
+                    ++active_connections;
 
-                /*
-                 * Start a new thread for every new router connection
-                 */
-                LOG_INFO("Client Connected => %s:%s, sock = %d",
-                        thr->client.c_ipv4, thr->client.c_port, thr->client.c_sock);
+                    LOG_INFO("Accepted new connection; active connections = %d", active_connections);
 
+                    /*
+                     * Start a new thread for every new router connection
+                     */
+                    LOG_INFO("Client Connected => %s:%s, sock = %d",
+                             thr->client.c_ip, thr->client.c_port, thr->client.c_sock);
 
-                pthread_attr_init(&thr_attr);
-                //pthread_attr_setdetachstate(&thr.thr_attr, PTHREAD_CREATE_DETACHED);
-                pthread_attr_setdetachstate(&thr_attr, PTHREAD_CREATE_JOINABLE);
-                thr->running = 1;
+                    pthread_attr_t thr_attr;            // thread attribute
+                    pthread_attr_init(&thr_attr);
+                    //pthread_attr_setdetachstate(&thr.thr_attr, PTHREAD_CREATE_DETACHED);
+                    pthread_attr_setdetachstate(&thr_attr, PTHREAD_CREATE_JOINABLE);
+                    thr->running = 1;
 
+                    // Start the thread to handle the client connection
+                    pthread_create(&thr->thr, &thr_attr,
+                                   ClientThread, thr);
 
-                // Start the thread to handle the client connection
-                pthread_create(&thr->thr,  &thr_attr,
-                        ClientThread, thr);
+                    // Add thread to vector
+                    thr_list.insert(thr_list.end(), thr);
 
-                // Add thread to vector
-                thr_list.insert(thr_list.end(), thr);
+                    // Free attribute
+                    pthread_attr_destroy(&thr_attr);
 
-                // Free attribute
-                pthread_attr_destroy(&thr_attr);
+                    collector_update_msg(kafka, cfg, thr->client,
+                                         MsgBusInterface::COLLECTOR_ACTION_CHANGE);
 
-                // Bump the current thread count
-                ++active_connections;
+                    last_heartbeat_time = time(NULL);
+                }
+                else {
+                    delete thr;
 
+                    // Send heartbeat if needed
+                    if ( (time(NULL) - last_heartbeat_time) >= cfg.heartbeat_interval) {
+                        BMPListener::ClientInfo client;
+                        collector_update_msg(kafka, cfg, client, MsgBusInterface::COLLECTOR_ACTION_HEARTBEAT);
+                        last_heartbeat_time = time(NULL);
+                    }
+
+                    usleep(10000);
+                }
 
             } else {
                 LOG_WARN("Reached max number of threads, cannot accept new BMP connections at this time.");
@@ -378,6 +472,8 @@ void runServer(Cfg_Options &cfg) {
             }
         }
 
+        collector_update_msg(kafka, cfg, client, MsgBusInterface::COLLECTOR_ACTION_STOPPED);
+        delete kafka;
 
     } catch (char const *str) {
         LOG_WARN(str);

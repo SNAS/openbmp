@@ -35,7 +35,7 @@ public:
         uint16_t       afi;                 ///< Address Family Identifier
         unsigned char  safi;                ///< Subsequent Address Family Identifier
         unsigned char  *nlri_data;          ///< NLRI data - Pointer to data (normally does not require freeing)
-        uint16_t       nlri_len;            ///< Not in RFC header; length of the NRLI data
+        uint16_t       nlri_len;            ///< Not in RFC header; length of the NLRI data
     };
 
     /**

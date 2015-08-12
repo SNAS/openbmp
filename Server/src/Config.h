@@ -14,17 +14,21 @@
  * Structure that defines the global configuration options
  */
 struct Cfg_Options {
-    char *password;
-    char *username;
-    char *dbURL;
-    char *dbName;
-    char *bmp_port;
+    u_char c_hash_id[16];            ///< Collector Hash ID (raw format)
+    char   admin_id[64];             ///< Admin ID
 
-    int  bmp_buffer_size;          ///< BMP buffer size in bytes (min is 2M max is 128M)
+    char   *kafka_brokers;
+    char   *bmp_port;
 
-    bool debug_bgp;
-    bool debug_bmp;
-    bool debug_mysql;
+    int    bmp_buffer_size;          ///< BMP buffer size in bytes (min is 2M max is 128M)
+    bool   svr_ipv4;                 ///< Indicates if server should listen for IPv4 connections
+    bool   svr_ipv6;                 ///< Indicates if server should listen for IPv6 connections
+
+    bool   debug_bgp;
+    bool   debug_bmp;
+    bool   debug_msgbus;
+
+    int    heartbeat_interval;      ///< Heartbeat interval in seconds for collector updates
 };
 
 

@@ -8,12 +8,13 @@
  */
 
 #include "parseBMP.h"
-#include "DbInterface.hpp"
+#include "MsgBusInterface.hpp"
 
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <sys/time.h>
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -31,7 +32,7 @@
  * \param [in]     logPtr      Pointer to existing Logger for app logging
  * \param [in,out] peer_entry  Pointer to the peer entry
  */
-parseBMP::parseBMP(Logger *logPtr, DbInterface::tbl_bgp_peer *peer_entry) {
+parseBMP::parseBMP(Logger *logPtr, MsgBusInterface::obj_bgp_peer *peer_entry) {
     debug = false;
     bmp_type = -1; // Initially set to error
     bmp_len = 0;
@@ -40,13 +41,30 @@ parseBMP::parseBMP(Logger *logPtr, DbInterface::tbl_bgp_peer *peer_entry) {
     bmp_data_len = 0;
     bzero(bmp_data, sizeof(bmp_data));
 
+    bmp_packet_len = 0;
+    bzero(bmp_packet, sizeof(bmp_packet));
+
     // Set the passed storage for the router entry items.
     p_entry = peer_entry;
-    bzero(p_entry, sizeof(DbInterface::tbl_bgp_peer));
+    bzero(p_entry, sizeof(MsgBusInterface::obj_bgp_peer));
 }
 
 parseBMP::~parseBMP() {
     // clean up
+}
+
+/**
+ * Recv wrapper for recv() to enable packet buffering
+ */
+ssize_t parseBMP::Recv(int sockfd, void *buf, size_t len, int flags) {
+    ssize_t read = recv(sockfd, buf, len, flags);
+
+    if (bmp_packet_len + read < sizeof(bmp_packet)) {
+        memcpy(bmp_packet + bmp_packet_len, buf, read);
+        bmp_packet_len += read;
+    }
+
+    return read;
 }
 
 /**
@@ -66,7 +84,7 @@ char parseBMP::handleMessage(int sock) {
 
     // Get the version in order to determine what we read next
     //    As of Junos 10.4R6.5, it supports version 1
-    bytes_read = read(sock, &ver, 1);
+    bytes_read = Recv(sock, &ver, 1, 0);
 
     if (bytes_read < 0)
         throw "(1) Failed to read from socket.";
@@ -111,7 +129,7 @@ void parseBMP::parseBMPv2(int sock) {
 
     bmp_len = 0;
 
-    if ((i = recv(sock, &c_hdr, BMP_HDRv1v2_LEN, MSG_WAITALL))
+    if ((i = Recv(sock, &c_hdr, BMP_HDRv1v2_LEN, MSG_WAITALL))
             != BMP_HDRv1v2_LEN) {
         SELF_DEBUG("sock=%d: Couldn't read all bytes, read %zd bytes",
                 sock, i);
@@ -124,7 +142,7 @@ void parseBMP::parseBMPv2(int sock) {
             SELF_DEBUG("sock=%d : BMP MSG : route monitor", sock);
 
             // Get the length of the remaining message by reading the BGP length
-            if ((i=recv(sock, buf, 18, MSG_PEEK | MSG_WAITALL)) == 18) {
+            if ((i=Recv(sock, buf, 18, MSG_PEEK | MSG_WAITALL)) == 18) {
                 uint16_t len;
                 memcpy(&len, (buf+16), 2);
                 bgp::SWAP_BYTES(&len);
@@ -145,11 +163,11 @@ void parseBMP::parseBMPv2(int sock) {
             LOG_INFO("sock=%d: BMP MSG: Peer down", sock);
 
             // Get the length of the remaining message by reading the BGP length
-            if ((i=recv(sock, buf, 1, MSG_PEEK)) != 1) {
+            if ((i=Recv(sock, buf, 1, MSG_PEEK)) != 1) {
 
                 // Is there a BGP message
                 if (buf[0] == 1 or buf[0] == 3) {
-                    if ((i = recv(sock, buf, 18, MSG_PEEK | MSG_WAITALL)) == 18) {
+                    if ((i = Recv(sock, buf, 18, MSG_PEEK | MSG_WAITALL)) == 18) {
                         memcpy(&bmp_len, buf + 16, 2);
                         bgp::SWAP_BYTES(&bmp_len);
 
@@ -271,7 +289,7 @@ void parseBMP::parseBMPv3(int sock) {
     struct common_hdr_v3 c_hdr = { 0 };
 
     SELF_DEBUG("Parsing BMP version 3 (latest draft)");
-    if ((recv(sock, &c_hdr, BMP_HDRv3_LEN, MSG_WAITALL)) != BMP_HDRv3_LEN) {
+    if ((Recv(sock, &c_hdr, BMP_HDRv3_LEN, MSG_WAITALL)) != BMP_HDRv3_LEN) {
         throw "ERROR: Cannot read v3 BMP common header.";
     }
 
@@ -331,13 +349,13 @@ void parseBMP::parseBMPv3(int sock) {
  * \param [in]  sock        Socket to read the message from
  */
 void parseBMP::parsePeerHdr(int sock) {
-    peer_hdr_v3 p_hdr = { 0 };
+    peer_hdr_v3 p_hdr = {0};
     int i;
 
     bzero(&p_hdr, sizeof(p_hdr));
 
-    if ((i = recv(sock, &p_hdr, BMP_PEER_HDR_LEN, MSG_WAITALL))
-            != BMP_PEER_HDR_LEN) {
+    if ((i = Recv(sock, &p_hdr, BMP_PEER_HDR_LEN, MSG_WAITALL))
+        != BMP_PEER_HDR_LEN) {
         LOG_ERR("sock=%d: Couldn't read all bytes, read %d bytes",
                 sock, i);
     }
@@ -346,7 +364,7 @@ void parseBMP::parsePeerHdr(int sock) {
     bmp_len -= BMP_PEER_HDR_LEN;
 
     SELF_DEBUG("parsePeerHdr: sock=%d : Peer Type is %d", sock,
-            p_hdr.peer_type);
+               p_hdr.peer_type);
 
     if (p_hdr.peer_flags & 0x80) { // V flag of 1 means this is IPv6
         p_entry->isIPv4 = false;
@@ -354,16 +372,16 @@ void parseBMP::parsePeerHdr(int sock) {
         inet_ntop(AF_INET6, p_hdr.peer_addr, peer_addr, sizeof(peer_addr));
 
         SELF_DEBUG("sock=%d : Peer address is IPv6 %s", sock,
-                peer_addr);
+                   peer_addr);
 
     } else {
         p_entry->isIPv4 = true;
 
         snprintf(peer_addr, sizeof(peer_addr), "%d.%d.%d.%d",
-                p_hdr.peer_addr[12], p_hdr.peer_addr[13], p_hdr.peer_addr[14],
-                p_hdr.peer_addr[15]);
+                 p_hdr.peer_addr[12], p_hdr.peer_addr[13], p_hdr.peer_addr[14],
+                 p_hdr.peer_addr[15]);
         SELF_DEBUG("sock=%d : Peer address is IPv4 %s", sock,
-                peer_addr);
+                   peer_addr);
     }
 
     if (p_hdr.peer_flags & 0x40) { // L flag of 1 means this is post-policy of Adj-RIB-In
@@ -377,34 +395,34 @@ void parseBMP::parsePeerHdr(int sock) {
 
     // convert the BMP byte messages to human readable strings
     snprintf(peer_as, sizeof(peer_as), "0x%04x%04x",
-            p_hdr.peer_as[0] << 8 | p_hdr.peer_as[1],
-            p_hdr.peer_as[2] << 8 | p_hdr.peer_as[3]);
+             p_hdr.peer_as[0] << 8 | p_hdr.peer_as[1],
+             p_hdr.peer_as[2] << 8 | p_hdr.peer_as[3]);
 
     inet_ntop(AF_INET, p_hdr.peer_bgp_id, peer_bgp_id, sizeof(peer_bgp_id));
 
     // Format based on the type of RD
     SELF_DEBUG("sock=%d : Peer RD type = %d %d", sock, p_hdr.peer_dist_id[0], p_hdr.peer_dist_id[1]);
-    switch ( p_hdr.peer_dist_id[1]) {
+    switch (p_hdr.peer_dist_id[1]) {
         case 1: // admin = 4bytes (IP address), assign number = 2bytes
             snprintf(peer_rd, sizeof(peer_rd), "%d.%d.%d.%d:%d",
-                    p_hdr.peer_dist_id[2], p_hdr.peer_dist_id[3],
-                    p_hdr.peer_dist_id[4], p_hdr.peer_dist_id[5],
-                    p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]);
+                     p_hdr.peer_dist_id[2], p_hdr.peer_dist_id[3],
+                     p_hdr.peer_dist_id[4], p_hdr.peer_dist_id[5],
+                     p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]);
             break;
 
         case 2: // admin = 4bytes (ASN), sub field 2bytes
             snprintf(peer_rd, sizeof(peer_rd), "%lu:%d",
-                    (unsigned long) (p_hdr.peer_dist_id[2] << 24
-                            | p_hdr.peer_dist_id[3] << 16
-                            | p_hdr.peer_dist_id[4] << 8 | p_hdr.peer_dist_id[5]),
-                    p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]);
+                     (unsigned long) (p_hdr.peer_dist_id[2] << 24
+                                      | p_hdr.peer_dist_id[3] << 16
+                                      | p_hdr.peer_dist_id[4] << 8 | p_hdr.peer_dist_id[5]),
+                     p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]);
             break;
         default: // Type 0:  // admin = 2 bytes, sub field = 4 bytes
             snprintf(peer_rd, sizeof(peer_rd), "%d:%lu",
-                    p_hdr.peer_dist_id[2] << 8 | p_hdr.peer_dist_id[3],
-                    (unsigned long) (p_hdr.peer_dist_id[4] << 24
-                            | p_hdr.peer_dist_id[5] << 16
-                            | p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]));
+                     p_hdr.peer_dist_id[2] << 8 | p_hdr.peer_dist_id[3],
+                     (unsigned long) (p_hdr.peer_dist_id[4] << 24
+                                      | p_hdr.peer_dist_id[5] << 16
+                                      | p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]));
             break;
     }
 
@@ -416,11 +434,20 @@ void parseBMP::parsePeerHdr(int sock) {
 
     // Save the advertised timestamp
     bgp::SWAP_BYTES(&p_hdr.ts_secs);
+    bgp::SWAP_BYTES(&p_hdr.ts_usecs);
 
-    if (p_hdr.ts_secs != 0)
+    if (p_hdr.ts_secs != 0) {
         p_entry->timestamp_secs = p_hdr.ts_secs;
-    else
-        p_entry->timestamp_secs = time(NULL);
+        p_entry->timestamp_us = p_hdr.ts_usecs;
+
+    } else {
+        timeval tv;
+
+        gettimeofday(&tv, NULL);
+        p_entry->timestamp_secs = tv.tv_sec;
+        p_entry->timestamp_us = tv.tv_usec;
+    }
+
 
     // Is peer type L3VPN peer or global instance
     if (p_hdr.peer_type == 1) // L3VPN
@@ -447,10 +474,10 @@ void parseBMP::parsePeerHdr(int sock) {
  *
  * \returns true if successfully parsed the bmp peer down header, false otherwise
  */
-bool parseBMP::parsePeerDownEventHdr(int sock, DbInterface::tbl_peer_down_event &down_event) {
+bool parseBMP::parsePeerDownEventHdr(int sock, MsgBusInterface::obj_peer_down_event &down_event) {
     char reason;
 
-    if (read(sock, &reason, 1) == 1) {
+    if (Recv(sock, &reason, 1, 0) == 1) {
         LOG_NOTICE("sock=%d : %s: BGP peer down notification with reason code: %d",
                     sock, p_entry->peer_addr, reason);
 
@@ -459,7 +486,6 @@ bool parseBMP::parsePeerDownEventHdr(int sock, DbInterface::tbl_peer_down_event 
 
         // Initialize the down_event struct
         down_event.bmp_reason = reason;
-        memcpy(down_event.peer_hash_id, p_entry->hash_id, sizeof(p_entry->hash_id));
 
     } else {
         return false;
@@ -491,7 +517,7 @@ void parseBMP::bufferBMPMessage(int sock) {
     }
 
     SELF_DEBUG("sock=%d: Buffering %d from socket", sock, bmp_len);
-    if ((bmp_data_len=recv(sock, bmp_data, bmp_len, MSG_WAITALL)) != bmp_len) {
+    if ((bmp_data_len=Recv(sock, bmp_data, bmp_len, MSG_WAITALL)) != bmp_len) {
          LOG_ERR("sock=%d: Couldn't read all %d bytes into buffer",
                  sock, bmp_len);
          throw "Error while reading BMP data into buffer";
@@ -513,17 +539,13 @@ void parseBMP::bufferBMPMessage(int sock) {
  *
  * \returns true if successfully parsed the bmp peer up header, false otherwise
  */
-bool parseBMP::parsePeerUpEventHdr(int sock, DbInterface::tbl_peer_up_event &up_event) {
+bool parseBMP::parsePeerUpEventHdr(int sock, MsgBusInterface::obj_peer_up_event &up_event) {
     unsigned char local_addr[16];
     bool isParseGood = true;
     int bytes_read = 0;
 
-    // Set the timestamp to the peer timestamp
-    up_event.timestamp_secs = p_entry->timestamp_secs;
-    memcpy(up_event.peer_hash_id, p_entry->hash_id, sizeof(p_entry->hash_id));
-
     // Get the local address
-    if ( recv(sock, &local_addr, 16, MSG_WAITALL) != 16)
+    if ( Recv(sock, &local_addr, 16, MSG_WAITALL) != 16)
         isParseGood = false;
     else
         bytes_read += 16;
@@ -540,7 +562,7 @@ bool parseBMP::parsePeerUpEventHdr(int sock, DbInterface::tbl_peer_up_event &up_
     }
 
     // Get the local port
-    if (isParseGood and recv(sock, &up_event.local_port, 2, MSG_WAITALL) != 2)
+    if (isParseGood and Recv(sock, &up_event.local_port, 2, MSG_WAITALL) != 2)
             isParseGood = false;
 
     else if (isParseGood) {
@@ -549,7 +571,7 @@ bool parseBMP::parsePeerUpEventHdr(int sock, DbInterface::tbl_peer_up_event &up_
     }
 
     // Get the remote port
-    if (isParseGood and recv(sock, &up_event.remote_port, 2, MSG_WAITALL) != 2)
+    if (isParseGood and Recv(sock, &up_event.remote_port, 2, MSG_WAITALL) != 2)
         isParseGood = false;
 
     else if (isParseGood) {
@@ -581,11 +603,11 @@ bool parseBMP::parsePeerUpEventHdr(int sock, DbInterface::tbl_peer_up_event &up_
  *
  * \return true if error, false if no error
  */
-bool parseBMP::handleStatsReport(int sock, DbInterface::tbl_stats_report &stats) {
+bool parseBMP::handleStatsReport(int sock, MsgBusInterface::obj_stats_report &stats) {
     unsigned long stats_cnt = 0; // Number of counter stat objects to follow
     unsigned char b[8];
 
-    if ((recv(sock, b, 4, MSG_WAITALL)) != 4)
+    if ((Recv(sock, b, 4, MSG_WAITALL)) != 4)
         throw "ERROR:  Cannot proceed since we cannot read the stats mon counter";
 
     bmp_len -= 4;
@@ -601,14 +623,12 @@ bool parseBMP::handleStatsReport(int sock, DbInterface::tbl_stats_report &stats)
     unsigned short stat_type = 0;
     unsigned short stat_len = 0;
 
-    memcpy(stats.peer_hash_id, p_entry->hash_id, sizeof(p_entry->hash_id));
-
     // Loop through each stats object
     for (unsigned long i = 0; i < stats_cnt; i++) {
 
-        if ((recv(sock, &stat_type, 2, MSG_WAITALL)) != 2)
+        if ((Recv(sock, &stat_type, 2, MSG_WAITALL)) != 2)
             throw "ERROR: Cannot proceed since we cannot read the stats type.";
-        if ((recv(sock, &stat_len, 2, MSG_WAITALL)) != 2)
+        if ((Recv(sock, &stat_len, 2, MSG_WAITALL)) != 2)
             throw "ERROR: Cannot proceed since we cannot read the stats len.";
 
         bmp_len -= 4;
@@ -624,7 +644,7 @@ bool parseBMP::handleStatsReport(int sock, DbInterface::tbl_stats_report &stats)
         if (stat_len == 4 or stat_len == 8) {
 
             // Read the stats counter - 32/64 bits
-            if ((recv(sock, b, stat_len, MSG_WAITALL)) == stat_len) {
+            if ((Recv(sock, b, stat_len, MSG_WAITALL)) == stat_len) {
                 bmp_len -= stat_len;
 
                 // convert the bytes from network to host order
@@ -688,7 +708,7 @@ bool parseBMP::handleStatsReport(int sock, DbInterface::tbl_stats_report &stats)
                         sock, stat_type, stat_len);
 
             while (stat_len-- > 0)
-                read(sock, &b[0], 1);
+                Recv(sock, &b[0], 1, 0);
         }
     }
 
@@ -701,7 +721,7 @@ bool parseBMP::handleStatsReport(int sock, DbInterface::tbl_stats_report &stats)
  * \param [in]     sock        Socket to read the init message from
  * \param [in/out] r_entry     Already defined router entry reference (will be updated)
  */
-void parseBMP::handleInitMsg(int sock, DbInterface::tbl_router &r_entry) {
+void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
     init_msg_v3 initMsg;
     char infoBuf[sizeof(r_entry.initiate_data)];
     int infoLen;
@@ -766,7 +786,7 @@ void parseBMP::handleInitMsg(int sock, DbInterface::tbl_router &r_entry) {
  * \param [in]     sock        Socket to read the term message from
  * \param [in/out] r_entry     Already defined router entry reference (will be updated)
  */
-void parseBMP::handleTermMsg(int sock, DbInterface::tbl_router &r_entry) {
+void parseBMP::handleTermMsg(int sock, MsgBusInterface::obj_router &r_entry) {
     term_msg_v3 termMsg;
     char infoBuf[sizeof(r_entry.term_data)];
     int infoLen;
@@ -819,31 +839,31 @@ void parseBMP::handleTermMsg(int sock, DbInterface::tbl_router &r_entry) {
 
                 switch (term_reason) {
                     case TERM_REASON_ADMIN_CLOSE :
-                        LOG_INFO("%s BMP session closed by remote administratively", r_entry.src_addr);
+                        LOG_INFO("%s BMP session closed by remote administratively", r_entry.ip_addr);
                         snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
                                "Remote session administratively closed");
                         break;
 
                     case TERM_REASON_OUT_OF_RESOURCES:
-                        LOG_INFO("%s BMP session closed by remote due to out of resources", r_entry.src_addr);
+                        LOG_INFO("%s BMP session closed by remote due to out of resources", r_entry.ip_addr);
                         snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
                                 "Remote out of resources");
                         break;
 
                     case TERM_REASON_REDUNDANT_CONN:
-                        LOG_INFO("%s BMP session closed by remote due to connection being redundant", r_entry.src_addr);
+                        LOG_INFO("%s BMP session closed by remote due to connection being redundant", r_entry.ip_addr);
                         snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
                                 "Remote considers connection redundant");
                         break;
 
                     case TERM_REASON_UNSPECIFIED:
-                        LOG_INFO("%s BMP session closed by remote as unspecified", r_entry.src_addr);
+                        LOG_INFO("%s BMP session closed by remote as unspecified", r_entry.ip_addr);
                         snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
                                 "Remote closed with unspecified reason");
                         break;
 
                     default:
-                        LOG_INFO("%s closed with undefined reason code of %d", r_entry.src_addr, term_reason);
+                        LOG_INFO("%s closed with undefined reason code of %d", r_entry.ip_addr, term_reason);
                         snprintf(r_entry.term_reason_text, sizeof(r_entry.term_reason_text),
                                "Unknown %d termination reason, which is not part of draft.", term_reason);
                 }

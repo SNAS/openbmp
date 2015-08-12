@@ -12,7 +12,7 @@
 
 #include "Logger.h"
 #include "bgp_common.h"
-#include "DbInterface.hpp"
+#include "MsgBusInterface.hpp"
 
 #include <string>
 #include <list>
@@ -122,9 +122,9 @@ public:
      * Parsed data structure for BGP-LS
      */
     struct parsed_data_ls {
-        std::list<DbInterface::tbl_ls_node>   nodes;        ///< List of Link state nodes
-        std::list<DbInterface::tbl_ls_link>   links;        ///< List of link state links
-        std::list<DbInterface::tbl_ls_prefix> prefixes;     ///< List of link state prefixes
+        std::list<MsgBusInterface::obj_ls_node>   nodes;        ///< List of Link state nodes
+        std::list<MsgBusInterface::obj_ls_link>   links;        ///< List of link state links
+        std::list<MsgBusInterface::obj_ls_prefix> prefixes;     ///< List of link state prefixes
     };
 
     /**
