@@ -88,7 +88,7 @@ endif()
 #--not used-- list( APPEND CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Set the libs to link
-set (LIBS pthread ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z rt)
+set (LIBS pthread ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z)
 
 # Set the binary
 add_executable (openbmpd ${SRC_FILES})

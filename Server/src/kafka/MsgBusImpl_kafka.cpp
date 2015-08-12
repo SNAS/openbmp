@@ -46,11 +46,23 @@ msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id)
 
     hash_toStr(c_hash_id, collector_hash);
 
-    disableDebug();
-
     isConnected = false;
     conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
     tconf = RdKafka::Conf::create(RdKafka::Conf::CONF_TOPIC);
+
+    disableDebug();
+
+    initTopicMap();
+
+    router_seq          = 0L;
+    collector_seq       = 0L;
+    peer_seq            = 0L;
+    base_attr_seq       = 0L;
+    unicast_prefix_seq  = 0L;
+    ls_node_seq         = 0L;
+    ls_link_seq         = 0L;
+    ls_prefix_seq       = 0L;
+    bmp_stat_seq        = 0L;
 
     broker_list = brokerList;
 

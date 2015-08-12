@@ -34,41 +34,16 @@
   */
 class msgBus_kafka: public MsgBusInterface {
 public:
-    /**
-     * Topic name to handle pointer map (key=Name, value=topic pointer)
-     */
-    typedef std::map<std::string, RdKafka::Topic *> topic_map;
-    std::map<std::string, RdKafka::Topic*> topic = {
-            #define MSGBUS_TOPIC_COLLECTOR              "openbmp.parsed.collector"
-            { MSGBUS_TOPIC_COLLECTOR,        NULL},
-
-            #define MSGBUS_TOPIC_ROUTER                 "openbmp.parsed.router"
-            { MSGBUS_TOPIC_ROUTER,           NULL},
-
-            #define MSGBUS_TOPIC_PEER                   "openbmp.parsed.peer"
-            { MSGBUS_TOPIC_PEER,             NULL},
-
-            #define MSGBUS_TOPIC_BASE_ATTRIBUTE         "openbmp.parsed.base_attribute"
-            { MSGBUS_TOPIC_BASE_ATTRIBUTE,   NULL},
-
-            #define MSGBUS_TOPIC_UNICAST_PREFIX         "openbmp.parsed.unicast_prefix"
-            { MSGBUS_TOPIC_UNICAST_PREFIX,   NULL},
-
-            #define MSGBUS_TOPIC_LS_NODE                "openbmp.parsed.ls_node"
-            { MSGBUS_TOPIC_LS_NODE,          NULL},
-
-            #define MSGBUS_TOPIC_LS_LINK                "openbmp.parsed.ls_link"
-            { MSGBUS_TOPIC_LS_LINK,          NULL},
-
-            #define MSGBUS_TOPIC_LS_PREFIX              "openbmp.parsed.ls_prefix"
-            { MSGBUS_TOPIC_LS_PREFIX,        NULL},
-
-            #define MSGBUS_TOPIC_BMP_STAT               "openbmp.parsed.bmp_stat"
-            { MSGBUS_TOPIC_BMP_STAT,         NULL},
-
-            #define MSGBUS_TOPIC_BMP_RAW                "openbmp.bmp_raw"
-            { MSGBUS_TOPIC_BMP_RAW,          NULL}
-    };
+    #define MSGBUS_TOPIC_COLLECTOR              "openbmp.parsed.collector"
+    #define MSGBUS_TOPIC_ROUTER                 "openbmp.parsed.router"
+    #define MSGBUS_TOPIC_PEER                   "openbmp.parsed.peer"
+    #define MSGBUS_TOPIC_BASE_ATTRIBUTE         "openbmp.parsed.base_attribute"
+    #define MSGBUS_TOPIC_UNICAST_PREFIX         "openbmp.parsed.unicast_prefix"
+    #define MSGBUS_TOPIC_LS_NODE                "openbmp.parsed.ls_node"
+    #define MSGBUS_TOPIC_LS_LINK                "openbmp.parsed.ls_link"
+    #define MSGBUS_TOPIC_LS_PREFIX              "openbmp.parsed.ls_prefix"
+    #define MSGBUS_TOPIC_BMP_STAT               "openbmp.parsed.bmp_stat"
+    #define MSGBUS_TOPIC_BMP_RAW                "openbmp.bmp_raw"
 
     /******************************************************************//**
      * \brief This function will initialize and connect to MySQL.  
@@ -112,31 +87,31 @@ private:
 
     std::string     collector_hash;             ///< collector hash string value
 
-    uint64_t        router_seq  = 0L;           ///< Router add/del sequence
-    uint64_t        collector_seq = 0L;         ///< Collector add/del sequence
-    uint64_t        peer_seq = 0L;              ///< Peer add/del sequence
-    uint64_t        base_attr_seq = 0L;         ///< Base attribute sequence
-    uint64_t        unicast_prefix_seq = 0L;    ///< Unicast prefix sequence
-    uint64_t        bmp_stat_seq = 0L;          ///< BMP stats sequence
-    uint64_t        ls_node_seq = 0L;           ///< LS node sequence
-    uint64_t        ls_link_seq = 0L;           ///< LS link sequence
-    uint64_t        ls_prefix_seq = 0L;         ///< LS prefix sequence
+    uint64_t        router_seq;                 ///< Router add/del sequence
+    uint64_t        collector_seq;              ///< Collector add/del sequence
+    uint64_t        peer_seq ;                  ///< Peer add/del sequence
+    uint64_t        base_attr_seq;              ///< Base attribute sequence
+    uint64_t        unicast_prefix_seq;         ///< Unicast prefix sequence
+    uint64_t        bmp_stat_seq;               ///< BMP stats sequence
+    uint64_t        ls_node_seq;                ///< LS node sequence
+    uint64_t        ls_link_seq;                ///< LS link sequence
+    uint64_t        ls_prefix_seq;              ///< LS prefix sequence
 
     std::string     broker_list;                ///< Broker list in the format of <host>:<port>[,...]
 
     /**
      * Kafka Configuration object (global and topic level)
      */
-    RdKafka::Conf   *conf       = NULL;
-    RdKafka::Conf   *tconf      = NULL;
+    RdKafka::Conf   *conf;
+    RdKafka::Conf   *tconf;
 
-    RdKafka::Producer *producer = NULL;                ///< Kafka Producer instance
+    RdKafka::Producer *producer;                ///< Kafka Producer instance
 
     /**
      * Callback handlers
      */
-    KafkaEventCallback              *event_callback      = NULL;
-    KafkaDeliveryReportCallback     *delivery_callback   = NULL;
+    KafkaEventCallback              *event_callback;
+    KafkaDeliveryReportCallback     *delivery_callback;
 
 
     bool isConnected;                           ///< Indicates if Kafka is connected or not
@@ -148,6 +123,28 @@ private:
     typedef std::map<std::string, time_t>::iterator peer_list_iter;
 
     std::string router_ip;                      ///< Router IP in printed format, used for logging
+
+    /**
+     * Topic name to handle pointer map (key=Name, value=topic pointer)
+     */
+    typedef std::map<std::string, RdKafka::Topic *> topic_map;
+
+    void initTopicMap() {
+        topic = {
+                { const_cast<char *>(MSGBUS_TOPIC_COLLECTOR),        (RdKafka::Topic *)NULL},
+                { const_cast<char *>(MSGBUS_TOPIC_ROUTER),           (RdKafka::Topic *)NULL},
+                { const_cast<char *>(MSGBUS_TOPIC_PEER),             (RdKafka::Topic *)NULL},
+                { const_cast<char *>(MSGBUS_TOPIC_BASE_ATTRIBUTE),   (RdKafka::Topic *)NULL},
+                { const_cast<char *>(MSGBUS_TOPIC_UNICAST_PREFIX),   (RdKafka::Topic *)NULL},
+                { const_cast<char *>(MSGBUS_TOPIC_LS_NODE),          (RdKafka::Topic *)NULL},
+                { const_cast<char *>(MSGBUS_TOPIC_LS_LINK),          (RdKafka::Topic *)NULL},
+                { const_cast<char *>(MSGBUS_TOPIC_LS_PREFIX),        (RdKafka::Topic *)NULL},
+                { const_cast<char *>(MSGBUS_TOPIC_BMP_STAT),         (RdKafka::Topic *)NULL},
+                { const_cast<char *>(MSGBUS_TOPIC_BMP_RAW),          (RdKafka::Topic *)NULL}
+        };
+    };
+
+    std::map<std::string, RdKafka::Topic*> topic;
 
     /**
      * Connects to kafka broker

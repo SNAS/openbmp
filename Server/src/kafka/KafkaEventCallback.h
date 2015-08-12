@@ -29,7 +29,7 @@ public:
     void setLogger(Logger *logPtr);
 
 private:
-    Logger *logger = NULL;
+    Logger *logger;
     bool   *isConnected;           // Indicates if connected to the broker or not.
 };
 

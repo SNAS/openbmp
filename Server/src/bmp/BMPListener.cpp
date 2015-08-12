@@ -47,9 +47,11 @@ BMPListener::BMPListener(Logger *logPtr, Cfg_Options *config) {
     if (cfg->debug_bmp)
         enableDebug();
 
+    svr_addr.sin_family = PF_INET;
     svr_addr.sin_port = htons(atoi(cfg->bmp_port));
     svr_addr.sin_addr.s_addr = INADDR_ANY;
 
+    svr_addrv6.sin_family = PF_INET6;
     svr_addrv6.sin_port = htons(atoi(cfg->bmp_port));
     svr_addrv6.sin_addr.s_addr = INADDR_ANY;
 
@@ -90,7 +92,8 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
         }
 
         // Bind to the address/port
-        if (::bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) < 0) {
+        if (bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) < 0) {
+            perror("what");
             close(sock);
             throw "ERROR: Cannot bind to IPv4 address and port";
         }
@@ -111,7 +114,7 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
         }
 
         // Bind to the address/port
-        if (::bind(sockv6, (struct sockaddr *) &svr_addrv6, sizeof(svr_addrv6)) < 0) {
+        if (bind(sockv6, (struct sockaddr *) &svr_addrv6, sizeof(svr_addrv6)) < 0) {
             close(sockv6);
             throw "ERROR: Cannot bind to IPv6 address and port";
         }
