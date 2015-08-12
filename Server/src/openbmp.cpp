@@ -79,7 +79,7 @@ void Usage(char *prog) {
     cout << endl << "  DEBUG OPTIONS:" << endl;
     cout << "     -dbgp             Debug BGP parser" <<  endl;
     cout << "     -dbmp             Debug BMP parser" << endl;
-    cout << "     -dmysql           Debug mysql" << endl;
+    cout << "     -dmsgbus          Debug message bus" << endl;
 
 }
 

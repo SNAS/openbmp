@@ -5,6 +5,21 @@ See the various requirements and suggested system configurations at [Requirement
 Openbmp is built and installed using 'cmake' to build the makefiles. 
 
 
+All Platforms (Ubuntu, CentOS, etc.)
+------------------------------------
+
+### Install librdkafka development and runtime libraries
+
+See [librdkafka](https://github.com/edenhill/librdkafka) for detailed instructions on how to install.  
+
+```
+git clone https://github.com/edenhill/librdkafka.git
+cd librdkafka
+./configure
+make
+sudo make install
+```
+
 Ubuntu 14.04
 ------------
 ### Install Ubuntu 14.04
@@ -13,11 +28,8 @@ Install standard Ubuntu 14.04/Trusty server image [Ubuntu Download](http://www.u
 ### Install the dependancies
 
 ``` 
-sudo apt-get install gcc g++ libboost-dev mysql-client-5.6 mysql-common-5.6 cmake libmysqlcppconn-dev libmysqlcppconn7
+sudo apt-get install gcc g++ libboost-dev cmake 
 ```
-> ### NOTE
-> If you use an existing server, you may have to adjust the dependency installs. 
-
 
 RHEL7/CentOS7
 -------------
@@ -29,27 +41,6 @@ We use CentOS 7 minimal.  [CentOS 7 Download](http://www.centos.org/download/)
 ```
 sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget
 ```
-
-### Install MySQL devel dependancies 
-Mysql is still used till MariaDB has been tested
-
-```
-wget http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
-
-sudo rpm -i mysql-community-release-el7-5.noarch.rpm
-
-sudo yum install -y mysql-community-devel mysql-community-libs 
-```
-
-### Install MySQL C++ Connector (used while MySQL is still being used)
-```
-wget http://dev.mysql.com/get/Downloads/Connector-C++/mysql-connector-c++-1.1.4-linux-el6-x86-64bit.rpm
-
-rpm -i mysql-connector-c++-1.1.4-linux-el6-x86-64bit.rpm
-```
-
-> ### NOTE
-> If you use an existing server, you may have to adjust the dependency installs. 
 
 
 RHEL6/CentOS6 (6.5) - Legacy support
@@ -63,43 +54,24 @@ We use CentOS 6 minimal.  [CentOS 6 Download](http://wiki.centos.org/Download)
 sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget
 ```
 
-### Install MySQL devel dependancies 
-Mysql is still used till MariaDB has been tested
 
-```
-wget http://dev.mysql.com/get/mysql-community-release-el6-5.noarch.rpm
-
-sudo rpm -i mysql-community-release-el6-5.noarch.rpm
-
-sudo yum install -y mysql-community-devel mysql-community-libs 
-```
-
-### Install MySQL C++ Connector (used while MySQL is still being used)
-```
-wget http://dev.mysql.com/get/Downloads/Connector-C++/mysql-connector-c++-1.1.4-linux-el6-x86-64bit.rpm
-
-rpm -i mysql-connector-c++-1.1.4-linux-el6-x86-64bit.rpm
-```
-
-> ### NOTE
-> If you use an existing server, you may have to adjust the dependency installs. 
-
-
-
-Compiling Source (ALL)
+Compiling Source (All Platforms)
 -------------------------------------
+> #### IMPORTANT
+> Make sure you have installed librdkafka development and runtime libs as mentioned under all platforms above.
 
 Do the following: 
 
-1. git clone https://github.com/OpenBMP/openbmp.git
-1. cd openbmp
-1. cmake **-DCMAKE_INSTALL_PREFIX:PATH=/usr** **.**  
-   *(don't forget the dot '.')*
-1. make
+    git clone https://github.com/OpenBMP/openbmp.git
+    cd openbmp
+    mkdir build
+    cd build
+    cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ../  
+    make
 
 ### Example output
 ```
-localadmin@toolServer:/ws/ws-openbmp/openbmp$ cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr .
+ubuntu@bmp-dev:~/test/openbmp/build$ cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ../ 
 -- The C compiler identification is GNU 4.8.2
 -- The CXX compiler identification is GNU 4.8.2
 -- Check for working C compiler: /usr/bin/cc
@@ -117,30 +89,36 @@ localadmin@toolServer:/ws/ws-openbmp/openbmp$ cmake -DCMAKE_INSTALL_PREFIX:PATH=
 -- Performing Test SUPPORTS_STD_CXX01 - Success
 -- Configuring done
 -- Generating done
--- Build files have been written to: /ws/ws-openbmp/openbmp
+-- Build files have been written to: /home/ubuntu/test/openbmp/build
 
-localadmin@toolServer:/ws/ws-openbmp/openbmp$ make
+ubuntu@bmp-dev:~/test/openbmp/build$ make
 Scanning dependencies of target openbmpd
-[  7%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/BMPListener.cpp.o
-[ 14%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/BMPReader.cpp.o
-[ 21%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/DbImpl_mysql.cpp.o
-[ 28%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/openbmp.cpp.o
-[ 35%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/parseBMP.cpp.o
+[  5%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bmp/BMPListener.cpp.o
+[ 10%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bmp/BMPReader.cpp.o
+[ 15%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/kafka/MsgBusImpl_kafka.cpp.o
+[ 21%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/kafka/KafkaEventCallback.cpp.o
+[ 26%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/kafka/KafkaDeliveryReportCallback.cpp.o
+[ 31%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/openbmp.cpp.o
+[ 36%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bmp/parseBMP.cpp.o
 [ 42%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/md5.cpp.o
-[ 50%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/Logger.cpp.o
-[ 57%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/client_thread.cpp.o
-[ 64%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/parseBGP.cpp.o
-[ 71%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/NotificationMsg.cpp.o
-[ 78%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/OpenMsg.cpp.o
-[ 85%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/UpdateMsg.cpp.o
-[ 92%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/MPReachAttr.cpp.o
-[100%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/MPUnReachAttr.cpp.o
+[ 47%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/Logger.cpp.o
+[ 52%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/client_thread.cpp.o
+[ 57%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/parseBGP.cpp.o
+[ 63%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/NotificationMsg.cpp.o
+[ 68%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/OpenMsg.cpp.o
+[ 73%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/UpdateMsg.cpp.o
+[ 78%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/MPReachAttr.cpp.o
+[ 84%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/MPUnReachAttr.cpp.o
+[ 89%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/ExtCommunity.cpp.o
+[ 94%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/linkstate/MPLinkState.cpp.o
+[100%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/linkstate/MPLinkStateAttr.cpp.o
 Linking CXX executable openbmpd
 [100%] Built target openbmpd
 ```
 
+Binary will be located under **Server/**
 
-Install (ALL)
+Install (All Platforms)
 ----------------------------------------------------
 
 Run: **sudo** make install
@@ -149,9 +127,13 @@ Run: **sudo** make install
 > 
 
 ```
-localadmin@toolServer:/ws/ws-openbmp/openbmp$ sudo make install
+ubuntu@bmp-dev:~/test/openbmp/build$ sudo make install
 [100%] Built target openbmpd
 Install the project...
 -- Install configuration: ""
 -- Installing: /usr/bin/openbmpd
+-- Installing: /etc/init/openbmpd.conf
+-- Installing: /etc/default/openbmpd
+-- Installing: /etc/init.d/openbmpd
+-- Installing: /etc/logrotate.d/openbmpd
 ```

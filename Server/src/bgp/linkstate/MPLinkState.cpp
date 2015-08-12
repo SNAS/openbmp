@@ -36,7 +36,7 @@ namespace bgp_msg {
     /**
      * MP Reach Link State NLRI parse
      *
-     * \details Will handle parsing the link state NRLI
+     * \details Will handle parsing the link state NLRI
      *
      * \param [in]   nlri           Reference to parsed NLRI struct
      */
@@ -78,7 +78,7 @@ namespace bgp_msg {
     /**
      * MP UnReach Link State NLRI parse
      *
-     * \details Will handle parsing the unreach link state NRLI
+     * \details Will handle parsing the unreach link state NLRI
      *
      * \param [in]   nlri           Reference to parsed NLRI struct
      */
@@ -114,13 +114,13 @@ namespace bgp_msg {
         uint16_t        nlri_len;
         uint16_t        nlri_len_read = 0;
 
-        // Process the NRLI data
+        // Process the NLRI data
         while (nlri_len_read < len) {
 
             SELF_DEBUG("NLRI read=%d total = %d", nlri_len_read, len);
 
             /*
-             * Parse the NRLI TLV
+             * Parse the NLRI TLV
              */
             memcpy(&nlri_type, data, 2);
             data += 2;
@@ -235,7 +235,7 @@ namespace bgp_msg {
     /**********************************************************************************//*
      * Parse NODE NLRI
      *
-     * \details will parse the node NRLI type. Data starts at local node descriptor.
+     * \details will parse the node NLRI type. Data starts at local node descriptor.
      *
      * \param [in]   data           Pointer to the start of the node NLRI data
      * \param [in]   data_len       Length of the data
@@ -247,7 +247,7 @@ namespace bgp_msg {
         bzero(&node_tbl, sizeof(node_tbl));
 
         if (data_len < 4) {
-            LOG_WARN("%s: bgp-ls: Unable to parse node NRLI since it's too short (invalid)", peer_addr.c_str());
+            LOG_WARN("%s: bgp-ls: Unable to parse node NLRI since it's too short (invalid)", peer_addr.c_str());
             return;
         }
 
@@ -313,7 +313,7 @@ namespace bgp_msg {
     /**********************************************************************************//*
      * Parse LINK NLRI
      *
-     * \details will parse the LINK NRLI type.  Data starts at local node descriptor.
+     * \details will parse the LINK NLRI type.  Data starts at local node descriptor.
      *
      * \param [in]   data           Pointer to the start of the node NLRI data
      * \param [in]   data_len       Length of the data
@@ -325,7 +325,7 @@ namespace bgp_msg {
         bzero(&link_tbl, sizeof(link_tbl));
 
         if (data_len < 4) {
-            LOG_WARN("%s: bgp-ls: Unable to parse link NRLI since it's too short (invalid)", peer_addr.c_str());
+            LOG_WARN("%s: bgp-ls: Unable to parse link NLRI since it's too short (invalid)", peer_addr.c_str());
             return;
         }
 
@@ -418,7 +418,7 @@ namespace bgp_msg {
     /**********************************************************************************//*
      * Parse PREFIX NLRI
      *
-     * \details will parse the PREFIX NRLI type.  Data starts at local node descriptor.
+     * \details will parse the PREFIX NLRI type.  Data starts at local node descriptor.
      *
      * \param [in]   data           Pointer to the start of the node NLRI data
      * \param [in]   data_len       Length of the data
@@ -431,7 +431,7 @@ namespace bgp_msg {
         bzero(&prefix_tbl, sizeof(prefix_tbl));
 
         if (data_len < 4) {
-            LOG_WARN("%s: bgp-ls: Unable to parse prefix NRLI since it's too short (invalid)", peer_addr.c_str());
+            LOG_WARN("%s: bgp-ls: Unable to parse prefix NLRI since it's too short (invalid)", peer_addr.c_str());
             return;
         }
 

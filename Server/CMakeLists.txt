@@ -15,7 +15,7 @@ find_path(LIBRDKAFKA_INCLUDE_DIR
 
 find_library(LIBRDKAFKA_LIBRARY
         NAMES
-        rdkafka
+        librdkafka.a rdkafka
         HINTS
         ${HINT_ROOT_DIR}
         PATH_SUFFIXES
@@ -24,7 +24,7 @@ find_library(LIBRDKAFKA_LIBRARY
 
 find_library(LIBRDKAFKA_CPP_LIBRARY
         NAMES
-        rdkafka++
+        librdkafka++.a rdkafka++
         HINTS
         ${HINT_ROOT_DIR}
         PATH_SUFFIXES
@@ -88,7 +88,7 @@ endif()
 #--not used-- list( APPEND CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Set the libs to link
-set (LIBS pthread  ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY})
+set (LIBS pthread ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z rt)
 
 # Set the binary
 add_executable (openbmpd ${SRC_FILES})

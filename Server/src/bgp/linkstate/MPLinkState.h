@@ -148,7 +148,7 @@ namespace bgp_msg {
         /**
          * MP Reach Link State NLRI parse
          *
-         * \details Will handle parsing the link state NRLI
+         * \details Will handle parsing the link state NLRI
          *
          * \param [in]   nlri           Reference to parsed NLRI struct
          */
@@ -157,7 +157,7 @@ namespace bgp_msg {
         /**
          * MP UnReach Link State NLRI parse
          *
-         * \details Will handle parsing the unreach link state NRLI
+         * \details Will handle parsing the unreach link state NLRI
          *
          * \param [in]   nlri           Reference to parsed NLRI struct
          */
@@ -185,7 +185,7 @@ namespace bgp_msg {
         /**********************************************************************************//*
          * Parse NODE NLRI
          *
-         * \details will parse the node NRLI type. Data starts at local node descriptor.
+         * \details will parse the node NLRI type. Data starts at local node descriptor.
          *
          * \param [in]   data           Pointer to the start of the node NLRI data
          * \param [in]   data_len       Length of the data
@@ -197,7 +197,7 @@ namespace bgp_msg {
         /**********************************************************************************//*
          * Parse LINK NLRI
          *
-         * \details will parse the LINK NRLI type. Data starts at local node descriptor.
+         * \details will parse the LINK NLRI type. Data starts at local node descriptor.
          *
          * \param [in]   data           Pointer to the start of the node NLRI data
          * \param [in]   data_len       Length of the data
@@ -209,7 +209,7 @@ namespace bgp_msg {
         /**********************************************************************************//*
          * Parse PREFIX NLRI
          *
-         * \details will parse the PREFIX NRLI type.  Data starts at local node descriptor.
+         * \details will parse the PREFIX NLRI type.  Data starts at local node descriptor.
          *
          * \param [in]   data           Pointer to the start of the node NLRI data
          * \param [in]   data_len       Length of the data
