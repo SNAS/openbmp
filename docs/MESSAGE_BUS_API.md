@@ -45,8 +45,9 @@ Message API: Parsed Data
 ------------------------------------
 
 ### Headers
-| Header | Value | Description |
-|--------|-------|-------------|
+
+Header | Value | Description 
+--------|-------|-------------
 **V**| 1 | Schema version, currently 1
 **C\_HASH\_ID** | hash string | Collector Hash Id
 **L** | length | Length of the data in bytes
@@ -67,8 +68,8 @@ Data is in **TSV** format
 #### Object: <font color="blue">collector</font> (openbmp.parsed.collector)
 Collector details.
 
-| # | Field | Data Type | Size in Bytes | Details |
-|---|-------|-----------|---------------|---------|
+\# | Field | Data Type | Size in Bytes | Details 
+---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **started** = Collector started<br>**change** = Collector had a router connection change<br>**heartbeat** = Collector periodic heartbeat<br>**stopped** = Collector was stopped/shutdown
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number. This increments for each collector record and restarts on collector restart or number wrap. 
 3 | Admin Id | String | 64 | Administrative Id (variable length string); can be IP, hostname, etc.
@@ -85,8 +86,8 @@ Collector details.
 #### Object: <font color="blue">router</font> (openbmp.parsed.router)
 One or more BMP routers.
 
-| # | Field | Data Type | Size in Bytes | Details |
-|---|-------|-----------|---------------|---------|
+\# | Field | Data Type | Size in Bytes | Details 
+---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **first** = first message received by the router, before the INIT message<br>**init** = Initiation message received<br>**term** = Termination message received or connection was closed
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each router record by collector and restarts on collector restart or number wrap. 
 3 | Name | String | 64 | String name of router (from BMP init message or dns PTR)
@@ -102,8 +103,8 @@ One or more BMP routers.
 #### Object: <font color="blue">peer</font> (openbmp.parsed.peer)
 One or more BGP peers.
 
-| # | Field | Data Type | Size in Bytes | Details |
-|---|-------|-----------|---------------|---------|
+\# | Field | Data Type | Size in Bytes | Details 
+---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **first** = first message received by the router, before the INIT message<br>**up** = PEER\_UP message received<br>**down** = PEER\_DOWN message received or connection was closed
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each peer record by collector and restarts on collector restart or number wrap.
 3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ remote/peer ip, peer RD, router hash ]
@@ -141,8 +142,8 @@ One or more BGP peers.
 #### Object: <font color="blue">bmp\_stat</font> (openbmp.parsed.bmp\_stat)
 One or more bmp stat reports.
 
-| # | Field | Data Type | Size in Bytes | Details |
-|---|-------|-----------|---------------|---------|
+\# | Field | Data Type | Size in Bytes | Details 
+---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New stat report entry
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each record by peer and restarts on collector restart or number wrap.
 3 | Router Hash | String | 32 | Hash Id of router
@@ -165,8 +166,8 @@ One or more bmp stat reports.
 #### Object: <font color="blue">base\_attribute</font> (openbmp.parsed.base\_attribute)
 One or more attribute sets (does not include the NLRI's)
 
-| # | Field | Data Type | Size in Bytes | Details |
-|---|-------|-----------|---------------|---------|
+\# | Field | Data Type | Size in Bytes | Details 
+---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>*There is no delete action since attributes are not withdrawn.  Attribute is considered stale/old when no RIB entries contain this hash id paird with peer and router hash id's*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each attribute record by peer and restarts on collector restart or number wrap.
 3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ as path, next hop, aggregator, origin, med, local pref, community list, ext community list, peer hash ]
@@ -194,8 +195,8 @@ One or more attribute sets (does not include the NLRI's)
 #### Object: <font color="blue">unicast\_prefix</font> (openbmp.parsed.unicast\_prefix)
 One or more IPv4/IPv6 unicast prefixes.
 
-| # | Field | Data Type | Size in Bytes | Details |
-|---|-------|-----------|---------------|---------|
+\# | Field | Data Type | Size in Bytes | Details 
+---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each prefix record by peer and restarts on collector restart or number wrap.
 3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ prefix, prefix length, peer hash ]
@@ -227,8 +228,8 @@ One or more IPv4/IPv6 unicast prefixes.
 #### Object: <font color="blue">ls\_node</font> (openbmp.parsed.ls\_node)
 One or more link-state nodes.
 
-| # | Field | Data Type | Size in Bytes | Details |
-|---|-------|-----------|---------------|---------|
+\# | Field | Data Type | Size in Bytes | Details 
+---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each  record by peer and restarts on collector restart or number wrap.
 3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ igp router id, bgp ls id, asn, ospf area id ]
@@ -257,8 +258,8 @@ One or more link-state nodes.
 #### Object: <font color="blue">ls\_link</font> (openbmp.parsed.ls\_link)
 One or more link-state links.
 
-| # | Field | Data Type | Size in Bytes | Details |
-|---|-------|-----------|---------------|---------|
+\# | Field | Data Type | Size in Bytes | Details 
+---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each  record by peer and restarts on collector restart or number wrap.
 3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ interface ip, neighbor ip, link id, local node hash, remote node hash, local link id, remote link id, peer hash ]
@@ -301,8 +302,8 @@ One or more link-state links.
 #### Object: <font color="blue">ls\_prefix</font> (openbmp.parsed.ls\_prefix)
 One or more link-state prefixes.
 
-| # | Field | Data Type | Size in Bytes | Details |
-|---|-------|-----------|---------------|---------|
+\# | Field | Data Type | Size in Bytes | Details 
+---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each  record by peer and restarts on collector restart or number wrap.
 3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ igp router id, bgp ls id, asn, ospf area id ]
@@ -339,8 +340,8 @@ Message API: BMP RAW Data
 ------------------------------------
 
 ### Headers
-| Header | Value | Description |
-|--------|-------|-------------|
+Header | Value | Description 
+--------|-------|-------------
 **V**| 1 | Schema version, currently 1
 **C\_HASH\_ID** | hash string | Collector Hash Id
 **R\_HASH\_ID** | hash string | Router Hash Id

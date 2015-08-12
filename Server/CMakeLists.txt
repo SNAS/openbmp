@@ -31,10 +31,23 @@ find_library(LIBRDKAFKA_CPP_LIBRARY
         lib64
         lib)
 
+find_library(LIBRT_LIBRARY
+        NAMES
+        rt
+        HINTS
+        ${HINT_ROOT_DIR}
+        PATH_SUFFIXES
+        lib64
+        lib)
+
 if (NOT LIBRDKAFKA_INCLUDE_DIR OR NOT LIBRDKAFKA_LIBRARY OR NOT LIBRDKAFKA_CPP_LIBRARY)
 	Message (FATAL_ERROR "Librdkafka was not found, cannot proceed.  Visit https://github.com/edenhill/librdkafka for details on how to install it.")
 #else ()
 #	Message ("lib = " ${LIBRDKAFKA_LIBRARY})
+endif()
+
+if (NOT LIBRT_LIBRARY AND NOT MACOSX)
+    Message (FATAL_ERROR "librt was not found, cannot proceed.")
 endif()
 
 # Update the include dir
@@ -84,9 +97,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_COMPILER_IS_GNUCXX)
     endif()
 endif()
 
-#--not-used--  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=gnu++0x")
-#--not used-- list( APPEND CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-
 # Set the libs to link
 set (LIBS pthread ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z)
 
@@ -94,7 +104,11 @@ set (LIBS pthread ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z)
 add_executable (openbmpd ${SRC_FILES})
 
 # Link the binary
-target_link_libraries (openbmpd ${LIBS}) 
+target_link_libraries (openbmpd ${LIBS})
+
+if (LIBRT_LIBRARY)
+    target_link_libraries(openbmpd ${LIBRT_LIBRARY})
+endif()
 
 # Install the binary and configs
 install(TARGETS openbmpd DESTINATION bin COMPONENT binaries)

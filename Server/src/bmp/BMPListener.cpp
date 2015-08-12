@@ -92,8 +92,7 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
         }
 
         // Bind to the address/port
-        if (bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) < 0) {
-            perror("what");
+        if (::bind(sock, (struct sockaddr *) &svr_addr, sizeof(svr_addr)) < 0) {
             close(sock);
             throw "ERROR: Cannot bind to IPv4 address and port";
         }
@@ -114,7 +113,7 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
         }
 
         // Bind to the address/port
-        if (bind(sockv6, (struct sockaddr *) &svr_addrv6, sizeof(svr_addrv6)) < 0) {
+        if (::bind(sockv6, (struct sockaddr *) &svr_addrv6, sizeof(svr_addrv6)) < 0) {
             close(sockv6);
             throw "ERROR: Cannot bind to IPv6 address and port";
         }

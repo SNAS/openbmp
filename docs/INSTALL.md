@@ -1,8 +1,10 @@
 Install Steps
 =============
+
 See the various requirements and suggested system configurations at [Requirements](REQUIREMENTS.md)
 
 ### Recommended Current Linux Distributions
+
   1. Ubuntu 14.04/Trusty
   1. CentOS 7/RHEL 7
   
@@ -12,6 +14,7 @@ Ubuntu 14.04
 First install either the **Server** or **Cloud** standard Ubuntu image available from [Ubuntu Download](http://www.ubuntu.com/download)
 
 ### Required Steps
+
   1. Update the apt get repo
   1. Install openbmpd using package or from source
   1. Install openbmp MySQL consumer
@@ -29,11 +32,13 @@ First install either the **Server** or **Cloud** standard Ubuntu image available
 
 
 ### Before using 'apt-get' do the following to make sure the repositories are up-to-date
+
 ```
 sudo apt-get update
 ```
 
 ### Install openbmp via package
+
   1. Download the openbmp
       
       [package for Ubuntu 14.04](http://www.openbmp.org/#!download.md)
@@ -52,9 +57,11 @@ Setting up openbmp (0.8.0-pre) ...
 ```
 
 #### If installing from source
+
 Follow the steps in [BUILD](BUILD.md) to install via source from github.
 
 ### Install openbmp mysql consumer
+
   1. Download the openbmp-mysql-consumer
       
       [Download Page](http://www.openbmp.org/#!download.md)
@@ -63,6 +70,7 @@ Follow the steps in [BUILD](BUILD.md) to install via source from github.
 > The consumer is a JAR file that is runnable using java -jar \<filename\>.  In the near future this will be packaged in a DEB package so that you start it using 'service openbmp-mysql-consumer start'.  For now, you will need to run this JAR file via shell command.  See the last step regarding running the consumer for how to run it. 
 
 ### On DB server install mysql
+
 ```
 sudo apt-get install mysql-server-5.6
 ```
@@ -77,6 +85,7 @@ sudo apt-get install mysql-server-5.6
 
 
 ### Login to mysql and create the openbmp database and user account
+
 Apply the below to create the database and user that will be used by the openbmp daemon
 
 > **NOTE**
@@ -94,10 +103,12 @@ mysql -u root -p
 ```
 
 ### MySQL Temporary Table Space
+
 Large queries or queries that involve sorting/counting/... will use a temporary table on disk.   We have found that using a **tmpfs** will improve performance. 
 
 
 #### Create tmpfs (as root)
+
 The below will also configure the tmpfs to be mounted upon restart/boot.
 
     mkdir -p /var/mysqltmp
@@ -106,6 +117,7 @@ The below will also configure the tmpfs to be mounted upon restart/boot.
 
 
 ### Update the /etc/my.cnf file to enable InnoDB and tune memory
+
 The below **MUST** but adjusted based on your memory available.  Ideally it should be set as high as possible. Below is for a system that has 16G of RAM and 8vCPU.
 
 > #### IMPORTANT
@@ -170,6 +182,7 @@ innodb_write_io_threads   = 16
 * sudo service mysql restart
 
 ### Load the schema
+
 Load the openbmp DB schema by downloading it from www.openbmp.org.  You can also get the 
 latest from [GitHub OpenBMP](https://github.com/OpenBMP/openbmp)
 
@@ -188,6 +201,7 @@ mysql -u root -p openBMP < mysql-openbmp-current.db
 
 
 ### Run the openbmp server
+
 MySQL should be installed now and it should be running.   OpenBMP is ready to run. 
 
 **openbmpd**   *(normally installed in /usr/bin)*
@@ -232,6 +246,7 @@ sudo openbmpd -a $(uname -n) -k localhost -b 16 -p 5555 -l /var/log/openbmpd.log
 
 
 ### Run openbmp-mysql-consumer
+
 You can unpack the JAR file if you want to modify the logging config.  Otherwise,  you can run as follows:
 
 > Consumer can run on any platform

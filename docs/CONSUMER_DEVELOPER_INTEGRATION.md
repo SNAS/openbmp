@@ -4,9 +4,9 @@ Consumer Developer Integration
 Developers can now integrate with the real-time message stream of both **parsed** messages and **BMP raw** binary data.   The openbmp collector is an Apache Kafka producer that produces real-time. Any application wishing to access the live stream can do so by simply creating an Apache Kafka consumer.    
 
 
-See [Message Bus API Specification](docs/MESSAGE_BUS_API.md) for details on the API specification. 
+See [Message Bus API Specification](MESSAGE_BUS_API.md) for details on the API specification. 
 
-Alternatively, the developer can interact with the MySQL database via the openbmp-mysql-consumer.  See [DB_SCHEMA](docs/DB_SCHMEA.md) for more details. 
+Alternatively, the developer can interact with the MySQL database via the openbmp-mysql-consumer.  See [DB_SCHEMA](http://www.openbmp.org/#!docs/DB_SCHMEA.md) for more details. 
 
 Reasons for using Apache Kafka
 ------------------------------
