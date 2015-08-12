@@ -3,6 +3,9 @@ Install Steps
 
 See the various requirements and suggested system configurations at [Requirements](REQUIREMENTS.md)
 
+### Docker
+Docker files will be created soon to automate the build/install process and to make it very easy to deploy. 
+
 ### Recommended Current Linux Distributions
 
   1. Ubuntu 14.04/Trusty
@@ -18,6 +21,7 @@ First install either the **Server** or **Cloud** standard Ubuntu image available
   1. Update the apt get repo
   1. Install openbmpd using package or from source
   1. Install openbmp MySQL consumer
+  1. Install Apache Kafka 
   1. Install mysql DB server
   1. Create mysql database and user
   1. Configure mysql settings
@@ -67,7 +71,23 @@ Follow the steps in [BUILD](BUILD.md) to install via source from github.
       [Download Page](http://www.openbmp.org/#!download.md)
       
 > #### NOTE
-> The consumer is a JAR file that is runnable using java -jar \<filename\>.  In the near future this will be packaged in a DEB package so that you start it using 'service openbmp-mysql-consumer start'.  For now, you will need to run this JAR file via shell command.  See the last step regarding running the consumer for how to run it. 
+> The consumer is a JAR file that is runnable using java -jar [filename].  In the near future this will be packaged in a DEB package so that you start it using 'service openbmp-mysql-consumer start'.  For now, you will need to run this JAR file via shell command.  See the last step regarding running the consumer for how to run it. 
+
+### Install Apache Kafka
+
+Follow the [Kafka Quick Start](http://kafka.apache.org/documentation.html#quickstart) guide in order to install and configure Apache Kafka.  You should have it up in running within minutes. 
+
+note: Edit the **config/server.properties** file and make sure to define a valid FQDN  for the variable **advertised.host.name** .  
+
+The collector (producer) and consumers will connect to Kafka and receive the **advertised.host.name** as where it should contact the server.  If this is set to localhost the producer/consumer will not be able to connect successfully to Kafka, unless of course everything is running on a single node.
+
+```
+# Hostname the broker will advertise to producers and consumers. If not set, it uses the
+# value for "host.name" if configured.  Otherwise, it will use the value returned from
+# java.net.InetAddress.getCanonicalHostName().
+
+advertised.host.name=bmp-dev.openbmp.org
+```
 
 ### On DB server install mysql
 
