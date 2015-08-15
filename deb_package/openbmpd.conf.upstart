@@ -6,9 +6,9 @@ start on startup
 stop on runlevel [06]
 
 kill timeout 20
-respawn
+respawn limit 15 5
 
-expect fork
+#expect fork
 
 post-stop script
     rm -f /var/run/openbmpd.pid
@@ -16,5 +16,5 @@ end script
 
 script
     [ -f /etc/default/openbmpd ] && . /etc/default/openbmpd
-    exec /usr/bin/openbmpd -pid /var/run/openbmpd.pid $OPENBMPD_OPTS
+    exec /usr/bin/openbmpd -f $OPENBMPD_OPTS
 end script

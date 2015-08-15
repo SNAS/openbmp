@@ -59,10 +59,11 @@ parseBMP::~parseBMP() {
 ssize_t parseBMP::Recv(int sockfd, void *buf, size_t len, int flags) {
     ssize_t read = recv(sockfd, buf, len, flags);
 
-    if (bmp_packet_len + read < sizeof(bmp_packet)) {
-        memcpy(bmp_packet + bmp_packet_len, buf, read);
-        bmp_packet_len += read;
-    }
+    if (read > 0)
+        if ((bmp_packet_len + read) < BMP_PACKET_BUF_SIZE) {
+            memcpy(&bmp_packet[bmp_packet_len], buf, read);
+            bmp_packet_len += read;
+        }
 
     return read;
 }
@@ -84,7 +85,7 @@ char parseBMP::handleMessage(int sock) {
 
     // Get the version in order to determine what we read next
     //    As of Junos 10.4R6.5, it supports version 1
-    bytes_read = Recv(sock, &ver, 1, 0);
+    bytes_read = Recv(sock, &ver, 1, MSG_WAITALL);
 
     if (bytes_read < 0)
         throw "(1) Failed to read from socket.";

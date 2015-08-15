@@ -34,6 +34,8 @@
   */
 class msgBus_kafka: public MsgBusInterface {
 public:
+    #define MSGBUS_WORKING_BUF_SIZE 1800000
+
     #define MSGBUS_TOPIC_COLLECTOR              "openbmp.parsed.collector"
     #define MSGBUS_TOPIC_ROUTER                 "openbmp.parsed.router"
     #define MSGBUS_TOPIC_PEER                   "openbmp.parsed.peer"
@@ -82,6 +84,8 @@ public:
     void disableDebug();
 
 private:
+    char            *prep_buf;                  ///< Large working buffer for message preparation
+    unsigned char   *producer_buf;              ///< Producer message buffer
     bool            debug;                      ///< debug flag to indicate debugging
     Logger          *logger;                    ///< Logging class pointer
 

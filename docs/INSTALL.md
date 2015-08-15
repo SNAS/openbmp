@@ -1,9 +1,9 @@
 Install Steps
 =============
-
 See the various requirements and suggested system configurations at [Requirements](REQUIREMENTS.md)
 
-### Docker
+Docker
+------
 Docker files will be created soon to automate the build/install process and to make it very easy to deploy. 
 
 ### Recommended Current Linux Distributions
@@ -52,12 +52,12 @@ sudo apt-get update
       **dpkg -i openbmp-VERSION.deb**
   
 ```
-ubuntu@demo:~# sudo dpkg -i openbmp-0.8.0-pre4.deb
-Selecting previously unselected package openbmp.
-(Reading database ... 51367 files and directories currently installed.)
-Preparing to unpack openbmp-0.8.0-pre4.deb ...
-Unpacking openbmp (0.8.0-pre) ...
-Setting up openbmp (0.8.0-pre) ...
+ubuntu@demo:~# sudo dpkg -i openbmp-0.11.0-pre3.deb 
+(Reading database ... 57165 files and directories currently installed.)
+Preparing to unpack openbmp-0.11.0-pre3.deb ...
+Unpacking openbmp (0.11.0-pre3-pre3) over (0.10.0-pre3-pre3) ...
+Setting up openbmp (0.11.0-pre3-pre3) ...
+Processing triggers for ureadahead (0.100.0-16) ...
 ```
 
 #### If installing from source
@@ -69,6 +69,10 @@ Follow the steps in [BUILD](BUILD.md) to install via source from github.
   1. Download the openbmp-mysql-consumer
       
       [Download Page](http://www.openbmp.org/#!download.md)
+      
+      ```
+      wget http://www.openbmp.org/packages/openbmp-mysql-consumer-0.1.0-081315.jar
+      ```  
       
 > #### NOTE
 > The consumer is a JAR file that is runnable using java -jar [filename].  In the near future this will be packaged in a DEB package so that you start it using 'service openbmp-mysql-consumer start'.  For now, you will need to run this JAR file via shell command.  See the last step regarding running the consumer for how to run it. 
@@ -87,6 +91,36 @@ The collector (producer) and consumers will connect to Kafka and receive the **a
 # java.net.InetAddress.getCanonicalHostName().
 
 advertised.host.name=bmp-dev.openbmp.org
+```
+
+#### Example Install Steps
+
+```
+# Install JRE
+sudo apt-get install openjdk-7-jre-headless
+
+sudo mkdir /usr/local/kafka
+sudo chown $(id -u) /usr/local/kafka
+
+wget http://supergsego.com/apache/kafka/0.8.2.1/kafka_2.10-0.8.2.1.tgz
+tar xzf kafka_2.10-0.8.2.1.tgz
+cd kafka_2.10-0.8.2.1
+sudo mv * /usr/local/kafka/
+cd /usr/local/kafka/
+
+# Update the Kafka config
+#    USE FQDN for this host that is reachable by the collectors
+sed -i -r 's/^[#]*advertised.host.name=.*/advertised.host.name=collector.openbmp.org/' \
+ config/server.properties
+sed -i -r 's/^[#]*log.dirs=.*/log.dirs=\/var\/kafka/' config/server.properties
+
+# Create the logs dir for Kafka topics
+sudo mkdir -m 0750 /var/kafka
+sudo chown $(id -u) /var/kafka
+
+nohup bin/zookeeper-server-start.sh config/zookeeper.properties > zookeeper.log &
+sleep 1
+nohup bin/kafka-server-start.sh config/server.properties > kafka.log &
 ```
 
 ### On DB server install mysql
@@ -271,5 +305,6 @@ You can unpack the JAR file if you want to modify the logging config.  Otherwise
 
 > Consumer can run on any platform
     
-     java -jar target/openbmp-mysql-consumer-0.1.0.jar -dh db.openbmp.org -dn openBMPdev -du openbmp -dp openbmpNow -zk bmp-dev.openbmp.org
-     
+      nohup java -Xmx512M -Xms512M -XX:+UseParNewGC -XX:+UseConcMarkSweepGC -XX:+DisableExplicitGC \
+            -jar openbmp-mysql-consumer-0.1.0-081315.jar  -dh db.openbmp.org \
+            -dn openBMP -du openbmp -dp openbmpNow -zk localhost > mysql-consumer.log &     

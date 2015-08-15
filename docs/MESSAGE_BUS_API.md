@@ -18,7 +18,7 @@ Currently there are two feeds available.
 
 #### Topic Name Structure
 
-**<font style="margin-left:50px" color="blue">openbmp</font>.<font color="darkgreen">parsed</font>.<font color="grey">\<object\></font>**
+**<font style="margin-left:50px" color="blue">openbmp</font>.<font color="darkgreen">parsed</font>.<font color="grey">{object}</font>**
 
 
 ### 2) BMP RAW Messages
@@ -184,7 +184,7 @@ One or more attribute sets (does not include the NLRI's)
 14 | Next Hop | String | 46 | Printed form of the next hop IP address
 15 | MED | Int | 4 | MED value
 16 | Local Pref | Int | 4 | Local preference value
-17 | Aggregator | String | 64 | Aggregator in printed form \<as\> \<IP\>
+17 | Aggregator | String | 64 | Aggregator in printed form {as} {IP}
 18 | Community List | String | 8K | String form of the communities
 19 | Ext Community List | String | 8K | String from of the extended communities
 20 | Cluster List | String | 1K | String form of the cluster id's
@@ -217,7 +217,7 @@ One or more IPv4/IPv6 unicast prefixes.
 18 | Next Hop | String | 46 | Printed form of the next hop IP address
 19 | MED | Int | 4 | MED value
 20 | Local Pref | Int | 4 | Local preference value
-21 | Aggregator | String | 64 | Aggregator in printed form \<as\> \<IP\>
+21 | Aggregator | String | 64 | Aggregator in printed form {as} {IP}
 22 | Community List | String | 8K | String form of the communities
 23 | Ext Community List | String | 8K | String from of the extended communities
 24 | Cluster List | String | 1K | String form of the cluster id's

@@ -26,6 +26,7 @@
 #include <fstream>
 #include <csignal>
 #include <cstring>
+#include <sys/stat.h>
 #include "md5.h"
 
 using namespace std;
@@ -39,6 +40,7 @@ const char *debug_filename  = NULL;                 // Debug file to log message
 const char *pid_filename    = NULL;                 // PID file to record the daemon pid
 bool        debugEnabled    = false;                // Globally enable/disable dbug
 bool        run             = true;                 // Indicates if server should run
+bool        run_foreground  = false;                // Indicates if server should run in forground
 
 #define CFG_FILENAME "/etc/openbmp/openbmpd.conf"
 
@@ -72,6 +74,7 @@ void Usage(char *prog) {
     cout << "     -pid <filename>   PID filename, default is no pid file" << endl;
     cout << "     -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128" << endl;
     cout << "     -hi <minutes>     Collector message heartbeat interval in minutes (default is 240 (4 hrs)" << endl;
+    cout << "     -f                Run in foreground instead of daemon (use for upstart)" << endl;
 
     cout << endl << "  OTHER OPTIONS:" << endl;
     cout << "     -v                   Version" << endl;
@@ -83,6 +86,52 @@ void Usage(char *prog) {
 
 }
 
+/**
+ * Daemonize the program
+ */
+void daemonize() {
+    pid_t pid, sid;
+
+    pid = fork();
+
+    if (pid < 0) // Error forking
+        _exit(EXIT_FAILURE);
+
+    if (pid > 0) {
+        _exit(EXIT_SUCCESS);
+
+    } else {
+        sid = setsid();
+        if (sid < 0)
+            exit(EXIT_FAILURE);
+    }
+
+    //Change File Mask
+    umask(0);
+
+    //Change Directory
+    if ((chdir("/")) < 0)
+        exit(EXIT_FAILURE);
+
+    //Close Standard File Descriptors
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    // Write PID to PID file if requested
+    if (pid_filename != NULL) {
+        //pid_t pid = getpid();
+        ofstream pfile(pid_filename);
+
+        if (pfile.is_open()) {
+            pfile << pid << endl;
+            pfile.close();
+        } else {
+            LOG_ERR("Failed to write PID to %s", pid_filename);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
 
 /**
  * Signal handler
@@ -132,7 +181,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
     // Initialize the defaults
     cfg.bmp_port            = const_cast<char *>("5000");
-    cfg.kafka_brokers       =  const_cast<char *>("localhost:9092");
+    cfg.kafka_brokers       = const_cast<char *>("localhost:9092");
     cfg.debug_bgp           = false;
     cfg.debug_bmp           = false;
     cfg.debug_msgbus        = false;
@@ -162,7 +211,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
         } else if (!strcmp(argv[i], "-p")) {
             // We expect the next arg to be a port
-            if (i+1 >= argc) {
+            if (i + 1 >= argc) {
                 cout << "INVALID ARG: -p expects a port number" << endl;
                 return true;
             }
@@ -171,12 +220,13 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
             // Validate the port
             if (atoi(cfg.bmp_port) < 25 || atoi(cfg.bmp_port) > 65535) {
-                cout << "INVALID ARG: port '" << cfg.bmp_port << "' is out of range, expected range is 100-65535" << endl;
+                cout << "INVALID ARG: port '" << cfg.bmp_port << "' is out of range, expected range is 100-65535" <<
+                                                                 endl;
                 return true;
             }
 
         } else if (!strcmp(argv[i], "-hi")) {
-            if (i+1 >= argc) {
+            if (i + 1 >= argc) {
                 cout << "INVALID ARG: -hi expects minutes" << endl;
                 return true;
             }
@@ -185,7 +235,8 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
             // Validate the port
             if (cfg.heartbeat_interval < 60 || cfg.heartbeat_interval > 86400) {
-                cout << "INVALID ARG: port '" << cfg.heartbeat_interval << "' is out of range, expected range is 1 - 1440" << endl;
+                cout << "INVALID ARG: port '" << cfg.heartbeat_interval <<
+                                                 "' is out of range, expected range is 1 - 1440" << endl;
                 return true;
             }
 
@@ -211,7 +262,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
         } else if (!strcmp(argv[i], "-k")) {
             // We expect the next arg to be the kafka broker list hostname:port
-            if (i+1 >= argc) {
+            if (i + 1 >= argc) {
                 cout << "INVALID ARG: -k expects the kafka broker list host:port[,...]" << endl;
                 return true;
             }
@@ -219,7 +270,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
             cfg.kafka_brokers = argv[++i];
 
         } else if (!strcmp(argv[i], "-a")) {
-            if (i+1 >= argc) {
+            if (i + 1 >= argc) {
                 cout << "INVALID ARG: -a expects admin ID string" << endl;
                 return true;
             }
@@ -228,7 +279,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
         } else if (!strcmp(argv[i], "-b")) {
             // We expect the next arg to be the size in MB
-            if (i+1 >= argc) {
+            if (i + 1 >= argc) {
                 cout << "INVALID ARG: -b expects a value between 2 and 15" << endl;
                 return true;
             }
@@ -237,7 +288,8 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
             // Validate the size
             if (cfg.bmp_buffer_size < 2 || cfg.bmp_buffer_size > 384) {
-                cout << "INVALID ARG: port '" << cfg.bmp_buffer_size << "' is out of range, expected range is 2 - 384" << endl;
+                cout << "INVALID ARG: port '" << cfg.bmp_buffer_size <<
+                                                 "' is out of range, expected range is 2 - 384" << endl;
                 return true;
             }
 
@@ -253,6 +305,8 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
         } else if (!strcmp(argv[i], "-dmsgbus")) {
             cfg.debug_msgbus = true;
             debugEnabled = true;
+        } else if (!strcmp(argv[i], "-f")) {
+            run_foreground = true;
         }
 
         // Config filename
@@ -326,7 +380,7 @@ void collector_update_msg(msgBus_kafka *kafka,  Cfg_Options &cfg, BMPListener::C
 
     MsgBusInterface::obj_collector oc;
 
-    memcpy(oc.admin_id, cfg.admin_id, sizeof(oc.admin_id));
+    snprintf(oc.admin_id, sizeof(oc.admin_id), "%s", cfg.admin_id);
 
     oc.router_count = thr_list.size();
 
@@ -375,7 +429,7 @@ void runServer(Cfg_Options &cfg) {
         delete[] hash_raw;
 
 
-        // Test Kafka connection
+        // Kafka connection
         kafka = new msgBus_kafka(logger, cfg.kafka_brokers, cfg.c_hash_id);
 
         // allocate and start a new bmp server
@@ -393,6 +447,7 @@ void runServer(Cfg_Options &cfg) {
              * Check for any stale threads/connections
              */
              for (size_t i=0; i < thr_list.size(); i++) {
+
                 // If thread is not running, it means it terminated, so close it out
                 if (!thr_list.at(i)->running) {
 
@@ -506,25 +561,11 @@ int main(int argc, char **argv) {
 
     if (debugEnabled)
         logger->enableDebug();
-    else {
+    else if (not run_foreground){
         /*
         * Become a daemon if debug is not enabled
         */
-        daemon(1,1);
-
-        // Write PID to PID file if requested
-        if (pid_filename != NULL) {
-            pid_t pid = getpid();
-            ofstream pfile (pid_filename);
-
-            if (pfile.is_open()) {
-                pfile << pid << endl;
-                pfile.close();
-            } else {
-                LOG_ERR("Failed to write PID to %s", pid_filename);
-                exit (1);
-            }
-        }
+        daemonize();
     }
 
     /*

@@ -28,7 +28,6 @@
 #include <boost/algorithm/string/replace.hpp>
 
 #include "md5.h"
-#include "safeQueue.hpp"
 
 using namespace std;
 
@@ -43,6 +42,9 @@ using namespace std;
  ********************************************************************/
 msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id) {
     logger = logPtr;
+
+    producer_buf = new unsigned char[MSGBUS_WORKING_BUF_SIZE];
+    prep_buf = new char[MSGBUS_WORKING_BUF_SIZE];
 
     hash_toStr(c_hash_id, collector_hash);
 
@@ -67,6 +69,11 @@ msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id)
     broker_list = brokerList;
 
     // Make the connection to the server
+    event_callback      = NULL;
+    delivery_callback   = NULL;
+    producer            = NULL;
+
+    router_ip.assign("");
     connect();
 }
 
@@ -74,6 +81,9 @@ msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id)
  * Destructor
  */
 msgBus_kafka::~msgBus_kafka() {
+
+    delete [] producer_buf;
+    delete [] prep_buf;
 
     SELF_DEBUG("Destory msgBus Kafka instance");
 
@@ -88,7 +98,7 @@ msgBus_kafka::~msgBus_kafka() {
 
     // Free topic pointers
     for (topic_map::iterator it = topic.begin(); it != topic.end(); it++) {
-        if (it->second != NULL) {
+        if (it->second) {
             delete it->second;
             it->second = NULL;
         }
@@ -214,6 +224,11 @@ void msgBus_kafka::connect() {
 void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, int rows, string key) {
 
     while (isConnected == false or topic[topic_name] == NULL) {
+
+        // Do not attempt to reconnect if this is the main process (router ip is null)
+        if (router_ip.size() <= 1)
+            break;
+
         LOG_WARN("rtr=%s: Not connected to Kafka, attempting to reconnect", router_ip.c_str());
         connect();
 
@@ -223,20 +238,18 @@ void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, i
     SELF_DEBUG("rtr=%s: Producing message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
                topic_name, key.c_str(), msg_size);
 
-    unsigned char *buf = new unsigned char[msg_size + 200];
     char headers[128];
     snprintf(headers, sizeof(headers), "V: 1\nC_HASH_ID: %s\nL: %lu\nR: %d\n\n",
             collector_hash.c_str(), msg_size, rows);
 
-    memcpy(buf, headers, sizeof(headers));
-    memcpy(buf+strlen(headers), msg, msg_size);
+    memcpy(producer_buf, headers, sizeof(headers));
+    memcpy(producer_buf+strlen(headers), msg, msg_size);
 
     RdKafka::ErrorCode resp = producer->produce(topic[topic_name], 0,
                                                 RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
-                                                buf, msg_size + strlen(headers),
+                                                producer_buf, msg_size + strlen(headers),
                                                 (const std::string *)&key, NULL);
 
-    delete [] buf;
     if (resp != RdKafka::ERR_NO_ERROR)
         LOG_ERR("rtr=%s: Failed to produce message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
 
@@ -512,7 +525,8 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
 void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr, base_attr_action_code code) {
-    char    buf[100000];                // Misc working buffer
+
+    prep_buf[0] = 0;
     size_t  buf_len;                    // size of the message in buf
 
     string path_hash_str;
@@ -555,7 +569,7 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
     buf_len =
-            snprintf(buf, sizeof(buf),
+            snprintf(prep_buf, MSGBUS_WORKING_BUF_SIZE,
                      "add\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIu16 "\t%" PRIu32
                              "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
                      base_attr_seq, path_hash_str.c_str(), r_hash_str.c_str(), router_ip.c_str(), p_hash_str.c_str(),
@@ -564,7 +578,7 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
                      attr.local_pref, attr.aggregator, attr.community_list, attr.ext_community_list, attr.cluster_list,
                      attr.atomic_agg, attr.nexthop_isIPv4, attr.originator_id);
 
-    produce(MSGBUS_TOPIC_BASE_ATTRIBUTE, buf, buf_len, 1, p_hash_str);
+    produce(MSGBUS_TOPIC_BASE_ATTRIBUTE, prep_buf, buf_len, 1, p_hash_str);
 
     ++base_attr_seq;
 }
@@ -575,9 +589,8 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
  */
 void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib,
                                         obj_path_attr *attr, unicast_prefix_action_code code) {
-    char    *buf = new char[1800000];            // Misc working buffer
-    bzero(buf, 1800000);
-
+    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+    prep_buf[0] = 0;
 
     char    buf2[80000];                         // Second working buffer
     size_t  buf_len = 0;                         // query buffer length
@@ -603,7 +616,6 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
             action = "del";
             break;
     }
-
 
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
@@ -658,17 +670,14 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
         }
 
         // Cat the entry to the query buff
-        if (buf_len < 1800000 /* size of buf */)
-            strcat(buf, buf2);
+        if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
+            strcat(prep_buf, buf2);
 
         ++unicast_prefix_seq;
     }
 
 
-    produce(MSGBUS_TOPIC_UNICAST_PREFIX, buf, strlen(buf), rib.size(), p_hash_str);
-
-    // Free the large buffer
-    delete[] buf;
+    produce(MSGBUS_TOPIC_UNICAST_PREFIX, prep_buf, strlen(prep_buf), rib.size(), p_hash_str);
 }
 
 /**
@@ -704,8 +713,7 @@ void msgBus_kafka::add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats) {
  */
 void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_node> &nodes,
                                   ls_action_code code) {
-    char    *buf = new char[1800000];            // Misc working buffer
-    bzero(buf, 1800000);
+    bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
 
     char    buf2[8192];                          // Second working buffer
     int     buf_len = 0;                         // query buffer length
@@ -781,18 +789,14 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
                         node.protocol, node.flags, attr.as_path, attr.local_pref, attr.med, attr.next_hop, node.name);
 
         // Cat the entry to the query buff
-        if (buf_len < 1800000 /* size of buf */)
-            strcat(buf, buf2);
+        if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
+            strcat(prep_buf, buf2);
 
         ++ls_node_seq;
     }
 
 
-    produce(MSGBUS_TOPIC_LS_NODE, buf, buf_len, rows, peer_hash_str);
-
-
-    // Free the large buffer
-    delete[] buf;
+    produce(MSGBUS_TOPIC_LS_NODE, prep_buf, buf_len, rows, peer_hash_str);
 }
 
 /**
@@ -800,8 +804,7 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
  */
 void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_link> &links,
                                  ls_action_code code) {
-    char    *buf = new char[1800000];            // Misc working buffer
-    bzero(buf, 1800000);
+    bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
 
     char    buf2[8192];                          // Second working buffer
     int     buf_len = 0;                         // query buffer length
@@ -911,16 +914,13 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
                             local_node_hash_id.c_str());
 
         // Cat the entry to the query buff
-        if (buf_len < 1800000 /* size of buf */)
-            strcat(buf, buf2);
+        if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
+            strcat(prep_buf, buf2);
 
         ++ls_link_seq;
     }
 
-    produce(MSGBUS_TOPIC_LS_LINK, buf, strlen(buf), rows, peer_hash_str);
-
-    // Free the large buffer
-    delete[] buf;
+    produce(MSGBUS_TOPIC_LS_LINK, prep_buf, strlen(prep_buf), rows, peer_hash_str);
 }
 
 /**
@@ -928,8 +928,7 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
  */
 void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
                                    ls_action_code code) {
-    char    *buf = new char[1800000];            // Misc working buffer
-    bzero(buf, 1800000);
+    bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
 
     char    buf2[8192];                          // Second working buffer
     int     buf_len = 0;                         // query buffer length
@@ -1039,16 +1038,13 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
                             ospf_fwd_addr, prefix.metric, prefix_ip, prefix.prefix_len);
 
         // Cat the entry to the query buff
-        if (buf_len < 1800000 /* size of buf */)
-            strcat(buf, buf2);
+        if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
+            strcat(prep_buf, buf2);
 
         ++ls_prefix_seq;
     }
 
-    produce(MSGBUS_TOPIC_LS_PREFIX, buf, strlen(buf), rows, peer_hash_str);
-
-    // Free the large buffer
-    delete[] buf;
+    produce(MSGBUS_TOPIC_LS_PREFIX, prep_buf, strlen(prep_buf), rows, peer_hash_str);
 }
 
 /**
@@ -1059,7 +1055,7 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len) {
     hash_toStr(r_hash, r_hash_str);
 
     SELF_DEBUG("rtr=%s: Producing bmp raw message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
-               MSGBUS_TOPIC_BMP_RAW, r_hash, data_len);
+               MSGBUS_TOPIC_BMP_RAW, r_hash_str.c_str(), data_len);
 
     if (data_len == 0)
         return;
@@ -1071,21 +1067,18 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len) {
         sleep(2);
     }
 
-    unsigned char *buf = new unsigned char[data_len + 200];
-    bzero(buf, data_len + 200);
     char headers[128];
     snprintf(headers, sizeof(headers), "V: 1\nC_HASH_ID: %s\nR_HASH: %s\nR_IP: %s\nL: %lu\n\n",
              collector_hash.c_str(), r_hash_str.c_str(), router_ip.c_str(), data_len);
 
-    memcpy(buf, headers, sizeof(headers));
-    memcpy(buf+strlen(headers), data, data_len);
+    memcpy(producer_buf, headers, sizeof(headers));
+    memcpy(producer_buf+strlen(headers), data, data_len);
 
     RdKafka::ErrorCode resp = producer->produce(topic[MSGBUS_TOPIC_BMP_RAW], 0,
                                                 RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
-                                                buf, data_len + strlen(headers),
+                                                producer_buf, data_len + strlen(headers),
                                                 (const std::string *)&r_hash_str, NULL);
 
-    delete [] buf;
     if (resp != RdKafka::ERR_NO_ERROR)
         LOG_ERR("rtr=%s: Failed to produce bmp raw message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
 

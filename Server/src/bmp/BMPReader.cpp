@@ -297,7 +297,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
     }
 
     // Send BMP RAW packet data
-    mbus_ptr->send_bmp_raw(client->hash_id, pBMP->bmp_packet, pBMP->bmp_packet_len);
+    mbus_ptr->send_bmp_raw(router_hash_id, pBMP->bmp_packet, pBMP->bmp_packet_len);
 
     // Free the bmp parser
     delete pBMP;

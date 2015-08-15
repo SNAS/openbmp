@@ -24,6 +24,7 @@
 #define BMP_INIT_MSG_LEN 4          ///< BMP init message header length, does not count the info field
 #define BMP_TERM_MSG_LEN 4          ///< BMP term message header length, does not count the info field
 #define BMP_PEER_UP_HDR_LEN 20      ///< BMP peer up event header size not including the recv/sent open param message
+#define BMP_PACKET_BUF_SIZE 68000   ///< Size of the BMP packet buffer (memory)
 
 /**
  * \class   parseBMP
@@ -143,7 +144,7 @@ public:
      *      BMP data message is read into this buffer so that it can be passed to the BGP parser for handling.
      *      Complete BGP message is read, otherwise error is generated.
      */
-    u_char      bmp_data[67000];
+    u_char      bmp_data[BMP_PACKET_BUF_SIZE + 1];
     size_t      bmp_data_len;              ///< Length/size of data in the data buffer
 
     /**
@@ -154,7 +155,7 @@ public:
      *
      * Length of packet is the common header message length (bytes)
      */
-    u_char      bmp_packet[68000];
+    u_char      bmp_packet[BMP_PACKET_BUF_SIZE + 1];
     size_t      bmp_packet_len;
 
     /**
