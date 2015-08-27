@@ -12,7 +12,7 @@ Currently there are two feeds available.
 * Messages have two parts:
     * Headers
     * Data
-* Data is conveyed in a denormalized **TSV** format (see each object data foramt for TSV syntax details)
+* Data is conveyed in a denormalized **TSV** format (see each object data format for TSV syntax details)
 * TSV (tab separated values, like CSV) records are in sequence for ordered consumption
 * Hash ID's are used to correlate related records between objects
 
@@ -57,7 +57,7 @@ Header | Value | Description
 Data is in **TSV** format
 
 * Field delimiter is TAB (**\\t**)
-* Fields are **NOT** optionally enclosed - this isn't needed and its more work for the constumer to implement it
+* Fields are **NOT** optionally enclosed - this isn't needed and its more work for the consumer to implement it
 * Instead of having to deal with escaping TAB and NEWLINE, values with TAB will be replaced with space and newlines (\\n) will be replaced with a carriage return (**\\r**)
 * Records are delimited by unix line feed (**\\n**)
 * Action is always the first field.  This defines how to handle the data, such as add or delete
@@ -79,7 +79,7 @@ Collector details.
 7 | Timestamp | String | 26 | In the format of: YYYY-MM-dd HH:MM:SS.ffffff
 
 * Collector sends messages on collector startup, on router change, and every heartbeat interval (default is 4 hours)
-* IP adress is not part of the data set because there can be multiple IP addresses (v4/v6 and other interfaces)
+* IP address is not part of the data set because there can be multiple IP addresses (v4/v6 and other interfaces)
 * Heartbeat is only sent if no other messages have been sent since last period
 
 
@@ -168,7 +168,7 @@ One or more attribute sets (does not include the NLRI's)
 
 \# | Field | Data Type | Size in Bytes | Details 
 ---|-------|-----------|---------------|---------
-1 | Action | String | 32 | **add** = New/Update entry<br>*There is no delete action since attributes are not withdrawn.  Attribute is considered stale/old when no RIB entries contain this hash id paird with peer and router hash id's*
+1 | Action | String | 32 | **add** = New/Update entry<br>*There is no delete action since attributes are not withdrawn.  Attribute is considered stale/old when no RIB entries contain this hash id paired with peer and router hash id's*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each attribute record by peer and restarts on collector restart or number wrap.
 3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ as path, next hop, aggregator, origin, med, local pref, community list, ext community list, peer hash ]
 4 | Router Hash | String | 32 | Hash Id of router
@@ -245,7 +245,7 @@ One or more link-state nodes.
 13 | Routing Id | Int | 8 | Routing universe Id 
 14 | LS Id | Int | 4 | Link state Id in Hex
 15 | Mt Id | Int | 4 | Multi-Topology Id
-16 | Ospf Area Id | String | 16 | Printed form of teh OSPF Area Id (IP format)
+16 | Ospf Area Id | String | 16 | Printed form of the OSPF Area Id (IP format)
 17 | Isis Area Id | String | 32 | Hex string of the area Id
 18 | Protocol | String | 32 | String name of the protocol (Direct, Static, IS-IS\_L1, IS-IS\_L2, OSPFv2, OSPFv3)
 19 | Flags | String | 32 | String representation of the flags
@@ -274,7 +274,7 @@ One or more link-state links.
 12 | Router Id | String | 46 | Printed form of the router Id (either null/empty, IPv4 or IPv6)
 13 | Routing Id | Int | 8 | Routing universe Id 
 14 | LS Id | Int | 4 | Link state Id in Hex
-15 | Ospf Area Id | String | 16 | Printed form of teh OSPF Area Id (IP format)
+15 | Ospf Area Id | String | 16 | Printed form of the OSPF Area Id (IP format)
 16 | Isis Area Id | String | 32 | Hex string of the area Id
 17 | Protocol | String | 32 | String name of the protocol (Direct, Static, IS-IS\_L1, IS-IS\_L2, OSPFv2, OSPFv3)
 18 | AS Path | String | 8K | BGP AS Path string
@@ -318,7 +318,7 @@ One or more link-state prefixes.
 12 | Router Id | String | 46 | Printed form of the router Id (either null/empty, IPv4 or IPv6)
 13 | Routing Id | Int | 8 | Routing universe Id 
 14 | LS Id | Int | 4 | Link state Id in Hex
-15 | Ospf Area Id | String | 16 | Printed form of teh OSPF Area Id (IP format)
+15 | Ospf Area Id | String | 16 | Printed form of the OSPF Area Id (IP format)
 16 | Isis Area Id | String | 32 | Hex string of the area Id
 17 | Protocol | String | 32 | String name of the protocol (Direct, Static, IS-IS\_L1, IS-IS\_L2, OSPFv2, OSPFv3)
 18 | AS Path | String | 8K | BGP AS Path string

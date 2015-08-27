@@ -87,15 +87,13 @@ bool parseBGP::handleUpdate(u_char *data, size_t size) {
     bgp_msg::UpdateMsg::parsed_update_data parsed_data;
     int read_size = 0;
 
-    bool four_octet_asn = p_info->recv_four_octet_asn and p_info->sent_four_octet_asn;
-
     if (parseBgpHeader(data, size) == BGP_MSG_UPDATE) {
         data += BGP_MSG_HDR_LEN;
 
         /*
          * Parse the update message - stored results will be in parsed_data
          */
-        bgp_msg::UpdateMsg uMsg(logger, p_entry->peer_addr, router_addr, four_octet_asn, debug);
+        bgp_msg::UpdateMsg uMsg(logger, p_entry->peer_addr, router_addr, p_info, debug);
 
         if ((read_size=uMsg.parseUpdateMsg(data, data_bytes_remaining, parsed_data)) != (size - BGP_MSG_HDR_LEN)) {
             LOG_NOTICE("%s: rtr=%s: Failed to parse the update message, read %d expected %d", p_entry->peer_addr,
@@ -173,6 +171,10 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
     list <string>       cap_list;
     string              local_bgp_id, remote_bgp_id;
     size_t              read_size;
+
+    p_info->recv_four_octet_asn = false;
+    p_info->sent_four_octet_asn = false;
+    p_info->using_2_octet_asn = false;
 
     /*
      * Process the sent open message

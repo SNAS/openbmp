@@ -125,6 +125,13 @@ nohup bin/kafka-server-start.sh config/server.properties > kafka.log &
 
 ### On DB server install mysql
 
+> ### Note on MariaDB
+> You can use MariaDB 10.0 or greater as well.  We have tested and validated that
+> the schema and settings work with MariaDB >= 10.0
+> 
+> You can get instructions for installing MariaDB at [MariaDB Repositories](https://downloads.mariadb.org/mariadb/repositories/#mirror=digitalocean-nyc).  Make sure you **select 10.0**
+
+
 ```
 sudo apt-get install mysql-server-5.6
 ```
@@ -247,7 +254,8 @@ latest from [GitHub OpenBMP](https://github.com/OpenBMP/openbmp)
 **Latest/Current DEB package uses the current schema as below**
 
 ```
-curl -o mysql-openbmp-current.db https://raw.githubusercontent.com/OpenBMP/openbmp/master/database/mysql-openbmp-current.db
+curl -O https://raw.githubusercontent.com/OpenBMP/openbmp-mysql-consumer/master/database/mysql-openbmp-current.db
+
 mysql -u root -p openBMP < mysql-openbmp-current.db 
 ```
 

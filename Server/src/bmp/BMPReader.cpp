@@ -205,7 +205,6 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             case parseBMP::TYPE_PEER_UP : // Peer up type
             {
                 MsgBusInterface::obj_peer_up_event up_event = {};
-                peer_info pInfo = {};
 
                 if (pBMP->parsePeerUpEventHdr(read_fd, up_event)) {
                     LOG_INFO("%s: PEER UP Received, local addr=%s:%hu remote addr=%s:%hu", client->c_ip,

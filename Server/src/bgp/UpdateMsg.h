@@ -18,6 +18,7 @@
 #include <list>
 #include <array>
 #include <map>
+#include <bmp/BMPReader.h>
 
 namespace bgp_msg {
 /**
@@ -149,10 +150,10 @@ public:
      * \param [in]     logPtr       Pointer to existing Logger for app logging
      * \param [in]     pperAddr     Printed form of peer address used for logging
      * \param [in]     routerAddr  The router IP address - used for logging
-     * \param [in]     four_octet_asn   True if 4-octet ASN should be used, false for 2-octet
+     * \param [in,out] peer_info   Persistent peer information
      * \param [in]     enable_debug Debug true to enable, false to disable
      */
-     UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAddr, bool four_octet_asn,
+     UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAddr, BMPReader::peer_info *peer_info,
                 bool enable_debug=false);
      virtual ~UpdateMsg();
 
@@ -178,6 +179,7 @@ private:
     std::string      peer_addr;                       ///< Printed form of the peer address for logging
     std::string      router_addr;                     ///< Router IP address - used for logging
     bool             four_octet_asn;                  ///< Indicates true if 4 octets or false if 2
+    BMPReader::peer_info *peer_info;                  ///< Persistent Peer info pointer
 
 
     /**

@@ -438,7 +438,7 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
             break;
     }
 
-    // Check if we have already processed this entry, if so update it an return
+    // Check if we have already processed this entry, if so update it and return
     if (skip_if_in_cache and peer_list.find(p_hash_str) != peer_list.end()) {
         peer_list[p_hash_str] = time(NULL);
         return;
