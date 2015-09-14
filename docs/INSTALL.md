@@ -67,7 +67,7 @@ Below table lists the environment variables that can be used with ``docker -e <n
 
 NAME | Value | Details
 :---- | ----- |:-------
-**API\_FQDN** | hostname | **required** Fully qualified hostname for the docker host/IP of this container, will be used for API and Kafka. It is also the collector Admin Id
+**API\_FQDN** | hostname | **required** Fully qualified hostname for the docker host of this container, will be used for API and Kafka. It is also the collector Admin Id
 MEM | RAM in GB | The size of RAM allowed for container in gigabytes. (e.g. ```-e MEM=15```)
 OPENBMP_BUFFER | Size in MB | Defines the openbmpd buffer per router for BMP messages. Default is 16 MB.  
 REINIT_DB | 1 | If set to 1 the DB will be reinitialized, which is needed to load the new schema sometimes.  This will wipe out the old data and start from scratch.  When this is not set, the old DB is reused.   (e.g. ```-e REINIT_DB=1```)
@@ -76,10 +76,14 @@ MYSQL\_OPENBMP\_PASSWORD | password | MySQL openbmp user password.  The default 
 
 #### Run normally
 > ##### IMPORTANT
-> Make sure to define **API_FQDN** as a valid hostname or IP address reachable by 
-> the client browser.
+> Make sure to define **API_FQDN** as a hostname (or fqdn) and not by IP.  The hostname should
+> resolve to the docker host (*host that runs docker containers*) IP address, which is normally
+> eth0.
+> 
+> If you do not plan to connect to the docker container via Kafka consumers, then you can use any 
+> hostname, such as *openbmp.localdomain*
 
-    docker run -d -e API_FQDN=<hostname or IP> --name=openbmp_aio -e MEM=15 \
+    docker run -d -e API_FQDN=<hostname> --name=openbmp_aio -e MEM=15 \
          -v /var/openbmp/mysql:/data/mysql \
          -p 3306:3306 -p 2181:2181 -p 9092:9092 -p 5000:5000 -p 8001:8001 \
          openbmp/aio
