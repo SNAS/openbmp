@@ -95,7 +95,11 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_dat
 
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6
-            parseAfiIPv6(nlri, parsed_data);
+            parseAfi_IPv4IPv6(false, nlri, parsed_data);
+            break;
+
+        case bgp::BGP_AFI_IPV4 : // IPv4
+            parseAfi_IPv4IPv6(true, nlri, parsed_data);
             break;
 
         case bgp::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
@@ -105,12 +109,6 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_dat
             break;
         }
 
-        case bgp::BGP_AFI_IPV4 : // IPv4
-        {
-            // TODO: Add support for IPv4 in MPREACH/UNREACH
-            break;
-
-        }
 
         default : // Unknown
             LOG_INFO("%s: MP_UNREACH AFI=%d is not implemented yet, skipping", peer_addr.c_str(), nlri.afi);
@@ -119,28 +117,29 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_dat
 }
 
 /**
- * MP UnReach NLRI parse for BGP_AFI_IPV6
+ * MP Reach NLRI parse for BGP_AFI_IPV4 & BGP_AFI_IPV6
  *
- * \details Will handle parsing the SAFI's for address family ipv6
+ * \details Will handle the SAFI and parsing of AFI IPv4 & IPv6
  *
+ * \param [in]   isIPv4         True false to indicate if IPv4 or IPv6
  * \param [in]   nlri           Reference to parsed Unreach NLRI struct
  * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPUnReachAttr::parseAfiIPv6(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
+void MPUnReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
 
     /*
      * Decode based on SAFI
      */
     switch (nlri.safi) {
-        case bgp::BGP_SAFI_UNICAST: // Unicast IPv6 address prefix
+        case bgp::BGP_SAFI_UNICAST: // Unicast IP address prefix
 
-            // Data is an IPv6 address - parse the address and save it
-            MPReachAttr::parseNlriData_v6(nlri.nlri_data, nlri.nlri_len, parsed_data.withdrawn);
+            // Data is an IP address - parse the address and save it
+            MPReachAttr::parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, parsed_data.withdrawn);
             break;
 
         default :
-            LOG_INFO("%s: MP_UNREACH AFI=ipv6 SAFI=%d is not implemented yet, skipping for now",
-                     peer_addr.c_str(), nlri.safi);
+            LOG_INFO("%s: MP_UNREACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now",
+                     peer_addr.c_str(), isIPv4, nlri.safi);
             return;
     }
 }

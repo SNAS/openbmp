@@ -81,14 +81,15 @@ private:
     void parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
 
     /**
-     * MP Reach NLRI parse for BGP_AFI_IPV6
+     * MP Reach NLRI parse for BGP_AFI_IPV4 & BGP_AFI_IPV6
      *
-     * \details Will handle the SAFI and parsing of AFI IPv6
+     * \details Will handle the SAFI and parsing of AFI IPv4 & IPv6
      *
+     * \param [in]   isIPv4         True false to indicate if IPv4 or IPv6
      * \param [in]   nlri           Reference to parsed UnReach NLRI struct
      * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
      */
-    void parseAfiIPv6(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
+    void parseAfi_IPv4IPv6(bool isIPv4, mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
 };
 
 } /* namespace bgp_msg */

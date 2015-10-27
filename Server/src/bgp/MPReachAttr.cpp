@@ -94,7 +94,11 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
 
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6
-            parseAfiIPv6(nlri, parsed_data);
+            parseAfi_IPv4IPv6(false, nlri, parsed_data);
+            break;
+
+        case bgp::BGP_AFI_IPV4 : // IPv4
+            parseAfi_IPv4IPv6(true, nlri, parsed_data);
             break;
 
         case bgp::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
@@ -105,13 +109,6 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
             break;
         }
 
-        case bgp::BGP_AFI_IPV4 : // IPv4
-        {
-            // TODO: Add support for IPv4 in MPREACH/UNREACH
-            break;
-
-        }
-
         default : // Unknown
             LOG_INFO("%s: MP_REACH AFI=%d is not implemented yet, skipping", peer_addr.c_str(), nlri.afi);
             return;
@@ -119,72 +116,78 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
 }
 
 /**
- * MP Reach NLRI parse for BGP_AFI_IPV6
+ * MP Reach NLRI parse for BGP_AFI_IPv4 & BGP_AFI_IPV6
  *
- * \details Will handle parsing the SAFI's for address family ipv6
+ * \details Will handle parsing the SAFI's for address family ipv6 and IPv4
  *
+ * \param [in]   isIPv4         True false to indicate if IPv4 or IPv6
  * \param [in]   nlri           Reference to parsed NLRI struct
  * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
-void MPReachAttr::parseAfiIPv6(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
-    u_char      ipv6_raw[16];
-    char        ipv6_char[40];
+void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
+    u_char      ip_raw[16];
+    char        ip_char[40];
 
-    bzero(ipv6_raw, sizeof(ipv6_raw));
+    bzero(ip_raw, sizeof(ip_raw));
 
     /*
      * Decode based on SAFI
      */
     switch (nlri.safi) {
-        case bgp::BGP_SAFI_UNICAST: // Unicast IPv6 address prefix
+        case bgp::BGP_SAFI_UNICAST: // Unicast IP address prefix
 
-            // Next-hop is an IPv6 address - Change/set the next-hop attribute in parsed data to use this next-hop
+            // Next-hop is an IP address - Change/set the next-hop attribute in parsed data to use this next-hop
             if (nlri.nh_len > 16)
-                memcpy(ipv6_raw, nlri.next_hop, 16);
+                memcpy(ip_raw, nlri.next_hop, 16);
             else
-                memcpy(ipv6_raw, nlri.next_hop, nlri.nh_len);
+                memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
 
-            inet_ntop(AF_INET6, ipv6_raw, ipv6_char, sizeof(ipv6_char));
-            parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ipv6_char);
+            if (not isIPv4)
+                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+            else
+                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
 
-            // Data is an IPv6 address - parse the address and save it
-            parseNlriData_v6(nlri.nlri_data, nlri.nlri_len, parsed_data.advertised);
+            parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
+
+            // Data is an IP address - parse the address and save it
+            parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, parsed_data.advertised);
             break;
 
         default :
-            LOG_INFO("%s: MP_REACH AFI=ipv6 SAFI=%d is not implemented yet, skipping for now",
-                     peer_addr.c_str(), nlri.safi);
+            LOG_INFO("%s: MP_REACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now",
+                     peer_addr.c_str(), isIPv4, nlri.safi);
             return;
     }
 }
 
 /**
- * Parses mp_reach_nlri and mp_unreach_nlri
+ * Parses mp_reach_nlri and mp_unreach_nlri (IPv4/IPv6)
  *
  * \details
  *      Will parse the NLRI encoding as defined in RFC4760 Section 5 (NLRI Encoding).
  *
+ * \param [in]   isIPv4     True false to indicate if IPv4 or IPv6
  * \param [in]   data       Pointer to the start of the prefixes to be parsed
  * \param [in]   len        Length of the data in bytes to be read
  * \param [out]  prefixes   Reference to a list<prefix_tuple> to be updated with entries
  */
-void MPReachAttr::parseNlriData_v6(u_char *data, uint16_t len, std::list<bgp::prefix_tuple> &prefixes) {
-    u_char            ipv6_raw[16];
-    char              ipv6_char[40];
+void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
+                                         std::list<bgp::prefix_tuple> &prefixes) {
+    u_char            ip_raw[16];
+    char              ip_char[40];
     u_char            addr_bytes;
     bgp::prefix_tuple tuple;
 
     if (len <= 0 or data == NULL)
         return;
 
-    // TODO: Can extend this to support multicast, but right now we set it to unicast v6
-    // Set the type for all to be unicast V6
-    tuple.type = bgp::PREFIX_UNICAST_V6;
-    tuple.isIPv4 = false;
+    // TODO: Can extend this to support multicast, but right now we set it to unicast v4/v6
+    tuple.type = isIPv4 ? bgp::PREFIX_UNICAST_V4 : bgp::PREFIX_UNICAST_V6;
+    tuple.isIPv4 = isIPv4;
 
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
-        bzero(ipv6_raw, sizeof(ipv6_raw));
+        bzero(ip_raw, sizeof(ip_raw));
 
         // set the address in bits length
         tuple.len = *data++;
@@ -196,16 +199,20 @@ void MPReachAttr::parseNlriData_v6(u_char *data, uint16_t len, std::list<bgp::pr
 
         // if the route isn't a default route
         if (addr_bytes > 0) {
-            memcpy(ipv6_raw, data, addr_bytes);
+            memcpy(ip_raw, data, addr_bytes);
             data += addr_bytes;
             read_size += addr_bytes;
 
             // Convert the IP to string printed format
-            inet_ntop(AF_INET6, ipv6_raw, ipv6_char, sizeof(ipv6_char));
-            tuple.prefix.assign(ipv6_char);
+            if (isIPv4)
+                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+            else
+                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+
+            tuple.prefix.assign(ip_char);
 
             // set the raw/binary address
-            memcpy(tuple.prefix_bin, ipv6_raw, sizeof(ipv6_raw));
+            memcpy(tuple.prefix_bin, ip_raw, sizeof(ip_raw));
 
             // Add tuple to prefix list
             prefixes.push_back(tuple);

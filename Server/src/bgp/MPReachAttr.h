@@ -68,16 +68,17 @@ public:
     void parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::parsed_update_data &parsed_data);
 
     /**
-     * Parses mp_reach_nlri and mp_unreach_nlri
+     * Parses mp_reach_nlri and mp_unreach_nlri (IPv4/IPv6)
      *
      * \details
      *      Will parse the NLRI encoding as defined in RFC4760 Section 5 (NLRI Encoding).
      *
+     * \param [in]   isIPv4     True false to indicate if IPv4 or IPv6
      * \param [in]   data       Pointer to the start of the prefixes to be parsed
      * \param [in]   len        Length of the data in bytes to be read
      * \param [out]  prefixes   Reference to a list<prefix_tuple> to be updated with entries
      */
-    static void parseNlriData_v6(u_char *data, uint16_t len, std::list<bgp::prefix_tuple> &prefixes);
+    static void parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len, std::list<bgp::prefix_tuple> &prefixes);
 
 private:
     bool             debug;                           ///< debug flag to indicate debugging
@@ -96,14 +97,15 @@ private:
     void parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
 
     /**
-     * MP Reach NLRI parse for BGP_AFI_IPV6 (e.g. unicast ipv6)
+     * MP Reach NLRI parse for BGP_AFI_IPv4 & BGP_AFI_IPV6
      *
-     * \details Will handle the SAFI and parsing of AFI IPv6
+     * \details Will handle parsing the SAFI's for address family ipv6 and IPv4
      *
+     * \param [in]   isIPv4         True false to indicate if IPv4 or IPv6
      * \param [in]   nlri           Reference to parsed NLRI struct
      * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
      */
-    void parseAfiIPv6(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
+    void parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
 };
 
 } /* namespace bgp_msg */
