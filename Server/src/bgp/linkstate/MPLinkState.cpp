@@ -692,15 +692,23 @@ namespace bgp_msg {
 
             case LINK_DESCR_MT_ID:
             {
-                if (len != 4) {
+                if (len < 2) {
                     LOG_NOTICE("%s: bgp-ls: failed to parse link MT-ID descriptor sub-tlv; too short",
                             peer_addr.c_str());
                     data_read += len;
                     break;
                 }
 
-                memcpy(&info.mt_id, data, 4); bgp::SWAP_BYTES(&info.mt_id);
-                data_read += 4;
+                if (len > 4) {
+                    SELF_DEBUG("%s: bgp-ls: failed to parse link MT-ID descriptor sub-tlv; too long %d",
+                               peer_addr.c_str(), len);
+                    info.mt_id = 0;
+                    data_read += len;
+                    break;
+                }
+
+                memcpy(&info.mt_id, data, len); bgp::SWAP_BYTES(&info.mt_id);
+                data_read += len;
 
                 SELF_DEBUG("%s: bgp-ls: Link descriptior MT-ID = %08x ", peer_addr.c_str(), info.mt_id);
 
@@ -838,7 +846,8 @@ namespace bgp_msg {
                 uint32_t    value_32bit;
 
                 if (len < 2) {
-                    LOG_NOTICE("%s: bgp-ls: failed to parse prefix ip_reach_info sub-tlv; too short");
+                    LOG_NOTICE("%s: bgp-ls: failed to parse prefix ip_reach_info sub-tlv; too short",
+                               peer_addr.c_str());
                     data_read += len;
                     break;
                 }
@@ -907,15 +916,23 @@ namespace bgp_msg {
                 break;
             }
             case PREFIX_DESCR_MT_ID:
-                if (len != 4) {
+                if (len < 2) {
                     LOG_NOTICE("%s: bgp-ls: failed to parse prefix MT-ID descriptor sub-tlv; too short",
                             peer_addr.c_str());
                     data_read += len;
                     break;
                 }
 
-                memcpy(&info.mt_id, data, 4); bgp::SWAP_BYTES(&info.mt_id);
-                data_read += 4;
+                if (len > 4) {
+                    SELF_DEBUG("%s: bgp-ls: failed to parse link MT-ID descriptor sub-tlv; too long %d",
+                               peer_addr.c_str(), len);
+                    info.mt_id = 0;
+                    data_read += len;
+                    break;
+                }
+
+                memcpy(&info.mt_id, data, len); bgp::SWAP_BYTES(&info.mt_id);
+                data_read += len;
 
                 SELF_DEBUG("%s: bgp-ls: Link descriptior MT-ID = %08x ", peer_addr.c_str(), info.mt_id);
 
