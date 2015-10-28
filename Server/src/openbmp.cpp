@@ -207,6 +207,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
     for (int i=1; i < argc; i++) {
 
         if (!strcmp(argv[i], "-h")) {   // Help message
+            Usage(argv[0]);
             return true;
 
         } else if (!strcmp(argv[i], "-p")) {
@@ -252,6 +253,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
                 cfg.svr_ipv4 = true;
             } else if (!strcasecmp(argv[i], "v6")) {
                 cfg.svr_ipv6 = true;
+                cfg.svr_ipv4 = false;
             } else if (!strcasecmp(argv[i], "v4v6")) {
                 cfg.svr_ipv6 = true;
                 cfg.svr_ipv4 = true;
@@ -361,7 +363,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
     // Make sure we have the required ARGS
     if (strlen(cfg.admin_id) <= 0) {
         cout << "Missing required 'admin ID', use -a <string> to set the collector admin ID" << endl;
-        return false;
+        return true;
     }
 
     return false;
@@ -543,7 +545,6 @@ int main(int argc, char **argv) {
 
     // Process the command line args
     if (ReadCmdArgs(argc, argv, cfg)) {
-        Usage(argv[0]);
         return 1;
     }
 

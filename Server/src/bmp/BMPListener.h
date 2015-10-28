@@ -26,10 +26,10 @@ using namespace std;
  * \details Maintains received connections and data from those connections.
  */
 class BMPListener {
-    int         sock;                           ///< Listening socket (ipv4)
-    int         sockv6;                         ///< IPv6 listening socket
-    sockaddr_in svr_addr;                       ///< Server v4 address
-    sockaddr_in svr_addrv6;                     ///< Server v6 address
+    int          sock;                           ///< Listening socket (ipv4)
+    int          sockv6;                         ///< IPv6 listening socket
+    sockaddr_in  svr_addr;                       ///< Server v4 address
+    sockaddr_in6 svr_addrv6;                     ///< Server v6 address
 
 public:
     /**
@@ -38,8 +38,8 @@ public:
     class ClientInfo {
     public:
         u_char      hash_id[16];            ///< Hash ID for router (is the unique ID)
-        sockaddr_in c_addr;                 ///< client address info
-        sockaddr_in s_addr;                 ///< Server/collector address info
+        sockaddr_storage c_addr;            ///< client address info
+        sockaddr_storage s_addr;            ///< Server/collector address info
         int         c_sock;                 ///< Active client socket connection
         int         pipe_sock;              ///< Piped socket for client stream (buffered) - zero if not buffered
         char        c_port[6];              ///< Client source port

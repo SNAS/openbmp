@@ -47,13 +47,14 @@ BMPListener::BMPListener(Logger *logPtr, Cfg_Options *config) {
     if (cfg->debug_bmp)
         enableDebug();
 
-    svr_addr.sin_family = PF_INET;
-    svr_addr.sin_port = htons(atoi(cfg->bmp_port));
+    svr_addr.sin_family      = PF_INET;
+    svr_addr.sin_port        = htons(atoi(cfg->bmp_port));
     svr_addr.sin_addr.s_addr = INADDR_ANY;
 
-    svr_addrv6.sin_family = PF_INET6;
-    svr_addrv6.sin_port = htons(atoi(cfg->bmp_port));
-    svr_addrv6.sin_addr.s_addr = INADDR_ANY;
+    svr_addrv6.sin6_family   = AF_INET6;
+    svr_addrv6.sin6_port     = htons(atoi(cfg->bmp_port));
+    svr_addrv6.sin6_scope_id = 0;
+    svr_addrv6.sin6_addr     = in6addr_any;
 
     // Open listening sockets
     open_socket(cfg->svr_ipv4, cfg->svr_ipv6);
@@ -102,7 +103,7 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
     }
 
     if (ipv6) {
-        if ((sockv6 = socket(PF_INET6, SOCK_STREAM, 0)) <= 0) {
+        if ((sockv6 = socket(AF_INET6, SOCK_STREAM, 0)) <= 0) {
             throw "ERROR: Cannot open IPv6 socket.";
         }
 
@@ -112,8 +113,14 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
             throw "ERROR: Failed to set IPv6 socket option SO_REUSEADDR";
         }
 
+        if (setsockopt(sockv6, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on)) < 0) {
+            close(sockv6);
+            throw "ERROR: Failed to set IPv6 socket option IPV6_V6ONLY";
+        }
+
         // Bind to the address/port
         if (::bind(sockv6, (struct sockaddr *) &svr_addrv6, sizeof(svr_addrv6)) < 0) {
+            perror("bind to ipv6");
             close(sockv6);
             throw "ERROR: Cannot bind to IPv6 address and port";
         }
@@ -149,7 +156,7 @@ bool BMPListener::wait_and_accept_connection(ClientInfo &c, int timeout) {
     }
 
     if (sockv6 > 0) {
-        pfd[fds_cnt].fd = sock;
+        pfd[fds_cnt].fd = sockv6;
         pfd[fds_cnt].events = POLLIN | POLLHUP | POLLERR;
         pfd[fds_cnt].revents = 0;
         fds_cnt++;
@@ -210,6 +217,10 @@ void BMPListener::accept_connection(ClientInfo &c, bool isIPv4) {
     socklen_t s_addr_len = sizeof(c.s_addr);         // the client info length
 
     int sock = isIPv4 ? this->sock : this->sockv6;
+
+    sockaddr_in *v4_addr = (sockaddr_in *) &c.c_addr;
+    sockaddr_in6 *v6_addr = (sockaddr_in6 *) &c.c_addr;
+
     uint8_t addr_fam = isIPv4 ? PF_INET : PF_INET6;
 
     bzero(c.c_ip, sizeof(c.s_ip));
@@ -227,16 +238,32 @@ void BMPListener::accept_connection(ClientInfo &c, bool isIPv4) {
     }
 
     // Update returned class to have address and port of client in text form.
-    inet_ntop(addr_fam, &c.c_addr.sin_addr, c.c_ip, sizeof(c.c_ip));
-    snprintf(c.c_port, sizeof(c.c_port), "%hu", ntohs(c.c_addr.sin_port));
+    if (isIPv4) {
+        inet_ntop(AF_INET, &v4_addr->sin_addr, c.c_ip, sizeof(c.c_ip));
+        snprintf(c.c_port, sizeof(c.c_port), "%hu", ntohs(v4_addr->sin_port));
+    } else {
+        inet_ntop(AF_INET6,  &v6_addr->sin6_addr, c.c_ip, sizeof(c.c_ip));
+        snprintf(c.c_port, sizeof(c.c_port), "%hu", ntohs(v6_addr->sin6_port));
+    }
 
     // Get the server source address and port
+    v4_addr = (sockaddr_in *) &c.s_addr;
+    v6_addr = (sockaddr_in6 *) &c.s_addr;
+
     if (!getsockname(c.c_sock, (struct sockaddr *) &c.s_addr, &s_addr_len)) {
-        inet_ntop(addr_fam, &c.s_addr.sin_addr, c.s_ip, sizeof(c.s_ip));
-        snprintf(c.s_port, sizeof(c.s_port), "%hu", ntohs(c.s_addr.sin_port));
-    }
-    else
+        if (isIPv4) {
+            inet_ntop(AF_INET, &v4_addr->sin_addr, c.s_ip, sizeof(c.s_ip));
+            snprintf(c.s_port, sizeof(c.s_port), "%hu", ntohs(v4_addr->sin_port));
+        } else {
+            inet_ntop(AF_INET, &v6_addr->sin6_addr, c.s_ip, sizeof(c.s_ip));
+            snprintf(c.s_port, sizeof(c.s_port), "%hu", ntohs(v6_addr->sin6_port));
+        }
+
+    } else {
         LOG_ERR("sock=%d: Unable to get the socket name/local address information", c.c_sock);
+
+
+    }
 
     // Enable TCP Keepalives
     int on = 1;
