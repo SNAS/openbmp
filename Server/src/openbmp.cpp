@@ -430,7 +430,6 @@ void runServer(Cfg_Options &cfg) {
         memcpy(cfg.c_hash_id, hash_raw, 16);
         delete[] hash_raw;
 
-
         // Kafka connection
         kafka = new msgBus_kafka(logger, cfg.kafka_brokers, cfg.c_hash_id);
 

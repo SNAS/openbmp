@@ -224,10 +224,12 @@ void msgBus_kafka::connect() {
 void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, int rows, string key) {
 
     while (isConnected == false or topic[topic_name] == NULL) {
-
         // Do not attempt to reconnect if this is the main process (router ip is null)
-        if (router_ip.size() <= 1)
-            break;
+        // Changed on 10/29/15 to support docker startup delay with kafka
+        /*
+        if (router_ip.size() <= 0) {
+            return;
+        }*/
 
         LOG_WARN("rtr=%s: Not connected to Kafka, attempting to reconnect", router_ip.c_str());
         connect();
