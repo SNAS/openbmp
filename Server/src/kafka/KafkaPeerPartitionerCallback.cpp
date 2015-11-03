@@ -19,5 +19,5 @@ int32_t KafkaPeerPartitionerCallback::partitioner_cb (const RdKafka::Topic *topi
                                                   int32_t partition_cnt,
                                                   void *msg_opaque) {
 
-    return (key->front() + key->back()) % partition_cnt;
+    return (key->at(0) + key->at(key->size() - 1)) % partition_cnt;
 }
