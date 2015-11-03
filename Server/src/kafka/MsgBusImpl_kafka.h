@@ -25,6 +25,7 @@
 #include "safeQueue.hpp"
 #include "KafkaEventCallback.h"
 #include "KafkaDeliveryReportCallback.h"
+#include "KafkaPeerPartitionerCallback.h"
 
 /**
  * \class   mysqlMBP
@@ -116,6 +117,7 @@ private:
      */
     KafkaEventCallback              *event_callback;
     KafkaDeliveryReportCallback     *delivery_callback;
+    KafkaPeerPartitionerCallback    *peer_partitioner_callback;
 
 
     bool isConnected;                           ///< Indicates if Kafka is connected or not

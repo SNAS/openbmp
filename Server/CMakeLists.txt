@@ -73,10 +73,10 @@ set (SRC_FILES
 	src/bgp/UpdateMsg.cpp
 	src/bgp/MPReachAttr.cpp
 	src/bgp/MPUnReachAttr.cpp
-    src/bgp/ExtCommunity.cpp
-    src/bgp/linkstate/MPLinkState.cpp
-    src/bgp/linkstate/MPLinkStateAttr.cpp
-	) 
+        src/bgp/ExtCommunity.cpp
+        src/bgp/linkstate/MPLinkState.cpp
+        src/bgp/linkstate/MPLinkStateAttr.cpp
+        src/kafka/KafkaPeerPartitionerCallback.cpp)
 
 # Disable warnings
 add_definitions ("-Wno-unused-result")

@@ -69,9 +69,11 @@ msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id)
     broker_list = brokerList;
 
     // Make the connection to the server
-    event_callback      = NULL;
-    delivery_callback   = NULL;
-    producer            = NULL;
+    event_callback       = NULL;
+    delivery_callback    = NULL;
+    producer             = NULL;
+
+    peer_partitioner_callback = new KafkaPeerPartitionerCallback();
 
     router_ip.assign("");
     connect();
@@ -108,6 +110,7 @@ msgBus_kafka::~msgBus_kafka() {
 
     if (event_callback != NULL) delete event_callback;
     if (delivery_callback != NULL) delete delivery_callback;
+    if (peer_partitioner_callback != NULL) delete peer_partitioner_callback;
 
 }
 
@@ -179,6 +182,7 @@ void msgBus_kafka::connect() {
         throw "ERROR: Failed to configure kafka delivery report callback";
     }
 
+
     // Create producer and connect
     producer = RdKafka::Producer::create(conf, errstr);
     if (!producer) {
@@ -202,6 +206,15 @@ void msgBus_kafka::connect() {
      * Create the topics
      */
     for (topic_map::iterator it = topic.begin(); it != topic.end(); it++) {
+
+        if (! it->first.compare(MSGBUS_TOPIC_UNICAST_PREFIX) or
+                ! it->first.compare(MSGBUS_TOPIC_BASE_ATTRIBUTE)) {
+            if (tconf->set("partitioner_cb", peer_partitioner_callback, errstr) != RdKafka::Conf::CONF_OK) {
+                LOG_ERR("Failed to configure kafka partitioner callback: %s", errstr.c_str());
+                throw "ERROR: Failed to configure kafka partitioner callback";
+            }
+        }
+
         it->second = RdKafka::Topic::create(producer, it->first.c_str(), tconf, errstr);
         if (it->second == NULL) {
             LOG_ERR("rtr=%s: Failed to create '%s' topic: %s", router_ip.c_str(), it->first.c_str(), errstr.c_str());
@@ -247,7 +260,7 @@ void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, i
     memcpy(producer_buf, headers, sizeof(headers));
     memcpy(producer_buf+strlen(headers), msg, msg_size);
 
-    RdKafka::ErrorCode resp = producer->produce(topic[topic_name], 0,
+    RdKafka::ErrorCode resp = producer->produce(topic[topic_name], RdKafka::Topic::PARTITION_UA,
                                                 RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
                                                 producer_buf, msg_size + strlen(headers),
                                                 (const std::string *)&key, NULL);
@@ -764,9 +777,14 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
         }
 
         if (!strcmp(node.protocol, "OSPFv3") or !strcmp(node.protocol, "OSPFv2") ) {
+            bzero(isis_area_id, sizeof(isis_area_id));
+
             inet_ntop(PF_INET, node.igp_router_id, igp_router_id, sizeof(igp_router_id));
             inet_ntop(PF_INET, node.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
+
         } else {
+            bzero(ospf_area_id, sizeof(ospf_area_id));
+
             snprintf(igp_router_id, sizeof(igp_router_id),
                      "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
                      node.igp_router_id[0], node.igp_router_id[1], node.igp_router_id[2], node.igp_router_id[3],
@@ -841,8 +859,8 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     char nei_ip[46];
     char igp_router_id[46];
     char router_id[46];
-    char ospf_area_id[16] = {0};
-    char isis_area_id[32] = {0};
+    char ospf_area_id[17] = {0};
+    char isis_area_id[33] = {0};
 
     // Loop through the vector array of entries
     int rows = 0;
@@ -884,22 +902,27 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
         }
 
         if (!strcmp(link.protocol, "OSPFv3") or !strcmp(link.protocol, "OSPFv2") ) {
+            bzero(isis_area_id, sizeof(isis_area_id));
+
             inet_ntop(PF_INET, link.igp_router_id, igp_router_id, sizeof(igp_router_id));
             inet_ntop(PF_INET, link.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
         } else {
+            bzero(ospf_area_id, sizeof(ospf_area_id));
+
             snprintf(igp_router_id, sizeof(igp_router_id),
                      "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
                      link.igp_router_id[0], link.igp_router_id[1], link.igp_router_id[2], link.igp_router_id[3],
                      link.igp_router_id[4], link.igp_router_id[5], link.igp_router_id[6], link.igp_router_id[7]);
 
-            if (link.isis_area_id[8] <= sizeof(link.isis_area_id))
-                for (i=0; i < link.isis_area_id[8]; i++) {
+            if (link.isis_area_id[8] <= sizeof(link.isis_area_id)) {
+                for (i = 0; i < link.isis_area_id[8]; i++) {
                     snprintf(buf2, sizeof(buf2), "%02hhX", link.isis_area_id[i]);
                     strcat(isis_area_id, buf2);
 
                     if (i == 0)
                         strcat(isis_area_id, ".");
                 }
+            }
         }
 
         buf_len += snprintf(buf2, sizeof(buf2),
@@ -1009,9 +1032,13 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
         }
 
         if (!strcmp(prefix.protocol, "OSPFv3") or !strcmp(prefix.protocol, "OSPFv2") ) {
+            bzero(isis_area_id, sizeof(isis_area_id));
+
             inet_ntop(PF_INET, prefix.igp_router_id, igp_router_id, sizeof(igp_router_id));
             inet_ntop(PF_INET, prefix.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
         } else {
+            bzero(ospf_area_id, sizeof(ospf_area_id));
+
             snprintf(igp_router_id, sizeof(igp_router_id),
                      "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
                      prefix.igp_router_id[0], prefix.igp_router_id[1], prefix.igp_router_id[2], prefix.igp_router_id[3],
