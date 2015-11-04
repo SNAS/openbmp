@@ -46,7 +46,7 @@ install(FILES openbmpd.conf.upstart
 install(FILES openbmpd.defaults
         PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
         DESTINATION /etc/default
-        RENAME openbmpd
+        RENAME openbmpd.new
 )
 install(FILES openbmpd.init
         PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ GROUP_EXECUTE GROUP_READ WORLD_EXECUTE WORLD_READ
@@ -71,8 +71,11 @@ install(FILES openbmpd.logrotate
 SET (CPACK_OUTPUT_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/debPackageConfig.cmake")
 SET (CPACK_SOURCE_OUTPUT_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/debPackageSourceConfig.cmake")
 
-# Define the package filename
+# Define the inscript scripts, delimit with ;
+SET(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA
+        "${CMAKE_CURRENT_SOURCE_DIR}/postinst")
 
+# Define the package filename
 SET(CPACK_SOURCE_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${OPENBMP_VERSION}-src")
 SET(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${OPENBMPD_VERSION}")
 
