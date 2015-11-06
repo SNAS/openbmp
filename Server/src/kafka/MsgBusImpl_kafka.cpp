@@ -207,12 +207,9 @@ void msgBus_kafka::connect() {
      */
     for (topic_map::iterator it = topic.begin(); it != topic.end(); it++) {
 
-        if (! it->first.compare(MSGBUS_TOPIC_UNICAST_PREFIX) or
-                ! it->first.compare(MSGBUS_TOPIC_BASE_ATTRIBUTE)) {
-            if (tconf->set("partitioner_cb", peer_partitioner_callback, errstr) != RdKafka::Conf::CONF_OK) {
-                LOG_ERR("Failed to configure kafka partitioner callback: %s", errstr.c_str());
-                throw "ERROR: Failed to configure kafka partitioner callback";
-            }
+        if (tconf->set("partitioner_cb", peer_partitioner_callback, errstr) != RdKafka::Conf::CONF_OK) {
+            LOG_ERR("Failed to configure kafka partitioner callback: %s", errstr.c_str());
+            throw "ERROR: Failed to configure kafka partitioner callback";
         }
 
         it->second = RdKafka::Topic::create(producer, it->first.c_str(), tconf, errstr);
@@ -1103,7 +1100,7 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len) {
     memcpy(producer_buf, headers, sizeof(headers));
     memcpy(producer_buf+strlen(headers), data, data_len);
 
-    RdKafka::ErrorCode resp = producer->produce(topic[MSGBUS_TOPIC_BMP_RAW], 0,
+    RdKafka::ErrorCode resp = producer->produce(topic[MSGBUS_TOPIC_BMP_RAW], RdKafka::Topic::PARTITION_UA,
                                                 RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
                                                 producer_buf, data_len + strlen(headers),
                                                 (const std::string *)&r_hash_str, NULL);
