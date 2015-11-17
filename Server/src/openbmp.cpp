@@ -198,6 +198,11 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
         exit(0);
     }
 
+    else if (argc > 1 and !strcmp(argv[1], "-h")) {
+        Usage(argv[0]);
+        exit(0);
+    }
+
     else if (argc < 3) {
         cout << "ERROR: Missing required args." << endl;
         return true;
@@ -208,7 +213,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
         if (!strcmp(argv[i], "-h")) {   // Help message
             Usage(argv[0]);
-            return true;
+            exit(0);
 
         } else if (!strcmp(argv[i], "-p")) {
             // We expect the next arg to be a port

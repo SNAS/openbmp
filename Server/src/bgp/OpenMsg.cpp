@@ -85,9 +85,15 @@ size_t OpenMsg::parseOpenMsg(u_char *data, size_t size,
                 open_hdr.ver, open_hdr.hold, open_hdr.asn, bgp_id.c_str(), open_hdr.param_len);
 
     /*
-     * Make sure the buffer contains the rest of the open message
+     * Make sure the buffer contains the rest of the open message, but allow a zero length in case the
+     *  data is missing on purpose (router implementation)
      */
-    if (open_hdr.param_len > (size - read_size)) {
+    if (open_hdr.param_len == 0) {
+        LOG_WARN("%s: Capabilities in open message is ZERO/empty, this is abnormal and likely a router implementation issue.", peer_addr.c_str());
+        return read_size;
+    }
+
+    else if (open_hdr.param_len > (size - read_size)) {
         LOG_WARN("%s: Could not read capabilities in open message due to buffer not containing the full param length", peer_addr.c_str());
         return 0;
     }
