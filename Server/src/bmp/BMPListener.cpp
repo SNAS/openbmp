@@ -143,7 +143,7 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
  * \return  True if accepted a connection, false if not (timed out waiting)
  */
 bool BMPListener::wait_and_accept_connection(ClientInfo &c, int timeout) {
-    pollfd pfd[2];
+    pollfd pfd[4];
     int fds_cnt = 0;
     int cur_sock = 0;
     bool close_sock = false;
