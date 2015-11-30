@@ -368,12 +368,6 @@ void parseBGP::UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
  * \param  attrs            Reference to the parsed attributes map
  */
 void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
-    /*
-     * Skip adding path attribute if next hop is missing
-     */
-    if (attrs.find(bgp_msg::ATTR_TYPE_NEXT_HOP) == attrs.end()) {
-        return;
-    }
 
     /*
      * Setup the record
@@ -419,15 +413,6 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     else // is IPv6
         base_attr.nexthop_isIPv4 = false;
 
-    if ( ((string)attrs[bgp_msg::ATTR_TYPE_NEXT_HOP]).length() > 0)
-        strncpy(base_attr.next_hop, ((string)attrs[bgp_msg::ATTR_TYPE_NEXT_HOP]).c_str(), sizeof(base_attr.next_hop));
-
-    else {
-        // Skip adding path attributes if next hop is missing
-        return;
-        //bzero(base_attr.next_hop, sizeof(base_attr.next_hop));
-    }
-
     if ( ((string)attrs[bgp_msg::ATTR_TYPE_AGGEGATOR]).length() > 0)
         strncpy(base_attr.aggregator, ((string)attrs[bgp_msg::ATTR_TYPE_AGGEGATOR]).c_str(), sizeof(base_attr.aggregator));
     else
@@ -438,7 +423,17 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     else
         bzero(base_attr.origin, sizeof(base_attr.origin));
 
-    SELF_DEBUG("%s: adding attributes to DB", p_entry->peer_addr);
+    if ( ((string)attrs[bgp_msg::ATTR_TYPE_NEXT_HOP]).length() > 0)
+        strncpy(base_attr.next_hop, ((string)attrs[bgp_msg::ATTR_TYPE_NEXT_HOP]).c_str(), sizeof(base_attr.next_hop));
+
+    else {
+        // Skip adding path attributes if next hop is missing
+        SELF_DEBUG("%s: no next-hop, must be unreach; not sending attributes to message bus", p_entry->peer_addr);
+        bzero(base_attr.next_hop, sizeof(base_attr.next_hop));
+        return;
+    }
+
+    SELF_DEBUG("%s: adding attributes to message bus", p_entry->peer_addr);
 
     // Update the DB entry
     mbus_ptr->update_baseAttribute(*p_entry, base_attr, mbus_ptr->BASE_ATTR_ACTION_ADD);
