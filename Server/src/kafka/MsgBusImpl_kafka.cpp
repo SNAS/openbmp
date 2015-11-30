@@ -1003,6 +1003,7 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
         hash.update(&prefix.prefix_len, 1);
         hash.update((unsigned char *)&prefix.id, sizeof(prefix.id));
         hash.update(prefix.local_node_hash_id, sizeof(prefix.local_node_hash_id));
+        hash.update((unsigned char *)prefix.ospf_route_type, sizeof(prefix.ospf_route_type));
         hash.finalize();
 
         // Save the hash

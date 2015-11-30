@@ -63,13 +63,18 @@ So much more...
 
 News
 ----
+### Nov-18-2015
+**Released version 0.11.0** with Apache Kafka integration.  See release notes at [Release 0.11.0](docs/release_notes/release-0.11.0.md)
+
+Mysql and file consumers are available.
+
 ### Aug-11-2015
 **Apache Kafka integration available** <br>
 The collector now fully supports Apache Kafka by producing both parsed and BMP raw messages.  [openbmp-mysql-consumer](https://github.com/OpenBMP/openbmp-mysql-consumer) and [openbmp-file-consumer](https://github.com/OpenBMP/openbmp-file-consumer) are available for immediate use.  Please report any bugs/issues via github. 
 
 
 ### Jul-23-2015
-**New release 0.10.0 is available.** Starting in **0.11.0** the collector will forward all messages (parsed and raw) to Apache Kafka.  Anyone wishing to interact with the data can do so via simple kafka consumer clients.  MySQL is being moved into a consumer app, so same over functionality with MySQL will be maintained.   In addition to MySQL, a flat file example app will be created so others can see how easy it is to interact with the data.  Other apps can be written by anyone, which includes Cassandra, Postgres, Apache Spark, etc.
+**New release 0.10.0 is available** Starting in **0.11.0** the collector will forward all messages (parsed and raw) to Apache Kafka.  Anyone wishing to interact with the data can do so via simple kafka consumer clients.  MySQL is being moved into a consumer app, so same over functionality with MySQL will be maintained.   In addition to MySQL, a flat file example app will be created so others can see how easy it is to interact with the data.  Other apps can be written by anyone, which includes Cassandra, Postgres, Apache Spark, etc.
 
 New branch [0.10-0-mysql](https://github.com/OpenBMP/openbmp/tree/0.10.0-mysql) has been created for support/bug fixes only.  New features will be in the master branch.
 
