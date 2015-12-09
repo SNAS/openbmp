@@ -42,6 +42,7 @@ void ClientThread_cancel(void *arg) {
     cInfo->bmp_reader_thread->join();
 
     delete cInfo->bmp_reader_thread;
+    cInfo->bmp_reader_thread = NULL;
 
     delete cInfo->mbus;
     cInfo->mbus = NULL;
@@ -143,8 +144,9 @@ void *ClientThread(void *arg) {
                         close(cInfo.client->c_sock);
 
                         bmp_run = false;
-                        cInfo.bmp_reader_thread->join();
-                        delete cInfo.bmp_reader_thread;
+                        //cInfo.bmp_reader_thread->join();
+                        //delete cInfo.bmp_reader_thread;
+                        //cInfo.bmp_reader_thread = NULL;
                         break;
                     }
                     else {
@@ -189,8 +191,9 @@ void *ClientThread(void *arg) {
                         close(cInfo.client->c_sock);
 
                         bmp_run = false;
-                        cInfo.bmp_reader_thread->join();
-                        delete cInfo.bmp_reader_thread;
+                        //cInfo.bmp_reader_thread->join();
+                        //delete cInfo.bmp_reader_thread;
+                        //cInfo.bmp_reader_thread = NULL;
                         break;
                     }
 
@@ -243,13 +246,15 @@ void *ClientThread(void *arg) {
 
     pthread_cleanup_pop(0);
 
-    // Delete mysql
-    if (cInfo.mbus != NULL)
-       delete cInfo.mbus;
+    // Close/shutdown message bus so that it sends a term message
+    if (cInfo.bmp_reader_thread != NULL and cInfo.bmp_reader_thread->joinable())
+        cInfo.bmp_reader_thread->join();
 
-    // close the socket
-    shutdown(cInfo.client->c_sock, SHUT_RDWR);
-    close (cInfo.client->c_sock);
+    if (cInfo.bmp_reader_thread != NULL)
+        delete cInfo.bmp_reader_thread;
+
+    if (cInfo.mbus != NULL)
+        delete cInfo.mbus;
 
     // Indicate that we are no longer running
     thr->running = false;

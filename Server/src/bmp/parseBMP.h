@@ -62,7 +62,8 @@ public:
       * BMP Termination Message reasons for type=1
       */
      enum BMP_TERM_TYPE1_REASON { TERM_REASON_ADMIN_CLOSE=0, TERM_REASON_UNSPECIFIED, TERM_REASON_OUT_OF_RESOURCES,
-                     TERM_REASON_REDUNDANT_CONN};
+                     TERM_REASON_REDUNDANT_CONN,
+                     TERM_REASON_OPENBMP_CONN_CLOSED=65533, TERM_REASON_OPENBMP_CONN_ERR=65534 };
 
 
      /**

@@ -289,7 +289,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
     } catch (char const *str) {
         // Mark the router as disconnected and update the error to be a local disconnect (no term message received)
         LOG_INFO("%s: Caught: %s", client->c_ip, str);
-        disconnect(client, mbus_ptr, 65534, str);
+        disconnect(client, mbus_ptr, parseBMP::TERM_REASON_OPENBMP_CONN_ERR, str);
 
         delete pBMP;                    // Make sure to free the resource
         throw str;

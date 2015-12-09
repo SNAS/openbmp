@@ -76,6 +76,8 @@ msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id)
     peer_partitioner_callback = new KafkaPeerPartitionerCallback();
 
     router_ip.assign("");
+    bzero(router_hash, sizeof(router_hash));
+
     connect();
 }
 
@@ -84,19 +86,40 @@ msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id)
  */
 msgBus_kafka::~msgBus_kafka() {
 
+    SELF_DEBUG("Destory msgBus Kafka instance");
+
+    // Disconnect/term the router if not already done
+    MsgBusInterface::obj_router r_object;
+    bool router_defined = false;
+    for (int i=0; i < sizeof(router_hash); i++) {
+        if (router_hash[i] != 0) {
+            router_defined = true;
+            break;
+        }
+    }
+
+    if (router_defined) {
+        bzero(&r_object, sizeof(r_object));
+        memcpy(r_object.hash_id, router_hash, sizeof(r_object.hash_id));
+        snprintf((char *)r_object.ip_addr, sizeof(r_object.ip_addr), "%s", router_ip.c_str());
+        r_object.term_reason_code = 65533;
+        snprintf(r_object.term_reason_text, sizeof(r_object.term_reason_text),
+                 "Connection closed");
+
+        printf("Sending term\n");
+        update_Router(r_object, msgBus_kafka::ROUTER_ACTION_TERM);
+        printf("Done sending term\n");
+    }
+
+    sleep(2);
+
     delete [] producer_buf;
     delete [] prep_buf;
 
-    SELF_DEBUG("Destory msgBus Kafka instance");
-
-    router_list.clear();
     peer_list.clear();
 
-    producer->poll(700);
+    producer->poll(500);
 
-    // Free vars
-    delete conf;
-    delete tconf;
 
     // Free topic pointers
     for (topic_map::iterator it = topic.begin(); it != topic.end(); it++) {
@@ -106,12 +129,14 @@ msgBus_kafka::~msgBus_kafka() {
         }
     }
 
+    delete conf;
+    delete tconf;
+
     if (producer != NULL) delete producer;
 
     if (event_callback != NULL) delete event_callback;
     if (delivery_callback != NULL) delete delivery_callback;
     if (peer_partitioner_callback != NULL) delete peer_partitioner_callback;
-
 }
 
 /**
@@ -232,6 +257,7 @@ void msgBus_kafka::connect() {
  * \param [in] key           Hash key
  */
 void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, int rows, string key) {
+    size_t len;
 
     while (isConnected == false or topic[topic_name] == NULL) {
         // Do not attempt to reconnect if this is the main process (router ip is null)
@@ -250,18 +276,17 @@ void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, i
     SELF_DEBUG("rtr=%s: Producing message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
                topic_name, key.c_str(), msg_size);
 
-    char headers[128];
-    snprintf(headers, sizeof(headers), "V: 1\nC_HASH_ID: %s\nL: %lu\nR: %d\n\n",
+    char headers[256];
+    len = snprintf(headers, sizeof(headers), "V: 1\nC_HASH_ID: %s\nL: %lu\nR: %d\n\n",
             collector_hash.c_str(), msg_size, rows);
 
-    memcpy(producer_buf, headers, sizeof(headers));
-    memcpy(producer_buf+strlen(headers), msg, msg_size);
+    memcpy(producer_buf, headers, len);
+    memcpy(producer_buf+len, msg, msg_size);
 
     RdKafka::ErrorCode resp = producer->produce(topic[topic_name], RdKafka::Topic::PARTITION_UA,
-                                                RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
-                                                producer_buf, msg_size + strlen(headers),
+                                                RdKafka::Producer::RK_MSG_COPY,
+                                                producer_buf, msg_size + len,
                                                 (const std::string *)&key, NULL);
-
     if (resp != RdKafka::ERR_NO_ERROR)
         LOG_ERR("rtr=%s: Failed to produce message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
 
@@ -314,8 +339,7 @@ void msgBus_kafka::update_Router(obj_router &r_object, router_action_code code) 
     string r_hash_str;
     hash_toStr(r_object.hash_id, r_hash_str);
 
-    bool skip_if_in_cache = true;
-    bool add_to_cache = true;
+    bool skip_if_defined = true;
 
     string action = "first";
 
@@ -325,33 +349,30 @@ void msgBus_kafka::update_Router(obj_router &r_object, router_action_code code) 
             break;
 
         case ROUTER_ACTION_INIT :
-            skip_if_in_cache = false;
+            skip_if_defined = false;
             action.assign("init");
             break;
 
         case ROUTER_ACTION_TERM:
-            skip_if_in_cache = false;
+            skip_if_defined = false;
             action.assign("term");
-            add_to_cache = false;
-
-            if (router_list.find(r_hash_str) != router_list.end())
-                router_list.erase(r_hash_str);
-
+            bzero(router_hash, sizeof(router_hash));
             break;
     }
 
 
     // Check if we have already processed this entry, if so update it an return
-    if (skip_if_in_cache and router_list.find(r_hash_str) != router_list.end()) {
-        router_list[r_hash_str] = time(NULL);
-        return;
+    if (skip_if_defined) {
+        for (int i=0; i < sizeof(router_hash); i++) {
+            if (router_hash[i] != 0)
+                return;
+        }
     }
 
-    router_ip.assign((char *)r_object.ip_addr);                     // Update router IP for logging
+    if (code != ROUTER_ACTION_TERM)
+        memcpy(router_hash, r_object.hash_id, sizeof(router_hash));
 
-    // Insert/Update map entry
-    if (add_to_cache)
-        router_list[r_hash_str] = time(NULL);
+    router_ip.assign((char *)r_object.ip_addr);                     // Update router IP for logging
 
     string descr((char *)r_object.descr);
     boost::replace_all(descr, "\n", "\\n");
@@ -375,13 +396,13 @@ void msgBus_kafka::update_Router(obj_router &r_object, router_action_code code) 
         snprintf((char *)r_object.name, sizeof(r_object.name), "%s", hostname.c_str());
     }
 
-    snprintf(buf, sizeof(buf),
+    size_t size = snprintf(buf, sizeof(buf),
              "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%" PRIu16 "\t%s\t%s\t%s\t%s\n", action.c_str(),
              router_seq, r_object.name, r_hash_str.c_str(), r_object.ip_addr, descr.c_str(),
              r_object.term_reason_code, r_object.term_reason_text,
              initData.c_str(), termData.c_str(), ts.c_str());
 
-    produce(MSGBUS_TOPIC_ROUTER, buf, strlen(buf), 1, r_hash_str);
+    produce(MSGBUS_TOPIC_ROUTER, buf, size, 1, r_hash_str);
 
     router_seq++;
 }
@@ -1094,16 +1115,16 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len) {
         sleep(2);
     }
 
-    char headers[128];
-    snprintf(headers, sizeof(headers), "V: 1\nC_HASH_ID: %s\nR_HASH: %s\nR_IP: %s\nL: %lu\n\n",
+    char headers[256];
+    size_t hdr_len = snprintf(headers, sizeof(headers), "V: 1\nC_HASH_ID: %s\nR_HASH: %s\nR_IP: %s\nL: %lu\n\n",
              collector_hash.c_str(), r_hash_str.c_str(), router_ip.c_str(), data_len);
 
-    memcpy(producer_buf, headers, sizeof(headers));
-    memcpy(producer_buf+strlen(headers), data, data_len);
+    memcpy(producer_buf, headers, hdr_len);
+    memcpy(producer_buf+hdr_len, data, data_len);
 
     RdKafka::ErrorCode resp = producer->produce(topic[MSGBUS_TOPIC_BMP_RAW], RdKafka::Topic::PARTITION_UA,
                                                 RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
-                                                producer_buf, data_len + strlen(headers),
+                                                producer_buf, data_len + hdr_len,
                                                 (const std::string *)&r_hash_str, NULL);
 
     if (resp != RdKafka::ERR_NO_ERROR)
@@ -1124,11 +1145,12 @@ bool msgBus_kafka::resolveIp(string name, string &hostname) {
     addrinfo *ai;
     char host[255];
 
-    if (!getaddrinfo(name.c_str(), NULL, NULL, &ai) and
-            !getnameinfo(ai->ai_addr,ai->ai_addrlen, host, sizeof(host), NULL, 0, NI_NAMEREQD)) {
+    if (!getaddrinfo(name.c_str(), NULL, NULL, &ai)) {
 
-        hostname.assign(host);
-        LOG_INFO("resovle: %s to %s", name.c_str(), hostname.c_str());
+        if (!getnameinfo(ai->ai_addr,ai->ai_addrlen, host, sizeof(host), NULL, 0, NI_NAMEREQD)) {
+            hostname.assign(host);
+            LOG_INFO("resovle: %s to %s", name.c_str(), hostname.c_str());
+        }
 
         freeaddrinfo(ai);
         return false;

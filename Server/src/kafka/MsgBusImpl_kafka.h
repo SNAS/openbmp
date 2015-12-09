@@ -123,12 +123,11 @@ private:
     bool isConnected;                           ///< Indicates if Kafka is connected or not
 
     // array of hashes
-    typedef std::map<std::string, time_t>::iterator router_list_iter;
-    std::map<std::string, time_t> router_list;
     std::map<std::string, time_t> peer_list;
     typedef std::map<std::string, time_t>::iterator peer_list_iter;
 
-    std::string router_ip;                      ///< Router IP in printed format, used for logging
+    std::string router_ip;                      ///< Router IP in printed format
+    u_char      router_hash[16];                ///< Router Hash in binary format
 
     /**
      * Topic name to handle pointer map (key=Name, value=topic pointer)
