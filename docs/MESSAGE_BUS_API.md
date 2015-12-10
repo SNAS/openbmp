@@ -4,7 +4,7 @@
 
 Types of Message Feeds
 -------------
-Currently there are two feeds available. 
+Currently there are two feeds available.
 
 ### 1) Parsed Messages
 
@@ -27,7 +27,7 @@ Currently there are two feeds available.
 * Each Kafka message is a **complete** BMP message, including all BGP data that goes along with that message
 
 #### Topic Name Structure
- 
+
 **<font style="margin-left:50px" color="blue">openbmp</font>.<font color="darkgreen">bmp_raw</font>**
 
 
@@ -46,14 +46,14 @@ Message API: Parsed Data
 
 ### Headers
 
-Header | Value | Description 
+Header | Value | Description
 --------|-------|-------------
 **V**| 1 | Schema version, currently 1
 **C\_HASH\_ID** | hash string | Collector Hash Id
 **L** | length | Length of the data in bytes
 **R** | count | Number of records in TSV data
 
-### Data 
+### Data
 Data is in **TSV** format
 
 * Field delimiter is TAB (**\\t**)
@@ -68,10 +68,10 @@ Data is in **TSV** format
 #### Object: <font color="blue">collector</font> (openbmp.parsed.collector)
 Collector details.
 
-\# | Field | Data Type | Size in Bytes | Details 
+\# | Field | Data Type | Size in Bytes | Details
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **started** = Collector started<br>**change** = Collector had a router connection change<br>**heartbeat** = Collector periodic heartbeat<br>**stopped** = Collector was stopped/shutdown
-2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number. This increments for each collector record and restarts on collector restart or number wrap. 
+2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number. This increments for each collector record and restarts on collector restart or number wrap.
 3 | Admin Id | String | 64 | Administrative Id (variable length string); can be IP, hostname, etc.
 4 | Hash | String | 32 | Hash Id for this entry; Hash of fields [ admin id ]
 5 | Routers | String | 4K | List of router IP's connected (delimited by comma if more than one exists)
@@ -86,10 +86,10 @@ Collector details.
 #### Object: <font color="blue">router</font> (openbmp.parsed.router)
 One or more BMP routers.
 
-\# | Field | Data Type | Size in Bytes | Details 
+\# | Field | Data Type | Size in Bytes | Details
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **first** = first message received by the router, before the INIT message<br>**init** = Initiation message received<br>**term** = Termination message received or connection was closed
-2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each router record by collector and restarts on collector restart or number wrap. 
+2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each router record by collector and restarts on collector restart or number wrap.
 3 | Name | String | 64 | String name of router (from BMP init message or dns PTR)
 4 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ IP address, collector hash ]
 5 | IP Address | String | 46 | Printed form of the router source IP address
@@ -103,7 +103,7 @@ One or more BMP routers.
 #### Object: <font color="blue">peer</font> (openbmp.parsed.peer)
 One or more BGP peers.
 
-\# | Field | Data Type | Size in Bytes | Details 
+\# | Field | Data Type | Size in Bytes | Details
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **first** = first message received by the router, before the INIT message<br>**up** = PEER\_UP message received<br>**down** = PEER\_DOWN message received or connection was closed
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each peer record by collector and restarts on collector restart or number wrap.
@@ -142,7 +142,7 @@ One or more BGP peers.
 #### Object: <font color="blue">bmp\_stat</font> (openbmp.parsed.bmp\_stat)
 One or more bmp stat reports.
 
-\# | Field | Data Type | Size in Bytes | Details 
+\# | Field | Data Type | Size in Bytes | Details
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New stat report entry
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each record by peer and restarts on collector restart or number wrap.
@@ -166,7 +166,7 @@ One or more bmp stat reports.
 #### Object: <font color="blue">base\_attribute</font> (openbmp.parsed.base\_attribute)
 One or more attribute sets (does not include the NLRI's)
 
-\# | Field | Data Type | Size in Bytes | Details 
+\# | Field | Data Type | Size in Bytes | Details
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>*There is no delete action since attributes are not withdrawn.  Attribute is considered stale/old when no RIB entries contain this hash id paired with peer and router hash id's*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each attribute record by peer and restarts on collector restart or number wrap.
@@ -179,7 +179,7 @@ One or more attribute sets (does not include the NLRI's)
 9 | Timestamp | String | 26 | In the format of: YYYY-MM-dd HH:MM:SS.ffffff
 10 | Origin | String | 32 | Origin of the prefix (igp, egp, incomplete)
 11 | AS Path | String | 8K | AS Path string
-12 | AS Path Count | Int | 2 | Count of ASN's in the path 
+12 | AS Path Count | Int | 2 | Count of ASN's in the path
 13 | Origin AS | Int | 4 | Originating ASN (right most)
 14 | Next Hop | String | 46 | Printed form of the next hop IP address
 15 | MED | Int | 4 | MED value
@@ -195,7 +195,7 @@ One or more attribute sets (does not include the NLRI's)
 #### Object: <font color="blue">unicast\_prefix</font> (openbmp.parsed.unicast\_prefix)
 One or more IPv4/IPv6 unicast prefixes.
 
-\# | Field | Data Type | Size in Bytes | Details 
+\# | Field | Data Type | Size in Bytes | Details
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each prefix record by peer and restarts on collector restart or number wrap.
@@ -212,7 +212,7 @@ One or more IPv4/IPv6 unicast prefixes.
 13 | isIPv4 | Bool | 1 | Indicates if prefix is IPv4 or IPv6
 14 | Origin | String | 32 | Origin of the prefix (igp, egp, incomplete)
 15 | AS Path | String | 8K | AS Path string
-16 | AS Path Count | Int | 2 | Count of ASN's in the path 
+16 | AS Path Count | Int | 2 | Count of ASN's in the path
 17 | Origin AS | Int | 4 | Originating ASN (right most)
 18 | Next Hop | String | 46 | Printed form of the next hop IP address
 19 | MED | Int | 4 | MED value
@@ -228,7 +228,7 @@ One or more IPv4/IPv6 unicast prefixes.
 #### Object: <font color="blue">ls\_node</font> (openbmp.parsed.ls\_node)
 One or more link-state nodes.
 
-\# | Field | Data Type | Size in Bytes | Details 
+\# | Field | Data Type | Size in Bytes | Details
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each  record by peer and restarts on collector restart or number wrap.
@@ -242,7 +242,7 @@ One or more link-state nodes.
 10 | Timestamp | String | 26 | In the format of: YYYY-MM-dd HH:MM:SS.ffffff
 11 | IGP Router Id | String | 46 | printed form of the IGP router Id (varies in size depending on protocol)
 12 | Router Id | String | 46 | Printed form of the router Id (either null/empty, IPv4 or IPv6)
-13 | Routing Id | Int | 8 | Routing universe Id 
+13 | Routing Id | Int | 8 | Routing universe Id
 14 | LS Id | Int | 4 | Link state Id in Hex
 15 | Mt Id | Int | 4 | Multi-Topology Id
 16 | Ospf Area Id | String | 16 | Printed form of the OSPF Area Id (IP format)
@@ -251,14 +251,15 @@ One or more link-state nodes.
 19 | Flags | String | 32 | String representation of the flags
 20 | AS Path | String | 8K | BGP AS Path string
 21 | Local Pref | Int | 4 | BGP Local preference
-22 | MED | Int 4 | BGP MED value
+22 | MED | Int | 4 | BGP MED value
 23 | Next Hop | String | 46 | BGP next hop IP address in printed form
+24 | Node Name | String | 255 | ISIS hostname
 
 
 #### Object: <font color="blue">ls\_link</font> (openbmp.parsed.ls\_link)
 One or more link-state links.
 
-\# | Field | Data Type | Size in Bytes | Details 
+\# | Field | Data Type | Size in Bytes | Details
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each  record by peer and restarts on collector restart or number wrap.
@@ -272,7 +273,7 @@ One or more link-state links.
 10 | Timestamp | String | 26 | In the format of: YYYY-MM-dd HH:MM:SS.ffffff
 11 | IGP Router Id | String | 46 | printed form of the IGP router Id (varies in size depending on protocol)
 12 | Router Id | String | 46 | Printed form of the router Id (either null/empty, IPv4 or IPv6)
-13 | Routing Id | Int | 8 | Routing universe Id 
+13 | Routing Id | Int | 8 | Routing universe Id
 14 | LS Id | Int | 4 | Link state Id in Hex
 15 | Ospf Area Id | String | 16 | Printed form of the OSPF Area Id (IP format)
 16 | Isis Area Id | String | 32 | Hex string of the area Id
@@ -302,7 +303,7 @@ One or more link-state links.
 #### Object: <font color="blue">ls\_prefix</font> (openbmp.parsed.ls\_prefix)
 One or more link-state prefixes.
 
-\# | Field | Data Type | Size in Bytes | Details 
+\# | Field | Data Type | Size in Bytes | Details
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each  record by peer and restarts on collector restart or number wrap.
@@ -316,7 +317,7 @@ One or more link-state prefixes.
 10 | Timestamp | String | 26 | In the format of: YYYY-MM-dd HH:MM:SS.ffffff
 11 | IGP Router Id | String | 46 | printed form of the IGP router Id (varies in size depending on protocol)
 12 | Router Id | String | 46 | Printed form of the router Id (either null/empty, IPv4 or IPv6)
-13 | Routing Id | Int | 8 | Routing universe Id 
+13 | Routing Id | Int | 8 | Routing universe Id
 14 | LS Id | Int | 4 | Link state Id in Hex
 15 | Ospf Area Id | String | 16 | Printed form of the OSPF Area Id (IP format)
 16 | Isis Area Id | String | 32 | Hex string of the area Id
@@ -340,7 +341,7 @@ Message API: BMP RAW Data
 ------------------------------------
 
 ### Headers
-Header | Value | Description 
+Header | Value | Description
 --------|-------|-------------
 **V**| 1 | Schema version, currently 1
 **C\_HASH\_ID** | hash string | Collector Hash Id
@@ -348,11 +349,9 @@ Header | Value | Description
 **L** | length | Length of the data in bytes
 
 
-### Data 
+### Data
 Data is the binary BMP message data.  This includes the BMP headers and the BGP data (if present in the BMP message).
 
 Binary data begins immediately after the headers and the double newline ("**\\n\\n**")
 
 The binary data can be replayed and consumed by any BMP receiver. Data is unaltered and is an identical copy from what was received by the router.  This means the BMP version is relative to the router implementation.  Monitor **openbmp.parsed.router** to get router details, including the **r\_hash\_id**.
-
-
