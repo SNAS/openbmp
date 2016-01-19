@@ -244,7 +244,7 @@ One or more link-state nodes.
 12 | Router Id | String | 46 | Printed form of the router Id (either null/empty, IPv4 or IPv6)
 13 | Routing Id | Int | 8 | Routing universe Id
 14 | LS Id | Int | 4 | Link state Id in Hex
-15 | Mt Id | Int | 4 | Multi-Topology Id
+15 | Mt Id | String | 256 | Multi-Topology Id list of hex values delimited by comma
 16 | Ospf Area Id | String | 16 | Printed form of the OSPF Area Id (IP format)
 17 | Isis Area Id | String | 32 | Hex string of the area Id
 18 | Protocol | String | 32 | String name of the protocol (Direct, Static, IS-IS\_L1, IS-IS\_L2, OSPFv2, OSPFv3)
@@ -282,7 +282,7 @@ One or more link-state links.
 19 | Local Pref | Int | 4 | BGP Local preference
 20 | MED | Int 4 | BGP MED value
 21 | Next Hop | String | 46 | BGP next hop IP address in printed form
-22 | Mt Id | String | 128 | Multi-Topology Id
+22 | Mt Id | Int | 4 | Multi-Topology Id in Hex
 23 | Local Link Id | Int | 4 | Unsigned 32bit local link id
 24 | remote Link Id | Int 4 | Unsigned 32bit remote link id
 25 | Interface IP | String | 46 | Printed form of the local interface IP (ospf)
@@ -327,7 +327,7 @@ One or more link-state prefixes.
 20 | MED | Int 4 | BGP MED value
 21 | Next Hop | String | 46 | BGP next hop IP address in printed form
 22 | Local node Hash | String 32 | Local node hash Id
-23 | Mt Id | String | 128 | Multi-Topology Id
+23 | Mt Id | Int | 4 | Multi-Topology Id in hex
 24 | Ospf Route Type | String | 64 | Textual representation of the OSPF route type (Intra, Inter, Ext-1, Ext-2, NSSA-1, NSSA-2)
 25 | IGP Flags | String | 32 | String representation of the IGP flags
 26 | Route Tag | Int | 4 | Route tag value

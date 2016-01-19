@@ -685,7 +685,7 @@ namespace bgp_msg {
                 memcpy(&info.remote_id, data, 4); bgp::SWAP_BYTES(&info.remote_id);
                 data_read += 8;
 
-                SELF_DEBUG("%s: bgp-ls: Link descriptior ID local = %08x remote = %08x", peer_addr.c_str(), info.local_id, info.remote_id);
+                SELF_DEBUG("%s: bgp-ls: Link descriptor ID local = %08x remote = %08x", peer_addr.c_str(), info.local_id, info.remote_id);
 
                 break;
             }
@@ -708,6 +708,7 @@ namespace bgp_msg {
                 }
 
                 memcpy(&info.mt_id, data, len); bgp::SWAP_BYTES(&info.mt_id);
+                info.mt_id >>= 16;          // MT ID is 16 bits
                 data_read += len;
 
                 SELF_DEBUG("%s: bgp-ls: Link descriptior MT-ID = %08x ", peer_addr.c_str(), info.mt_id);
@@ -845,9 +846,9 @@ namespace bgp_msg {
                 uint64_t    value_64bit;
                 uint32_t    value_32bit;
 
-                if (len < 2) {
-                    LOG_NOTICE("%s: bgp-ls: failed to parse prefix ip_reach_info sub-tlv; too short",
-                               peer_addr.c_str());
+                if (len < 1) {
+                    LOG_INFO("%s: bgp-ls: Not parsing prefix ip_reach_info sub-tlv; too short at len=%d",
+                               peer_addr.c_str(), len);
                     data_read += len;
                     break;
                 }
@@ -857,7 +858,12 @@ namespace bgp_msg {
 
                 char ip_char[46];
                 bzero(info.prefix, sizeof(info.prefix));
-                memcpy(info.prefix, data, len - 1);
+
+                // If length is greater than 1 then parse the prefix (default/zero prefix will not have prefix bytes)
+                if (len > 1) {
+                    memcpy(info.prefix, data, len - 1);
+                    data_read += len - 1;
+                }
 
                 if (isIPv4) {
                     inet_ntop(AF_INET, info.prefix, ip_char, sizeof(ip_char));
@@ -906,10 +912,8 @@ namespace bgp_msg {
                             memcpy(info.prefix_bcast, &value_64bit, 8);
                         }
                     } else
-                            memcpy(info.prefix_bcast, info.prefix, sizeof(info.prefix_bcast));
+                        memcpy(info.prefix_bcast, info.prefix, sizeof(info.prefix_bcast));
                 }
-
-                data_read += len - 1;
 
                 SELF_DEBUG("%s: bgp-ls: prefix ip_reach_info: prefix = %s/%d", peer_addr.c_str(),
                             ip_char, info.prefix_len);
@@ -932,6 +936,8 @@ namespace bgp_msg {
                 }
 
                 memcpy(&info.mt_id, data, len); bgp::SWAP_BYTES(&info.mt_id);
+                info.mt_id >>= 16;          // MT ID is 16 bits
+
                 data_read += len;
 
                 SELF_DEBUG("%s: bgp-ls: Link descriptior MT-ID = %08x ", peer_addr.c_str(), info.mt_id);

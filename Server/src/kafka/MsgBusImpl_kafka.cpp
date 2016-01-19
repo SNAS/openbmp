@@ -898,6 +898,7 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
         hash.update((unsigned char *)&link.local_link_id, sizeof(link.local_link_id));
         hash.update((unsigned char *)&link.remote_link_id, sizeof(link.remote_link_id));
         hash.update((unsigned char *)peer_hash_str.c_str(), peer_hash_str.length());
+        hash.update((unsigned char *)&link.mt_id, sizeof(link.mt_id));
         hash.finalize();
 
         // Save the hash
@@ -1025,6 +1026,7 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
         hash.update((unsigned char *)&prefix.id, sizeof(prefix.id));
         hash.update(prefix.local_node_hash_id, sizeof(prefix.local_node_hash_id));
         hash.update((unsigned char *)prefix.ospf_route_type, sizeof(prefix.ospf_route_type));
+        hash.update((unsigned char *)&prefix.mt_id, sizeof(prefix.mt_id));
         hash.finalize();
 
         // Save the hash
@@ -1076,7 +1078,7 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
 
         buf_len += snprintf(buf2, sizeof(buf2),
                 "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32
-                        "\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%" PRIu32 "\t%" PRIx64
+                        "\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%" PRIx32 "\t%s\t%s\t%" PRIu32 "\t%" PRIx64
                             "\t%s\t%" PRIu32 "\t%s\t%d\n",
                             action.c_str(), ls_prefix_seq, hash_str.c_str(), path_hash_str.c_str(), r_hash_str.c_str(),
                             router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
