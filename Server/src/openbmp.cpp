@@ -507,7 +507,7 @@ void runServer(Cfg_Options &cfg) {
                     // Free attribute
                     pthread_attr_destroy(&thr_attr);
 
-                    collector_update_msg(kafka, cfg, thr->client,
+                    collector_update_msg(kafka, cfg,
                                          MsgBusInterface::COLLECTOR_ACTION_CHANGE);
 
                     last_heartbeat_time = time(NULL);
@@ -518,7 +518,7 @@ void runServer(Cfg_Options &cfg) {
                     // Send heartbeat if needed
                     if ( (time(NULL) - last_heartbeat_time) >= cfg.heartbeat_interval) {
                         BMPListener::ClientInfo client;
-                        collector_update_msg(kafka, cfg, client, MsgBusInterface::COLLECTOR_ACTION_HEARTBEAT);
+                        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_HEARTBEAT);
                         last_heartbeat_time = time(NULL);
                     }
 
@@ -531,7 +531,7 @@ void runServer(Cfg_Options &cfg) {
             }
         }
 
-        collector_update_msg(kafka, cfg, client, MsgBusInterface::COLLECTOR_ACTION_STOPPED);
+        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_STOPPED);
         delete kafka;
 
     } catch (char const *str) {
