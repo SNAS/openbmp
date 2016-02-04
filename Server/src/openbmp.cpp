@@ -73,7 +73,7 @@ void Usage(char *prog) {
     cout << "     -d <filename>     Debug filename, default is log filename" << endl;
     cout << "     -pid <filename>   PID filename, default is no pid file" << endl;
     cout << "     -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128" << endl;
-    cout << "     -hi <minutes>     Collector message heartbeat interval in minutes (default is 240 (4 hrs)" << endl;
+    cout << "     -hi <minutes>     Collector message heartbeat interval in minutes (default is 5 minutes)" << endl;
     cout << "     -f                Run in foreground instead of daemon (use for upstart)" << endl;
 
     cout << endl << "  OTHER OPTIONS:" << endl;
@@ -188,7 +188,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
     cfg.bmp_buffer_size     = 15728640; // 15MB
     cfg.svr_ipv6            = false;
     cfg.svr_ipv4            = true;
-    cfg.heartbeat_interval  = 60 * 60 * 4;   // Default is 4 hours
+    cfg.heartbeat_interval  = 60 * 5;   // Default is 5 minutes
 
     bzero(cfg.admin_id, sizeof(cfg.admin_id));
 
@@ -379,10 +379,9 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
  *
  * \param [in] kafka                 Pointer to kafka instance
  * \param [in] cfg                   Reference to configuration
- * \param [in] client                Reference to client info
  * \param [in] code                  reason code for the update
  */
-void collector_update_msg(msgBus_kafka *kafka,  Cfg_Options &cfg, BMPListener::ClientInfo &client,
+void collector_update_msg(msgBus_kafka *kafka,  Cfg_Options &cfg,
                           MsgBusInterface::collector_action_code code) {
 
     MsgBusInterface::obj_collector oc;
@@ -391,8 +390,6 @@ void collector_update_msg(msgBus_kafka *kafka,  Cfg_Options &cfg, BMPListener::C
 
     oc.router_count = thr_list.size();
 
-    //string hash_str;
-    //string router_hashes;
     string router_ips;
     for (int i=0; i < thr_list.size(); i++) {
         //MsgBusInterface::hash_toStr(thr_list.at(i)->client.hash_id, hash_str);
@@ -442,7 +439,7 @@ void runServer(Cfg_Options &cfg) {
         BMPListener *bmp_svr = new BMPListener(logger, &cfg);
 
         BMPListener::ClientInfo client;
-        collector_update_msg(kafka, cfg, client, MsgBusInterface::COLLECTOR_ACTION_STARTED);
+        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_STARTED);
         last_heartbeat_time = time(NULL);
 
         LOG_INFO("Ready. Waiting for connections");
@@ -461,12 +458,13 @@ void runServer(Cfg_Options &cfg) {
                     pthread_join(thr_list.at(i)->thr, NULL);
                     --active_connections;
 
-                    collector_update_msg(kafka, cfg, thr_list.at(i)->client,
-                                         MsgBusInterface::COLLECTOR_ACTION_CHANGE);
-
                     // free the vector entry
                     delete thr_list.at(i);
                     thr_list.erase(thr_list.begin() + i);
+
+                    collector_update_msg(kafka, cfg,
+                                         MsgBusInterface::COLLECTOR_ACTION_CHANGE);
+
                 }
 
                 //TODO: Add code to check for a socket that is open, but not really connected/half open

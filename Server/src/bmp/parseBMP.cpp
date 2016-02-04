@@ -400,6 +400,7 @@ void parseBMP::parsePeerHdr(int sock) {
              p_hdr.peer_as[2] << 8 | p_hdr.peer_as[3]);
 
     inet_ntop(AF_INET, p_hdr.peer_bgp_id, peer_bgp_id, sizeof(peer_bgp_id));
+    SELF_DEBUG("sock=%d : Peer BGP-ID %x (%s)", sock, (uint32_t)p_hdr.peer_bgp_id, peer_bgp_id);
 
     // Format based on the type of RD
     SELF_DEBUG("sock=%d : Peer RD type = %d %d", sock, p_hdr.peer_dist_id[0], p_hdr.peer_dist_id[1]);
