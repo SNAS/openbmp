@@ -28,7 +28,7 @@ Install standard Ubuntu 14.04/Trusty server image [Ubuntu Download](http://www.u
 ### Install the dependancies
 
 ``` 
-sudo apt-get install gcc g++ libboost-dev cmake 
+sudo apt-get install gcc g++ libboost-dev cmake zlib1g-dev
 ```
 
 RHEL7/CentOS7

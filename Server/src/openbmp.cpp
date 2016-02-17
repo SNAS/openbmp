@@ -239,7 +239,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
 
             cfg.heartbeat_interval = atoi(argv[++i]) * 60;
 
-            // Validate the port
+            // Validate range
             if (cfg.heartbeat_interval < 60 || cfg.heartbeat_interval > 86400) {
                 cout << "INVALID ARG: port '" << cfg.heartbeat_interval <<
                                                  "' is out of range, expected range is 1 - 1440" << endl;
