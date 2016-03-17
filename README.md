@@ -10,26 +10,10 @@ JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR, an
 ### Daemon
 OpenBMP daemon is a BMP receiver for devices/software that implement BMP, such as Cisco and Juniper routers. The collector is a **producer** to Apache Kafka.   Both RAW BMP messages and parsed messages are produced for Kafka consumer consumption.  
 
-Using Logstash with OpenBMP
--------------------
-> Logstash is a flexible, open source, data collection, enrichment, and transport pipeline designed to efficiently process a growing list of log, event, and unstructured data sources for distribution into a variety of outputs, including Elasticsearch.
+### Using Logstash with OpenBMP
+Logstash is a flexible, open source, data collection, enrichment, and transport pipeline designed to efficiently process a growing list of log, event, and unstructured data sources for distribution into a variety of outputs, including Elasticsearch.
 
-With logstash, you can easily get a variety of [possible outputs](https://www.elastic.co/guide/en/logstash/current/output-plugins.html). Here we provide elasticsearch output configuration with openBMP kafka input.
-
-### Installing Logstash
-[Visit download page](https://www.elastic.co/downloads/logstash)
-
-### Configuration
-[Config file for OpenBMP](openbmp/docs/LOGSTASH-CONF.md)
-
-### Starting logstash
-Go to your logstash installation location, and run
-
-`logstash -f openbmp-logstash.conf`
-
-### Expanding
-To use other outputs or add custom data processing, add other plugins to **filter** section and **output** section. Note that **plugins execute in the order they appear**.
-
+See [Logstash](docs/LOGSTASH.md) for more details and how to use logstash with OpenBMP.
 
 ### Flat File Consumer
 A basic file consumer of OpenBMP parsed and RAW BMP Kafka streams. You can use this file consumer in the following ways:
