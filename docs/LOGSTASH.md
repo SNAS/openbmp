@@ -1,3 +1,17 @@
+# Using Logstash with OpenBMP
+
+## Installing Logstash
+[Visit download page](https://www.elastic.co/downloads/logstash)
+
+## Starting logstash
+Go to your logstash installation location, and run
+
+`logstash -f openbmp-logstash.conf`
+
+## Expanding
+With logstash, you can easily get a variety of [possible outputs](https://www.elastic.co/guide/en/logstash/current/output-plugins.html). Here we provide elasticsearch output configuration with openBMP kafka input. To use other outputs or add custom data processing, add other plugins to **filter** section and **output** section. Note that **plugins execute in the order they appear**.
+
+## Logstash config
 ```
 input{
 	kafka{
