@@ -133,6 +133,7 @@ namespace bgp_msg {
          * \returns length of the TLV attribute parsed
          */
         int parseAttrLinkStateTLV(int attr_len, u_char *data);
+        float float_swap(float value);
 
     };
 

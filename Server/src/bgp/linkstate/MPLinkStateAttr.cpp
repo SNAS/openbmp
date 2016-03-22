@@ -57,6 +57,21 @@ namespace bgp_msg {
         }
     }
 
+    float MPLinkStateAttr::float_swap(float value)
+    {
+        union v {
+            float       f;
+            unsigned int    i;
+        };
+     
+        union v val;
+     
+        val.f = value;
+        val.i = ntohl(val.i);
+                   
+        return val.f;
+    }
+
     /*******************************************************************************//*
      * Parse Link State attribute TLV
      *
@@ -73,6 +88,7 @@ namespace bgp_msg {
 
         char            ip_char[46];
         uint32_t        value_32bit;
+        float           float_val;
 
 
         if (attr_len < 4) {
@@ -146,8 +162,20 @@ namespace bgp_msg {
                 break;
 
             case ATTR_LINK_ADMIN_GROUP:
-                //SELF_DEBUG("%s: bgp-ls: parsing link admin group attribute", peer_addr.c_str());
-                LOG_INFO("%s: bgp-ls: node MT ID attribute, not yet implemented", peer_addr.c_str());
+                if (len != 4) 
+                {
+                    LOG_NOTICE("%s: bgp-ls: failed to parse attribute link admin group sub-tlv, size not 4",
+                            peer_addr.c_str());
+                    break;
+                } else {
+                    value_32bit = 0;
+                    memcpy(&value_32bit, data, len);
+                    bgp::SWAP_BYTES(&value_32bit, len);
+                    memcpy(parsed_data->ls_attrs[ATTR_LINK_ADMIN_GROUP].data(), &value_32bit, 4);
+                    SELF_DEBUG("%s: bgp-ls: parsed linked admin group attribute: "
+                               " 0x%x, len = %d",
+                               peer_addr.c_str(), value_32bit, len);
+                }
                 break;
 
             case ATTR_LINK_IGP_METRIC:
@@ -189,13 +217,28 @@ namespace bgp_msg {
                 break;
 
             case ATTR_LINK_MAX_LINK_BW:
-                //SELF_DEBUG("%s: bgp-ls: parsing link max link bw attribute", peer_addr.c_str());
-                LOG_INFO("%s: bgp-ls: link max link bw attribute, not yet implemented", peer_addr.c_str());
+                if (len != 4) {
+                    LOG_NOTICE("%s: bgp-ls: failed to parse attribute maximum link bandwidth sub-tlv; too short",
+                            peer_addr.c_str());
+                    break;
+                } 
+                
+                memcpy(&float_val, data, len);
+                float_val = float_swap(float_val);
+                memcpy(parsed_data->ls_attrs[ATTR_LINK_MAX_LINK_BW].data(), &float_val, 4);
+                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum link bandwidth %x (len=%d)", peer_addr.c_str(), *(uint32_t *)&float_val, len);
                 break;
 
             case ATTR_LINK_MAX_RESV_BW:
-                //SELF_DEBUG("%s: bgp-ls: parsing link max reserve bw attribute", peer_addr.c_str());
-                LOG_INFO("%s: bgp-ls: link max link bw attribute, not yet implemented", peer_addr.c_str());
+                if (len != 4) {
+                    LOG_NOTICE("%s: bgp-ls: failed to parse attribute remote IPv4 sub-tlv; too short",
+                            peer_addr.c_str());
+                    break;
+                }
+                memcpy(&float_val, data, len);
+                float_val = float_swap(float_val);
+                memcpy(parsed_data->ls_attrs[ATTR_LINK_MAX_RESV_BW].data(), &float_val, 4);
+                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum reserved bandwidth %x (len=%d)", peer_addr.c_str(), *(uint32_t *)&float_val, len);
                 break;
 
             case ATTR_LINK_MPLS_PROTO_MASK:
@@ -221,8 +264,16 @@ namespace bgp_msg {
                 break;
 
             case ATTR_LINK_TE_DEF_METRIC:
-                //SELF_DEBUG("%s: bgp-ls: parsing link TE default metric attribute", peer_addr.c_str());
-                LOG_INFO("%s: bgp-ls: link TE default metric attribute, not yet implemented", peer_addr.c_str());
+                if (len != 3) {
+                    LOG_NOTICE("%s: bgp-ls: failed to parse attribute TE default metric sub-tlv; too short %d",
+                            peer_addr.c_str(), len);
+                    break;
+                }
+                value_32bit = 0;
+                memcpy(&value_32bit, data, len);
+                bgp::SWAP_BYTES(&value_32bit, len);
+                memcpy(parsed_data->ls_attrs[ATTR_LINK_TE_DEF_METRIC].data(), &value_32bit, len);
+                SELF_DEBUG("%s: bgp-ls: parsed attribute te default metric %x (len=%d)", peer_addr.c_str(), value_32bit, len);
                 break;
 
             case ATTR_LINK_UNRESV_BW:
