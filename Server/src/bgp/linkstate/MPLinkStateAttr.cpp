@@ -56,22 +56,47 @@ namespace bgp_msg {
                 data += tlv_len;
         }
     }
-
-    float MPLinkStateAttr::float_swap(float value)
+ 
+    int32_t MPLinkStateAttr::ieee_float_to_int32(int32_t float_val)
     {
-        union v {
-            float       f;
-            unsigned int    i;
-        };
-     
-        union v val;
-     
-        val.f = value;
-        val.i = ntohl(val.i);
-                   
-        return val.f;
+        int32_t sign, exponent, mantissa;
+
+        sign = float_val & IEEE_SIGN_MASK;
+        exponent = float_val & IEEE_EXPONENT_MASK;
+        mantissa = float_val & IEEE_MANTISSA_MASK;
+
+        if ((float_val & ~IEEE_SIGN_MASK) == 0) {
+            /* Number is zero, unnormalized, or not-a-float_val. */
+            return 0;
+        }
+
+        if (IEEE_INFINITY == exponent) {
+            /* Number is positive or negative infinity, or a special value. */
+            return (sign ? MINUS_INFINITY : PLUS_INFINITY);
+        }
+
+        exponent = (exponent >> IEEE_MANTISSA_WIDTH) - IEEE_BIAS;
+        if (exponent < 0) {
+             /* Number is between zero and one. */
+             return 0;
+        }
+
+        mantissa |= IEEE_IMPLIED_BIT;
+        if (exponent <= IEEE_MANTISSA_WIDTH) {
+           mantissa >>= IEEE_MANTISSA_WIDTH - exponent;
+        } else {
+           mantissa <<= exponent - IEEE_MANTISSA_WIDTH;
+        }
+
+        return (sign ? -mantissa : mantissa);
     }
 
+    int32_t MPLinkStateAttr::convert_to_kbps(int32_t bw_float) {
+	int32_t bw_int;
+        bw_int = bw_float/ 125;
+        bw_int += (bw_float % 125) ? 1 : 0;
+        return bw_int;
+    }
     /*******************************************************************************//*
      * Parse Link State attribute TLV
      *
@@ -88,7 +113,7 @@ namespace bgp_msg {
 
         char            ip_char[46];
         uint32_t        value_32bit;
-        float           float_val;
+        int32_t         float_val;
 
 
         if (attr_len < 4) {
@@ -223,10 +248,13 @@ namespace bgp_msg {
                     break;
                 } 
                 
+                float_val = 0;
                 memcpy(&float_val, data, len);
-                float_val = float_swap(float_val);
+                bgp::SWAP_BYTES(&float_val, len);
+                float_val = ieee_float_to_int32(float_val);
+                float_val = convert_to_kbps(float_val);
                 memcpy(parsed_data->ls_attrs[ATTR_LINK_MAX_LINK_BW].data(), &float_val, 4);
-                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum link bandwidth %x (len=%d)", peer_addr.c_str(), *(uint32_t *)&float_val, len);
+                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum link bandwidth %u Kbps (len=%d)", peer_addr.c_str(), *(int32_t *)&float_val, len);
                 break;
 
             case ATTR_LINK_MAX_RESV_BW:
@@ -235,10 +263,13 @@ namespace bgp_msg {
                             peer_addr.c_str());
                     break;
                 }
+                float_val = 0;
                 memcpy(&float_val, data, len);
-                float_val = float_swap(float_val);
+                bgp::SWAP_BYTES(&float_val, len);
+                float_val = ieee_float_to_int32(float_val);
+                float_val = convert_to_kbps(float_val);
                 memcpy(parsed_data->ls_attrs[ATTR_LINK_MAX_RESV_BW].data(), &float_val, 4);
-                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum reserved bandwidth %x (len=%d)", peer_addr.c_str(), *(uint32_t *)&float_val, len);
+                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum reserved bandwidth %u Kbps (len=%d)", peer_addr.c_str(), *(uint32_t *)&float_val, len);
                 break;
 
             case ATTR_LINK_MPLS_PROTO_MASK:
