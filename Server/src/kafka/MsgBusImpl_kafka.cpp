@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -24,8 +24,12 @@
 #include "MsgBusImpl_kafka.h"
 #include "KafkaEventCallback.h"
 #include "KafkaDeliveryReportCallback.h"
+#include "KafkaTopicSelector.h"
 
 #include <boost/algorithm/string/replace.hpp>
+
+#include <librdkafka/rdkafka.h>
+
 
 #include "md5.h"
 
@@ -37,10 +41,10 @@ using namespace std;
  * \details It is expected that this class will start off with a new connection.
  *
  *  \param [in] logPtr      Pointer to Logger instance
- *  \param [in] brokerList  Comma delimited list of brokers (e.g. localhost:9092,host2:9092)
+ *  \param [in] cfg         Pointer to the config instance
  *  \param [in] c_hash_id   Collector Hash ID
  ********************************************************************/
-msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id) {
+msgBus_kafka::msgBus_kafka(Logger *logPtr, Config *cfg, u_char *c_hash_id) {
     logger = logPtr;
 
     producer_buf = new unsigned char[MSGBUS_WORKING_BUF_SIZE];
@@ -50,11 +54,10 @@ msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id)
 
     isConnected = false;
     conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
-    tconf = RdKafka::Conf::create(RdKafka::Conf::CONF_TOPIC);
 
     disableDebug();
 
-    initTopicMap();
+    // TODO: Init the topic selector class
 
     router_seq          = 0L;
     collector_seq       = 0L;
@@ -66,14 +69,13 @@ msgBus_kafka::msgBus_kafka(Logger *logPtr, string brokerList, u_char *c_hash_id)
     ls_prefix_seq       = 0L;
     bmp_stat_seq        = 0L;
 
-    broker_list = brokerList;
+    this->cfg           = cfg;
 
     // Make the connection to the server
     event_callback       = NULL;
     delivery_callback    = NULL;
     producer             = NULL;
-
-    peer_partitioner_callback = new KafkaPeerPartitionerCallback();
+    topicSel             = NULL;
 
     router_ip.assign("");
     bzero(router_hash, sizeof(router_hash));
@@ -118,25 +120,42 @@ msgBus_kafka::~msgBus_kafka() {
 
     peer_list.clear();
 
-    producer->poll(500);
+    disconnect(500);
 
+    delete conf;
+}
 
-    // Free topic pointers
-    for (topic_map::iterator it = topic.begin(); it != topic.end(); it++) {
-        if (it->second) {
-            delete it->second;
-            it->second = NULL;
+/**
+ * Disconnect from Kafka
+ */
+void msgBus_kafka::disconnect(int wait_ms) {
+
+    if (isConnected) {
+        int i = 0;
+        while (producer->outq_len() > 0 or i > 8) {
+            LOG_INFO("Waiting for producer to finish before disconnecting: outq=%d", producer->outq_len());
+            producer->poll(500);
+            i++;
         }
     }
 
-    delete conf;
-    delete tconf;
+    if (topicSel != NULL) delete topicSel;
+
+    topicSel = NULL;
 
     if (producer != NULL) delete producer;
+    producer = NULL;
+
+    // suggested by librdkafka to free memory
+    RdKafka::wait_destroyed(wait_ms);
 
     if (event_callback != NULL) delete event_callback;
+    event_callback = NULL;
+
     if (delivery_callback != NULL) delete delivery_callback;
-    if (peer_partitioner_callback != NULL) delete peer_partitioner_callback;
+    delivery_callback = NULL;
+
+    isConnected = false;
 }
 
 /**
@@ -146,21 +165,20 @@ void msgBus_kafka::connect() {
     string errstr;
     string value;
 
-    // Free topic pointers
-    for (topic_map::iterator it = topic.begin(); it != topic.end(); it++) {
-        if (it->second != NULL) {
-            delete it->second;
-            it->second = NULL;
-        }
-    }
-
-    if (producer != NULL) delete producer;
-    producer                 = NULL;
+    disconnect();
 
     /*
      * Configure Kafka Producer (https://kafka.apache.org/08/configuration.html)
      */
     //TODO: Add config options to change these settings
+
+    // Disable logging of connection close/idle timeouts caused by Kafka 0.9.x (connections.max.idle.ms)
+    //    See https://github.com/edenhill/librdkafka/issues/437 for more details.
+    // TODO: change this when librdkafka has better handling of the idle disconnects
+    value = "false";
+    if (conf->set("log.connection.close", value, errstr) != RdKafka::Conf::CONF_OK) {
+        LOG_ERR("Failed to configure log.connection.close=false: %s.", errstr.c_str());
+    }
 
     // Batch message number
     value = "1000";
@@ -185,13 +203,12 @@ void msgBus_kafka::connect() {
     }
 
     // broker list
-    if (conf->set("metadata.broker.list", broker_list, errstr) != RdKafka::Conf::CONF_OK) {
+    if (conf->set("metadata.broker.list", cfg->kafka_brokers, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure broker list for kafka: %s", errstr.c_str());
         throw "ERROR: Failed to configure kafka broker list";
     }
 
     // Register event callback
-    if (event_callback != NULL) delete event_callback;
     event_callback = new KafkaEventCallback(&isConnected, logger);
     if (conf->set("event_cb", event_callback, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure kafka event callback: %s", errstr.c_str());
@@ -199,7 +216,6 @@ void msgBus_kafka::connect() {
     }
 
     // Register delivery report callback
-    if (delivery_callback != NULL) delete delivery_callback;
     delivery_callback = new KafkaDeliveryReportCallback();
 
     if (conf->set("dr_cb", delivery_callback, errstr) != RdKafka::Conf::CONF_OK) {
@@ -210,38 +226,31 @@ void msgBus_kafka::connect() {
 
     // Create producer and connect
     producer = RdKafka::Producer::create(conf, errstr);
-    if (!producer) {
+    if (producer == NULL) {
         LOG_ERR("rtr=%s: Failed to create producer: %s", router_ip.c_str(), errstr.c_str());
         throw "ERROR: Failed to create producer";
     }
 
     isConnected = true;
 
-    producer->poll(200);
+    producer->poll(1000);
 
     if (not isConnected) {
         LOG_ERR("rtr=%s: Failed to connect to Kafka, will try again in a few", router_ip.c_str());
-        delete producer;
-        producer = NULL;
         return;
 
     }
 
     /*
-     * Create the topics
+     * Initialize the topic selector/handler
      */
-    for (topic_map::iterator it = topic.begin(); it != topic.end(); it++) {
+    try {
+        topicSel = new KafkaTopicSelector(logger, cfg, producer);
 
-        if (tconf->set("partitioner_cb", peer_partitioner_callback, errstr) != RdKafka::Conf::CONF_OK) {
-            LOG_ERR("Failed to configure kafka partitioner callback: %s", errstr.c_str());
-            throw "ERROR: Failed to configure kafka partitioner callback";
-        }
-
-        it->second = RdKafka::Topic::create(producer, it->first.c_str(), tconf, errstr);
-        if (it->second == NULL) {
-            LOG_ERR("rtr=%s: Failed to create '%s' topic: %s", router_ip.c_str(), it->first.c_str(), errstr.c_str());
-            throw "ERROR: Failed to create topic";
-        }
+    } catch (char const *str) {
+        LOG_ERR("rtr=%s: Failed to create one or more topics, will try again in a few: err=%s", router_ip.c_str(), str);
+        isConnected = false;
+        return;
     }
 
     producer->poll(100);
@@ -250,16 +259,20 @@ void msgBus_kafka::connect() {
 /**
  * produce message to Kafka
  *
- * \param [in] topic]        Topic name to lookup in the topic map
+ * \param [in] topic_var     Topic var to use in KafkaTopicSelector::getTopic() MSGBUS_TOPIC_VAR_*
  * \param [in] msg           message to produce
  * \param [in] msg_size      Length in bytes of the message
  * \param [in] rows          Number of rows
  * \param [in] key           Hash key
+ * \param [in] peer_group    Peer group name - empty/NULL if not set or used
+ * \param [in] peer_asn      Peer ASN
  */
-void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, int rows, string key) {
+void msgBus_kafka::produce(const char *topic_var, char *msg, size_t msg_size, int rows, string key,
+                           const string *peer_group, uint32_t peer_asn) {
     size_t len;
+    RdKafka::Topic *topic = NULL;
 
-    while (isConnected == false or topic[topic_name] == NULL) {
+    while (isConnected == false or topicSel == NULL) {
         // Do not attempt to reconnect if this is the main process (router ip is null)
         // Changed on 10/29/15 to support docker startup delay with kafka
         /*
@@ -270,11 +283,11 @@ void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, i
         LOG_WARN("rtr=%s: Not connected to Kafka, attempting to reconnect", router_ip.c_str());
         connect();
 
-        sleep(2);
+        sleep(1);
     }
 
     SELF_DEBUG("rtr=%s: Producing message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
-               topic_name, key.c_str(), msg_size);
+               topic_var, key.c_str(), msg_size);
 
     char headers[256];
     len = snprintf(headers, sizeof(headers), "V: 1\nC_HASH_ID: %s\nL: %lu\nR: %d\n\n",
@@ -283,12 +296,16 @@ void msgBus_kafka::produce(const char *topic_name, char *msg, size_t msg_size, i
     memcpy(producer_buf, headers, len);
     memcpy(producer_buf+len, msg, msg_size);
 
-    RdKafka::ErrorCode resp = producer->produce(topic[topic_name], RdKafka::Topic::PARTITION_UA,
-                                                RdKafka::Producer::RK_MSG_COPY,
-                                                producer_buf, msg_size + len,
-                                                (const std::string *)&key, NULL);
-    if (resp != RdKafka::ERR_NO_ERROR)
-        LOG_ERR("rtr=%s: Failed to produce message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
+
+    topic = topicSel->getTopic(topic_var, &router_group_name, peer_group, peer_asn);
+    if (topic != NULL) {
+        RdKafka::ErrorCode resp = producer->produce(topic, RdKafka::Topic::PARTITION_UA,
+                                                    RdKafka::Producer::RK_MSG_COPY,
+                                                    producer_buf, msg_size + len,
+                                                    (const std::string *) &key, NULL);
+        if (resp != RdKafka::ERR_NO_ERROR)
+            LOG_ERR("rtr=%s: Failed to produce message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
+    }
 
     producer->poll(0);
 }
@@ -324,7 +341,7 @@ void msgBus_kafka::update_Collector(obj_collector &c_object, collector_action_co
              action, collector_seq, c_object.admin_id, collector_hash.c_str(),
              c_object.routers, c_object.router_count, ts.c_str());
 
-    produce(MSGBUS_TOPIC_COLLECTOR, buf, strlen(buf), 1, collector_hash);
+    produce(MSGBUS_TOPIC_VAR_COLLECTOR, buf, strlen(buf), 1, collector_hash, NULL, 0);
 
     collector_seq++;
 }
@@ -361,7 +378,7 @@ void msgBus_kafka::update_Router(obj_router &r_object, router_action_code code) 
     }
 
 
-    // Check if we have already processed this entry, if so update it an return
+    // Check if we have already processed this entry, if so return
     if (skip_if_defined) {
         for (int i=0; i < sizeof(router_hash); i++) {
             if (router_hash[i] != 0)
@@ -390,11 +407,14 @@ void msgBus_kafka::update_Router(obj_router &r_object, router_action_code code) 
     getTimestamp(r_object.timestamp_secs, r_object.timestamp_us, ts);
 
     // Get the hostname
+    string hostname = "";
     if (strlen((char *)r_object.name) <= 0) {
-        string hostname;
         resolveIp((char *) r_object.ip_addr, hostname);
-        snprintf((char *)r_object.name, sizeof(r_object.name), "%s", hostname.c_str());
+        snprintf((char *)r_object.name, sizeof(r_object.name)-1, "%s", hostname.c_str());
     }
+
+    if (topicSel != NULL)
+        topicSel->lookupRouterGroup((char *)r_object.name, (char *)r_object.ip_addr, router_group_name);
 
     size_t size = snprintf(buf, sizeof(buf),
              "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%" PRIu16 "\t%s\t%s\t%s\t%s\n", action.c_str(),
@@ -402,7 +422,7 @@ void msgBus_kafka::update_Router(obj_router &r_object, router_action_code code) 
              r_object.term_reason_code, r_object.term_reason_text,
              initData.c_str(), termData.c_str(), ts.c_str());
 
-    produce(MSGBUS_TOPIC_ROUTER, buf, size, 1, r_hash_str);
+    produce(MSGBUS_TOPIC_VAR_ROUTER, buf, size, 1, r_hash_str, NULL, 0);
 
     router_seq++;
 }
@@ -471,9 +491,8 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
             break;
     }
 
-    // Check if we have already processed this entry, if so update it and return
+    // Check if we have already processed this entry, if so return
     if (skip_if_in_cache and peer_list.find(p_hash_str) != peer_list.end()) {
-        peer_list[p_hash_str] = time(NULL);
         return;
     }
 
@@ -485,8 +504,10 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
     // Insert/Update map entry
-    if (add_to_cache)
-        peer_list[p_hash_str] = time(NULL);
+    if (add_to_cache) {
+        if (topicSel != NULL)
+            topicSel->lookupPeerGroup(hostname, peer.peer_addr, peer.peer_as, peer_list[p_hash_str]);
+    }
 
     switch (code) {
         case PEER_ACTION_FIRST :
@@ -549,7 +570,7 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
         }
     }
 
-    produce(MSGBUS_TOPIC_PEER, buf, strlen(buf), 1, p_hash_str);
+    produce(MSGBUS_TOPIC_VAR_PEER, buf, strlen(buf), 1, p_hash_str, &peer_list[p_hash_str], peer.peer_as);
 
     peer_seq++;
 }
@@ -611,7 +632,7 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
                      attr.local_pref, attr.aggregator, attr.community_list, attr.ext_community_list, attr.cluster_list,
                      attr.atomic_agg, attr.nexthop_isIPv4, attr.originator_id);
 
-    produce(MSGBUS_TOPIC_BASE_ATTRIBUTE, prep_buf, buf_len, 1, p_hash_str);
+    produce(MSGBUS_TOPIC_VAR_BASE_ATTRIBUTE, prep_buf, buf_len, 1, p_hash_str, &peer_list[p_hash_str], peer.peer_as);
 
     ++base_attr_seq;
 }
@@ -710,7 +731,8 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
     }
 
 
-    produce(MSGBUS_TOPIC_UNICAST_PREFIX, prep_buf, strlen(prep_buf), rib.size(), p_hash_str);
+    produce(MSGBUS_TOPIC_VAR_UNICAST_PREFIX, prep_buf, strlen(prep_buf), rib.size(), p_hash_str,
+            &peer_list[p_hash_str], peer.peer_as);
 }
 
 /**
@@ -737,7 +759,7 @@ void msgBus_kafka::add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats) {
              stats.routes_adj_rib_in, stats.routes_loc_rib);
 
 
-    produce(MSGBUS_TOPIC_BMP_STAT, buf, strlen(buf), 1, p_hash_str);
+    produce(MSGBUS_TOPIC_VAR_BMP_STAT, buf, strlen(buf), 1, p_hash_str, &peer_list[p_hash_str], peer.peer_as);
     ++bmp_stat_seq;
 }
 
@@ -834,7 +856,7 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     }
 
 
-    produce(MSGBUS_TOPIC_LS_NODE, prep_buf, buf_len, rows, peer_hash_str);
+    produce(MSGBUS_TOPIC_VAR_LS_NODE, prep_buf, buf_len, rows, peer_hash_str, &peer_list[peer_hash_str], peer.peer_as);
 }
 
 /**
@@ -964,7 +986,8 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
         ++ls_link_seq;
     }
 
-    produce(MSGBUS_TOPIC_LS_LINK, prep_buf, strlen(prep_buf), rows, peer_hash_str);
+    produce(MSGBUS_TOPIC_VAR_LS_LINK, prep_buf, strlen(prep_buf), rows, peer_hash_str,
+            &peer_list[peer_hash_str], peer.peer_as);
 }
 
 /**
@@ -1094,23 +1117,28 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
         ++ls_prefix_seq;
     }
 
-    produce(MSGBUS_TOPIC_LS_PREFIX, prep_buf, strlen(prep_buf), rows, peer_hash_str);
+    produce(MSGBUS_TOPIC_VAR_LS_PREFIX, prep_buf, strlen(prep_buf), rows, peer_hash_str,
+            &peer_list[peer_hash_str], peer.peer_as);
 }
 
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
-void msgBus_kafka::send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len) {
+void msgBus_kafka::send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data, size_t data_len) {
     string r_hash_str;
+    string p_hash_str;
+    RdKafka::Topic *topic = NULL;
+
+    hash_toStr(peer.hash_id, p_hash_str);
     hash_toStr(r_hash, r_hash_str);
 
     SELF_DEBUG("rtr=%s: Producing bmp raw message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
-               MSGBUS_TOPIC_BMP_RAW, r_hash_str.c_str(), data_len);
+               MSGBUS_TOPIC_VAR_BMP_RAW, r_hash_str.c_str(), data_len);
 
     if (data_len == 0)
         return;
 
-    while (isConnected == false or topic[MSGBUS_TOPIC_BMP_RAW] == NULL) {
+    while (isConnected == false) {
         LOG_WARN("rtr=%s: Not connected to Kafka, attempting to reconnect", router_ip.c_str());
         connect();
 
@@ -1124,13 +1152,16 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len) {
     memcpy(producer_buf, headers, hdr_len);
     memcpy(producer_buf+hdr_len, data, data_len);
 
-    RdKafka::ErrorCode resp = producer->produce(topic[MSGBUS_TOPIC_BMP_RAW], RdKafka::Topic::PARTITION_UA,
-                                                RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
-                                                producer_buf, data_len + hdr_len,
-                                                (const std::string *)&r_hash_str, NULL);
+    topic = topicSel->getTopic(MSGBUS_TOPIC_VAR_BMP_RAW, &router_group_name, &peer_list[p_hash_str], peer.peer_as);
+    if (topic != NULL) {
+        RdKafka::ErrorCode resp = producer->produce(topic, RdKafka::Topic::PARTITION_UA,
+                                                    RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
+                                                    producer_buf, data_len + hdr_len,
+                                                    (const std::string *)&r_hash_str, NULL);
 
-    if (resp != RdKafka::ERR_NO_ERROR)
-        LOG_ERR("rtr=%s: Failed to produce bmp raw message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
+        if (resp != RdKafka::ERR_NO_ERROR)
+            LOG_ERR("rtr=%s: Failed to produce bmp raw message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
+    }
 
     producer->poll(0);
 }
@@ -1151,7 +1182,7 @@ bool msgBus_kafka::resolveIp(string name, string &hostname) {
 
         if (!getnameinfo(ai->ai_addr,ai->ai_addrlen, host, sizeof(host), NULL, 0, NI_NAMEREQD)) {
             hostname.assign(host);
-            LOG_INFO("resovle: %s to %s", name.c_str(), hostname.c_str());
+            LOG_INFO("resolve: %s to %s", name.c_str(), hostname.c_str());
         }
 
         freeaddrinfo(ai);
@@ -1160,8 +1191,6 @@ bool msgBus_kafka::resolveIp(string name, string &hostname) {
 
     return true;
 }
-
-
 
 /*
  * Enable/disable debugs

@@ -42,7 +42,6 @@ bool        debugEnabled    = false;                // Globally enable/disable d
 bool        run             = true;                 // Indicates if server should run
 bool        run_foreground  = false;                // Indicates if server should run in forground
 
-#define CFG_FILENAME "/etc/openbmp/openbmpd.conf"
 
 #define MAX_THREADS 200
 
@@ -57,32 +56,37 @@ static Logger *logger;                              // Local source logger refer
 void Usage(char *prog) {
     cout << "Usage: " << prog << " <options>" << endl;
     cout << endl << "  REQUIRED OPTIONS:" << endl;
+    cout << "     -c <filename>     Config filename.  " <<  endl;
+    cout << "          OR " << endl;
     cout << "     -a <string>       Admin ID for collector, this must be unique for this collector.  hostname or IP is good to use" << endl;
     cout << endl;
 
     cout << endl << "  OPTIONAL OPTIONS:" << endl;
-    cout << "     -k <host:port>    Kafka broker list format: host:port[,...]" << endl;
-    cout << "                       Default is 127.0.0.1:9092" << endl;
-    cout << "     -m <mode>         Mode can be 'v4, v6, or v4v6'" << endl;
-    cout << "                       Default is v4.  Enables IPv4 and/or IPv6 BMP listening port" << endl;
-    cout << endl;
-    cout << "     -p <port>         BMP listening port (default is 5000)" << endl;
-    cout << endl;
-    cout << "     -c <filename>     Config filename, default is " << CFG_FILENAME << endl;
+    cout << "     -pid <filename>   PID filename, default is no pid file" << endl;
     cout << "     -l <filename>     Log filename, default is STDOUT" << endl;
     cout << "     -d <filename>     Debug filename, default is log filename" << endl;
-    cout << "     -pid <filename>   PID filename, default is no pid file" << endl;
-    cout << "     -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128" << endl;
-    cout << "     -hi <minutes>     Collector message heartbeat interval in minutes (default is 5 minutes)" << endl;
     cout << "     -f                Run in foreground instead of daemon (use for upstart)" << endl;
 
     cout << endl << "  OTHER OPTIONS:" << endl;
     cout << "     -v                   Version" << endl;
 
     cout << endl << "  DEBUG OPTIONS:" << endl;
+    cout << "     -debug"           "Debug general items" << endl;
     cout << "     -dbgp             Debug BGP parser" <<  endl;
     cout << "     -dbmp             Debug BMP parser" << endl;
     cout << "     -dmsgbus          Debug message bus" << endl;
+
+    cout << endl << "  DEPRECATED OPTIONS:" << endl;
+    cout << endl << "       These options will be removed in a future release. You should switch to use the config file." << endl;
+    cout << "     -k <host:port>    Kafka broker list format: host:port[,...]" << endl;
+    cout << "                       Default is 127.0.0.1:9092" << endl;
+    cout << "     -m <mode>         Mode can be 'v4, v6, or v4v6'" << endl;
+    cout << "                       Default is v4.  Enables IPv4 and/or IPv6 BMP listening port" << endl;
+    cout << endl;
+    cout << "     -p <port>         BMP listening port (default is 5000)" << endl;
+    cout << "     -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128" << endl;
+    cout << "     -hi <minutes>     Collector message heartbeat interval in minutes (default is 5 minutes)" << endl;
+    cout << endl;
 
 }
 
@@ -177,20 +181,7 @@ void signal_handler(int signum)
  * \returns true if error, false if no error
  *
  */
-bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
-
-    // Initialize the defaults
-    cfg.bmp_port            = const_cast<char *>("5000");
-    cfg.kafka_brokers       = const_cast<char *>("localhost:9092");
-    cfg.debug_bgp           = false;
-    cfg.debug_bmp           = false;
-    cfg.debug_msgbus        = false;
-    cfg.bmp_buffer_size     = 15728640; // 15MB
-    cfg.svr_ipv6            = false;
-    cfg.svr_ipv4            = true;
-    cfg.heartbeat_interval  = 60 * 5;   // Default is 5 minutes
-
-    bzero(cfg.admin_id, sizeof(cfg.admin_id));
+bool ReadCmdArgs(int argc, char **argv, Config &cfg) {
 
     // Make sure we have the correct number of required args
     if (argc > 1 and !strcmp(argv[1], "-v")) {   // Version
@@ -201,11 +192,6 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
     else if (argc > 1 and !strcmp(argv[1], "-h")) {
         Usage(argv[0]);
         exit(0);
-    }
-
-    else if (argc < 3) {
-        cout << "ERROR: Missing required args." << endl;
-        return true;
     }
 
     // Loop through the args
@@ -222,12 +208,12 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
                 return true;
             }
 
-            cfg.bmp_port = argv[++i];
+            cfg.bmp_port = atoi(argv[++i]);
 
             // Validate the port
-            if (atoi(cfg.bmp_port) < 25 || atoi(cfg.bmp_port) > 65535) {
-                cout << "INVALID ARG: port '" << cfg.bmp_port << "' is out of range, expected range is 100-65535" <<
-                                                                 endl;
+            if (cfg.bmp_port < 25 || cfg.bmp_port > 65535) {
+                cout << "INVALID ARG: port '" << cfg.bmp_port
+                        << "' is out of range, expected range is 100-65535" << endl;
                 return true;
             }
 
@@ -303,6 +289,10 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
             // Convert the size to bytes
             cfg.bmp_buffer_size = cfg.bmp_buffer_size * 1024 * 1024;
 
+        } else if (!strcmp(argv[i], "-debug")) {
+            cfg.debug_general = true;
+            debugEnabled = true;
+
         } else if (!strcmp(argv[i], "-dbgp")) {
             cfg.debug_bgp = true;
             debugEnabled = true;
@@ -312,6 +302,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
         } else if (!strcmp(argv[i], "-dmsgbus")) {
             cfg.debug_msgbus = true;
             debugEnabled = true;
+
         } else if (!strcmp(argv[i], "-f")) {
             run_foreground = true;
         }
@@ -365,12 +356,6 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
         }
     }
 
-    // Make sure we have the required ARGS
-    if (strlen(cfg.admin_id) <= 0) {
-        cout << "Missing required 'admin ID', use -a <string> to set the collector admin ID" << endl;
-        return true;
-    }
-
     return false;
 }
 
@@ -381,7 +366,7 @@ bool ReadCmdArgs(int argc, char **argv, Cfg_Options &cfg) {
  * \param [in] cfg                   Reference to configuration
  * \param [in] code                  reason code for the update
  */
-void collector_update_msg(msgBus_kafka *kafka,  Cfg_Options &cfg,
+void collector_update_msg(msgBus_kafka *kafka, Config &cfg,
                           MsgBusInterface::collector_action_code code) {
 
     MsgBusInterface::obj_collector oc;
@@ -414,7 +399,7 @@ void collector_update_msg(msgBus_kafka *kafka,  Cfg_Options &cfg,
  *
  * \param [in]  cfg    Reference to the config options
  */
-void runServer(Cfg_Options &cfg) {
+void runServer(Config &cfg) {
     msgBus_kafka *kafka;
     int active_connections = 0;                 // Number of active connections/threads
     time_t last_heartbeat_time = 0;
@@ -433,7 +418,7 @@ void runServer(Cfg_Options &cfg) {
         delete[] hash_raw;
 
         // Kafka connection
-        kafka = new msgBus_kafka(logger, cfg.kafka_brokers, cfg.c_hash_id);
+        kafka = new msgBus_kafka(logger, &cfg, cfg.c_hash_id);
 
         // allocate and start a new bmp server
         BMPListener *bmp_svr = new BMPListener(logger, &cfg);
@@ -543,11 +528,27 @@ void runServer(Cfg_Options &cfg) {
  * main function
  */
 int main(int argc, char **argv) {
-    Cfg_Options cfg;
+    Config cfg;
 
     // Process the command line args
     if (ReadCmdArgs(argc, argv, cfg)) {
         return 1;
+    }
+
+    if (cfg_filename != NULL) {
+        try {
+            cfg.load(cfg_filename);
+
+        } catch (char const *str) {
+            cout << "ERROR: Failed to load the configuration file: " << str << endl;
+            return 2;
+        }
+    }
+
+    // Make sure we have the required ARGS
+    if (strlen(cfg.admin_id) <= 0) {
+        cout << "ERROR: Missing required 'admin ID', use -c <config> or -a <string> to set the collector admin ID" << endl;
+        return true;
     }
 
     try {

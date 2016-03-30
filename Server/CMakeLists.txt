@@ -1,3 +1,14 @@
+# find openssl
+find_package( OpenSSL 1)
+if (OPENSSL_FOUND)
+    include_directories(${OPENSSL_INCLUDE_DIR})
+    set (SSL_LIBS ${OPENSSL_LIBRARIES} sasl2)
+else()
+    set(SSL_LIBS )
+endif()
+
+
+
 # Find and set the env for the mysql c++ connector
 set(HINT_ROOT_DIR
         "${HINT_ROOT_DIR}"
@@ -5,13 +16,29 @@ set(HINT_ROOT_DIR
         PATH
         "Where to start looking for this component.")
 
+find_path(LIBYAML_CPP_INCLUDE_DIR
+        NAMES
+        yaml-cpp/yaml.h
+        HINTS
+        ${HINT_ROOT_DIR}
+        PATH_SUFFIXES
+        include)
+
+find_library(LIBYAML_CPP_LIBRARY
+        NAMES
+        libyaml-cpp.a yaml-cpp
+        HINTS
+        ${HINT_ROOT_DIR}
+        PATH_SUFFIXES
+        lib64
+        lib)
+
 find_path(LIBRDKAFKA_INCLUDE_DIR
         librdkafka/rdkafkacpp.h
         HINTS
         ${HINT_ROOT_DIR}
         PATH_SUFFIXES
         include)
-
 
 find_library(LIBRDKAFKA_LIBRARY
         NAMES
@@ -46,12 +73,16 @@ if (NOT LIBRDKAFKA_INCLUDE_DIR OR NOT LIBRDKAFKA_LIBRARY OR NOT LIBRDKAFKA_CPP_L
 #	Message ("lib = " ${LIBRDKAFKA_LIBRARY})
 endif()
 
+if (NOT LIBYAML_CPP_INCLUDE_DIR OR NOT LIBYAML_CPP_LIBRARY)
+    Message (FATAL_ERROR "Libyaml-cpp was not found, cannot proceed.  Visit https://github.com/jbeder/yaml-cpp for install details.")
+endif()
+
 if (NOT LIBRT_LIBRARY AND NOT MACOSX)
     Message (FATAL_ERROR "librt was not found, cannot proceed.")
 endif()
 
 # Update the include dir
-include_directories(${LIBRDKAFKA_INCLUDE_DIR} src/ src/bmp src/bgp src/bgp/linkstate src/kafka)
+include_directories(${LIBRDKAFKA_INCLUDE_DIR} ${LIBYAML_CPP_INCLUDE_DIR} src/ src/bmp src/bgp src/bgp/linkstate src/kafka)
 #link_directories(${LIBRDKAFKA_LIBRARY})
 
 
@@ -62,10 +93,13 @@ set (SRC_FILES
 	src/kafka/MsgBusImpl_kafka.cpp
 	src/kafka/KafkaEventCallback.cpp
 	src/kafka/KafkaDeliveryReportCallback.cpp
+    src/kafka/KafkaTopicSelector.cpp
+    src/kafka/KafkaPeerPartitionerCallback.cpp
 	src/openbmp.cpp
 	src/bmp/parseBMP.cpp
 	src/md5.cpp
 	src/Logger.cpp
+    src/Config.cpp
 	src/client_thread.cpp
 	src/bgp/parseBGP.cpp
 	src/bgp/NotificationMsg.cpp
@@ -73,10 +107,10 @@ set (SRC_FILES
 	src/bgp/UpdateMsg.cpp
 	src/bgp/MPReachAttr.cpp
 	src/bgp/MPUnReachAttr.cpp
-        src/bgp/ExtCommunity.cpp
-        src/bgp/linkstate/MPLinkState.cpp
-        src/bgp/linkstate/MPLinkStateAttr.cpp
-        src/kafka/KafkaPeerPartitionerCallback.cpp)
+    src/bgp/ExtCommunity.cpp
+    src/bgp/linkstate/MPLinkState.cpp
+    src/bgp/linkstate/MPLinkStateAttr.cpp
+    )
 
 # Disable warnings
 add_definitions ("-Wno-unused-result")
@@ -98,7 +132,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_COMPILER_IS_GNUCXX)
 endif()
 
 # Set the libs to link
-set (LIBS pthread ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z)
+set (LIBS pthread ${LIBYAML_CPP_LIBRARY} ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z ${SSL_LIBS})
 
 # Set the binary
 add_executable (openbmpd ${SRC_FILES})
@@ -112,4 +146,4 @@ endif()
 
 # Install the binary and configs
 install(TARGETS openbmpd DESTINATION bin COMPONENT binaries)
-#install(FILES openbmpd.conf DESTINATION etc/openbmp/ COMPONENT config)
+install(FILES openbmpd.conf DESTINATION etc/openbmp/ COMPONENT config)

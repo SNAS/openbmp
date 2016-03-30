@@ -21,7 +21,7 @@
 struct ThreadMgmt {
     pthread_t thr;
     BMPListener::ClientInfo client;
-    Cfg_Options *cfg;
+    Config *cfg;
     Logger *log;
     bool running;                       // true if running, zero if not running
 };

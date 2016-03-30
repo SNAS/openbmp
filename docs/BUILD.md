@@ -8,6 +8,8 @@ Openbmp is built and installed using 'cmake' to build the makefiles.
 All Platforms (Ubuntu, CentOS, etc.)
 ------------------------------------
 
+> #### YOU MUST INSTALL DEPENDS BEFORE BUILDING librdkafka and libyaml-cpp
+
 ### Install librdkafka development and runtime libraries
 
 See [librdkafka](https://github.com/edenhill/librdkafka) for detailed instructions on how to install.  
@@ -20,6 +22,29 @@ make
 sudo make install
 ```
 
+### Install libyaml-cpp development and runtime libraries
+
+See [yaml-cpp](https://github.com/jbeder/yaml-cpp) for detailed instructions on how to install.
+
+```
+git clone https://github.com/jbeder/yaml-cpp.git
+cd yaml-cpp
+
+# IF on CentOS6/RHEL6, use the following command to checkout release 0.5.3
+#git checkout release-0.5.3
+
+# IF on CentOS6/RHEL6 - you might run into an issue about date_time boost lib. This issue
+#    is specific to cmake on centos6/rhel6.   If you run into this issue, you can
+#    safely run the below to resolve the issue. 
+#sed -i '116,117 s/^/#/' ../CMakeLists.txt
+
+mkdir build
+cd build
+cmake -DBUILD_SHARED_LIBS=OFF ..
+make
+sudo make install
+```
+
 Ubuntu 14.04
 ------------
 ### Install Ubuntu 14.04
@@ -28,7 +53,7 @@ Install standard Ubuntu 14.04/Trusty server image [Ubuntu Download](http://www.u
 ### Install the dependancies
 
 ``` 
-sudo apt-get install gcc g++ libboost-dev cmake zlib1g-dev
+sudo apt-get install gcc g++ libboost-dev cmake zlib1g-dev libssl1.0.0 libsasl2-2 libssl-dev libsasl2-dev 
 ```
 
 RHEL7/CentOS7
@@ -39,7 +64,7 @@ We use CentOS 7 minimal.  [CentOS 7 Download](http://www.centos.org/download/)
 
 ### Install basic dependancies
 ```
-sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget
+sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget openssl-libs openssl-devel cyrus-sasl-devel cyrus-sasl-lib
 ```
 
 
@@ -51,7 +76,7 @@ We use CentOS 6 minimal.  [CentOS 6 Download](http://wiki.centos.org/Download)
 
 ### Install basic dependancies
 ```
-sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget
+sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel boost-static cmake git wget  openssl-libs openssl-devel cyrus-sasl-devel cyrus-sasl-devel cyrus-sasl-lib
 ```
 
 
@@ -71,7 +96,7 @@ Do the following:
 
 ### Example output
 ```
-ubuntu@bmp-dev:~/test/openbmp/build$ cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ../ 
+localadmin@toolServer:/ws/ws-openbmp/openbmp/build$ cmake ../
 -- The C compiler identification is GNU 4.8.2
 -- The CXX compiler identification is GNU 4.8.2
 -- Check for working C compiler: /usr/bin/cc
@@ -83,37 +108,40 @@ ubuntu@bmp-dev:~/test/openbmp/build$ cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ../
 -- Detecting CXX compiler ABI info
 -- Detecting CXX compiler ABI info - done
 -- Boost version: 1.54.0
+-- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libssl.so;/usr/lib/x86_64-linux-gnu/libcrypto.so (found suitable version "1.0.1f", minimum required is "1")
 -- Performing Test SUPPORTS_STD_CXX11
 -- Performing Test SUPPORTS_STD_CXX11 - Success
 -- Performing Test SUPPORTS_STD_CXX01
 -- Performing Test SUPPORTS_STD_CXX01 - Success
 -- Configuring done
 -- Generating done
--- Build files have been written to: /home/ubuntu/test/openbmp/build
+-- Build files have been written to: /ws/ws-openbmp/openbmp/build
 
-ubuntu@bmp-dev:~/test/openbmp/build$ make
+localadmin@toolServer:/ws/ws-openbmp/openbmp/build$ make
 Scanning dependencies of target openbmpd
 [  5%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bmp/BMPListener.cpp.o
 [ 10%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bmp/BMPReader.cpp.o
 [ 15%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/kafka/MsgBusImpl_kafka.cpp.o
-[ 21%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/kafka/KafkaEventCallback.cpp.o
-[ 26%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/kafka/KafkaDeliveryReportCallback.cpp.o
-[ 31%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/openbmp.cpp.o
-[ 36%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bmp/parseBMP.cpp.o
-[ 42%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/md5.cpp.o
-[ 47%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/Logger.cpp.o
-[ 52%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/client_thread.cpp.o
-[ 57%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/parseBGP.cpp.o
-[ 63%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/NotificationMsg.cpp.o
-[ 68%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/OpenMsg.cpp.o
-[ 73%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/UpdateMsg.cpp.o
-[ 78%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/MPReachAttr.cpp.o
-[ 84%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/MPUnReachAttr.cpp.o
-[ 89%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/ExtCommunity.cpp.o
-[ 94%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/linkstate/MPLinkState.cpp.o
-[100%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/linkstate/MPLinkStateAttr.cpp.o
+[ 20%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/kafka/KafkaEventCallback.cpp.o
+[ 25%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/kafka/KafkaDeliveryReportCallback.cpp.o
+[ 30%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/openbmp.cpp.o
+[ 35%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bmp/parseBMP.cpp.o
+[ 40%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/md5.cpp.o
+[ 45%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/Logger.cpp.o
+[ 50%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/client_thread.cpp.o
+[ 55%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/parseBGP.cpp.o
+[ 60%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/NotificationMsg.cpp.o
+[ 65%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/OpenMsg.cpp.o
+[ 70%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/UpdateMsg.cpp.o
+[ 75%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/MPReachAttr.cpp.o
+[ 80%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/MPUnReachAttr.cpp.o
+[ 85%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/ExtCommunity.cpp.o
+[ 90%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/linkstate/MPLinkState.cpp.o
+[ 95%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/bgp/linkstate/MPLinkStateAttr.cpp.o
+[100%] Building CXX object Server/CMakeFiles/openbmpd.dir/src/kafka/KafkaPeerPartitionerCallback.cpp.o
 Linking CXX executable openbmpd
 [100%] Built target openbmpd
+
 ```
 
 Binary will be located under **Server/**

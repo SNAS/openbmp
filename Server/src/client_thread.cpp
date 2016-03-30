@@ -79,7 +79,7 @@ void *ClientThread(void *arg) {
 
     try {
         // connect to message bus
-        cInfo.mbus = new msgBus_kafka(logger, thr->cfg->kafka_brokers, thr->cfg->c_hash_id);
+        cInfo.mbus = new msgBus_kafka(logger, thr->cfg, thr->cfg->c_hash_id);
 
         if (thr->cfg->debug_msgbus)
             cInfo.mbus->enableDebug();
@@ -106,7 +106,6 @@ void *ClientThread(void *arg) {
         int bytes_read = 0;
         int write_buf_pos = 0;
         int read_buf_pos = 0;
-        int bytes_in_buf = 0;
         bool wrap_state = false;
         unsigned char *sock_buf_read_ptr = sock_buf;
         unsigned char *sock_buf_write_ptr = sock_buf;

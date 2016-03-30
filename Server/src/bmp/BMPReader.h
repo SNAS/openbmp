@@ -27,12 +27,6 @@
 class BMPReader {
 
 public:
-
-/*    enum ADDR_TYPES {
-        ADDR_IPV4, ADDR_IPV6, DNS
-    };
-*/
-
     /**
      * Persistent peer information structure
      *
@@ -43,6 +37,7 @@ public:
         bool recv_four_octet_asn;               ///< Indicates if 4 (true) or 2 (false) octet ASN is being used (recv cap)
         bool using_2_octet_asn;                 ///< Indicates if peer is using two octet ASN format or not (true=2 octet, false=4 octet)
         bool checked_asn_octet_length;          ///< Indicates if the ASN octet length has been checked or not
+        string peer_group;                      ///< Peer group name of defined
     };
 
 
@@ -53,7 +48,7 @@ public:
      *  \param [in] config  Pointer to the loaded configuration
      *
      */
-    BMPReader(Logger *logPtr, Cfg_Options *config);
+    BMPReader(Logger *logPtr, Config *config);
 
     virtual ~BMPReader();
 
@@ -103,7 +98,7 @@ public:
     Logger      *logger;                    ///< Logging class pointer
 
 private:
-    Cfg_Options *cfg;                       ///< Config pointer
+    Config      *cfg;                       ///< Config pointer
     bool        debug;                      ///< debug flag to indicate debugging
     u_char      router_hash_id[16];         ///< Router hash ID
 

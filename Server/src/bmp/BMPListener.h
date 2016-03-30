@@ -55,7 +55,7 @@ public:
      *  \param [in] config  Pointer to the loaded configuration
      *
      */
-    BMPListener(Logger *logPtr, Cfg_Options *config);
+    BMPListener(Logger *logPtr, Config *config);
 
     virtual ~BMPListener();
 
@@ -91,7 +91,7 @@ public:
     Logger      *logger;                    ///< Logging class pointer
 
 private:
-    Cfg_Options *cfg;                       ///< Config pointer
+    Config      *cfg;                       ///< Config pointer
     bool        debug;                      ///< debug flag to indicate debugging
 
     /**

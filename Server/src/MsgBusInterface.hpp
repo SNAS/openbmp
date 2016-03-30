@@ -499,13 +499,14 @@ public:
      * \details     Will generate a message to send the BMP packet data/feed
      *
      * \param[in]    r_hash     Router hash
+     * \param[in]    peer       Peer object
      * \param[in]    data       Packet raw data
      * \param[in]    data_len   Length in bytes for the raw data
      *
      * \returns     The hash_id will be updated based on the
      *              supplied data for each object.
      *****************************************************************/
-    virtual void send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len) = 0;
+    virtual void send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data, size_t data_len) = 0;
 
 
     /* ---------------------------------------------------------------------------
