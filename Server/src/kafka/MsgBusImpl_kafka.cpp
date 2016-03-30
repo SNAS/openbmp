@@ -132,7 +132,7 @@ void msgBus_kafka::disconnect(int wait_ms) {
 
     if (isConnected) {
         int i = 0;
-        while (producer->outq_len() > 0 or i > 8) {
+        while (producer->outq_len() > 0 and i < 8) {
             LOG_INFO("Waiting for producer to finish before disconnecting: outq=%d", producer->outq_len());
             producer->poll(500);
             i++;
@@ -179,6 +179,13 @@ void msgBus_kafka::connect() {
     if (conf->set("log.connection.close", value, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure log.connection.close=false: %s.", errstr.c_str());
     }
+
+    // TODO: Add config for address family - default is any
+    /*value = "v4";
+    if (conf->set("broker.address.family", value, errstr) != RdKafka::Conf::CONF_OK) {
+        LOG_ERR("Failed to configure broker.address.family: %s.", errstr.c_str());
+    }*/
+
 
     // Batch message number
     value = "1000";
