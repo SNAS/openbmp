@@ -121,6 +121,21 @@ namespace bgp_msg {
 
         UpdateMsg::parsed_update_data *parsed_data;       ///< Parsed data structure
 
+	#define IEEE_INFINITY         0x7F800000
+	#define MINUS_INFINITY        (int32_t)0x80000000L
+	#define PLUS_INFINITY         0x7FFFFFFF
+	#define IEEE_NUMBER_WIDTH       32        /* bits in number */
+	#define IEEE_EXP_WIDTH          8         /* bits in exponent */
+	#define IEEE_MANTISSA_WIDTH     (IEEE_NUMBER_WIDTH - 1 - IEEE_EXP_WIDTH)
+        #define IEEE_SIGN_MASK          0x80000000
+	#define IEEE_EXPONENT_MASK      0x7F800000
+	#define IEEE_MANTISSA_MASK      0x007FFFFF
+
+	#define IEEE_IMPLIED_BIT        (1 << IEEE_MANTISSA_WIDTH)
+	#define IEEE_INFINITE           ((1 << IEEE_EXP_WIDTH) - 1)
+	#define IEEE_BIAS               ((1 << (IEEE_EXP_WIDTH - 1)) - 1)
+
+
 
         /*******************************************************************************//*
          * Parse Link State attribute TLV
@@ -133,7 +148,8 @@ namespace bgp_msg {
          * \returns length of the TLV attribute parsed
          */
         int parseAttrLinkStateTLV(int attr_len, u_char *data);
-
+        int32_t ieee_float_to_int32(int32_t float_val);
+ 	int32_t convert_to_kbps(int32_t bw_float);
     };
 
 }
