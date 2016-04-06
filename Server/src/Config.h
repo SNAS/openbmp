@@ -44,6 +44,8 @@ public:
     bool        debug_msgbus;
 
     int         heartbeat_interval;      ///< Heartbeat interval in seconds for collector updates
+    int   	tx_max_bytes;            ///< Maximum transmit message size
+    int 	rx_max_bytes;            ///< Maximum receive  message size
 
     /**
      * matching structs and maps

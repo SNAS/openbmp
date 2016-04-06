@@ -40,6 +40,8 @@ Config::Config() {
     svr_ipv4            = true;
     heartbeat_interval  = 60 * 5;   // Default is 5 minutes
     kafka_brokers       = "localhost:9092";
+    tx_max_bytes        = 1000000;
+    rx_max_bytes        = 100000000;
 
     bzero(admin_id, sizeof(admin_id));
 
@@ -300,10 +302,46 @@ void Config::parseKafka(const YAML::Node &node) {
         }
     }
 
+    if (node["tx_max_bytes"] && node["tx_max_bytes"].Type() == YAML::NodeType::Scalar) {
+       try {
+            tx_max_bytes = node["tx_max_bytes"].as<int>();
+
+            if (tx_max_bytes < 1000 || tx_max_bytes > 1000000000)
+                throw "invalid transmit max bytes , should be "
+		"in range 1000 - 1000000000";
+
+            if (debug_general)
+                std::cout << "   Config: transmit max bytes : " << tx_max_bytes
+		 << std::endl;
+
+        } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("message_size.tx_max_bytes is not of type int", 
+				node["tx_max_bytes"]);
+        }
+    }
+    if (node["rx_max_bytes"]  && node["rx_max_bytes"].Type() == YAML::NodeType::Scalar) {
+        try {
+            rx_max_bytes = node["rx_max_bytes"].as<int>();
+
+            if (rx_max_bytes < 1000 || rx_max_bytes > 1000000000)
+               throw "invalid receive max bytes , should be "
+				"in range 1000 - 1000000000";
+            if (debug_general)
+                   std::cout << "   Config: receive max bytes : " << rx_max_bytes
+				 << std::endl;
+
+        } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("message_size.rx_max_bytes is not of type int", 
+				node["rx_max_bytes"]);
+        }
+    }
+
     if (node["topics"] && node["topics"].Type() == YAML::NodeType::Map) {
         parseTopics(node["topics"]);
     }
 }
+
+
 
 /**
  * Parse the kafka topics configuration

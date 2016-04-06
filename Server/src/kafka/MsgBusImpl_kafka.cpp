@@ -164,6 +164,7 @@ void msgBus_kafka::disconnect(int wait_ms) {
 void msgBus_kafka::connect() {
     string errstr;
     string value;
+    std::ostringstream rx_bytes, tx_bytes;
 
     disconnect();
 
@@ -213,6 +214,26 @@ void msgBus_kafka::connect() {
     if (conf->set("metadata.broker.list", cfg->kafka_brokers, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure broker list for kafka: %s", errstr.c_str());
         throw "ERROR: Failed to configure kafka broker list";
+    }
+
+    // Maximum transmit byte size
+    tx_bytes << cfg->tx_max_bytes;
+    if (conf->set("message.max.bytes", tx_bytes.str(), 
+                             errstr) != RdKafka::Conf::CONF_OK) 
+    {
+       LOG_ERR("Failed to configure transmit max message size for kafka: %s",
+                               errstr.c_str());
+       throw "ERROR: Failed to configure transmit max message size";
+    } 
+ 
+    // Maximum receive byte size
+    rx_bytes << cfg->rx_max_bytes;
+    if (conf->set("receive.message.max.bytes", rx_bytes.str(), 
+                             errstr) != RdKafka::Conf::CONF_OK)
+    {
+       LOG_ERR("Failed to configure receive max message size for kafka: %s",
+                               errstr.c_str());
+       throw "ERROR: Failed to configure receive max message size";
     }
 
     // Register event callback
