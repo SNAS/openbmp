@@ -36,7 +36,7 @@ void KafkaEventCallback::event_cb (RdKafka::Event &event) {
                 case RdKafka::Event::EVENT_SEVERITY_ALERT:
                 case RdKafka::Event::EVENT_SEVERITY_CRITICAL:
                 case RdKafka::Event::EVENT_SEVERITY_ERROR:
-                    *isConnected = false;
+                    // rdkafka will reconnect, so no need to change at this phase
                     LOG_ERR("Kafka LOG-%i-%s: %s", event.severity(), event.fac().c_str(),
                             event.str().c_str());
                     break;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -25,7 +25,9 @@
 #include "safeQueue.hpp"
 #include "KafkaEventCallback.h"
 #include "KafkaDeliveryReportCallback.h"
-#include "KafkaPeerPartitionerCallback.h"
+#include "KafkaTopicSelector.h"
+
+#include "Config.h"
 
 /**
  * \class   mysqlMBP
@@ -37,27 +39,16 @@ class msgBus_kafka: public MsgBusInterface {
 public:
     #define MSGBUS_WORKING_BUF_SIZE 1800000
 
-    #define MSGBUS_TOPIC_COLLECTOR              "openbmp.parsed.collector"
-    #define MSGBUS_TOPIC_ROUTER                 "openbmp.parsed.router"
-    #define MSGBUS_TOPIC_PEER                   "openbmp.parsed.peer"
-    #define MSGBUS_TOPIC_BASE_ATTRIBUTE         "openbmp.parsed.base_attribute"
-    #define MSGBUS_TOPIC_UNICAST_PREFIX         "openbmp.parsed.unicast_prefix"
-    #define MSGBUS_TOPIC_LS_NODE                "openbmp.parsed.ls_node"
-    #define MSGBUS_TOPIC_LS_LINK                "openbmp.parsed.ls_link"
-    #define MSGBUS_TOPIC_LS_PREFIX              "openbmp.parsed.ls_prefix"
-    #define MSGBUS_TOPIC_BMP_STAT               "openbmp.parsed.bmp_stat"
-    #define MSGBUS_TOPIC_BMP_RAW                "openbmp.bmp_raw"
-
     /******************************************************************//**
      * \brief This function will initialize and connect to MySQL.  
      *
      * \details It is expected that this class will start off with a new connection.
      *
      *  \param [in] logPtr      Pointer to Logger instance
-     *  \param [in] brokerList  Comma delimited list of brokers (e.g. localhost:9092,host2:9092)
+     *  \param [in] cfg         Pointer to the config instance
      *  \param [in] c_hash_id   Collector Hash ID
      ********************************************************************/
-    msgBus_kafka(Logger *logPtr, std::string brokerList, u_char *c_hash_id);
+    msgBus_kafka(Logger *logPtr, Config *cfg, u_char *c_hash_id);
     ~msgBus_kafka();
 
     /*
@@ -78,7 +69,7 @@ public:
     void update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
                       ls_action_code code);
 
-    void send_bmp_raw(u_char *r_hash, u_char *data, size_t data_len);
+    void send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data, size_t data_len);
 
     // Debug methods
     void enableDebug();
@@ -102,13 +93,12 @@ private:
     uint64_t        ls_link_seq;                ///< LS link sequence
     uint64_t        ls_prefix_seq;              ///< LS prefix sequence
 
-    std::string     broker_list;                ///< Broker list in the format of <host>:<port>[,...]
+    Config          *cfg;                       ///< Pointer to config instance
 
     /**
-     * Kafka Configuration object (global and topic level)
+     * Kafka Configuration object (global)
      */
     RdKafka::Conf   *conf;
-    RdKafka::Conf   *tconf;
 
     RdKafka::Producer *producer;                ///< Kafka Producer instance
 
@@ -117,39 +107,21 @@ private:
      */
     KafkaEventCallback              *event_callback;
     KafkaDeliveryReportCallback     *delivery_callback;
-    KafkaPeerPartitionerCallback    *peer_partitioner_callback;
-
 
     bool isConnected;                           ///< Indicates if Kafka is connected or not
 
     // array of hashes
-    std::map<std::string, time_t> peer_list;
-    typedef std::map<std::string, time_t>::iterator peer_list_iter;
+    std::map<std::string, std::string> peer_list;
+    typedef std::map<std::string, std::string>::iterator peer_list_iter;
 
     std::string router_ip;                      ///< Router IP in printed format
     u_char      router_hash[16];                ///< Router Hash in binary format
+    std::string router_group_name;              ///< Router group name - if matched
 
-    /**
-     * Topic name to handle pointer map (key=Name, value=topic pointer)
-     */
-    typedef std::map<std::string, RdKafka::Topic *> topic_map;
-
-    void initTopicMap() {
-        topic = {
-                { const_cast<char *>(MSGBUS_TOPIC_COLLECTOR),        (RdKafka::Topic *)NULL},
-                { const_cast<char *>(MSGBUS_TOPIC_ROUTER),           (RdKafka::Topic *)NULL},
-                { const_cast<char *>(MSGBUS_TOPIC_PEER),             (RdKafka::Topic *)NULL},
-                { const_cast<char *>(MSGBUS_TOPIC_BASE_ATTRIBUTE),   (RdKafka::Topic *)NULL},
-                { const_cast<char *>(MSGBUS_TOPIC_UNICAST_PREFIX),   (RdKafka::Topic *)NULL},
-                { const_cast<char *>(MSGBUS_TOPIC_LS_NODE),          (RdKafka::Topic *)NULL},
-                { const_cast<char *>(MSGBUS_TOPIC_LS_LINK),          (RdKafka::Topic *)NULL},
-                { const_cast<char *>(MSGBUS_TOPIC_LS_PREFIX),        (RdKafka::Topic *)NULL},
-                { const_cast<char *>(MSGBUS_TOPIC_BMP_STAT),         (RdKafka::Topic *)NULL},
-                { const_cast<char *>(MSGBUS_TOPIC_BMP_RAW),          (RdKafka::Topic *)NULL}
-        };
-    };
 
     std::map<std::string, RdKafka::Topic*> topic;
+
+    KafkaTopicSelector *topicSel;               ///< Kafka topic selector/handler
 
     /**
      * Connects to kafka broker
@@ -157,15 +129,23 @@ private:
     void connect();
 
     /**
+     * Disconnects from kafka broker
+     */
+    void disconnect(int wait_ms=2000);
+
+    /**
      * produce message to Kafka
      *
-     * \param [in] topic]        Topic name to lookup in the topic map
+     * \param [in] topic_var     Topic var to use in KafkaTopicSelector::getTopic()
      * \param [in] msg           message to produce
      * \param [in] msg_size      Length in bytes of the message
      * \param [in] rows          Number of rows in data
      * \param [in] key           Hash key
+     * \param [in] peer_group    Peer group name - empty/NULL if not set or used
+     * \param [in] peer_asn      Peer ASN
      */
-    void produce(const char *topic_name, char *msg, size_t msg_size, int rows, std::string key);
+    void produce(const char *topic_var, char *msg, size_t msg_size, int rows,
+                 std::string key, const std::string *peer_group, uint32_t);
 
     /**
     * \brief Method to resolve the IP address to a hostname

@@ -34,7 +34,7 @@ using namespace std;
  *  \param [in] config  Pointer to the loaded configuration
  *
  */
-BMPListener::BMPListener(Logger *logPtr, Cfg_Options *config) {
+BMPListener::BMPListener(Logger *logPtr, Config *config) {
     sock = 0;
     sockv6 = 0;
     debug = false;
@@ -48,11 +48,11 @@ BMPListener::BMPListener(Logger *logPtr, Cfg_Options *config) {
         enableDebug();
 
     svr_addr.sin_family      = PF_INET;
-    svr_addr.sin_port        = htons(atoi(cfg->bmp_port));
+    svr_addr.sin_port        = htons(cfg->bmp_port);
     svr_addr.sin_addr.s_addr = INADDR_ANY;
 
     svr_addrv6.sin6_family   = AF_INET6;
-    svr_addrv6.sin6_port     = htons(atoi(cfg->bmp_port));
+    svr_addrv6.sin6_port     = htons(cfg->bmp_port);
     svr_addrv6.sin6_scope_id = 0;
     svr_addrv6.sin6_addr     = in6addr_any;
 
@@ -278,7 +278,7 @@ void BMPListener::accept_connection(ClientInfo &c, bool isIPv4) {
 /**
  * Generate BMP router HASH
  *
- * \param [in,out] client   Refernce to client info used to generate the hash.
+ * \param [in,out] client   Reference to client info used to generate the hash.
  *
  * \return client.hash_id will be updated with the generated hash
  */
