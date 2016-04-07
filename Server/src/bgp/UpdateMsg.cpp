@@ -584,7 +584,10 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
 
             LOG_NOTICE("%s: rtr=%s: Could not parse the AS PATH due to update message buffer being too short when using ASN octet size %d",
                        peer_addr.c_str(), router_addr.c_str(), asn_octet_size);
-            return;
+            LOG_NOTICE("%s: rtr=%s: switching encoding size to 2-octet due to parsing failure",
+                       peer_addr.c_str(), router_addr.c_str());
+
+            peer_info->using_2_octet_asn = true;
         }
 
         // The rest of the data is the as path sequence, in blocks of 2 or 4 bytes
