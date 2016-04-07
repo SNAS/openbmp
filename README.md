@@ -186,4 +186,4 @@ See the [BUILD](docs/BUILD.md) document for details on how to build OpenBMP from
 Support by
 ----------
 
-<a href="http://www.cisco.com"><img src="docs/images/Cisco_Logo.png" alt="Cisco" height="200px" width="200px"/></a>  <a href="http://www.jetbrains.com"><img src="docs/images/logo_JetBrains_4.png" alt="JetBrains" height="200px" width="200px"/></a>
+<a href="http://www.cisco.com"><img src="docs/images/Cisco_Logo.png" alt="Cisco" height="139px" width="200px"/></a>  <a href="http://www.jetbrains.com"><img src="docs/images/logo_JetBrains_4.png" alt="JetBrains" height="200px" width="200px"/></a>
