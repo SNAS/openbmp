@@ -86,6 +86,8 @@ void Usage(char *prog) {
     cout << "     -p <port>         BMP listening port (default is 5000)" << endl;
     cout << "     -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128" << endl;
     cout << "     -hi <minutes>     Collector message heartbeat interval in minutes (default is 5 minutes)" << endl;
+    cout << "     -tx_max_bytes <bytes>    Maximum transmit message size (default is 1000000)" << endl;
+    cout << "     -rx_max_bytes <bytes>    Maximum transmit message size (default is 1000000)" << endl;
     cout << endl;
 
 }
@@ -227,11 +229,39 @@ bool ReadCmdArgs(int argc, char **argv, Config &cfg) {
 
             // Validate range
             if (cfg.heartbeat_interval < 60 || cfg.heartbeat_interval > 86400) {
-                cout << "INVALID ARG: port '" << cfg.heartbeat_interval <<
+                cout << "INVALID ARG: heartbeat interval '" << cfg.heartbeat_interval <<
                                                  "' is out of range, expected range is 1 - 1440" << endl;
                 return true;
             }
 
+        } else if (!strcmp(argv[i], "-rx_max_bytes")) {
+            if (i + 1 >= argc) {
+                cout << "INVALID ARG: -rx_max_bytes expects bytes" << endl;
+                return true;
+            }
+
+            cfg.rx_max_bytes = atoi(argv[++i]);
+
+            // Validate range
+            if (cfg.rx_max_bytes < 1) { 
+                cout << "INVALID ARG:  receive max bytes '" << cfg.rx_max_bytes <<
+                                                 "' is out of range" << endl;
+                return true;
+            }
+        } else if (!strcmp(argv[i], "-tx_max_bytes")) {
+            if (i + 1 >= argc) {
+                cout << "INVALID ARG: -tx_max_bytes expects bytes" << endl;
+                return true;
+            }
+
+            cfg.tx_max_bytes = atoi(argv[++i]);
+
+            // Validate range
+            if (cfg.tx_max_bytes < 1) { 
+                cout << "INVALID ARG:  transmit max bytes '" << cfg.tx_max_bytes <<
+                                                 "' is out of range" << endl;
+                return true;
+            }
         } else if (!strcmp(argv[i], "-m")) {
             // We expect the next arg to be mode
             if (i + 1 >= argc) {
