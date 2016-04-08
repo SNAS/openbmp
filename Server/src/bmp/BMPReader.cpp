@@ -24,6 +24,7 @@
 #include "parseBMP.h"
 #include "parseBGP.h"
 #include "MsgBusInterface.hpp"
+#include "Logger.h"
 
 
 using namespace std;
