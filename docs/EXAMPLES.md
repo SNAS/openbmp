@@ -9,26 +9,26 @@ The UI uses the OpenBMP API, which is using the MySQL backend.
 
 
 UI Screenshots
---------------
-### Top 20 Prefixes updated and withdrawn
+================
+ 
+## Top 20 Prefixes updated and withdrawn
 Time period customizable
 ![](images/top20.png "Top 20 prefixes updated/withdrawn")
 
-- - -
-### Peer Info
+
+## Peer Info
 Similar to ```show bgp neighbor```, which includes the TCP session and capabilities 
 ![](images/peer_info.png "Peer Info")
 
-- - -
-### Security Analysis
+
+## Security Analysis
 Report received origin of prefixes to RPKI and IRR.  IRR data is downloaded once a day.  RPKI is continually updated every few minutes. 
 ![](images/security_report.png "Security Analysis")
 
 
 ![](images/rpki_drill_down.png "RPKI drill down")
 
-- - -
-### BGP-LS
+## BGP-LS
 BGP-LS provides the link-state topology for either IS-IS and/or OSPF.  SPF's are run per router to build the topology and routing tables.  Run path traces, including the ability to run them with constraints, such as what if this router link didn't exist or what if one was added...
 
 ![](images/linkstate_topo_geo.png "link-state topo with geo")
@@ -36,15 +36,13 @@ BGP-LS provides the link-state topology for either IS-IS and/or OSPF.  SPF's are
 ![](images/linkstate_SPF_and_traces.png "link-state spf and path trace")
 
 
-- - -
-### AS Analysis
+## AS Analysis
 
 ![](images/as_view.png "AS View")
 ![](images/as_view_up_down.png "AS Upstream/downstream")
 ![](images/as_by_prefix_summary.png "AS prefix summary")
 
-- - -
-### RIB
+## RIB
 
 Routing table is maintained per BGP peer (pre and post policy)
 ![](images/routing_table.png "Routing table")
@@ -62,6 +60,7 @@ Per peer withdrawals over time
 ![](images/withdraws_overtime.png "Withdraws")
 
 
+- - -
 
 MySQL Client
 ------------
