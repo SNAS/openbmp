@@ -1,37 +1,10 @@
-Open BGP Monitoring Protocol (OpenBMP) Collector
-================================================
+Open BGP Monitoring Protocol (OpenBMP) Collection Framework
+===========================================================
 ![Build Status](http://build-jenkins.openbmp.org/buildStatus/icon?job=openbmp-server-ubuntu-trusty)
 
-OpenBMP is an open source project that implements **draft-ietf-grow-bmp-14**.  BMP protocol version 3 is defined in draft 08, while versions 1 and 2 are defined in the previous revisions of the draft.
+OpenBMP is an open source project that implements **draft-ietf-grow-bmp-17**.  BMP protocol version 3 is defined in draft 08, while versions 1 and 2 are defined in the previous revisions of the draft.
 
-JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR, and JunOS 13.3 implement version 3 (draft 07).
-
-
-### Daemon
-OpenBMP daemon is a BMP receiver for devices/software that implement BMP, such as Cisco and Juniper routers. The collector is a **producer** to Apache Kafka.   Both RAW BMP messages and parsed messages are produced for Kafka consumer consumption.  
-
-### Using Logstash with OpenBMP
-Logstash is a flexible, open source, data collection, enrichment, and transport pipeline designed to efficiently process a growing list of log, event, and unstructured data sources for distribution into a variety of outputs, including Elasticsearch.
-
-See [Logstash](docs/LOGSTASH.md) for more details and how to use logstash with OpenBMP.
-
-### Flat File Consumer
-A basic file consumer of OpenBMP parsed and RAW BMP Kafka streams. You can use this file consumer in the following ways:
-
-* Working example to develop your own consumer that works with either parsed or RAW BMP binary messages
-* Record BMP feeds (identical as they are sent by the router) so they can be replayed to other BMP parsers/receivers
-* Log parsed BMP and BGP messages in plain flat files
-
-See [file-consumer](http://www.openbmp.org/#!docs/FILE_CONSUMER.md) for more details.
-
-### MySQL Consumer
-The MySQL consumer implements the OpenBMP Message Bus API parsed messages API to collect and store BMP/BGP data of all collectors, routers, and peers in real-time. The consumer provides the same data storage that OpenBMP collector versions 0.10.x and less implemented.
-
-See [mysql-consumer](http://www.openbmp.org/#!docs/MYSQL_CONSUMER.md) for more details about the MySQL consumer.
-
-### Message Bus (Kafka)
-Starting in release 0.11.x Apache Kafka is used as the centralized bus for collector message streams.   The collector no longer forwards direct to MySQL. Instead, database consumers are used to integrate the data into MySQL, Cassandra, MongoDb, Postgres, flat files, etc.  Anyone can now can interact with the BGP parsed and RAW data in a centralized fashion via Kafka or via one of the consumers.   A single BMP feed from one router can be made available to many consumers without the collector having to be aware of that.  
-
+JunOS 10.4 implements the older versions of BMP.   Cisco IOS XE 3.12, IOS XR 5.2.2, and JunOS 13.3 implement version 3 (draft 07).
 
 OpenBMP Flow
 ------------
@@ -42,11 +15,9 @@ OpenBMP Flow
 
 * Apache Kafka enables many applications the ability to tap into the existing BMP feeds from any number of routers.  A single BMP feed via OpenBMP can feed data into hundreds of consumer apps, such as MySQL, Cassandra, Real-time monitors, Flat file, ELK, Apache Spark, etc.
 
-* Open Daylight (ODL) controller plugins can integrate Kafka feed in both parsed and RAW formats into ODL data store to enable ODL APP's/plugins, making the data available via Netconf/RESTconf.
+* OpenBMP forwarder can be used to forward the native BMP messages (no modification) to any other BMP receiver, including openbmpd.
 
-* Admins, Network Engineers, automated programs/scripts, etc. interact via ODL northbound interfaces to run various BMP analytics.
-
-* Admins, Network Engineers, automated programs/scripts, etc. can go direct to Kafka, BMP database, RA APi's, etc.
+* Admins, Network Engineers, automated programs/scripts, etc. interact with the OpenBMP API or any other consuming application
 
 Supported Features Highlights
 -----------------------------
@@ -54,77 +25,74 @@ Below is a list of some key features supported today in OpenBMP.  Many more feat
 
 Feature | Description
 -------: | -----------
-draft-ietf-grow-bmp-14 | BMP Version 3 with backwards compatibility with older drafts
+RPKI/IRR | RPKI and IRR integration enables security analysis of monitored prefixes and ASN's.  Try it out using the containers **openbmp/aio** and **openbmp/ui** .
+Topic Mapping | Dynamic and customizable topic names. Scale Kafka consumers by partition and topic
+draft-ietf-grow-bmp | BMP Version 3 with backwards compatibility with older drafts
 Apache Kafka | Producer of parsed and RAW BMP feeds, multiple consumers available
 Database | Access to all collected data via standard ODBC/DB drivers (openbmp-mysql-consumer)
 File Logging | All parsed messages can be logged to files, including BMP binary streams (openbmp-file-consumer)
 IPv4 | IPv4 Unicast routing table information
 IPv6 | IPv6 Unicast routing table information
-VPNv4 | L3VPN routing information (within VRF)
-bgp-ls| draft-ietf-idr-ls-distribution
+bgp-ls| [RFC7752](https://tools.ietf.org/html/rfc7752)
 Extended Communities | Roughly all of them
+VPNv4 | L3VPN routing information (within VRF) - *coming soon*
 
 So much more...
 
-News
-----
-### Nov-18-2015
-**Released version 0.11.0** with Apache Kafka integration.  See release notes at [Release 0.11.0](docs/release_notes/release-0.11.0.md)
+### Daemon
+OpenBMP daemon is a BMP receiver for devices/software that implement BMP, such as Cisco and Juniper routers. The collector is a highly scalable **producer** to Apache Kafka.   Both RAW BMP messages and parsed messages are produced for Kafka consumer consumption.  
 
-Mysql and file consumers are available.
+### User Interface
+User interface is available in the docker container **openbmp/ui**.  Soon the UI will be added to github. 
 
-### Aug-11-2015
-**Apache Kafka integration available** <br>
-The collector now fully supports Apache Kafka by producing both parsed and BMP raw messages.  [openbmp-mysql-consumer](https://github.com/OpenBMP/openbmp-mysql-consumer) and [openbmp-file-consumer](https://github.com/OpenBMP/openbmp-file-consumer) are available for immediate use.  Please report any bugs/issues via github.
+### Using Logstash with OpenBMP
+Logstash is a flexible, open source, data collection, enrichment, and transport pipeline designed to efficiently process a growing list of log, event, and unstructured data sources for distribution into a variety of outputs, including Elasticsearch.
+
+See [Logstash](docs/LOGSTASH.md) for more details and how to use logstash with OpenBMP.
+
+### Openbmp Forwarder
+The Openbmp forwarder can be used to connect to one Kafka cluster and to regenerate BMP messages to another collector.  The forwarder consumes the collector, router, peer, and bmp_raw messages and forwards them via 
+native BMP.   
+
+See [openbmp-forwarder](https://github.com/OpenBMP/openbmp-forwarder) for more details. 
+
+### Openbmp MRT
+
+A lightweight OpenBMP consumer that dumps BMP messages on a time based interval to a file.
+The MRT file can then be loaded in any compliant MRT parser.  Validation testing has been with
+[libbgpdump](https://bitbucket.org/ripencc/bgpdump/wiki/Home).
+
+**[RFC6396](https://tools.ietf.org/html/rfc6396)** - Multi-Threaded Routing Toolkit (MRT) Routing Information Export Format
+
+* BGP4MP\_STATE\_CHANGE_AS4 - Peer up/down events
+* BGP4MP\_MESSAGE - BGP update messages
+* TABLE\_DUMP\_V2 - Table dumps require the use of openbmp-mysql-consumer (MySQL/MariaDB)
+
+See [openbmp-mrt](https://github.com/OpenBMP/openbmp-mrt) for more details. 
+
+### MySQL Consumer
+The MySQL consumer implements the OpenBMP Message Bus API parsed messages API to collect and store BMP/BGP data of all collectors, routers, and peers in real-time. The consumer provides the same data storage that OpenBMP collector versions 0.10.x and less implemented.
+
+See [mysql-consumer](http://www.openbmp.org/#!docs/MYSQL_CONSUMER.md) for more details about the MySQL consumer.
+
+### Flat File Consumer
+A basic file consumer of OpenBMP parsed and RAW BMP Kafka streams. You can use this file consumer in the following ways:
+
+* Working example to develop your own consumer that works with either parsed or RAW BMP binary messages
+* Record BMP feeds (identical as they are sent by the router) so they can be replayed to other BMP parsers/receivers
+* Log parsed BMP and BGP messages in plain flat files
+
+See [file-consumer](http://www.openbmp.org/#!docs/FILE_CONSUMER.md) for more details.
+
+### Message Bus (Kafka)
+Starting in release 0.11.x Apache Kafka is used as the centralized bus for collector message streams.   The collector no longer forwards direct to MySQL. Instead, database consumers are used to integrate the data into MySQL, Cassandra, MongoDb, Postgres, flat files, etc.  Anyone can now can interact with the BGP parsed and RAW data in a centralized fashion via Kafka or via one of the consumers.   A single BMP feed from one router can be made available to many consumers without the collector having to be aware of that.  
 
 
-### Jul-23-2015
-**New release 0.10.0 is available** Starting in **0.11.0** the collector will forward all messages (parsed and raw) to Apache Kafka.  Anyone wishing to interact with the data can do so via simple kafka consumer clients.  MySQL is being moved into a consumer app, so same over functionality with MySQL will be maintained.   In addition to MySQL, a flat file example app will be created so others can see how easy it is to interact with the data.  Other apps can be written by anyone, which includes Cassandra, Postgres, Apache Spark, etc.
+News/Change Log
+---------------
+Github is the best place to track and keep up with the latest changes.  
 
-New branch [0.10-0-mysql](https://github.com/OpenBMP/openbmp/tree/0.10.0-mysql) has been created for support/bug fixes only.  New features will be in the master branch.
-
-Kafka integration is available today via the development branch [0.11.0-kafka-dev](https://github.com/OpenBMP/openbmp/tree/0.11.0-kafka-dev). This will be merged into the master branch after MySQL consumer app is available.
-
-### Jun-04-2015
-> #### UPGRADE YOUR SCHEMA for this release
-New release 0.9.0 is available.   See [release-0.9.0](docs/release_notes/release-0.9.0.md) for more details.  
-
-This release includes significant improvements with performance to handle routers with 10 million plus pre-rib prefixes.  Number of peers can be in the hundreds per router.  
-
-### Mar-27-2015
-> #### UPGRADE YOUR SCHEMA if using BGP-LS (link-state)
-
-BGP-LS is now supported.   New tables and views have been created for BGP LS data.
-
-### Jan-27-2015
-**Release 0.8.0 is available.**   See [release-0.8.0](docs/release_notes/release-0.8.0.md) for more details.
-
-> #### UPGRADE YOUR SCHEMA
-> There have been schema changes, so please update your database.  Currently there isn't a migration
-> script, so upgrading will require a drop of the current database. Routers will resend all data
-> so all current/active info will come back, but the history will be lost.
->
-> If you are concerned with the history being lost, please email me with the schema version you are
-> using and I can provide you the alter table syntax to migrate the tables without loss.
-
-
-### Nov-1-2014
-Added back BMPv1 support.  BMPv1 is supported best effort since it's missing the INIT, PEER UP, and TERM messages. Most things will work, but some of the DB views might need to be updated.  We'll update those as needed/requested.
-
-### Oct-29-2014
-Added DNS PTR lookup for peers and routers.  Fixed minor issues and updated docs.  
-Added [DB REST](http://www.openbmp.org/#!docs/DBREST.md)
-
-
-### Sep-10-2014
-**Released version 0.7.1**   See [release-0.7.1](docs/release_notes/release-0.7.1.md) for more details.
-
-> OpenBMP now fully supports draft-ietf-grow-bmp-07
-
-**Upcoming Changes:**
-
-  * Add BGP-LS support - IGP tables/views
-  * OpenBMP UI is being revised using ODL
+See [Openbmp GitHub](https://github.com/OpenBMP)
 
 
 Use-Cases
@@ -172,12 +140,12 @@ Interfacing with the Database
 See the [DB_SCHEMA](http://www.openbmp.org/#!docs/DB_SCHEMA.md) documentation for the database schema and how to interact with it.    
 
 
-Using Open Daylight
--------------------
-ODL integration has been open for awhile due to placement of the collector and analytics via ODL.  With the recent change to Kafka, this makes it very clear and easy on how ODL will be able to integrate.  A simple ODL plugin that implements the OpenBMP Kafka parsed message API can expose real-time BMP messages from hundreds of routers/peers via MD-SAL/Datastore.  Making the data available via Netconf/RESTconf.  ODL can also implement the BMP RAW API to interact natively with the BMP messages for parsing in bgpcep.  
-
-See the [ODL](docs/ODL.md) documentation for detailed information on how to use Open Daylight with OpenBMP.  
-
 Building from Source
 --------------------
 See the [BUILD](docs/BUILD.md) document for details on how to build OpenBMP from source.  Includes how to create DEB and RPM packages.
+
+
+Support by
+----------
+
+<a href="http://www.cisco.com"><img src="docs/images/Cisco_Logo.png" alt="Cisco" height="139px" width="200px"/></a>  <a href="http://www.jetbrains.com"><img src="docs/images/logo_JetBrains_4.png" alt="JetBrains" height="200px" width="200px"/></a>

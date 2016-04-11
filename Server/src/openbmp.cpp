@@ -38,7 +38,6 @@ const char *cfg_filename    = NULL;                 // Configuration file name t
 const char *log_filename    = NULL;                 // Output file to log messages to
 const char *debug_filename  = NULL;                 // Debug file to log messages to
 const char *pid_filename    = NULL;                 // PID file to record the daemon pid
-bool        debugEnabled    = false;                // Globally enable/disable dbug
 bool        run             = true;                 // Indicates if server should run
 bool        run_foreground  = false;                // Indicates if server should run in forground
 
@@ -86,8 +85,7 @@ void Usage(char *prog) {
     cout << "     -p <port>         BMP listening port (default is 5000)" << endl;
     cout << "     -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128" << endl;
     cout << "     -hi <minutes>     Collector message heartbeat interval in minutes (default is 5 minutes)" << endl;
-    cout << "     -tx_max_bytes <bytes>    Maximum transmit message size (default is 1000000)" << endl;
-    cout << "     -rx_max_bytes <bytes>    Maximum transmit message size (default is 1000000)" << endl;
+
     cout << endl;
 
 }
@@ -234,34 +232,6 @@ bool ReadCmdArgs(int argc, char **argv, Config &cfg) {
                 return true;
             }
 
-        } else if (!strcmp(argv[i], "-rx_max_bytes")) {
-            if (i + 1 >= argc) {
-                cout << "INVALID ARG: -rx_max_bytes expects bytes" << endl;
-                return true;
-            }
-
-            cfg.rx_max_bytes = atoi(argv[++i]);
-
-            // Validate range
-            if (cfg.rx_max_bytes < 1) { 
-                cout << "INVALID ARG:  receive max bytes '" << cfg.rx_max_bytes <<
-                                                 "' is out of range" << endl;
-                return true;
-            }
-        } else if (!strcmp(argv[i], "-tx_max_bytes")) {
-            if (i + 1 >= argc) {
-                cout << "INVALID ARG: -tx_max_bytes expects bytes" << endl;
-                return true;
-            }
-
-            cfg.tx_max_bytes = atoi(argv[++i]);
-
-            // Validate range
-            if (cfg.tx_max_bytes < 1) { 
-                cout << "INVALID ARG:  transmit max bytes '" << cfg.tx_max_bytes <<
-                                                 "' is out of range" << endl;
-                return true;
-            }
         } else if (!strcmp(argv[i], "-m")) {
             // We expect the next arg to be mode
             if (i + 1 >= argc) {
@@ -321,17 +291,13 @@ bool ReadCmdArgs(int argc, char **argv, Config &cfg) {
 
         } else if (!strcmp(argv[i], "-debug")) {
             cfg.debug_general = true;
-            debugEnabled = true;
 
         } else if (!strcmp(argv[i], "-dbgp")) {
             cfg.debug_bgp = true;
-            debugEnabled = true;
         } else if (!strcmp(argv[i], "-dbmp")) {
             cfg.debug_bmp = true;
-            debugEnabled = true;
         } else if (!strcmp(argv[i], "-dmsgbus")) {
             cfg.debug_msgbus = true;
-            debugEnabled = true;
 
         } else if (!strcmp(argv[i], "-f")) {
             run_foreground = true;
@@ -593,8 +559,9 @@ int main(int argc, char **argv) {
     logger->setWidthFilename(15);
     logger->setWidthFunction(18);
 
-    if (debugEnabled)
+    if (cfg.debug_general)
         logger->enableDebug();
+
     else if (not run_foreground){
         /*
         * Become a daemon if debug is not enabled

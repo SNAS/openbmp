@@ -239,7 +239,7 @@ void Config::parseDebug(const YAML::Node &node) {
         }
     }
 
-    if (node["bmp"]) {
+    if (!debug_bmp and node["bmp"]) {
         try {
             debug_bmp = node["bmp"].as<bool>();
 
@@ -251,7 +251,7 @@ void Config::parseDebug(const YAML::Node &node) {
         }
     }
 
-    if (node["bgp"]) {
+    if (!debug_bgp and node["bgp"]) {
         try {
             debug_bgp = node["bgp"].as<bool>();
 
@@ -263,7 +263,7 @@ void Config::parseDebug(const YAML::Node &node) {
         }
     }
 
-    if (node["msgbus"]) {
+    if (!debug_msgbus and node["msgbus"]) {
         try {
             debug_msgbus = node["msgbus"].as<bool>();
 

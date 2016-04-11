@@ -828,6 +828,7 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     char router_id[46];
     char ospf_area_id[16] = {0};
     char isis_area_id[32] = {0};
+    char dr[16];
 
     // Loop through the vector array of entries
     int rows = 0;
@@ -846,8 +847,19 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 
         if (!strcmp(node.protocol, "OSPFv3") or !strcmp(node.protocol, "OSPFv2") ) {
             bzero(isis_area_id, sizeof(isis_area_id));
+            bzero(igp_router_id, sizeof(igp_router_id));
 
+            // The first 4 octets are the router ID and the second 4 are the DR or ZERO if no DR
             inet_ntop(PF_INET, node.igp_router_id, igp_router_id, sizeof(igp_router_id));
+
+            if ((uint32_t) *(node.igp_router_id+4) != 0) {
+                inet_ntop(PF_INET, node.igp_router_id+4, dr, sizeof(dr));
+                strncat(igp_router_id, "[", 1);
+                strncat(igp_router_id, dr, sizeof(dr));
+                strncat(igp_router_id, "]", 1);
+                LOG_INFO("igp router id includes DR: %s %s", igp_router_id, dr);
+            }
+
             inet_ntop(PF_INET, node.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
 
         } else {
@@ -929,6 +941,7 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     char router_id[46];
     char ospf_area_id[17] = {0};
     char isis_area_id[33] = {0};
+    char dr[16];
 
     // Loop through the vector array of entries
     int rows = 0;
@@ -974,6 +987,14 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
             bzero(isis_area_id, sizeof(isis_area_id));
 
             inet_ntop(PF_INET, link.igp_router_id, igp_router_id, sizeof(igp_router_id));
+
+            if ((uint32_t) *(link.igp_router_id+4) != 0) {
+                inet_ntop(PF_INET, link.igp_router_id+4, dr, sizeof(dr));
+                strncat(igp_router_id, "[", 1);
+                strncat(igp_router_id, dr, sizeof(dr));
+                strncat(igp_router_id, "]", 1);
+            }
+
             inet_ntop(PF_INET, link.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
         } else {
             bzero(ospf_area_id, sizeof(ospf_area_id));
@@ -1061,6 +1082,7 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
     char prefix_ip[46];
     char ospf_area_id[16] = {0};
     char isis_area_id[32] = {0};
+    char dr[16];
 
     // Loop through the vector array of entries
     int rows = 0;
@@ -1107,6 +1129,15 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
             bzero(isis_area_id, sizeof(isis_area_id));
 
             inet_ntop(PF_INET, prefix.igp_router_id, igp_router_id, sizeof(igp_router_id));
+
+            if ((uint32_t) *(prefix.igp_router_id+4) != 0) {
+                inet_ntop(PF_INET, prefix.igp_router_id+4, dr, sizeof(dr));
+                strncat(igp_router_id, "[", 1);
+                strncat(igp_router_id, dr, sizeof(dr));
+                strncat(igp_router_id, "]", 1);
+            }
+
+
             inet_ntop(PF_INET, prefix.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
         } else {
             bzero(ospf_area_id, sizeof(ospf_area_id));

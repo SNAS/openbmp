@@ -618,7 +618,7 @@ namespace bgp_msg {
                 memcpy(info.igp_router_id, data, len);
                 data_read += len;
 
-                SELF_DEBUG("%s: bgp-ls: Node descriptior IGP Router ID %d = %d.%d.%d.%d (%02x%02x.%02x%02x.%02x%02x.%02x %02x)", peer_addr.c_str(), data_read,
+                SELF_DEBUG("%s: bgp-ls: Node descriptor IGP Router ID %d = %d.%d.%d.%d (%02x%02x.%02x%02x.%02x%02x.%02x %02x)", peer_addr.c_str(), data_read,
                             info.igp_router_id[0], info.igp_router_id[1], info.igp_router_id[2], info.igp_router_id[3],
                         info.igp_router_id[0], info.igp_router_id[1], info.igp_router_id[2], info.igp_router_id[3],
                         info.igp_router_id[4], info.igp_router_id[5], info.igp_router_id[6], info.igp_router_id[7]);
