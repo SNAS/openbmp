@@ -164,7 +164,9 @@ void msgBus_kafka::disconnect(int wait_ms) {
 void msgBus_kafka::connect() {
     string errstr;
     string value;
-    std::ostringstream rx_bytes, tx_bytes;
+    std::ostringstream rx_bytes, tx_bytes, sess_timeout, socket_timeout;
+    std::ostringstream q_buf_max_msgs, q_buf_max_ms, 
+		msg_send_max_retry, retry_backoff_ms;
 
     disconnect();
 
@@ -236,6 +238,69 @@ void msgBus_kafka::connect() {
        throw "ERROR: Failed to configure receive max message size";
     }
 
+    // Client group session and failure detection timeout
+    sess_timeout << cfg->session_timeout;
+    if (conf->set("session.timeout.ms", sess_timeout.str(), 
+                             errstr) != RdKafka::Conf::CONF_OK) 
+    {
+       LOG_ERR("Failed to configure session timeout for kafka: %s",
+                               errstr.c_str());
+       throw "ERROR: Failed to configure session timeout ";
+    } 
+    
+    // Timeout for network requests 
+    socket_timeout << cfg->socket_timeout;
+    if (conf->set("socket.timeout.ms", socket_timeout.str(), 
+                             errstr) != RdKafka::Conf::CONF_OK) 
+    {
+       LOG_ERR("Failed to configure socket timeout for kafka: %s",
+                               errstr.c_str());
+       throw "ERROR: Failed to configure socket timeout ";
+    } 
+    
+    // Maximum number of messages allowed on the producer queue 
+    q_buf_max_msgs << cfg->q_buf_max_msgs;
+    if (conf->set("queue.buffering.max.messages", q_buf_max_msgs.str(), 
+                             errstr) != RdKafka::Conf::CONF_OK) 
+    {
+       LOG_ERR("Failed to configure max messages in buffer for kafka: %s",
+                               errstr.c_str());
+       throw "ERROR: Failed to configure max messages in buffer ";
+    } 
+    
+    // Maximum time, in milliseconds, for buffering data on the producer queue 
+    q_buf_max_ms << cfg->q_buf_max_ms;
+    if (conf->set("queue.buffering.max.ms", q_buf_max_ms.str(), 
+                             errstr) != RdKafka::Conf::CONF_OK) 
+    {
+       LOG_ERR("Failed to configure max time to wait for buffering for kafka: %s",
+                               errstr.c_str());
+       throw "ERROR: Failed to configure max time for buffering ";
+    } 
+    
+    // How many times to retry sending a failing MessageSet
+    msg_send_max_retry << cfg->msg_send_max_retry;
+    if (conf->set("message.send.max.retries", msg_send_max_retry.str(), 
+                             errstr) != RdKafka::Conf::CONF_OK) 
+    {
+       LOG_ERR("Failed to configure max retries for sending "
+               "failed message for kafka: %s",
+                               errstr.c_str());
+       throw "ERROR: Failed to configure max retries for sending failed message";
+    } 
+    
+    // Backoff time in ms before retrying a message send
+    retry_backoff_ms << cfg->retry_backoff_ms;
+    if (conf->set("retry.backoff.ms", retry_backoff_ms.str(), 
+                             errstr) != RdKafka::Conf::CONF_OK) 
+    {
+       LOG_ERR("Failed to configure backoff time before retrying to send"
+               "failed message for kafka: %s",
+                               errstr.c_str());
+       throw "ERROR: Failed to configure backoff time before resending"
+             " failed messages ";
+    } 
+    
     // Register event callback
     event_callback = new KafkaEventCallback(&isConnected, logger);
     if (conf->set("event_cb", event_callback, errstr) != RdKafka::Conf::CONF_OK) {
