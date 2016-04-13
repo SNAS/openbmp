@@ -38,10 +38,16 @@ Config::Config() {
     bmp_buffer_size     = 15 * 1024 * 1024; // 15MB
     svr_ipv6            = false;
     svr_ipv4            = true;
-    heartbeat_interval  = 60 * 5;   // Default is 5 minutes
+    heartbeat_interval  = 60 * 5;        // Default is 5 minutes
     kafka_brokers       = "localhost:9092";
     tx_max_bytes        = 1000000;
     rx_max_bytes        = 100000000;
+    session_timeout     = 30000;	// Default is 30 seconds
+    socket_timeout	= 60000; 	// Default is 60 seconds
+    q_buf_max_msgs      = 100000;   
+    q_buf_max_ms        = 1000;         // Default is 1 sec
+    msg_send_max_retry  = 2;
+    retry_backoff_ms    = 100;
 
     bzero(admin_id, sizeof(admin_id));
 
@@ -302,26 +308,27 @@ void Config::parseKafka(const YAML::Node &node) {
         }
     }
 
-    if (node["tx_max_bytes"] && node["tx_max_bytes"].Type() == YAML::NodeType::Scalar) {
+    if (node["message.max.bytes"] && node["message.max.bytes"].Type() == YAML::NodeType::Scalar) {
        try {
-            tx_max_bytes = node["tx_max_bytes"].as<int>();
+            tx_max_bytes = node["message.max.bytes"].as<int>();
 
             if (tx_max_bytes < 1000 || tx_max_bytes > 1000000000)
                 throw "invalid transmit max bytes , should be "
 		"in range 1000 - 1000000000";
 
             if (debug_general)
-                std::cout << "   Config: transmit max bytes : " << tx_max_bytes
+                std::cout << "   Config: transmit max bytes : " << tx_max_bytes 
 		 << std::endl;
 
         } catch (YAML::TypedBadConversion<int> err) {
-                printWarning("message_size.tx_max_bytes is not of type int", 
-				node["tx_max_bytes"]);
+                printWarning("message.max.bytes is not of type int", 
+				node["message.max.bytes"]);
         }
     }
-    if (node["rx_max_bytes"]  && node["rx_max_bytes"].Type() == YAML::NodeType::Scalar) {
+
+    if (node["receive.message.max.bytes"]  && node["receive.message.max.bytes"].Type() == YAML::NodeType::Scalar) {
         try {
-            rx_max_bytes = node["rx_max_bytes"].as<int>();
+            rx_max_bytes = node["receive.message.max.bytes"].as<int>();
 
             if (rx_max_bytes < 1000 || rx_max_bytes > 1000000000)
                throw "invalid receive max bytes , should be "
@@ -331,8 +338,116 @@ void Config::parseKafka(const YAML::Node &node) {
 				 << std::endl;
 
         } catch (YAML::TypedBadConversion<int> err) {
-                printWarning("message_size.rx_max_bytes is not of type int", 
-				node["rx_max_bytes"]);
+                printWarning("receive.message.max.bytes is not of type int", 
+				node["receive.message.max.bytes"]);
+        }
+    }
+
+    if (node["session.timeout.ms"]  && 
+        node["session.timeout.ms"].Type() == YAML::NodeType::Scalar) {
+        try {
+            session_timeout = node["session.timeout.ms"].as<int>();
+
+            if (session_timeout < 1 || session_timeout > 3600000)
+               throw "invalid receive max bytes , should be "
+				"in range 1 - 3600000";
+            if (debug_general)
+                   std::cout << "   Config: session timeout in ms: " << session_timeout
+				 << std::endl;
+
+        } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("session_timeout is not of type int", 
+				node["session.timeout.ms"]);
+        }
+    }
+
+    if (node["socket.timeout.ms"]  && 
+        node["socket.timeout.ms"].Type() == YAML::NodeType::Scalar) {
+        try {
+            socket_timeout = node["socket.timeout.ms"].as<int>();
+
+            if (socket_timeout < 10 || socket_timeout > 300000)
+               throw "invalid receive max bytes , should be "
+				"in range 10 - 300000";
+            if (debug_general)
+                   std::cout << "   Config: socket timeout in ms: " << socket_timeout
+				 << std::endl;
+
+        } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("socket_timeout is not of type int", 
+				node["socket.timeout.ms"]);
+        }
+    }
+
+    if (node["queue.buffering.max.messages"]  && 
+        node["queue.buffering.max.messages"].Type() == YAML::NodeType::Scalar) {
+        try {
+            q_buf_max_msgs = node["queue.buffering.max.messages"].as<int>();
+
+            if (q_buf_max_msgs < 1 || q_buf_max_msgs > 10000000)
+               throw "invalid receive max bytes , should be "
+				"in range 1 - 10000000";
+            if (debug_general)
+                   std::cout << "   Config: queue buffering max messages: " << 
+                                q_buf_max_msgs << std::endl;
+
+        } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("q_buf_max_msgs is not of type int", 
+				node["queue.buffering.max.messages"]);
+        }
+    }
+
+    if (node["queue.buffering.max.ms"]  && 
+        node["queue.buffering.max.ms"].Type() == YAML::NodeType::Scalar) {
+        try {
+            q_buf_max_ms = node["queue.buffering.max.ms"].as<int>();
+
+            if (q_buf_max_ms < 1 || q_buf_max_ms > 900000)
+               throw "invalid receive max bytes , should be "
+				"in range 1 - 900000";
+            if (debug_general)
+                   std::cout << "   Config: queue buffering max time in ms: " << 
+                                q_buf_max_ms << std::endl;
+
+        } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("q_buf_max_ms is not of type int", 
+				node["queue.buffering.max.ms"]);
+        }
+    }
+
+    if (node["message.send.max.retries"]  && 
+        node["message.send.max.retries"].Type() == YAML::NodeType::Scalar) {
+        try {
+            msg_send_max_retry = node["message.send.max.retries"].as<int>();
+
+            if (msg_send_max_retry < 0 || msg_send_max_retry > 10000000)
+               throw "invalid receive max bytes , should be "
+				"in range 1 - 10000000";
+            if (debug_general)
+                   std::cout << "   Config: max message send retry: " << 
+                                msg_send_max_retry << std::endl;
+
+        } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("msg_send_max_retry is not of type int", 
+				node["message.send.max.retries"]);
+        }
+    }
+
+    if (node["retry.backoff.ms"]  && 
+        node["retry.backoff.ms"].Type() == YAML::NodeType::Scalar) {
+        try {
+            retry_backoff_ms = node["retry.backoff.ms"].as<int>();
+
+            if (retry_backoff_ms < 1 || retry_backoff_ms > 300000)
+               throw "invalid receive max bytes , should be "
+				"in range 1 - 300000";
+            if (debug_general)
+                   std::cout << "   Config: backoff time before resending failed message in ms: " << 
+                                retry_backoff_ms << std::endl;
+
+        } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("retry_backoff_ms is not of type int", 
+				node["retry.backoff.ms"]);
         }
     }
 
