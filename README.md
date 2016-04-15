@@ -43,7 +43,11 @@ So much more...
 OpenBMP daemon is a BMP receiver for devices/software that implement BMP, such as Cisco and Juniper routers. The collector is a highly scalable **producer** to Apache Kafka.   Both RAW BMP messages and parsed messages are produced for Kafka consumer consumption.  
 
 ### User Interface
-User interface is available in the docker container **openbmp/ui**.  Soon the UI will be added to github. 
+User interface is available in the docker container ```docker pull openbmp/ui```.   You can install the UI by following the docker [UI instructions](https://github.com/OpenBMP/docker/tree/master/ui).   
+
+Soon the UI will be added to github. 
+
+note: The UI uses [DB_REST](docs/DBREST.md) which requires the **mysql-consumer**.  You can install the MySQL consumer and DB_REST using the [mysql container](https://github.com/OpenBMP/docker/tree/master/mysql) or you can use the [aio container](https://github.com/OpenBMP/docker/tree/master/aio)
 
 ### Using Logstash with OpenBMP
 Logstash is a flexible, open source, data collection, enrichment, and transport pipeline designed to efficiently process a growing list of log, event, and unstructured data sources for distribution into a variety of outputs, including Elasticsearch.
