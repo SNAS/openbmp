@@ -52,6 +52,7 @@ public:
     int         q_buf_max_ms;		 ///< Max time for buffering msgs in queue
     int         msg_send_max_retry;      ///< No. of times to resend failed msgs
     int         retry_backoff_ms;        ///< Backoff time before resending msgs  
+    std::string compression;		 ///< Compression to use :none, gzip, snappy
 
     /**
      * matching structs and maps

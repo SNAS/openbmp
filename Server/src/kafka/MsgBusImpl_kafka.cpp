@@ -206,10 +206,10 @@ void msgBus_kafka::connect() {
 
 
     // compression
-    value = "snappy";
+    value = cfg->compression;
     if (conf->set("compression.codec", value, errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure Snappy compression for kafka: %s.", errstr.c_str());
-        throw "ERROR: Failed to configure kafka compression to Snappy";
+        LOG_ERR("Failed to configure %s compression for kafka: %s.", value, errstr.c_str());
+        throw "ERROR: Failed to configure kafka compression";
     }
 
     // broker list

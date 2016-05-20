@@ -48,6 +48,7 @@ Config::Config() {
     q_buf_max_ms        = 1000;         // Default is 1 sec
     msg_send_max_retry  = 2;
     retry_backoff_ms    = 100;
+    compression         = "snappy";
 
     bzero(admin_id, sizeof(admin_id));
 
@@ -448,6 +449,25 @@ void Config::parseKafka(const YAML::Node &node) {
         } catch (YAML::TypedBadConversion<int> err) {
                 printWarning("retry_backoff_ms is not of type int", 
 				node["retry.backoff.ms"]);
+        }
+    }
+
+    if (node["compression.codec"]  && 
+        node["compression.codec"].Type() == YAML::NodeType::Scalar) {
+        try {
+            compression = node["compression.codec"].as<std::string>();
+
+            if (compression != "none" && compression != "snappy" && 
+                compression != "gzip")
+               throw "invalid value for compression, should be one of none,"
+			" gzip or snappy";
+            if (debug_general)
+                   std::cout << "   Config: Compression : " << 
+                                compression << std::endl;
+
+        } catch (YAML::TypedBadConversion<std::string> err) {
+                printWarning("Compression is not of type string", 
+				node["compression.codec"]);
         }
     }
 
