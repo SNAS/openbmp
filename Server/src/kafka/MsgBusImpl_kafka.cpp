@@ -208,7 +208,7 @@ void msgBus_kafka::connect() {
     // compression
     value = cfg->compression;
     if (conf->set("compression.codec", value, errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure %s compression for kafka: %s.", value, errstr.c_str());
+        LOG_ERR("Failed to configure %s compression for kafka: %s.", value.c_str(), errstr.c_str());
         throw "ERROR: Failed to configure kafka compression";
     }
 
@@ -916,6 +916,10 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 
             // The first 4 octets are the router ID and the second 4 are the DR or ZERO if no DR
             inet_ntop(PF_INET, node.igp_router_id, igp_router_id, sizeof(igp_router_id));
+
+            string hostname;
+            resolveIp(igp_router_id, hostname);
+            strncpy(node.name, hostname.c_str(), sizeof(node.name));
 
             if ((uint32_t) *(node.igp_router_id+4) != 0) {
                 inet_ntop(PF_INET, node.igp_router_id+4, dr, sizeof(dr));
