@@ -153,6 +153,24 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, parsed_data.advertised);
             break;
 
+        case bgp::BGP_SAFI_NLRI_LABEL:
+            // Next-hop is an IP address - Change/set the next-hop attribute in parsed data to use this next-hop
+            if (nlri.nh_len > 16)
+                memcpy(ip_raw, nlri.next_hop, 16);
+            else
+                memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
+
+            if (not isIPv4)
+                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+            else
+                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+
+            parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
+
+            // Data is an Label, IP address tuple parse and save it
+            parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, parsed_data.advertised);
+            break;
+            
         default :
             LOG_INFO("%s: MP_REACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now",
                      peer_addr.c_str(), isIPv4, nlri.safi);
@@ -213,12 +231,109 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
 
             // set the raw/binary address
             memcpy(tuple.prefix_bin, ip_raw, sizeof(ip_raw));
-
+          
             // Add tuple to prefix list
             prefixes.push_back(tuple);
         }
     }
 }
 
+/**
+ * Parses mp_reach_nlri and mp_unreach_nlri (IPv4/IPv6)
+ *
+ * \details
+ *      Will parse the NLRI encoding as defined in RFC3107 Section 3 (Carrying Label Mapping information).
+ *
+ * \param [in]   isIPv4     True false to indicate if IPv4 or IPv6
+ * \param [in]   data       Pointer to the start of the label + prefixes to be parsed
+ * \param [in]   len        Length of the data in bytes to be read
+ * \param [out]  prefixes   Reference to a list<label, prefix_tuple> to be updated with entries
+ */
+void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
+                                         std::list<bgp::prefix_tuple> &prefixes) {
+    u_char            ip_raw[16];
+    char              ip_char[40];
+    int               addr_bytes;
+    bgp::prefix_tuple tuple;
+
+    typedef union {
+        struct { 
+            uint8_t   ttl     : 8;          // TTL - not present since only 3 octets are used
+            uint8_t   bos     : 1;          // Bottom of stack
+            uint8_t   exp     : 3;          // EXP - not really used
+            uint32_t  value   : 20;         // Label value
+        } decode;
+        uint32_t  data;                 // Raw label - 3 octets only per RFC3107
+    } mpls_label;
+  
+    mpls_label label;
+
+    
+
+    if (len <= 0 or data == NULL)
+        return;
+
+    // TODO: Can extend this to support multicast, but right now we set it to unicast v4/v6
+    tuple.type = isIPv4 ? bgp::PREFIX_LABEL_UNICAST_V4 : 
+			  bgp::PREFIX_LABEL_UNICAST_V6;
+    tuple.isIPv4 = isIPv4;
+    int parsed_bytes = 0;
+    // Loop through all prefixes
+    for (size_t read_size=0; read_size < len; read_size++) {
+        if (parsed_bytes == len) {
+            break;
+        }
+        bzero(&label, sizeof(label));
+        bzero(ip_raw, sizeof(ip_raw));
+
+        tuple.labels = "";
+        // set the address in bits length
+        tuple.len = *data++;
+
+        // Figure out how many bytes the bits requires
+        addr_bytes = tuple.len / 8;
+        if (tuple.len % 8)
+           ++addr_bytes;
+
+        // the label is 3 octects long
+        while (addr_bytes >= 3) 
+        {
+            memcpy(&label.data, data, 3);
+            bgp::SWAP_BYTES(&label.data);     // change to host order
+            data += 3;
+            addr_bytes -= 3;
+            read_size += 3;
+            tuple.len -= 24;        // Update prefix len to not include the label just parsed
+            ostringstream convert;
+            convert << label.decode.value;
+            tuple.labels.append(convert.str());
+            if (label.decode.bos == 1) {
+               break;               // Reached EoS
+            } else {
+               tuple.labels.append(",");
+            }
+        }
+        // if the route isn't a default route
+        if (addr_bytes > 3) {
+            memcpy(ip_raw, data, addr_bytes);
+            data += addr_bytes;
+            read_size += addr_bytes;
+
+            // Convert the IP to string printed format
+            if (isIPv4)
+                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+            else
+                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+
+            tuple.prefix.assign(ip_char);
+
+            // set the raw/binary address
+            memcpy(tuple.prefix_bin, ip_raw, sizeof(ip_raw));
+            // Add tuple to prefix list
+            prefixes.push_back(tuple);
+            LOG_INFO("Parsed Label: %s, prefix: %s", tuple.labels.c_str(), tuple.prefix.c_str());
+        }
+    }
+}
 
 } /* namespace bgp_msg */
