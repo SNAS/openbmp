@@ -687,8 +687,7 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
     MD5 hash;
 
     //hash.update(path_object.peer_hash_id, HASH_SIZE);
-    hash.update((unsigned char *) attr.as_path,
-                strlen(attr.as_path));
+    hash.update((unsigned char *) attr.as_path.c_str(), attr.as_path.length());
     hash.update((unsigned char *) attr.next_hop,
                 strlen(attr.next_hop));
     hash.update((unsigned char *) attr.aggregator,
@@ -699,8 +698,8 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
     hash.update((unsigned char *) &attr.local_pref,
                 sizeof(attr.local_pref));
 
-    hash.update((unsigned char *) attr.community_list, strlen(attr.community_list));
-    hash.update((unsigned char *) attr.ext_community_list, strlen(attr.ext_community_list));
+    hash.update((unsigned char *) attr.community_list.c_str(), attr.community_list.length());
+    hash.update((unsigned char *) attr.ext_community_list.c_str(), attr.ext_community_list.length());
     hash.update((unsigned char *) p_hash_str.c_str(), p_hash_str.length());
 
     hash.finalize();
@@ -721,8 +720,8 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
                              "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
                      base_attr_seq, path_hash_str.c_str(), r_hash_str.c_str(), router_ip.c_str(), p_hash_str.c_str(),
                      peer.peer_addr,peer.peer_as, ts.c_str(),
-                     attr.origin, attr.as_path, attr.as_path_count, attr.origin_as, attr.next_hop, attr.med,
-                     attr.local_pref, attr.aggregator, attr.community_list, attr.ext_community_list, attr.cluster_list,
+                     attr.origin, attr.as_path.c_str(), attr.as_path_count, attr.origin_as, attr.next_hop, attr.med,
+                     attr.local_pref, attr.aggregator, attr.community_list.c_str(), attr.ext_community_list.c_str(), attr.cluster_list.c_str(),
                      attr.atomic_agg, attr.nexthop_isIPv4, attr.originator_id);
 
     produce(MSGBUS_TOPIC_VAR_BASE_ATTRIBUTE, prep_buf, buf_len, 1, p_hash_str, &peer_list[p_hash_str], peer.peer_as);
@@ -799,9 +798,9 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
                                     router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
                                     rib[i].isIPv4, attr->origin,
-                                    attr->as_path, attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
+                                    attr->as_path.c_str(), attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
                                     attr->aggregator,
-                                    attr->community_list, attr->ext_community_list, attr->cluster_list,
+                                    attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
                                     attr->atomic_agg, attr->nexthop_isIPv4,
                                     attr->originator_id);
                 break;
@@ -955,7 +954,7 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
                         action.c_str(),ls_node_seq, hash_str.c_str(),path_hash_str.c_str(), r_hash_str.c_str(),
                         router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
                         igp_router_id, router_id, node.id, node.bgp_ls_id,node.mt_id, ospf_area_id, isis_area_id,
-                        node.protocol, node.flags, attr.as_path, attr.local_pref, attr.med, attr.next_hop, node.name);
+                        node.protocol, node.flags, attr.as_path.c_str(), attr.local_pref, attr.med, attr.next_hop, node.name);
 
         // Cat the entry to the query buff
         if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
@@ -1091,7 +1090,7 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
                             action.c_str(), ls_link_seq, hash_str.c_str(), path_hash_str.c_str(),r_hash_str.c_str(),
                             router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
                             igp_router_id, router_id, link.id, link.bgp_ls_id, ospf_area_id,
-                            isis_area_id, link.protocol, attr.as_path, attr.local_pref, attr.med, attr.next_hop,
+                            isis_area_id, link.protocol, attr.as_path.c_str(), attr.local_pref, attr.med, attr.next_hop,
                             link.mt_id, link.local_link_id, link.remote_link_id, intf_ip, nei_ip, link.igp_metric,
                             link.admin_group, link.max_link_bw, link.max_resv_bw, link.unreserved_bw, link.te_def_metric,
                             link.protection_type, link.mpls_proto_mask, link.srlg, link.name, remote_node_hash_id.c_str(),
@@ -1234,7 +1233,7 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
                             action.c_str(), ls_prefix_seq, hash_str.c_str(), path_hash_str.c_str(), r_hash_str.c_str(),
                             router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
                             igp_router_id, router_id, prefix.id, prefix.bgp_ls_id, ospf_area_id, isis_area_id,
-                            prefix.protocol, attr.as_path, attr.local_pref, attr.med, attr.next_hop, local_node_hash_id.c_str(),
+                            prefix.protocol, attr.as_path.c_str(), attr.local_pref, attr.med, attr.next_hop, local_node_hash_id.c_str(),
                             prefix.mt_id, prefix.ospf_route_type, prefix.igp_flags, prefix.route_tag, prefix.ext_route_tag,
                             ospf_fwd_addr, prefix.metric, prefix_ip, prefix.prefix_len);
 

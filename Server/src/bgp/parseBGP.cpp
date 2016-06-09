@@ -372,14 +372,10 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     /*
      * Setup the record
      */
-    base_attr.as_path                  = (char *)((string)attrs[bgp_msg::ATTR_TYPE_AS_PATH]).c_str();
-    base_attr.as_path_sz               = ((string)attrs[bgp_msg::ATTR_TYPE_AS_PATH]).length();
-    base_attr.cluster_list             = (char *)((string)attrs[bgp_msg::ATTR_TYPE_CLUSTER_LIST]).c_str();
-    base_attr.cluster_list_sz          = ((string)attrs[bgp_msg::ATTR_TYPE_CLUSTER_LIST]).length();
-    base_attr.community_list           = (char *)((string)attrs[bgp_msg::ATTR_TYPE_COMMUNITIES]).c_str();
-    base_attr.community_list_sz        = ((string)attrs[bgp_msg::ATTR_TYPE_COMMUNITIES]).length();
-    base_attr.ext_community_list       = (char *)((string)attrs[bgp_msg::ATTR_TYPE_EXT_COMMUNITY]).c_str();
-    base_attr.ext_community_list_sz    = ((string)attrs[bgp_msg::ATTR_TYPE_EXT_COMMUNITY]).length();
+    base_attr.as_path                  = (string)attrs[bgp_msg::ATTR_TYPE_AS_PATH];
+    base_attr.cluster_list             = (string)attrs[bgp_msg::ATTR_TYPE_CLUSTER_LIST];
+    base_attr.community_list           = (string)attrs[bgp_msg::ATTR_TYPE_COMMUNITIES];
+    base_attr.ext_community_list       = (string)attrs[bgp_msg::ATTR_TYPE_EXT_COMMUNITY];
 
     base_attr.atomic_agg               = ((string)attrs[bgp_msg::ATTR_TYPE_ATOMIC_AGGREGATE]).compare("1") == 0 ? true : false;
 
@@ -634,11 +630,14 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
         for (list<MsgBusInterface::obj_ls_link>::iterator it = ls_data.links.begin();
              it != ls_data.links.end(); it++) {
 
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL) != ls_attrs.end())
-                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL].data(), 4);
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL) != ls_attrs.end())
+            if (not (*it).isIPv4 and ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL) != ls_attrs.end())
                 memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL].data(), 16);
+
+            else if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL) != ls_attrs.end()) {
+                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL].data(), 4);
+                (*it).isIPv4 = true;
+            }
+
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID) != ls_attrs.end())
                 memcpy((*it).isis_area_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID].data(), sizeof((*it).isis_area_id));
@@ -687,11 +686,13 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
         for (list<MsgBusInterface::obj_ls_prefix>::iterator it = ls_data.prefixes.begin();
              it != ls_data.prefixes.end(); it++) {
 
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL) != ls_attrs.end())
-                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL].data(), 4);
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL) != ls_attrs.end())
+            if (not (*it).isIPv4 and ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL) != ls_attrs.end())
                 memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL].data(), 16);
+
+            else if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL) != ls_attrs.end()) {
+                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL].data(), 4);
+                (*it).isIPv4 = true;
+            }
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID) != ls_attrs.end())
                 memcpy((*it).isis_area_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID].data(), sizeof((*it).isis_area_id));

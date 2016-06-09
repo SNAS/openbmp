@@ -170,10 +170,9 @@ public:
         char        origin[16];             ///< bgp origin as string name
 
         /**
-         * Caller allocated string as_path.
+         * as_path.
          */
-        char        *as_path;
-        size_t      as_path_sz;             ///< Size of the as_path in bytes (buffer size)
+        std::string as_path;
 
         uint16_t    as_path_count;          ///< Count of AS PATH's in the path (includes all in AS-SET)
 
@@ -187,23 +186,19 @@ public:
         uint32_t    local_pref;             ///< bgp local pref
 
         /**
-         * Caller allocated string standard community list.
+         * standard community list.
          */
-        char        *community_list;
-        size_t      community_list_sz;       ///< Size of the community list in bytes (buffer size)
+        std::string community_list;
 
         /**
-         * Caller allocated string extended community list.
+         * extended community list.
          */
-        char        *ext_community_list;
-        size_t      ext_community_list_sz;   ///< Size of the community list in bytes (buffer size)
+        std::string  ext_community_list;
 
         /**
-         * Caller allocated string cluster list.
+         * cluster list.
          */
-        char        *cluster_list;
-        size_t      cluster_list_sz;        ///< Size of the cluster list in bytes (buffer size)
-
+        std::string cluster_list;
 
         char        originator_id[16];      ///< Originator ID in printed form
     };
