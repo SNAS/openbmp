@@ -280,7 +280,7 @@ One or more link-state links.
 17 | Protocol | String | 32 | String name of the protocol (Direct, Static, IS-IS\_L1, IS-IS\_L2, OSPFv2, OSPFv3)
 18 | AS Path | String | 8K | BGP AS Path string
 19 | Local Pref | Int | 4 | BGP Local preference
-20 | MED | Int 4 | BGP MED value
+20 | MED | Int | 4 | BGP MED value
 21 | Next Hop | String | 46 | BGP next hop IP address in printed form
 22 | Mt Id | Int | 4 | Multi-Topology Id in Hex
 23 | Local Link Id | Int | 4 | Unsigned 32bit local link id
@@ -292,7 +292,7 @@ One or more link-state links.
 29 | Max Link BW | Int | 4 | Int value of the max link BW in Kbits
 30 | Max Resv BW | Int | 4 | Int value of the max reserved BW in Kbits
 31 | Unreserved BW | String | 100 | String value for 8 uint32 values (8 priorities) delimited by comma (each value is in Kbits)
-32 | TE Default Metric | Int 4 | Unsigned 32bit value of the TE metric
+32 | TE Default Metric | Int | 4 | Unsigned 32bit value of the TE metric
 33 | Link Protection | String | 64 | Textual representation of the link protection type
 34 | MPLS Proto Mask | String | 64 | Textual representation of the protocols enabled (LDP, RSVP)
 35 | SRLG | String | 255 | HEX value list SRLG values (delimited by comma if more than one exists)
@@ -324,9 +324,9 @@ One or more link-state prefixes.
 17 | Protocol | String | 32 | String name of the protocol (Direct, Static, IS-IS\_L1, IS-IS\_L2, OSPFv2, OSPFv3)
 18 | AS Path | String | 8K | BGP AS Path string
 19 | Local Pref | Int | 4 | BGP Local preference
-20 | MED | Int 4 | BGP MED value
+20 | MED | Int | 4 | BGP MED value
 21 | Next Hop | String | 46 | BGP next hop IP address in printed form
-22 | Local node Hash | String 32 | Local node hash Id
+22 | Local node Hash | String | 32 | Local node hash Id
 23 | Mt Id | Int | 4 | Multi-Topology Id in hex
 24 | Ospf Route Type | String | 64 | Textual representation of the OSPF route type (Intra, Inter, Ext-1, Ext-2, NSSA-1, NSSA-2)
 25 | IGP Flags | String | 32 | String representation of the IGP flags
