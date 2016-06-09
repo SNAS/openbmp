@@ -646,7 +646,8 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
                 memcpy(&(*it).admin_group, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_ADMIN_GROUP].data(), sizeof((*it).admin_group));
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_LINK_BW) != ls_attrs.end())
-                memcpy(&(*it).max_link_bw, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_LINK_BW].data(), sizeof((*it).max_link_bw));
+                memcpy(&(*it).max_link_bw, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_LINK_BW].data(),
+                       sizeof((*it).max_link_bw));
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_RESV_BW) != ls_attrs.end())
                 memcpy(&(*it).max_resv_bw, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_RESV_BW].data(), sizeof((*it).max_resv_bw));

@@ -57,9 +57,10 @@ namespace bgp_msg {
         }
     }
  
-    int32_t MPLinkStateAttr::ieee_float_to_int32(int32_t float_val)
+    uint32_t MPLinkStateAttr::ieee_float_to_kbps(int32_t float_val)
     {
         int32_t sign, exponent, mantissa;
+        int64_t bits_value = 0;
 
         sign = float_val & IEEE_SIGN_MASK;
         exponent = float_val & IEEE_EXPONENT_MASK;
@@ -82,21 +83,27 @@ namespace bgp_msg {
         }
 
         mantissa |= IEEE_IMPLIED_BIT;
+
+        bits_value = mantissa;
+
         if (exponent <= IEEE_MANTISSA_WIDTH) {
-           mantissa >>= IEEE_MANTISSA_WIDTH - exponent;
+
+           bits_value >>= IEEE_MANTISSA_WIDTH - exponent;
         } else {
-           mantissa <<= exponent - IEEE_MANTISSA_WIDTH;
+           bits_value <<= exponent - IEEE_MANTISSA_WIDTH;
         }
 
-        return (sign ? -mantissa : mantissa);
+        // Change sign
+        if (sign)
+            bits_value *= -1;
+
+        bits_value *= 8;        // to bits
+        bits_value /= 1000;     // to kbits
+
+        return bits_value;
+
     }
 
-    int32_t MPLinkStateAttr::convert_to_kbps(int32_t bw_float) {
-	int32_t bw_int;
-        bw_int = bw_float/ 125;
-        bw_int += (bw_float % 125) ? 1 : 0;
-        return bw_int;
-    }
     /*******************************************************************************//*
      * Parse Link State attribute TLV
      *
@@ -108,12 +115,12 @@ namespace bgp_msg {
      * \returns length of the TLV attribute parsed (including the tlv header lenght)
      */
     int MPLinkStateAttr::parseAttrLinkStateTLV(int attr_len, u_char *data) {
-        uint16_t        type;
-        uint16_t        len;
-
-        char            ip_char[46];
-        uint32_t        value_32bit;
-        int32_t         float_val;
+        uint16_t            type;
+        uint16_t            len;
+        char                ip_char[46];
+        uint32_t            value_32bit;
+        int32_t             float_val;
+        std::stringstream   val_ss;
 
 
         if (attr_len < 4) {
@@ -184,6 +191,7 @@ namespace bgp_msg {
                 break;
 
             case ATTR_NODE_OPAQUE:
+                LOG_INFO("%s: bgp-ls: opaque node attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
 
             case ATTR_LINK_ADMIN_GROUP:
@@ -247,14 +255,17 @@ namespace bgp_msg {
                             peer_addr.c_str());
                     break;
                 } 
-                
+
                 float_val = 0;
                 memcpy(&float_val, data, len);
                 bgp::SWAP_BYTES(&float_val, len);
-                float_val = ieee_float_to_int32(float_val);
-                float_val = convert_to_kbps(float_val);
+                float_val = ieee_float_to_kbps(float_val);
                 memcpy(parsed_data->ls_attrs[ATTR_LINK_MAX_LINK_BW].data(), &float_val, 4);
-                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum link bandwidth %u Kbps (len=%d)", peer_addr.c_str(), *(int32_t *)&float_val, len);
+
+                memcpy(&value_32bit, data, 4);
+                bgp::SWAP_BYTES(&value_32bit);
+                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum link bandwidth (raw=%x) %u Kbits (len=%d)",
+                           peer_addr.c_str(), value_32bit, *(int32_t *)&float_val, len);
                 break;
 
             case ATTR_LINK_MAX_RESV_BW:
@@ -266,10 +277,9 @@ namespace bgp_msg {
                 float_val = 0;
                 memcpy(&float_val, data, len);
                 bgp::SWAP_BYTES(&float_val, len);
-                float_val = ieee_float_to_int32(float_val);
-                float_val = convert_to_kbps(float_val);
+                float_val = ieee_float_to_kbps(float_val);
                 memcpy(parsed_data->ls_attrs[ATTR_LINK_MAX_RESV_BW].data(), &float_val, 4);
-                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum reserved bandwidth %u Kbps (len=%d)", peer_addr.c_str(), *(uint32_t *)&float_val, len);
+                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum reserved bandwidth %u Kbits (len=%d)", peer_addr.c_str(), *(uint32_t *)&float_val, len);
                 break;
 
             case ATTR_LINK_MPLS_PROTO_MASK:
@@ -307,12 +317,41 @@ namespace bgp_msg {
                 SELF_DEBUG("%s: bgp-ls: parsed attribute te default metric %x (len=%d)", peer_addr.c_str(), value_32bit, len);
                 break;
 
-            case ATTR_LINK_UNRESV_BW:
-                //SELF_DEBUG("%s: bgp-ls: parsing link unreserve bw attribute", peer_addr.c_str());
-                LOG_INFO("%s: bgp-ls: link unreserve bw attribute, not yet implemented", peer_addr.c_str());
+            case ATTR_LINK_UNRESV_BW: {
+                std::stringstream   val_ss;
+
+                SELF_DEBUG("%s: bgp-ls: parsing link unreserve bw attribute (len=%d)", peer_addr.c_str(), len);
+
+                if (len != 32) {
+                    LOG_INFO("%s: bgp-ls: link unreserve bw attribute is invalid, length is %d but should be 32",
+                             peer_addr.c_str(), len);
+                    break;
+                }
+
+                val_ss.str(std::string());  // Clear
+
+                for (int i=0; i < 32; i += 4) {
+
+                    float_val = 0;
+                    memcpy(&float_val, data, 4);
+                    bgp::SWAP_BYTES(&float_val);
+                    float_val = ieee_float_to_kbps(float_val);
+
+                    if (!i)
+                        val_ss << float_val;
+                    else
+                        val_ss << ", " << float_val;
+                }
+
+                SELF_DEBUG("%s: bgp-ls: parsed unresvered bandwidth: %s", peer_addr.c_str(), val_ss.str().c_str());
+
+                memcpy(parsed_data->ls_attrs[ATTR_LINK_UNRESV_BW].data(), val_ss.str().data(), val_ss.str().length());
+
                 break;
+            }
 
             case ATTR_LINK_OPAQUE:
+                LOG_INFO("%s: bgp-ls: opaque link attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
 
 
@@ -348,6 +387,7 @@ namespace bgp_msg {
                 break;
 
             case ATTR_PREFIX_OPAQUE_PREFIX:
+                LOG_INFO("%s: bgp-ls: opaque prefix attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
 
             default:

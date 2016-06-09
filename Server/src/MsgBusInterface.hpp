@@ -299,8 +299,8 @@ public:
         u_char      local_node_hash_id[16]; ///< Local node hash ID
         u_char      remote_node_hash_id[16]; ///< Remove node hash ID
         uint32_t    admin_group;             ///< Admin group
-        double      max_link_bw;            ///< Maximum link bandwidth
-        double      max_resv_bw;            ///< Maximum reserved bandwidth
+        uint32_t    max_link_bw;            ///< Maximum link bandwidth
+        uint32_t    max_resv_bw;            ///< Maximum reserved bandwidth
         char        unreserved_bw[100];     ///< string for unreserved bandwidth, a set of 8 uint32_t values
 
         uint32_t    te_def_metric;          ///< Default TE metric

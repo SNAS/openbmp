@@ -289,9 +289,9 @@ One or more link-state links.
 26 | Neighbor IP | String | 46 | Printed form of the remote interface IP (ospf)
 27 | IGP Metric | Int | 4 | Unsigned 32bit IGP metric value
 28 | Admin Group | Int | 4 | Admin Group
-29 | Max Link BW | Float | 4 | Float value of the max link BW in bytes
-30 | Max Resv BW | Float | 4 | Float value of the max reserved BW in bytes
-31 | Unreserved BW | String | 100 | String value for 8 uint32 values (8 priorities) delimited by comma
+29 | Max Link BW | Int | 4 | Int value of the max link BW in Kbits
+30 | Max Resv BW | Int | 4 | Int value of the max reserved BW in Kbits
+31 | Unreserved BW | String | 100 | String value for 8 uint32 values (8 priorities) delimited by comma (each value is in Kbits)
 32 | TE Default Metric | Int 4 | Unsigned 32bit value of the TE metric
 33 | Link Protection | String | 64 | Textual representation of the link protection type
 34 | MPLS Proto Mask | String | 64 | Textual representation of the protocols enabled (LDP, RSVP)

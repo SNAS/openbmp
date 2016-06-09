@@ -148,8 +148,9 @@ namespace bgp_msg {
          * \returns length of the TLV attribute parsed
          */
         int parseAttrLinkStateTLV(int attr_len, u_char *data);
-        int32_t ieee_float_to_int32(int32_t float_val);
- 	int32_t convert_to_kbps(int32_t bw_float);
+
+
+        uint32_t ieee_float_to_kbps(int32_t float_val);
     };
 
 }
