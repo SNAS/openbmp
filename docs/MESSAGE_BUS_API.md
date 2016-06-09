@@ -284,7 +284,7 @@ One or more link-state links.
 21 | Next Hop | String | 46 | BGP next hop IP address in printed form
 22 | Mt Id | Int | 4 | Multi-Topology Id in Hex
 23 | Local Link Id | Int | 4 | Unsigned 32bit local link id
-24 | remote Link Id | Int 4 | Unsigned 32bit remote link id
+24 | remote Link Id | Int | 4 | Unsigned 32bit remote link id
 25 | Interface IP | String | 46 | Printed form of the local interface IP (ospf)
 26 | Neighbor IP | String | 46 | Printed form of the remote interface IP (ospf)
 27 | IGP Metric | Int | 4 | Unsigned 32bit IGP metric value
