@@ -135,7 +135,6 @@ public:
         parsed_attrs_map              attrs;              ///< Parsed attrbutes
         std::list<bgp::prefix_tuple>  withdrawn;          ///< List of withdrawn prefixes
         std::list<bgp::prefix_tuple>  advertised;         ///< List of advertised prefixes
-
         parsed_ls_attrs_map           ls_attrs;           ///< BGP-LS specific attributes
         parsed_data_ls                ls;                 ///< REACH: Link state parsed data
         parsed_data_ls                ls_withdrawn;       ///< UNREACH: Parsed Withdrawn data

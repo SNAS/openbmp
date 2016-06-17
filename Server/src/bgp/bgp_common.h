@@ -101,6 +101,8 @@ namespace bgp {
     enum PREFIX_TYPE {
                 PREFIX_UNICAST_V4=1,
                 PREFIX_UNICAST_V6,
+                PREFIX_LABEL_UNICAST_V4,
+                PREFIX_LABEL_UNICAST_V6,
                 PREFIX_VPN_V4,
                 PREFIX_VPN_v6,
                 PREFIX_MULTICAST_V4,
@@ -121,6 +123,8 @@ namespace bgp {
          std::string   prefix;               ///< Printed form of the IP address
          uint8_t       prefix_bin[16];       ///< Prefix in binary form
          bool          isIPv4;               ///< True if IPv4, false if IPv6
+     
+         std::string   labels;               ///< Labels in the format of label, label, ...
      };
 
     /*********************************************************************//**
