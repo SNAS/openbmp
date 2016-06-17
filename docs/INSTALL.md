@@ -384,31 +384,38 @@ MySQL should be installed now and it should be running.   OpenBMP is ready to ru
 
 ```
   REQUIRED OPTIONS:
+     -c <filename>     Config filename.
+          OR
      -a <string>       Admin ID for collector, this must be unique for this collector.  hostname or IP is good to use
 
 
   OPTIONAL OPTIONS:
+     -pid <filename>   PID filename, default is no pid file
+     -l <filename>     Log filename, default is STDOUT
+     -d <filename>     Debug filename, default is log filename
+     -f                Run in foreground instead of daemon (use for upstart)
+
+  OTHER OPTIONS:
+     -v                   Version
+     -h                   Help
+
+  DEBUG OPTIONS:
+     -debugDebug general items
+     -dbgp             Debug BGP parser
+     -dbmp             Debug BMP parser
+     -dmsgbus          Debug message bus
+
+  DEPRECATED OPTIONS:
+
+       These options will be removed in a future release. You should switch to use the config file.
      -k <host:port>    Kafka broker list format: host:port[,...]
                        Default is 127.0.0.1:9092
      -m <mode>         Mode can be 'v4, v6, or v4v6'
                        Default is v4.  Enables IPv4 and/or IPv6 BMP listening port
 
      -p <port>         BMP listening port (default is 5000)
-
-     -c <filename>     Config filename, default is /etc/openbmp/openbmpd.conf
-     -l <filename>     Log filename, default is STDOUT
-     -d <filename>     Debug filename, default is log filename
-     -pid <filename>   PID filename, default is no pid file
      -b <MB>           BMP read buffer per router size in MB (default is 15), range is 2 - 128
-     -hi <minutes>     Collector message heartbeat interval in minutes (default is 240 (4 hrs)
-
-  OTHER OPTIONS:
-     -v                   Version
-
-  DEBUG OPTIONS:
-     -dbgp             Debug BGP parser
-     -dbmp             Debug BMP parser
-     -dmsgbus          Debug message bus
+     -hi <minutes>     Collector message heartbeat interval in minutes (default is 5 minutes)
 ```
 
 Below starts openbmp on port 5555 for inbound BMP connections using Kafka server localhost:9092 and buffer of 16MB per router. 
