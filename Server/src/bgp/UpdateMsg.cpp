@@ -188,12 +188,12 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
         addr_bytes = tuple.len / 8;
         if (tuple.len % 8)
             ++addr_bytes;
-
+        
         SELF_DEBUG("%s: rtr=%s: Reading NLRI data prefix bits=%d bytes=%d", peer_addr.c_str(),
                     router_addr.c_str(), tuple.len, addr_bytes);
 
         // if the route isn't a default route
-        if (addr_bytes > 0) {
+        if (addr_bytes > 0 and addr_bytes <= 4) {
             memcpy(ipv4_raw, data, addr_bytes);
             read_size += addr_bytes;
             data += addr_bytes;
@@ -209,6 +209,10 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
 
             // Add tuple to prefix list
             prefixes.push_back(tuple);
+
+        } else if (addr_bytes > 4) {
+            LOG_NOTICE("%s: rtr=%s: NRLI v4 address is larger than 4 bytes bytes=%d len=%d",
+                       peer_addr.c_str(), router_addr.c_str(), addr_bytes, tuple.len);
         }
     }
 }

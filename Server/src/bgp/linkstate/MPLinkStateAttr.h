@@ -37,13 +37,15 @@ namespace bgp_msg {
         };
 
         /**
-         * ATTR_NODE_FLAG Bits Types
+         * ATTR_NODE_FLAG Bits Types See RFC7752 Section 3.3.1.1 for node flags
          */
         enum NODE_FLAG_TYPES {
-            NODE_FLAG_OVERLOAD                  = 0x80,         ///< Overload Bit (rfc1195)
-            NODE_FLAG_ATTACH                    = 0x40,         ///< Attached Bit (rfc1195)
-            NODE_FLAG_EXTERNAL                  = 0x20,         ///< External Bit (rfc2328)
-            NODE_FLAG_ABR                       = 0x10          ///< ABR Bit (rfc2328)
+            NODE_FLAG_MASK_OVERLOAD                  = 0x80,         ///< Overload Bit (rfc1195)
+            NODE_FLAG_MASK_ATTACH                    = 0x40,         ///< Attached Bit (rfc1195)
+            NODE_FLAG_MASK_EXTERNAL                  = 0x20,         ///< External Bit (rfc2328)
+            NODE_FLAG_MASK_ABR                       = 0x10,         ///< ABR Bit (rfc2328)
+            NODE_FLAG_MASK_ROUTER                    = 0x08,         ///< Router bit (rfc5340)
+            NODE_FLAG_MASK_V6                        = 0x04          ///< V6 bit (rfc5340)
         };
 
         /**
@@ -121,21 +123,19 @@ namespace bgp_msg {
 
         UpdateMsg::parsed_update_data *parsed_data;       ///< Parsed data structure
 
-	#define IEEE_INFINITY         0x7F800000
-	#define MINUS_INFINITY        (int32_t)0x80000000L
-	#define PLUS_INFINITY         0x7FFFFFFF
-	#define IEEE_NUMBER_WIDTH       32        /* bits in number */
-	#define IEEE_EXP_WIDTH          8         /* bits in exponent */
-	#define IEEE_MANTISSA_WIDTH     (IEEE_NUMBER_WIDTH - 1 - IEEE_EXP_WIDTH)
-        #define IEEE_SIGN_MASK          0x80000000
-	#define IEEE_EXPONENT_MASK      0x7F800000
-	#define IEEE_MANTISSA_MASK      0x007FFFFF
+        #define IEEE_INFINITY         0x7F800000
+        #define MINUS_INFINITY        (int32_t)0x80000000L
+        #define PLUS_INFINITY         0x7FFFFFFF
+        #define IEEE_NUMBER_WIDTH       32        /* bits in number */
+        #define IEEE_EXP_WIDTH          8         /* bits in exponent */
+        #define IEEE_MANTISSA_WIDTH     (IEEE_NUMBER_WIDTH - 1 - IEEE_EXP_WIDTH)
+            #define IEEE_SIGN_MASK          0x80000000
+        #define IEEE_EXPONENT_MASK      0x7F800000
+        #define IEEE_MANTISSA_MASK      0x007FFFFF
 
-	#define IEEE_IMPLIED_BIT        (1 << IEEE_MANTISSA_WIDTH)
-	#define IEEE_INFINITE           ((1 << IEEE_EXP_WIDTH) - 1)
-	#define IEEE_BIAS               ((1 << (IEEE_EXP_WIDTH - 1)) - 1)
-
-
+        #define IEEE_IMPLIED_BIT        (1 << IEEE_MANTISSA_WIDTH)
+        #define IEEE_INFINITE           ((1 << IEEE_EXP_WIDTH) - 1)
+        #define IEEE_BIAS               ((1 << (IEEE_EXP_WIDTH - 1)) - 1)
 
         /*******************************************************************************//*
          * Parse Link State attribute TLV

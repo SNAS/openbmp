@@ -138,10 +138,33 @@ namespace bgp_msg {
         data += 4;
 
         switch (type) {
-            case ATTR_NODE_FLAG:
-                //SELF_DEBUG("%s: bgp-ls: parsing node flag attribute", peer_addr.c_str());
-                LOG_INFO("%s: bgp-ls: node flag attribute, not yet implemented", peer_addr.c_str());
-                break;
+            case ATTR_NODE_FLAG: {
+                if (len != 1) {
+                    LOG_INFO("%s: bgp-ls: node flag attribute length is too long %d should be 1",
+                             peer_addr.c_str(), len);
+                }
+
+                std::string flags = "";
+
+                if (*data & NODE_FLAG_MASK_OVERLOAD)
+                    flags += "O";
+                if (*data & NODE_FLAG_MASK_ATTACH)
+                    flags += "T";
+                if (*data & NODE_FLAG_MASK_EXTERNAL)
+                    flags += "E";
+                if (*data & NODE_FLAG_MASK_ABR)
+                    flags += "B";
+                if (*data & NODE_FLAG_MASK_ROUTER)
+                    flags += "R";
+                if (*data & NODE_FLAG_MASK_V6)
+                    flags += "V";
+
+                SELF_DEBUG("%s: bgp-ls: parsed node flags %s %x (len=%d)", peer_addr.c_str(), flags.c_str(), *data, len);
+
+                parsed_data->ls_attrs[ATTR_NODE_FLAG].fill(0);
+                strncpy((char *)parsed_data->ls_attrs[ATTR_NODE_FLAG].data(), flags.c_str(), flags.size());
+            }
+            break;
 
             case ATTR_NODE_IPV4_ROUTER_ID_LOCAL:  // Includes ATTR_LINK_IPV4_ROUTER_ID_LOCAL
                 if (len != 4) {
