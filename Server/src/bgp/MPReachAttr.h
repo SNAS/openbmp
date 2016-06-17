@@ -80,6 +80,8 @@ public:
      */
     static void parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len, std::list<bgp::prefix_tuple> &prefixes);
 
+    void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len, std::list<bgp::prefix_tuple> &prefixes);
+
 private:
     bool             debug;                           ///< debug flag to indicate debugging
     Logger           *logger;                         ///< Logging class pointer
