@@ -222,6 +222,8 @@ public:
         u_char      prefix_len;             ///< Length of prefix in bits
         uint8_t     prefix_bin[16];         ///< Prefix in binary form
         uint8_t     prefix_bcast_bin[16];   ///< Broadcast address/last address in binary form
+        uint32_t    path_id;                ///< Add path ID - zero if not used
+        char        labels[255];            ///< Labels delimited by comma
     };
 
     /// Unicast prefix action codes
@@ -265,7 +267,7 @@ public:
         uint8_t     isis_area_id[9];        ///< IS-IS area ID
         char        flags[32];              ///< String representation of the flag bits
         char        name[255];              ///< Name of router
-        uint32_t    mt_id;                  ///< Multi-Topology ID
+        char        mt_id[255];             ///< Multi-Topology ID
     };
 
     /// LS action code (node, link, and prefix)

@@ -45,9 +45,10 @@ public:
      *
      * \param [in]     logPtr       Pointer to existing Logger for app logging
      * \param [in]     pperAddr     Printed form of peer address used for logging
+     * \param [in]     add_paths    True if add paths enabled, false if not
      * \param [in]     enable_debug Debug true to enable, false to disable
      */
-    MPUnReachAttr(Logger *logPtr, std::string peerAddr, bool enable_debug=false);
+    MPUnReachAttr(Logger *logPtr, std::string peerAddr, bool add_paths, bool enable_debug=false);
     virtual ~MPUnReachAttr();
 
     /**
@@ -68,6 +69,7 @@ private:
     bool             debug;                           ///< debug flag to indicate debugging
     Logger           *logger;                         ///< Logging class pointer
     std::string      peer_addr;                       ///< Printed form of the peer address for logging
+    bool             add_paths_enabled;               ///< Indicates if add paths are enabled or not
 
     /**
      * MP UnReach NLRI parse based on AFI

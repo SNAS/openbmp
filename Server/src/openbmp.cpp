@@ -68,6 +68,8 @@ void Usage(char *prog) {
 
     cout << endl << "  OTHER OPTIONS:" << endl;
     cout << "     -v                   Version" << endl;
+    cout << "     -h                   Help" << endl;
+
 
     cout << endl << "  DEBUG OPTIONS:" << endl;
     cout << "     -debug"           "Debug general items" << endl;

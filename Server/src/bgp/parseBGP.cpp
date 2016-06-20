@@ -175,6 +175,8 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
     p_info->recv_four_octet_asn = false;
     p_info->sent_four_octet_asn = false;
     p_info->using_2_octet_asn = false;
+    p_info->sent_add_paths = false;
+    p_info->recv_add_paths = false;
 
     /*
      * Process the sent open message
@@ -205,6 +207,9 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
             // Check for 4 octet ASN support
             if ((*it).find("4 Octet ASN") != std::string::npos)
                 p_info->sent_four_octet_asn = true;
+
+            if ((*it).find("ADD Path") != std::string::npos)
+                p_info->sent_add_paths = true;
 
             cap_str.append((*it));
         }
@@ -248,6 +253,9 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
             if ((*it).find("4 Octet ASN") != std::string::npos)
                 p_info->recv_four_octet_asn = true;
 
+            if ((*it).find("ADD Path") != std::string::npos)
+                p_info->recv_add_paths = true;
+
             cap_str.append((*it));
         }
 
@@ -258,6 +266,12 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
                 p_entry->peer_addr, router_addr.c_str());
         throw "ERROR: Invalid BGP MSG for BMP Received OPEN message, expected OPEN message.";
     }
+
+
+    if (p_info->sent_add_paths and p_info->recv_add_paths)
+        LOG_INFO("%s: rtr=%s: add paths enabled and expected in NLRI's",
+                p_entry->peer_addr, router_addr.c_str());
+
 
     return false;
 }
@@ -450,8 +464,8 @@ void parseBGP::UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes,
                                    bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     vector<MsgBusInterface::obj_rib> rib_list;
     MsgBusInterface::obj_rib         rib_entry;
-    uint32_t                     value_32bit;
-    uint64_t                     value_64bit;
+    uint32_t                         value_32bit;
+    uint64_t                         value_64bit;
 
     /*
      * Loop through all prefixes and add/update them in the DB
@@ -516,6 +530,9 @@ void parseBGP::UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes,
                 memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
         }
 
+        rib_entry.path_id = tuple.path_id;
+        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
+
         SELF_DEBUG("%s: Adding prefix=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
 
         // Add entry to the list
@@ -558,6 +575,9 @@ void parseBGP::UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefi
         rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
 
         memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
+
+        rib_entry.path_id = tuple.path_id;
+        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
 
         SELF_DEBUG("%s: Removing prefix=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
 

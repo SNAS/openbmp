@@ -119,6 +119,7 @@ namespace bgp_msg {
         uint16_t            len;
         char                ip_char[46];
         uint32_t            value_32bit;
+        uint16_t            value_16bit;
         int32_t             float_val;
         std::stringstream   val_ss;
 
@@ -201,8 +202,26 @@ namespace bgp_msg {
                 break;
 
             case ATTR_NODE_MT_ID:
-                //SELF_DEBUG("%s: bgp-ls: parsing node MT ID attribute", peer_addr.c_str());
-                LOG_INFO("%s: bgp-ls: node MT ID attribute, not yet implemented", peer_addr.c_str());
+                SELF_DEBUG("%s: bgp-ls: parsing node MT ID attribute (len=%d)", peer_addr.c_str(), len);
+
+                val_ss.str(std::string());  // Clear
+
+                for (int i=0; i < len; i += 2) {
+
+                    value_16bit = 0;
+                    memcpy(&value_16bit, data, 2);
+                    bgp::SWAP_BYTES(&value_16bit);
+                    data += 2;
+
+                    if (!i)
+                        val_ss << value_16bit;
+                    else
+                        val_ss << ", " << value_16bit;
+                }
+
+                memcpy(parsed_data->ls_attrs[ATTR_NODE_MT_ID].data(), val_ss.str().data(), val_ss.str().length());
+                //LOG_INFO("%s: bgp-ls: parsed node MT_ID %s (len=%d)", peer_addr.c_str(), val_ss.str().c_str(), len);
+
                 break;
 
             case ATTR_NODE_NAME:
@@ -328,16 +347,29 @@ namespace bgp_msg {
                 break;
 
             case ATTR_LINK_TE_DEF_METRIC:
-                if (len != 3) {
-                    LOG_NOTICE("%s: bgp-ls: failed to parse attribute TE default metric sub-tlv; too short %d",
+                value_32bit = 0;
+
+                // Per rfc7752 Section 3.3.2.3, this is supposed to be 4 bytes, but some implementations have this <=4.
+
+                if (len == 0) {
+                    memcpy(parsed_data->ls_attrs[ATTR_LINK_TE_DEF_METRIC].data(), &value_32bit, len);
+                    break;
+                }
+
+                else if (len > 4) {
+                    LOG_NOTICE("%s: bgp-ls: failed to parse attribute TE default metric sub-tlv; too long %d",
                             peer_addr.c_str(), len);
                     break;
                 }
-                value_32bit = 0;
-                memcpy(&value_32bit, data, len);
-                bgp::SWAP_BYTES(&value_32bit, len);
-                memcpy(parsed_data->ls_attrs[ATTR_LINK_TE_DEF_METRIC].data(), &value_32bit, len);
-                SELF_DEBUG("%s: bgp-ls: parsed attribute te default metric %x (len=%d)", peer_addr.c_str(), value_32bit, len);
+
+                else {
+                    memcpy(&value_32bit, data, len);
+                    bgp::SWAP_BYTES(&value_32bit, len);
+                    memcpy(parsed_data->ls_attrs[ATTR_LINK_TE_DEF_METRIC].data(), &value_32bit, len);
+                    SELF_DEBUG("%s: bgp-ls: parsed attribute te default metric %x (len=%d)", peer_addr.c_str(),
+                               value_32bit, len);
+                }
+
                 break;
 
             case ATTR_LINK_UNRESV_BW: {
@@ -360,6 +392,8 @@ namespace bgp_msg {
                     bgp::SWAP_BYTES(&float_val);
                     float_val = ieee_float_to_kbps(float_val);
 
+                    data += 4;
+
                     if (!i)
                         val_ss << float_val;
                     else
@@ -380,7 +414,8 @@ namespace bgp_msg {
 
             case ATTR_PREFIX_EXTEND_TAG:
                 //SELF_DEBUG("%s: bgp-ls: parsing prefix extended tag attribute", peer_addr.c_str());
-                LOG_INFO("%s: bgp-ls: prefix extended tag attribute, not yet implemented", peer_addr.c_str());
+                LOG_INFO("%s: bgp-ls: prefix extended tag attribute (len=%d), not yet implemented",
+                         peer_addr.c_str(), len);
                 break;
 
             case ATTR_PREFIX_IGP_FLAGS:
@@ -389,8 +424,8 @@ namespace bgp_msg {
                 break;
 
             case ATTR_PREFIX_PREFIX_METRIC:
+                value_32bit = 0;
                 if (len <= 4) {
-                    value_32bit = 0;
                     memcpy(&value_32bit, data, len);
                     bgp::SWAP_BYTES(&value_32bit, len);
                 }
@@ -400,10 +435,23 @@ namespace bgp_msg {
                 break;
 
             case ATTR_PREFIX_ROUTE_TAG:
-                //SELF_DEBUG("%s: bgp-ls: parsing prefix route tag attribute", peer_addr.c_str());
-                LOG_INFO("%s: bgp-ls: prefix route tag attribute, not yet implemented", peer_addr.c_str());
-                break;
+            {
+                SELF_DEBUG("%s: bgp-ls: parsing prefix route tag attribute (len=%d)", peer_addr.c_str(), len);
 
+                //TODO: Per RFC7752 section 3.3.3, prefix tag can be multiples, but for now we only decode the first one.
+                value_32bit = 0;
+
+                if (len == 4) {
+                    memcpy(&value_32bit, data, len);
+                    bgp::SWAP_BYTES(&value_32bit);
+
+                    memcpy(parsed_data->ls_attrs[ATTR_PREFIX_ROUTE_TAG].data(), &value_32bit, 4);
+                    LOG_INFO("%s: bgp-ls: parsing prefix route tag attribute %d (len=%d)", peer_addr.c_str(),
+                             value_32bit, len);
+                }
+
+                break;
+            }
             case ATTR_PREFIX_OSPF_FWD_ADDR:
                 //SELF_DEBUG("%s: bgp-ls: parsing prefix OSPF forwarding address attribute", peer_addr.c_str());
                 LOG_INFO("%s: bgp-ls: prefix OSPF forwarding address attribute, not yet implemented", peer_addr.c_str());

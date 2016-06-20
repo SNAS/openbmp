@@ -1,9 +1,19 @@
 # Message Bus API Specficiation
 
-> #### Version 1.0
+> #### Version 1.1
+
+## Diff from 1.0 to 1.1
+
+* **unicast_prefix** 
+
+    * Added **field 28** - Additional Paths ID - non-zero if add paths is enabled/used
+    * Added **field 29** - Command delimited list of labels - used for labeled unicast
+    * Changed hash_id to include path ID only if non-zero
+    * Changed hash_id to include the value 1 if labels are used.
+
 
 Types of Message Feeds
--------------
+----------------------
 Currently there are two feeds available.
 
 ### 1) Parsed Messages
@@ -42,13 +52,13 @@ Currently there are two feeds available.
 *See message API details for the list of headers that will be included*
 
 Message API: Parsed Data
-------------------------------------
+------------------------
 
 ### Headers
 
 Header | Value | Description
 --------|-------|-------------
-**V**| 1 | Schema version, currently 1
+**V**| 1.1 | Schema version, currently 1.1
 **C\_HASH\_ID** | hash string | Collector Hash Id
 **L** | length | Length of the data in bytes
 **R** | count | Number of records in TSV data
@@ -199,7 +209,7 @@ One or more IPv4/IPv6 unicast prefixes.
 ---|-------|-----------|---------------|---------
 1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
 2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each prefix record by peer and restarts on collector restart or number wrap.
-3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ prefix, prefix length, peer hash ]
+3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ prefix, prefix length, peer hash, path_id, 1 if has label(s) ]
 4 | Router Hash | String | 32 | Hash Id of router
 5 | Router IP | String | 46 | Router BMP source IP address
 6 | Base Attr Hash | String | 32 | Hash Id of the base attribute set
@@ -224,6 +234,8 @@ One or more IPv4/IPv6 unicast prefixes.
 25 | isAtomicAgg | Bool | 1 | Indicates if the aggregate is atomic
 26 | isNextHopIPv4 | Bool | 1 | Indicates if the next hop address is IPv4 or not
 27 | Originator Id | String | 46 | Originator ID in printed form (IP)
+28 | Path ID | Int | 4 | Unsigned 32 bit value for the path ID (draft-ietf-idr-add-paths-15).  Zero means add paths is not enabled/used.
+29 | Labels | String | 255 | Comma delimited list of 32bit unsigned values that represent the received labels. 
 
 #### Object: <font color="blue">ls\_node</font> (openbmp.parsed.ls\_node)
 One or more link-state nodes.
@@ -343,7 +355,7 @@ Message API: BMP RAW Data
 ### Headers
 Header | Value | Description
 --------|-------|-------------
-**V**| 1 | Schema version, currently 1
+**V**| 1.1 | Schema version, currently 1.1
 **C\_HASH\_ID** | hash string | Collector Hash Id
 **R\_HASH\_ID** | hash string | Router Hash Id
 **L** | length | Length of the data in bytes

@@ -21,13 +21,16 @@ namespace bgp_msg {
  *
  * \param [in]     logPtr       Pointer to existing Logger for app logging
  * \param [in]     pperAddr     Printed form of peer address used for logging
+ * \param [in]     add_paths    True if add paths enabled, false if not
  * \param [in]     enable_debug Debug true to enable, false to disable
  */
-MPReachAttr::MPReachAttr(Logger *logPtr, std::string peerAddr, bool enable_debug) {
+MPReachAttr::MPReachAttr(Logger *logPtr, std::string peerAddr, bool add_paths, bool enable_debug) {
     logger = logPtr;
     debug = enable_debug;
 
     peer_addr = peerAddr;
+    add_paths_enabled = add_paths;
+
 }
 
 MPReachAttr::~MPReachAttr() {
@@ -150,7 +153,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
 
             // Data is an IP address - parse the address and save it
-            parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, parsed_data.advertised);
+            parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, add_paths_enabled, parsed_data.advertised);
             break;
 
         case bgp::BGP_SAFI_NLRI_LABEL:
@@ -168,7 +171,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
 
             // Data is an Label, IP address tuple parse and save it
-            parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, parsed_data.advertised);
+            parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, add_paths_enabled, parsed_data.advertised);
             break;
             
         default :
@@ -187,9 +190,10 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
  * \param [in]   isIPv4     True false to indicate if IPv4 or IPv6
  * \param [in]   data       Pointer to the start of the prefixes to be parsed
  * \param [in]   len        Length of the data in bytes to be read
+ * \param [in]   add_paths  Indicates if add paths is enabled or not
  * \param [out]  prefixes   Reference to a list<prefix_tuple> to be updated with entries
  */
-void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
+void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len, bool add_paths,
                                          std::list<bgp::prefix_tuple> &prefixes) {
     u_char            ip_raw[16];
     char              ip_char[40];
@@ -205,7 +209,17 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
 
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
+        tuple.path_id = 0;
+
         bzero(ip_raw, sizeof(ip_raw));
+
+        // Parse add-paths if enabled
+        if (add_paths and (len + read_size) >= 4) {
+            memcpy(&tuple.path_id, data, 4);
+            bgp::SWAP_BYTES(&tuple.path_id);
+            data += 4; read_size += 4;
+        } else
+            tuple.path_id = 0;
 
         // set the address in bits length
         tuple.len = *data++;
@@ -247,9 +261,10 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
  * \param [in]   isIPv4     True false to indicate if IPv4 or IPv6
  * \param [in]   data       Pointer to the start of the label + prefixes to be parsed
  * \param [in]   len        Length of the data in bytes to be read
+ * \param [in]   add_paths  Indicates if add paths is enabled or not
  * \param [out]  prefixes   Reference to a list<label, prefix_tuple> to be updated with entries
  */
-void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
+void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len, bool add_paths,
                                          std::list<bgp::prefix_tuple> &prefixes) {
     u_char            ip_raw[16];
     char              ip_char[40];
@@ -268,21 +283,30 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
   
     mpls_label label;
 
-    
-
     if (len <= 0 or data == NULL)
         return;
 
-    // TODO: Can extend this to support multicast, but right now we set it to unicast v4/v6
-    tuple.type = isIPv4 ? bgp::PREFIX_LABEL_UNICAST_V4 : 
+    tuple.type = isIPv4 ? bgp::PREFIX_LABEL_UNICAST_V4 :
 			  bgp::PREFIX_LABEL_UNICAST_V6;
     tuple.isIPv4 = isIPv4;
     int parsed_bytes = 0;
+
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
+
+        // Parse add-paths if enabled
+        if (add_paths and (len + read_size) >= 4) {
+            memcpy(&tuple.path_id, data, 4);
+            bgp::SWAP_BYTES(&tuple.path_id);
+            data += 4; read_size += 4;
+        } else
+            tuple.path_id = 0;
+
+
         if (parsed_bytes == len) {
             break;
         }
+
         bzero(&label, sizeof(label));
         bzero(ip_raw, sizeof(ip_raw));
 
@@ -295,7 +319,11 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         if (tuple.len % 8)
            ++addr_bytes;
 
-        // the label is 3 octects long
+//        printf("Parsing Label NLRI add_paths=%d len=%d tuple.len = %d addr_bytes = %d read_size = %u\n",
+//                 add_paths, len, tuple.len, addr_bytes, read_size);
+
+
+        // the label is 3 octets long
         while (addr_bytes >= 3) 
         {
             memcpy(&label.data, data, 3);
@@ -304,17 +332,21 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
             addr_bytes -= 3;
             read_size += 3;
             tuple.len -= 24;        // Update prefix len to not include the label just parsed
+
             ostringstream convert;
             convert << label.decode.value;
             tuple.labels.append(convert.str());
+
             if (label.decode.bos == 1) {
                break;               // Reached EoS
+
             } else {
                tuple.labels.append(",");
             }
         }
+
         // if the route isn't a default route
-        if (addr_bytes > 3) {
+        if (addr_bytes > 0) {
             memcpy(ip_raw, data, addr_bytes);
             data += addr_bytes;
             read_size += addr_bytes;
@@ -329,9 +361,10 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
 
             // set the raw/binary address
             memcpy(tuple.prefix_bin, ip_raw, sizeof(ip_raw));
+
             // Add tuple to prefix list
             prefixes.push_back(tuple);
-            LOG_INFO("Parsed Label: %s, prefix: %s", tuple.labels.c_str(), tuple.prefix.c_str());
+//            printf("Parsed Label: %s, prefix: %s len=%d\n", tuple.labels.c_str(), tuple.prefix.c_str(), tuple.len);
         }
     }
 }

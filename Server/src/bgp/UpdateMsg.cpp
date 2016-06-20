@@ -41,6 +41,7 @@ UpdateMsg::UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAdd
     this->peer_info = peer_info;
 
     four_octet_asn = peer_info->recv_four_octet_asn and peer_info->sent_four_octet_asn;
+    add_paths_enabled = peer_info->recv_add_paths and peer_info->sent_add_paths;
 }
 
 UpdateMsg::~UpdateMsg() {
@@ -168,6 +169,7 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
 
     bgp::prefix_tuple tuple;
 
+
     if (len <= 0 or data == NULL)
         return;
 
@@ -178,8 +180,17 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
 
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
+
         bzero(ipv4_raw, sizeof(ipv4_raw));
         bzero(tuple.prefix_bin, sizeof(tuple.prefix_bin));
+
+        // Parse add-paths if enabled
+        if (add_paths_enabled and (len + read_size) >= 4) {
+            memcpy(&tuple.path_id, data, 4);
+            bgp::SWAP_BYTES(&tuple.path_id);
+            data += 4; read_size += 4;
+        } else
+            tuple.path_id = 0;
 
         // set the address in bits length
         tuple.len = *data++;
@@ -418,14 +429,14 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
         {
-            MPReachAttr mp(logger, peer_addr, debug);
+            MPReachAttr mp(logger, peer_addr, add_paths_enabled, debug);
             mp.parseReachNlriAttr(attr_len, data, parsed_data);
             break;
         }
 
         case ATTR_TYPE_MP_UNREACH_NLRI : // RFC4760
         {
-            MPUnReachAttr mp(logger, peer_addr, debug);
+            MPUnReachAttr mp(logger, peer_addr, add_paths_enabled, debug);
             mp.parseUnReachNlriAttr(attr_len, data, parsed_data);
             break;
         }

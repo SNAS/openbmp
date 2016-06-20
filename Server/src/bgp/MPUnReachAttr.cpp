@@ -21,13 +21,15 @@ namespace bgp_msg {
  *
  * \param [in]     logPtr       Pointer to existing Logger for app logging
  * \param [in]     pperAddr     Printed form of peer address used for logging
+ * \param [in]     add_paths    True if add paths enabled, false if not
  * \param [in]     enable_debug Debug true to enable, false to disable
  */
-MPUnReachAttr::MPUnReachAttr(Logger *logPtr, std::string peerAddr, bool enable_debug) {
+MPUnReachAttr::MPUnReachAttr(Logger *logPtr, std::string peerAddr, bool add_paths, bool enable_debug) {
     logger = logPtr;
     debug = enable_debug;
 
     peer_addr = peerAddr;
+    add_paths_enabled = add_paths;
 }
 
 MPUnReachAttr::~MPUnReachAttr() {
@@ -134,7 +136,13 @@ void MPUnReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_unreach_nlri &nlri, Update
         case bgp::BGP_SAFI_UNICAST: // Unicast IP address prefix
 
             // Data is an IP address - parse the address and save it
-            MPReachAttr::parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, parsed_data.withdrawn);
+            MPReachAttr::parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, add_paths_enabled,
+                                                parsed_data.withdrawn);
+            break;
+
+        case bgp::BGP_SAFI_NLRI_LABEL: // Labeled unicast
+            MPReachAttr::parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, add_paths_enabled,
+                                                     parsed_data.withdrawn);
             break;
 
         default :

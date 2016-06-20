@@ -94,6 +94,8 @@ void BMPReader::readerThreadLoop(bool &run, BMPListener::ClientInfo *client, Msg
  */
 bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr) {
     bool rval = true;
+    string peer_info_key;
+
     parseBGP *pBGP;                                 // Pointer to BGP parser
 
     int read_fd = client->pipe_sock > 0 ? client->pipe_sock : client->c_sock;
@@ -134,6 +136,8 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
         if (bmp_type < 4) {
             // Update p_entry hash_id now that add_Router updated it.
             memcpy(p_entry.router_hash_id, r_object.hash_id, sizeof(r_object.hash_id));
+            peer_info_key =  p_entry.peer_addr;
+            peer_info_key += p_entry.peer_rd;
 
             if (bmp_type != parseBMP::TYPE_PEER_UP)
                 mbus_ptr->update_Peer(p_entry, NULL, NULL, mbus_ptr->PEER_ACTION_FIRST);     // add the peer entry
@@ -154,7 +158,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
 
                     // Prepare the BGP parser
                     pBGP = new parseBGP(logger, mbus_ptr, &p_entry, (char *)r_object.ip_addr,
-                                        &peer_info_map[string(reinterpret_cast<char*>(p_entry.hash_id))]);
+                                        &peer_info_map[peer_info_key]);
 
                     if (cfg->debug_bgp)
                        pBGP->enableDebug();
@@ -215,7 +219,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
 
                     // Prepare the BGP parser
                     pBGP = new parseBGP(logger, mbus_ptr, &p_entry, (char *)r_object.ip_addr,
-                                        &peer_info_map[string(reinterpret_cast<char*>(p_entry.hash_id))]);
+                                        &peer_info_map[peer_info_key]);
 
                     if (cfg->debug_bgp)
                        pBGP->enableDebug();
@@ -243,7 +247,8 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                  *     parseBGP will update mysql directly
                  */
                 pBGP = new parseBGP(logger, mbus_ptr, &p_entry, (char *)r_object.ip_addr,
-                                    &peer_info_map[string(reinterpret_cast<char*>(p_entry.hash_id))]);
+                                    &peer_info_map[peer_info_key]);
+
                 if (cfg->debug_bgp)
                     pBGP->enableDebug();
 

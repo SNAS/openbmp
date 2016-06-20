@@ -238,7 +238,7 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
                                     break;
 
                                 case bgp::BGP_SAFI_NLRI_LABEL : // NLRI with MPLS Labels
-                                    decode_str = "NLRI/MPLS";
+                                    decode_str = "Labeled Unicast";
                                     break;
 
                                 case bgp::BGP_SAFI_MCAST_VPN : // MCAST VPN

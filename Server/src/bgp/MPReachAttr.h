@@ -48,9 +48,10 @@ public:
      *
      * \param [in]     logPtr       Pointer to existing Logger for app logging
      * \param [in]     pperAddr     Printed form of peer address used for logging
+     * \param [in]     add_paths    True if add paths enabled, false if not
      * \param [in]     enable_debug Debug true to enable, false to disable
      */
-    MPReachAttr(Logger *logPtr, std::string peerAddr, bool enable_debug=false);
+    MPReachAttr(Logger *logPtr, std::string peerAddr, bool add_paths, bool enable_debug=false);
     virtual ~MPReachAttr();
 
     /**
@@ -76,16 +77,20 @@ public:
      * \param [in]   isIPv4     True false to indicate if IPv4 or IPv6
      * \param [in]   data       Pointer to the start of the prefixes to be parsed
      * \param [in]   len        Length of the data in bytes to be read
+     * \param [in]   add_paths  Indicates if add paths is enabled or not
      * \param [out]  prefixes   Reference to a list<prefix_tuple> to be updated with entries
      */
-    static void parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len, std::list<bgp::prefix_tuple> &prefixes);
+    static void parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len, bool add_paths,
+                                       std::list<bgp::prefix_tuple> &prefixes);
 
-    void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len, std::list<bgp::prefix_tuple> &prefixes);
+    static void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len, bool add_paths,
+                                            std::list<bgp::prefix_tuple> &prefixes);
 
 private:
     bool             debug;                           ///< debug flag to indicate debugging
     Logger           *logger;                         ///< Logging class pointer
     std::string      peer_addr;                       ///< Printed form of the peer address for logging
+    bool             add_paths_enabled;               ///< Indicates if add paths are enabled or not
 
     /**
      * MP Reach NLRI parse based on AFI
