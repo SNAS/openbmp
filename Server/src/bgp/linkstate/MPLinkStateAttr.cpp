@@ -280,7 +280,7 @@ namespace bgp_msg {
 
             case ATTR_LINK_IPV6_ROUTER_ID_REMOTE:
                 if (len != 16) {
-                    LOG_NOTICE("%s: bgp-ls: failed to parse attribute local router id IPv6 sub-tlv; too short",
+                    LOG_NOTICE("%s: bgp-ls: failed to parse attribute remote router id IPv6 sub-tlv; too short",
                             peer_addr.c_str());
                     break;
                 }
@@ -288,7 +288,7 @@ namespace bgp_msg {
                 memcpy(parsed_data->ls_attrs[ATTR_LINK_IPV6_ROUTER_ID_REMOTE].data(), data, 16);
                 inet_ntop(AF_INET6, parsed_data->ls_attrs[ATTR_LINK_IPV6_ROUTER_ID_REMOTE].data(), ip_char, sizeof(ip_char));
 
-                SELF_DEBUG("%s: bgp-ls: parsed local IPv6 router id attribute: addr = %s", peer_addr.c_str(), ip_char);
+                SELF_DEBUG("%s: bgp-ls: parsed remote IPv6 router id attribute: addr = %s", peer_addr.c_str(), ip_char);
                 break;
 
             case ATTR_LINK_MAX_LINK_BW:
