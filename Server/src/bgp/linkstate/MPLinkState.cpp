@@ -563,7 +563,7 @@ namespace bgp_msg {
                 bgp::SWAP_BYTES(&info.asn);
                 data_read += 4;
 
-                SELF_DEBUG("%s: bgp-ls: Node descriptior AS = %u", peer_addr.c_str(), info.asn);
+                SELF_DEBUG("%s: bgp-ls: Node descriptor AS = %u", peer_addr.c_str(), info.asn);
 
                 break;
             }
@@ -582,7 +582,7 @@ namespace bgp_msg {
                 bgp::SWAP_BYTES(&info.bgp_ls_id);
                 data_read += 4;
 
-                SELF_DEBUG("%s: bgp-ls: Node descriptior BGP-LS ID = %08X", peer_addr.c_str(), info.bgp_ls_id);
+                SELF_DEBUG("%s: bgp-ls: Node descriptor BGP-LS ID = %08X", peer_addr.c_str(), info.bgp_ls_id);
                 break;
             }
 
@@ -601,7 +601,7 @@ namespace bgp_msg {
                 inet_ntop(AF_INET, info.ospf_area_Id, ipv4_char, sizeof(ipv4_char));
                 data_read += 4;
 
-                SELF_DEBUG("%s: bgp-ls: Node descriptior OSPF Area ID = %s", peer_addr.c_str(), ipv4_char);
+                SELF_DEBUG("%s: bgp-ls: Node descriptor OSPF Area ID = %s", peer_addr.c_str(), ipv4_char);
                 break;
             }
 
@@ -711,7 +711,7 @@ namespace bgp_msg {
                 info.mt_id >>= 16;          // MT ID is 16 bits
                 data_read += len;
 
-                SELF_DEBUG("%s: bgp-ls: Link descriptior MT-ID = %08x ", peer_addr.c_str(), info.mt_id);
+                SELF_DEBUG("%s: bgp-ls: Link descriptor MT-ID = %08x ", peer_addr.c_str(), info.mt_id);
 
                 break;
             }
@@ -732,7 +732,7 @@ namespace bgp_msg {
                 inet_ntop(AF_INET, info.intf_addr, ip_char, sizeof(ip_char));
                 data_read += 4;
 
-                SELF_DEBUG("%s: bgp-ls: Link descriptior Interface Address = %s", peer_addr.c_str(), ip_char);
+                SELF_DEBUG("%s: bgp-ls: Link descriptor Interface Address = %s", peer_addr.c_str(), ip_char);
                 break;
             }
 
@@ -751,7 +751,7 @@ namespace bgp_msg {
                 inet_ntop(AF_INET6, info.intf_addr, ip_char, sizeof(ip_char));
                 data_read += 16;
 
-                SELF_DEBUG("%s: bgp-ls: Link descriptior interface address = %s", peer_addr.c_str(), ip_char);
+                SELF_DEBUG("%s: bgp-ls: Link descriptor interface address = %s", peer_addr.c_str(), ip_char);
                 break;
             }
 
@@ -771,7 +771,7 @@ namespace bgp_msg {
                 inet_ntop(AF_INET, info.nei_addr, ip_char, sizeof(ip_char));
                 data_read += 4;
 
-                SELF_DEBUG("%s: bgp-ls: Link descriptior neighbor address = %s", peer_addr.c_str(), ip_char);
+                SELF_DEBUG("%s: bgp-ls: Link descriptor neighbor address = %s", peer_addr.c_str(), ip_char);
                 break;
             }
 
@@ -790,7 +790,7 @@ namespace bgp_msg {
                 inet_ntop(AF_INET6, info.nei_addr, ip_char, sizeof(ip_char));
                 data_read += 16;
 
-                SELF_DEBUG("%s: bgp-ls: Link descriptior neighbor address = %s", peer_addr.c_str(), ip_char);
+                SELF_DEBUG("%s: bgp-ls: Link descriptor neighbor address = %s", peer_addr.c_str(), ip_char);
                 break;
             }
 
@@ -940,7 +940,7 @@ namespace bgp_msg {
 
                 data_read += len;
 
-                SELF_DEBUG("%s: bgp-ls: Link descriptior MT-ID = %08x ", peer_addr.c_str(), info.mt_id);
+                SELF_DEBUG("%s: bgp-ls: Link descriptor MT-ID = %08x ", peer_addr.c_str(), info.mt_id);
 
                 break;
 

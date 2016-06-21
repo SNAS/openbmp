@@ -187,11 +187,14 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
                         capabilities.push_back(capStr);
                         break;
 
-                    case BGP_CAP_ADD_PATH:
+                    case BGP_CAP_ADD_PATH: {
+                        //TODO: Decode ADD PATH AFI/SAFI's that are enabled.  Need to update peer_info_map for each afi/safi
+
                         SELF_DEBUG("%s: supports add-path", peer_addr.c_str());
                         snprintf(capStr, sizeof(capStr), "ADD Path (%d)", BGP_CAP_ADD_PATH);
                         capabilities.push_back(capStr);
                         break;
+                    }
 
                     case BGP_CAP_GRACEFUL_RESTART:
                         SELF_DEBUG("%s: supports graceful restart", peer_addr.c_str());

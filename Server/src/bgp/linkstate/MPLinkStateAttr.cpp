@@ -446,8 +446,8 @@ namespace bgp_msg {
                     bgp::SWAP_BYTES(&value_32bit);
 
                     memcpy(parsed_data->ls_attrs[ATTR_PREFIX_ROUTE_TAG].data(), &value_32bit, 4);
-                    LOG_INFO("%s: bgp-ls: parsing prefix route tag attribute %d (len=%d)", peer_addr.c_str(),
-                             value_32bit, len);
+//                    SELF_DEBUG("%s: bgp-ls: parsing prefix route tag attribute %d (len=%d)", peer_addr.c_str(),
+//                             value_32bit, len);
                 }
 
                 break;
