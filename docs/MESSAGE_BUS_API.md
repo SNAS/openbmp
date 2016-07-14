@@ -5,10 +5,18 @@
 
 ## Version Diff
 
-### Diff from 1.1 to 1.0
+### Diff from 1.2 to 1.1
 
 * **ls_link**
-    * Added **field** - 
+    * Added **field 39** - printed form of the Remote IGP router Id (varies in size depending on protocol)
+    * Added **field 40** - Printed form of the Remote router Id.  When EPE, this is the Remote BGP Router ID.
+    * Added **field 41** - Local Node descriptor ASN
+    * Added **field 42** - Remote Node descriptor ASN
+    * Added **field 43** - Peer node SID in the format of [L] <weight> <label/idx/ipv4>. L is only set when L flag is set.
+
+* **router**
+    * Added **field 12** - Printed form of the router local BGP ID (IP address)
+    
 
 ### Diff from 1.0 to 1.1
 
@@ -66,7 +74,7 @@ Message API: Parsed Data
 
 Header | Value | Description
 --------|-------|-------------
-**V**| 1.1 | Schema version, currently 1.1
+**V**| 1.2 | Schema version, currently 1.2
 **C\_HASH\_ID** | hash string | Collector Hash Id
 **L** | length | Length of the data in bytes
 **R** | count | Number of records in TSV data
@@ -117,6 +125,7 @@ One or more BMP routers.
 9 | Init Data | String | 4K | BMP initiation data
 10 | Term Data | String | 4K | BMP termination data)
 11 | Timestamp | String | 26 | In the format of: YYYY-MM-dd HH:MM:SS.ffffff
+12 | BGP-ID | String | 46 | Printed form of the router local BGP ID (IP address)
 
 ### Object: <font color="blue">peer</font> (openbmp.parsed.peer)
 One or more BGP peers.
