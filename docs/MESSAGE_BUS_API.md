@@ -1,8 +1,16 @@
 # Message Bus API Specficiation
 
-> #### Version 1.1
+> #### Current Version 1.2
 
-## Diff from 1.0 to 1.1
+
+## Version Diff
+
+### Diff from 1.1 to 1.0
+
+* **ls_link**
+    * Added **field** - 
+
+### Diff from 1.0 to 1.1
 
 * **unicast_prefix** 
 
@@ -75,7 +83,7 @@ Data is in **TSV** format
 * Both reachable and withdraw NLRI maybe within the same message. Order of the records (and sequence number) indicate which comes first
 
 
-#### Object: <font color="blue">collector</font> (openbmp.parsed.collector)
+### Object: <font color="blue">collector</font> (openbmp.parsed.collector)
 Collector details.
 
 \# | Field | Data Type | Size in Bytes | Details
@@ -93,7 +101,7 @@ Collector details.
 * Heartbeat is only sent if no other messages have been sent since last period
 
 
-#### Object: <font color="blue">router</font> (openbmp.parsed.router)
+### Object: <font color="blue">router</font> (openbmp.parsed.router)
 One or more BMP routers.
 
 \# | Field | Data Type | Size in Bytes | Details
@@ -110,7 +118,7 @@ One or more BMP routers.
 10 | Term Data | String | 4K | BMP termination data)
 11 | Timestamp | String | 26 | In the format of: YYYY-MM-dd HH:MM:SS.ffffff
 
-#### Object: <font color="blue">peer</font> (openbmp.parsed.peer)
+### Object: <font color="blue">peer</font> (openbmp.parsed.peer)
 One or more BGP peers.
 
 \# | Field | Data Type | Size in Bytes | Details
@@ -149,7 +157,7 @@ One or more BGP peers.
 
 \*\* *Only available in PEER_DOWN (action=down), other actions will set these fields to null/empty*
 
-#### Object: <font color="blue">bmp\_stat</font> (openbmp.parsed.bmp\_stat)
+### Object: <font color="blue">bmp\_stat</font> (openbmp.parsed.bmp\_stat)
 One or more bmp stat reports.
 
 \# | Field | Data Type | Size in Bytes | Details
@@ -173,7 +181,7 @@ One or more bmp stat reports.
 17 | Prefixes Post Policy | Int | 8 | Prefixes post-policy (Adj-RIB-In) - All address families
 
 
-#### Object: <font color="blue">base\_attribute</font> (openbmp.parsed.base\_attribute)
+### Object: <font color="blue">base\_attribute</font> (openbmp.parsed.base\_attribute)
 One or more attribute sets (does not include the NLRI's)
 
 \# | Field | Data Type | Size in Bytes | Details
@@ -202,7 +210,7 @@ One or more attribute sets (does not include the NLRI's)
 22 | isNextHopIPv4 | Bool | 1 | Indicates if the next hop address is IPv4 or not
 23 | Originator Id | String | 46 | Originator ID in printed form (IP)
 
-#### Object: <font color="blue">unicast\_prefix</font> (openbmp.parsed.unicast\_prefix)
+### Object: <font color="blue">unicast\_prefix</font> (openbmp.parsed.unicast\_prefix)
 One or more IPv4/IPv6 unicast prefixes.
 
 \# | Field | Data Type | Size in Bytes | Details
@@ -237,7 +245,7 @@ One or more IPv4/IPv6 unicast prefixes.
 28 | Path ID | Int | 4 | Unsigned 32 bit value for the path ID (draft-ietf-idr-add-paths-15).  Zero means add paths is not enabled/used.
 29 | Labels | String | 255 | Comma delimited list of 32bit unsigned values that represent the received labels. 
 
-#### Object: <font color="blue">ls\_node</font> (openbmp.parsed.ls\_node)
+### Object: <font color="blue">ls\_node</font> (openbmp.parsed.ls\_node)
 One or more link-state nodes.
 
 \# | Field | Data Type | Size in Bytes | Details
@@ -268,7 +276,7 @@ One or more link-state nodes.
 24 | Node Name | String | 255 | ISIS hostname
 
 
-#### Object: <font color="blue">ls\_link</font> (openbmp.parsed.ls\_link)
+### Object: <font color="blue">ls\_link</font> (openbmp.parsed.ls\_link)
 One or more link-state links.
 
 \# | Field | Data Type | Size in Bytes | Details
@@ -283,8 +291,8 @@ One or more link-state links.
 8 | Peer IP | String | 46 | Peer remote IP address
 9 | Peer ASN | Int | 4 | Peer remote ASN
 10 | Timestamp | String | 26 | In the format of: YYYY-MM-dd HH:MM:SS.ffffff
-11 | IGP Router Id | String | 46 | printed form of the IGP router Id (varies in size depending on protocol)
-12 | Router Id | String | 46 | Printed form of the router Id (either null/empty, IPv4 or IPv6)
+11 | IGP Router Id | String | 46 | printed form of the Local IGP router Id (varies in size depending on protocol)
+12 | Router Id | String | 46 | Printed form of the Local router Id. When EPE, this is Local BGP Router ID.
 13 | Routing Id | Int | 8 | Routing universe Id
 14 | LS Id | Int | 4 | Link state Id in Hex
 15 | Ospf Area Id | String | 16 | Printed form of the OSPF Area Id (IP format)
@@ -311,8 +319,14 @@ One or more link-state links.
 36 | Link Name | String | 255 | Link name
 37 | Remote Node Hash | String | 32 | Remote node hash Id
 38 | Local Node Hash | String | 32 | Local node hash Id
+39 | Remote IGP Router Id | String | 46 | printed form of the Remote IGP router Id (varies in size depending on protocol)
+40 | Remote Router Id | String | 46 | Printed form of the Remote router Id.  When EPE, this is the Remote BGP Router ID.
+41 | Local Node ASN | Int | 4 | Local Node descriptor ASN
+42 | Remote Node ASN | Int | 4 | Remote Node descriptor ASN
+43 | EPE Peer Node SID | String | 128 | Peer node SID in the format of [L] <weight> <label/idx/ipv4>. L is only set when L flag is set.
 
-#### Object: <font color="blue">ls\_prefix</font> (openbmp.parsed.ls\_prefix)
+
+### Object: <font color="blue">ls\_prefix</font> (openbmp.parsed.ls\_prefix)
 One or more link-state prefixes.
 
 \# | Field | Data Type | Size in Bytes | Details

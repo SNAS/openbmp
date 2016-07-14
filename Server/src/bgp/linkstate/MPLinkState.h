@@ -44,7 +44,8 @@ namespace bgp_msg {
             NLRI_PROTO_OSPFV2,                         ///< OSPFv2
             NLRI_PROTO_DIRECT,                         ///< Direct
             NLRI_PROTO_STATIC,                         ///< Static configuration
-            NLRI_PROTO_OSPFV3                          ///< OSPFv3
+            NLRI_PROTO_OSPFV3,                         ///< OSPFv3
+            NLRI_PROTO_EPE=7                           ///< EPE per draft-ietf-idr-bgpls-segment-routing-epe
         };
 
         /**
@@ -55,6 +56,7 @@ namespace bgp_msg {
             uint32_t    bgp_ls_id;                     ///< BGP-LS Identifier
             uint8_t     igp_router_id[8];              ///< IGP router ID
             uint8_t     ospf_area_Id[4];               ///< OSPF area ID
+            uint32_t    bgp_router_id;                 ///< BGP router ID (draft-ietf-idr-bgpls-segment-routing-epe)
             uint8_t     hash_bin[16];                  ///< binary hash for node descriptor
         };
 
@@ -69,7 +71,8 @@ namespace bgp_msg {
             NODE_DESCR_AS                       = 512,      ///< Autonomous System (len=4)
             NODE_DESCR_BGP_LS_ID,                           ///< BGP-LS Identifier (len=4)
             NODE_DESCR_OSPF_AREA_ID,                        ///< OSPF Area-ID (len=4)
-            NODE_DESCR_IGP_ROUTER_ID                        ///< IGP Router-ID (len=variable)
+            NODE_DESCR_IGP_ROUTER_ID,                       ///< IGP Router-ID (len=variable)
+            NODE_DESCR_BGP_ROUTER_ID                        ///< BGP Router ID (draft-ietf-idr-bgpls-segment-routing-epe)
         };
 
 

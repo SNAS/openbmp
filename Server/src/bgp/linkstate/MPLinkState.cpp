@@ -225,6 +225,10 @@ namespace bgp_msg {
                 value = "OSPFv3";
                 break;
 
+            case NLRI_PROTO_EPE:
+                value = "EPE";
+                break;
+
             default:
                 break;
         }
@@ -375,11 +379,16 @@ namespace bgp_msg {
                     memcpy(link_tbl.local_node_hash_id, info.hash_bin, sizeof(link_tbl.local_node_hash_id));
                     memcpy(link_tbl.ospf_area_Id, info.ospf_area_Id, sizeof(link_tbl.ospf_area_Id));
                     link_tbl.bgp_ls_id = info.bgp_ls_id;
+                    link_tbl.local_node_asn = info.asn;
                     memcpy(link_tbl.igp_router_id, info.igp_router_id, sizeof(link_tbl.igp_router_id));
+                    link_tbl.local_bgp_router_id = info.bgp_router_id;
                     break;
 
                 case NODE_DESCR_REMOTE_DESCR:
                     memcpy(link_tbl.remote_node_hash_id, info.hash_bin, sizeof(link_tbl.remote_node_hash_id));
+                    memcpy(link_tbl.remote_igp_router_id, info.igp_router_id, sizeof(link_tbl.remote_igp_router_id));
+                    link_tbl.remote_node_asn = info.asn;
+                    link_tbl.remote_bgp_router_id = info.bgp_router_id;
                     break;
 
                 default:
@@ -625,8 +634,27 @@ namespace bgp_msg {
                 break;
             }
 
+            case NODE_DESCR_BGP_ROUTER_ID:
+            {
+                if (len != 4) {
+                    LOG_NOTICE("%s: bgp-ls: failed to parse node descriptor BGP Router ID sub-tlv; too short",
+                               peer_addr.c_str());
+                    data_read += len <= data_len ? len : data_len;
+                    break;
+                }
+
+
+                char    ipv4_char[16];
+                memcpy(&info.bgp_router_id, data, 4);
+                inet_ntop(AF_INET, &info.bgp_router_id, ipv4_char, sizeof(ipv4_char));
+                data_read += 4;
+
+                SELF_DEBUG("%s: bgp-ls: Node descriptor BGP Router-ID = %s", peer_addr.c_str(), ipv4_char);
+                break;
+            }
+
             default:
-                LOG_NOTICE("%s: bgp-ls: Failed to parse node descriptor; invalid sub-tlv type of %d",
+                LOG_NOTICE("%s: bgp-ls: node descriptor sub-tlv %d not yet implemented, skipping.",
                             peer_addr.c_str(), type);
                 data_read += len;
                 break;
@@ -682,7 +710,7 @@ namespace bgp_msg {
                 }
 
                 memcpy(&info.local_id, data, 4); bgp::SWAP_BYTES(&info.local_id);
-                memcpy(&info.remote_id, data, 4); bgp::SWAP_BYTES(&info.remote_id);
+                memcpy(&info.remote_id, data+4, 4); bgp::SWAP_BYTES(&info.remote_id);
                 data_read += 8;
 
                 SELF_DEBUG("%s: bgp-ls: Link descriptor ID local = %08x remote = %08x", peer_addr.c_str(), info.local_id, info.remote_id);
@@ -796,7 +824,7 @@ namespace bgp_msg {
 
 
             default:
-                LOG_NOTICE("%s: bgp-ls: Failed to parse node descriptor; invalid sub-tlv type of %d",
+                LOG_NOTICE("%s: bgp-ls: link descriptor sub-tlv %d not yet implemented, skipping",
                         peer_addr.c_str(), type);
                 data_read += len;
                 break;
@@ -979,7 +1007,7 @@ namespace bgp_msg {
             }
 
             default:
-                LOG_NOTICE("%s: bgp-ls: Failed to parse prefix descriptor; invalid sub-tlv type of %d",
+                LOG_NOTICE("%s: bgp-ls: Prefix descriptor sub-tlv %d not yet implemented, skipping.",
                         peer_addr.c_str(), type);
                 data_read += len;
                 break;

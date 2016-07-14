@@ -287,9 +287,17 @@ public:
         uint32_t    mt_id;                  ///< Multi-Topology ID
 
         uint32_t    bgp_ls_id;              ///< BGP-LS Identifier
-        uint8_t     igp_router_id[8];       ///< IGP router ID
+        uint8_t     igp_router_id[8];       ///< IGP router ID (local)
+        uint8_t     remote_igp_router_id[8]; ///< IGP router ID (remote)
         uint8_t     ospf_area_Id[4];        ///< OSPF area ID
-        uint8_t     router_id[16];          ///< IPv4 or IPv6 router ID
+        uint8_t     router_id[16];          ///< IPv4 or IPv6 router ID (local)
+        uint8_t     remote_router_id[16];   ///< IPv4 or IPv6 router ID (remote)
+
+        uint32_t    local_node_asn;         ///< Local node asn
+        uint32_t    remote_node_asn;        ///< Remote node asn
+        uint32_t    local_bgp_router_id;    ///< Local BGP router id (draft-ietf-idr-bgpls-segment-routing-epe)
+        uint32_t    remote_bgp_router_id;   ///< Remote BGP router id (draft-ietf-idr-bgpls-segment-routing-epe)
+
         uint8_t     isis_area_id[9];        ///< IS-IS area ID
 
         char        protocol[32];           ///< String representation of the protocol name
@@ -311,6 +319,7 @@ public:
         uint32_t    igp_metric;             ///< IGP metric
         char        srlg[128];              ///< String representation of the shared risk link group values
         char        name[255];              ///< Name of router
+        char        peer_node_sid[128];     ///< Peer node side (draft-ietf-idr-bgpls-segment-routing-epe)
     };
 
     /**

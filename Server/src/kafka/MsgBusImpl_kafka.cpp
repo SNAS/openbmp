@@ -1022,7 +1022,9 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     char intf_ip[46];
     char nei_ip[46];
     char igp_router_id[46];
+    char remote_igp_router_id[46];
     char router_id[46];
+    char remote_router_id[46];
     char ospf_area_id[17] = {0};
     char isis_area_id[33] = {0};
     char dr[16];
@@ -1057,15 +1059,12 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
         hash_toStr(link.local_node_hash_id, local_node_hash_id);
         hash_toStr(link.remote_node_hash_id, remote_node_hash_id);
 
-        if (link.isIPv4) {
-            inet_ntop(PF_INET, link.intf_addr, intf_ip, sizeof(intf_ip));
-            inet_ntop(PF_INET, link.nei_addr, nei_ip, sizeof(nei_ip));
-            inet_ntop(PF_INET, link.router_id, router_id, sizeof(router_id));
-        } else {
-            inet_ntop(PF_INET6, link.intf_addr, intf_ip, sizeof(intf_ip));
-            inet_ntop(PF_INET6, link.nei_addr, nei_ip, sizeof(nei_ip));
-            inet_ntop(PF_INET6, link.router_id, router_id, sizeof(router_id));
-        }
+        int afi = link.isIPv4 ? PF_INET : PF_INET6;
+
+        inet_ntop(afi, link.intf_addr, intf_ip, sizeof(intf_ip));
+        inet_ntop(afi, link.nei_addr, nei_ip, sizeof(nei_ip));
+        inet_ntop(afi, link.router_id, router_id, sizeof(router_id));
+        inet_ntop(afi, link.remote_router_id, remote_router_id, sizeof(remote_router_id));
 
         if (!strcmp(link.protocol, "OSPFv3") or !strcmp(link.protocol, "OSPFv2") ) {
             bzero(isis_area_id, sizeof(isis_area_id));
@@ -1080,7 +1079,8 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
             }
 
             inet_ntop(PF_INET, link.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
-        } else {
+
+        } else if (!strcmp(link.protocol, "IS-IS_L1") or !strcmp(link.protocol, "IS-IS_L2")) {
             bzero(ospf_area_id, sizeof(ospf_area_id));
 
             snprintf(igp_router_id, sizeof(igp_router_id),
@@ -1097,12 +1097,29 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
                         strcat(isis_area_id, ".");
                 }
             }
+
+            snprintf(remote_igp_router_id, sizeof(remote_igp_router_id),
+                     "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
+                     link.remote_igp_router_id[0], link.remote_igp_router_id[1], link.remote_igp_router_id[2], link.remote_igp_router_id[3],
+                     link.remote_igp_router_id[4], link.remote_igp_router_id[5], link.remote_igp_router_id[6], link.remote_igp_router_id[7]);
+
+
+        } else /* static, direct, epe, ... */ {
+            ospf_area_id[0]         = 0;
+            isis_area_id[0]         = 0;
+            igp_router_id[0]        = 0;
+            remote_igp_router_id[0] = 0;
+
+            inet_ntop(PF_INET, &link.local_bgp_router_id, router_id, sizeof(router_id));
+            inet_ntop(PF_INET, &link.remote_bgp_router_id, remote_router_id, sizeof(remote_router_id));
         }
+
 
         buf_len += snprintf(buf2, sizeof(buf2),
                 "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32 "\t%s\t%s\t%s\t%s\t%"
                         PRIu32 "\t%" PRIu32 "\t%s\t%" PRIx32 "\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%" PRIu32 "\t%" PRIu32
-                        "\t%" PRIu32 "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%s\t%s\n",
+                        "\t%" PRIu32 "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 ""
+                        "\t%" PRIu32 "\t%s\n",
                             action.c_str(), ls_link_seq, hash_str.c_str(), path_hash_str.c_str(),r_hash_str.c_str(),
                             router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
                             igp_router_id, router_id, link.id, link.bgp_ls_id, ospf_area_id,
@@ -1110,7 +1127,8 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
                             link.mt_id, link.local_link_id, link.remote_link_id, intf_ip, nei_ip, link.igp_metric,
                             link.admin_group, link.max_link_bw, link.max_resv_bw, link.unreserved_bw, link.te_def_metric,
                             link.protection_type, link.mpls_proto_mask, link.srlg, link.name, remote_node_hash_id.c_str(),
-                            local_node_hash_id.c_str());
+                            local_node_hash_id.c_str(),remote_igp_router_id, remote_router_id,
+                            link.local_node_asn,link.remote_node_asn, link.peer_node_sid);
 
         // Cat the entry to the query buff
         if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)

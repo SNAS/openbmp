@@ -658,6 +658,14 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
                 (*it).isIPv4 = true;
             }
 
+            if (not (*it).isIPv4 and ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_IPV6_ROUTER_ID_REMOTE) != ls_attrs.end())
+                memcpy((*it).remote_router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_IPV6_ROUTER_ID_REMOTE].data(), 16);
+
+            else if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_IPV4_ROUTER_ID_REMOTE) != ls_attrs.end()) {
+                memcpy((*it).remote_router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_IPV4_ROUTER_ID_REMOTE].data(), 4);
+                //(*it).isIPv4 = true; // only set for local rid
+            }
+
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID) != ls_attrs.end())
                 memcpy((*it).isis_area_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID].data(), sizeof((*it).isis_area_id));
@@ -692,6 +700,9 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME) != ls_attrs.end())
                 memcpy((*it).name, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME].data(), sizeof((*it).name));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_NODE_SID) != ls_attrs.end())
+                memcpy((*it).peer_node_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_NODE_SID].data(), sizeof((*it).peer_node_sid));
         }
 
         if (remove)

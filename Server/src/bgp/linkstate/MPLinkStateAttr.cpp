@@ -366,7 +366,7 @@ namespace bgp_msg {
                     memcpy(&value_32bit, data, len);
                     bgp::SWAP_BYTES(&value_32bit, len);
                     memcpy(parsed_data->ls_attrs[ATTR_LINK_TE_DEF_METRIC].data(), &value_32bit, len);
-                    SELF_DEBUG("%s: bgp-ls: parsed attribute te default metric %x (len=%d)", peer_addr.c_str(),
+                    SELF_DEBUG("%s: bgp-ls: parsed attribute te default metric 0x%X (len=%d)", peer_addr.c_str(),
                                value_32bit, len);
                 }
 
@@ -411,6 +411,57 @@ namespace bgp_msg {
                 LOG_INFO("%s: bgp-ls: opaque link attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
 
+            case ATTR_LINK_PEER_NODE_SID:
+                val_ss.str(std::string());
+
+                /*
+                 * Syntax of value is: [L] <weight> <sid value>
+                 *
+                 *      L flag indicates locally significant
+                 */
+
+                if (*data & 0x80 and *data & 0x40 and len == 7) {
+
+                    // 3-octet -  20 rightmost bits are used for encoding the label value.
+                    memcpy(&value_32bit, data+4, len);
+                    bgp::SWAP_BYTES(&value_32bit, 3);
+
+                    val_ss << "L " << (int)*(data + 1) << " " << value_32bit;
+                }
+                else if (len >= 20) {
+                    // 16-octet - IPv6 address
+                    if (*data & 0x40)
+                        val_ss << "L ";
+
+                    inet_ntop(AF_INET6, data + 4, ip_char, sizeof(ip_char));
+
+                    val_ss << (int) *(data + 1) << " " << ip_char;
+                }
+                else if (len == 8) {
+                    // 4-octet encoded offset in the SID/Label space advertised by this router using the encodings
+                    memcpy(&value_32bit, data+4, len);
+                    bgp::SWAP_BYTES(&value_32bit);
+
+                    val_ss << (int) *(data + 1) << " " << value_32bit;
+                }
+                else {
+                    LOG_WARN("%s: bgp-ls: Peer Node SID attribute has unexpected length of %d", peer_addr.c_str(), len);
+                    break;
+                }
+
+                SELF_DEBUG("%s: bgp-ls: parsed link peer node SID: %s (len=%d) %d/%x", peer_addr.c_str(),
+                           val_ss.str().c_str(), len, value_32bit, data+4);
+
+                memcpy(parsed_data->ls_attrs[ATTR_LINK_PEER_NODE_SID].data(), val_ss.str().data(), val_ss.str().length());
+                break;
+
+            case ATTR_LINK_PEER_AJD_SID:
+                LOG_INFO("%s: bgp-ls: peer adjacency SID link attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
+                break;
+
+            case ATTR_LINK_PEER_SET_SID:
+                LOG_INFO("%s: bgp-ls: peer set SID link attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
+                break;
 
             case ATTR_PREFIX_EXTEND_TAG:
                 //SELF_DEBUG("%s: bgp-ls: parsing prefix extended tag attribute", peer_addr.c_str());

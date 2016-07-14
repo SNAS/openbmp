@@ -66,7 +66,11 @@ namespace bgp_msg {
             ATTR_LINK_IGP_METRIC,                               ///< IGP link metric
             ATTR_LINK_SRLG,                                     ///< Shared risk link group
             ATTR_LINK_OPAQUE,                                   ///< Opaque link attribute
-            ATTR_LINK_NAME                                      ///< Link name
+            ATTR_LINK_NAME,                                     ///< Link name
+
+            ATTR_LINK_PEER_NODE_SID            = 1101,          ///< Peer Node SID (draft-ietf-idr-bgpls-segment-routing-epe)
+            ATTR_LINK_PEER_AJD_SID,                             ///< Peer Adjacency SID (draft-ietf-idr-bgpls-segment-routing-epe)
+            ATTR_LINK_PEER_SET_SID                              ///< Peer Set SID (draft-ietf-idr-bgpls-segment-routing-epe)
         };
 
         /**
