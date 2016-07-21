@@ -423,7 +423,7 @@ namespace bgp_msg {
                 if (*data & 0x80 and *data & 0x40 and len == 7) {
 
                     // 3-octet -  20 rightmost bits are used for encoding the label value.
-                    memcpy(&value_32bit, data+4, len);
+                    memcpy(&value_32bit, data+4, 3);
                     bgp::SWAP_BYTES(&value_32bit, 3);
 
                     val_ss << "L " << (int)*(data + 1) << " " << value_32bit;
