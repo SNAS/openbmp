@@ -439,7 +439,7 @@ namespace bgp_msg {
                 }
                 else if (len == 8) {
                     // 4-octet encoded offset in the SID/Label space advertised by this router using the encodings
-                    memcpy(&value_32bit, data+4, len);
+                    memcpy(&value_32bit, data+4, 4);
                     bgp::SWAP_BYTES(&value_32bit);
 
                     val_ss << (int) *(data + 1) << " " << value_32bit;
