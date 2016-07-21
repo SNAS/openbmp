@@ -753,12 +753,10 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
             bzero(infoBuf, sizeof(infoBuf));
             memcpy(infoBuf, bufPtr, infoLen);
             bufPtr += infoLen;                     // Move pointer past the info data
-            i += infoLen;                       // Update the counter past the info data
+            i += infoLen;                          // Update the counter past the info data
 
             initMsg.info = infoBuf;
 
-            // TODO: Change to SELF_DEBUG after IOS supports INIT messages correctly
-            LOG_INFO("Init message type %hu = %s", initMsg.type, initMsg.info);
         }
 
         /*
@@ -767,18 +765,27 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
         switch (initMsg.type) {
             case INIT_TYPE_FREE_FORM_STRING :
                 memcpy(r_entry.initiate_data, initMsg.info, initMsg.len);
+                LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.initiate_data);
+
                 break;
 
             case INIT_TYPE_SYSNAME :
                 strncpy((char *)r_entry.name, initMsg.info, sizeof(r_entry.name));
+                LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.name);
                 break;
 
             case INIT_TYPE_SYSDESCR :
                 strncpy((char *)r_entry.descr, initMsg.info, sizeof(r_entry.descr));
+                LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.descr);
+                break;
+
+            case INIT_TYPE_ROUTER_BGP_ID:
+                inet_ntop(AF_INET, initMsg.info, r_entry.bgp_id, sizeof(r_entry.bgp_id));
+                LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.bgp_id);
                 break;
 
             default:
-                LOG_NOTICE("Init message type %hu is unexpected per draft-07", initMsg.type);
+                LOG_NOTICE("Init message type %hu is unexpected per rfc7854", initMsg.type);
         }
     }
 }

@@ -72,6 +72,7 @@ public:
         u_char      name[255];              ///< BMP router sysName (initiation Type=2)
         u_char      descr[255];             ///< BMP router sysDescr (initiation Type=1)
         u_char      ip_addr[46];            ///< BMP router source IP address in printed form
+        char        bgp_id[16];             ///< BMP Router bgp-id
         uint32_t    asn;                    ///< BMP router ASN
         uint16_t    term_reason_code;       ///< BMP termination reason code
         char        term_reason_text[255];  ///< BMP termination reason text decode string

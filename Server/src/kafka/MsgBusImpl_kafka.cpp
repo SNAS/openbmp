@@ -510,10 +510,10 @@ void msgBus_kafka::update_Router(obj_router &r_object, router_action_code code) 
         topicSel->lookupRouterGroup((char *)r_object.name, (char *)r_object.ip_addr, router_group_name);
 
     size_t size = snprintf(buf, sizeof(buf),
-             "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%" PRIu16 "\t%s\t%s\t%s\t%s\n", action.c_str(),
+             "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%" PRIu16 "\t%s\t%s\t%s\t%s\t%s\n", action.c_str(),
              router_seq, r_object.name, r_hash_str.c_str(), r_object.ip_addr, descr.c_str(),
              r_object.term_reason_code, r_object.term_reason_text,
-             initData.c_str(), termData.c_str(), ts.c_str());
+             initData.c_str(), termData.c_str(), ts.c_str(), r_object.bgp_id);
 
     produce(MSGBUS_TOPIC_VAR_ROUTER, buf, size, 1, r_hash_str, NULL, 0);
 

@@ -51,7 +51,8 @@ public:
      /**
       * BMP Initiation Message Types
       */
-     enum BMP_INIT_TYPES { INIT_TYPE_FREE_FORM_STRING=0, INIT_TYPE_SYSDESCR, INIT_TYPE_SYSNAME };
+     enum BMP_INIT_TYPES { INIT_TYPE_FREE_FORM_STRING=0, INIT_TYPE_SYSDESCR, INIT_TYPE_SYSNAME,
+                           INIT_TYPE_ROUTER_BGP_ID=65531 };
 
      /**
       * BMP Termination Message Types
