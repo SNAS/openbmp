@@ -413,6 +413,7 @@ namespace bgp_msg {
 
             case ATTR_LINK_PEER_NODE_SID:
                 val_ss.str(std::string());
+                value_32bit = 0;
 
                 /*
                  * Syntax of value is: [L] <weight> <sid value>
@@ -423,7 +424,7 @@ namespace bgp_msg {
                 if (*data & 0x80 and *data & 0x40 and len == 7) {
 
                     // 3-octet -  20 rightmost bits are used for encoding the label value.
-                    memcpy(&value_32bit, data+4, 3);
+                    memcpy(&value_32bit, (data+4), 3);
                     bgp::SWAP_BYTES(&value_32bit, 3);
 
                     val_ss << "L " << (int)*(data + 1) << " " << value_32bit;
@@ -433,13 +434,13 @@ namespace bgp_msg {
                     if (*data & 0x40)
                         val_ss << "L ";
 
-                    inet_ntop(AF_INET6, data + 4, ip_char, sizeof(ip_char));
+                    inet_ntop(AF_INET6, (data + 4), ip_char, sizeof(ip_char));
 
                     val_ss << (int) *(data + 1) << " " << ip_char;
                 }
                 else if (len == 8) {
                     // 4-octet encoded offset in the SID/Label space advertised by this router using the encodings
-                    memcpy(&value_32bit, data+4, 4);
+                    memcpy(&value_32bit, (data+4), 4);
                     bgp::SWAP_BYTES(&value_32bit);
 
                     val_ss << (int) *(data + 1) << " " << value_32bit;
@@ -450,7 +451,7 @@ namespace bgp_msg {
                 }
 
                 SELF_DEBUG("%s: bgp-ls: parsed link peer node SID: %s (len=%d) %d/%x", peer_addr.c_str(),
-                           val_ss.str().c_str(), len, value_32bit, data+4);
+                           val_ss.str().c_str(), len, value_32bit, (data+4));
 
                 memcpy(parsed_data->ls_attrs[ATTR_LINK_PEER_NODE_SID].data(), val_ss.str().data(), val_ss.str().length());
                 break;
