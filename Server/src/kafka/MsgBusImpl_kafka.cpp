@@ -379,9 +379,6 @@ void msgBus_kafka::produce(const char *topic_var, char *msg, size_t msg_size, in
         sleep(1);
     }
 
-    SELF_DEBUG("rtr=%s: Producing message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
-               topic_var, key.c_str(), msg_size);
-
     char headers[256];
     len = snprintf(headers, sizeof(headers), "V: %s\nC_HASH_ID: %s\nL: %lu\nR: %d\n\n",
             MSGBUS_API_VERSION, collector_hash.c_str(), msg_size, rows);
@@ -392,12 +389,18 @@ void msgBus_kafka::produce(const char *topic_var, char *msg, size_t msg_size, in
 
     topic = topicSel->getTopic(topic_var, &router_group_name, peer_group, peer_asn);
     if (topic != NULL) {
+        SELF_DEBUG("rtr=%s: Producing message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
+                   topic->name().c_str(), key.c_str(), msg_size);
+
         RdKafka::ErrorCode resp = producer->produce(topic, RdKafka::Topic::PARTITION_UA,
                                                     RdKafka::Producer::RK_MSG_COPY,
                                                     producer_buf, msg_size + len,
                                                     (const std::string *) &key, NULL);
         if (resp != RdKafka::ERR_NO_ERROR)
             LOG_ERR("rtr=%s: Failed to produce message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
+    } else {
+        LOG_NOTICE("rtr=%s: failed to produce message because topic couldn't be found: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
+                   topic_var, key.c_str(), msg_size);
     }
 
     producer->poll(0);
@@ -1284,6 +1287,8 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
 
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
+ *
+ * TODO: Consolidate this to single produce method
  */
 void msgBus_kafka::send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data, size_t data_len) {
     string r_hash_str;
@@ -1292,9 +1297,6 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data
 
     hash_toStr(peer.hash_id, p_hash_str);
     hash_toStr(r_hash, r_hash_str);
-
-    SELF_DEBUG("rtr=%s: Producing bmp raw message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
-               MSGBUS_TOPIC_VAR_BMP_RAW, r_hash_str.c_str(), data_len);
 
     if (data_len == 0)
         return;
@@ -1315,6 +1317,9 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data
 
     topic = topicSel->getTopic(MSGBUS_TOPIC_VAR_BMP_RAW, &router_group_name, &peer_list[p_hash_str], peer.peer_as);
     if (topic != NULL) {
+        SELF_DEBUG("rtr=%s: Producing bmp raw message: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
+                   topic->name().c_str(), r_hash_str.c_str(), data_len);
+
         RdKafka::ErrorCode resp = producer->produce(topic, RdKafka::Topic::PARTITION_UA,
                                                     RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
                                                     producer_buf, data_len + hdr_len,
@@ -1322,6 +1327,10 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data
 
         if (resp != RdKafka::ERR_NO_ERROR)
             LOG_ERR("rtr=%s: Failed to produce bmp raw message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
+    }
+    else {
+        SELF_DEBUG("rtr=%s: failed to produce bmp raw message because topic couldn't be found: topic=%s key=%s, msg size = %lu",
+                   router_ip.c_str(), MSGBUS_TOPIC_VAR_BMP_RAW, r_hash_str.c_str(), data_len);
     }
 
     producer->poll(0);
