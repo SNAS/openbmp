@@ -385,13 +385,18 @@ void parseBMP::parsePeerHdr(int sock) {
                    peer_addr);
     }
 
-    if (p_hdr.peer_flags & 0x40) { // L flag of 1 means this is post-policy of Adj-RIB-In
+    if (p_hdr.peer_flags & 0x10) { // O flag of 1 means this is Adj-Rib-Out
+        SELF_DEBUG("sock=%d : Msg is for Adj-RIB-Out", sock);
+        p_entry->isPrePolicy = false;
+        p_entry->isAdjIn = false;
+    } else if (p_hdr.peer_flags & 0x40) { // L flag of 1 means this is post-policy of Adj-RIB-In
         SELF_DEBUG("sock=%d : Msg is for POST-POLICY Adj-RIB-In", sock);
         p_entry->isPrePolicy = false;
-
+        p_entry->isAdjIn = true;
     } else {
         SELF_DEBUG("sock=%d : Msg is for PRE-POLICY Adj-RIB-In", sock);
         p_entry->isPrePolicy = true;
+        p_entry->isAdjIn = true;
     }
 
     // convert the BMP byte messages to human readable strings

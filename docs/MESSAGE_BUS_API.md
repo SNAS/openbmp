@@ -5,6 +5,25 @@
 
 ## Version Diff
 
+### Diff from 1.3 to 1.2
+
+* **unicast_prefix**
+    * Added **field 30** - Flag indicating if unicast BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
+    * Added **field 31** - Flag indicating if unicast BGP prefix is Adj-RIB-In or Adj-RIB-Out
+
+* **ls_node**
+    * Added **field 25** - Flag indicating if LS node BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
+    * Added **field 26** - Flag indicating if LS node BGP prefix is Adj-RIB-In or Adj-RIB-Out
+
+* **ls_link**
+    * Added **field 44** - Flag indicating if LS link BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
+    * Added **field 45** - Flag indicating if LS link BGP prefix is Adj-RIB-In or Adj-RIB-Out
+
+* **ls_prefix**
+    * Added **field 32** - Flag indicating if LS prefix BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
+    * Added **field 33** - Flag indicating if LS prefix BGP prefix is Adj-RIB-In or Adj-RIB-Out
+
+
 ### Diff from 1.2 to 1.1
 
 * **ls_link**
@@ -252,7 +271,11 @@ One or more IPv4/IPv6 unicast prefixes.
 26 | isNextHopIPv4 | Bool | 1 | Indicates if the next hop address is IPv4 or not
 27 | Originator Id | String | 46 | Originator ID in printed form (IP)
 28 | Path ID | Int | 4 | Unsigned 32 bit value for the path ID (draft-ietf-idr-add-paths-15).  Zero means add paths is not enabled/used.
-29 | Labels | String | 255 | Comma delimited list of 32bit unsigned values that represent the received labels. 
+29 | Labels | String | 255 | Comma delimited list of 32bit unsigned values that represent the received labels.
+30 | isPrePolicy | Bool | 1 | Indicates if unicast BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
+31 | isAdjIn | Bool | 1 | Indicates if unicast BGP prefix is Adj-RIB-In or Adj-RIB-Out
+
+
 
 ### Object: <font color="blue">ls\_node</font> (openbmp.parsed.ls\_node)
 One or more link-state nodes.
@@ -283,6 +306,8 @@ One or more link-state nodes.
 22 | MED | Int | 4 | BGP MED value
 23 | Next Hop | String | 46 | BGP next hop IP address in printed form
 24 | Node Name | String | 255 | ISIS hostname
+25 | isPrePolicy | Bool | 1 | Indicates if LS node BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
+26 | isAdjIn | Bool | 1 | Indicates if LS node BGP prefix is Adj-RIB-In or Adj-RIB-Out
 
 
 ### Object: <font color="blue">ls\_link</font> (openbmp.parsed.ls\_link)
@@ -333,7 +358,8 @@ One or more link-state links.
 41 | Local Node ASN | Int | 4 | Local Node descriptor ASN
 42 | Remote Node ASN | Int | 4 | Remote Node descriptor ASN
 43 | EPE Peer Node SID | String | 128 | Peer node SID in the format of [L] <weight> <label/idx/ipv4>. L is only set when L flag is set.
-
+44 | isPrePolicy | Bool | 1 | Indicates if LS link BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
+45 | isAdjIn | Bool | 1 | Indicates if LS link BGP prefix is Adj-RIB-In or Adj-RIB-Out
 
 ### Object: <font color="blue">ls\_prefix</font> (openbmp.parsed.ls\_prefix)
 One or more link-state prefixes.
@@ -371,6 +397,8 @@ One or more link-state prefixes.
 29 | IGP Metric | Int | 4 | Unsigned 32bit igp metric value
 30 | Prefix | String | 46 | Printed form of the IP address/prefix
 31 | Prefix Length | Int | 1 | Prefix length in bits
+32 | isPrePolicy | Bool | 1 | Indicates if LS prefix BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
+33 | isAdjIn | Bool | 1 | Indicates if LS prefix BGP prefix is Adj-RIB-In or Adj-RIB-Out
 
 Message API: BMP RAW Data
 ------------------------------------
