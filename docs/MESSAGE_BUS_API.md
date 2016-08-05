@@ -93,7 +93,7 @@ Message API: Parsed Data
 
 Header | Value | Description
 --------|-------|-------------
-**V**| 1.2 | Schema version, currently 1.2
+**V**| 1.3 | Schema version, currently 1.3
 **C\_HASH\_ID** | hash string | Collector Hash Id
 **L** | length | Length of the data in bytes
 **R** | count | Number of records in TSV data
@@ -357,7 +357,7 @@ One or more link-state links.
 40 | Remote Router Id | String | 46 | Printed form of the Remote router Id.  When EPE, this is the Remote BGP Router ID.
 41 | Local Node ASN | Int | 4 | Local Node descriptor ASN
 42 | Remote Node ASN | Int | 4 | Remote Node descriptor ASN
-43 | EPE Peer Node SID | String | 128 | Peer node SID in the format of [L] <weight> <label/idx/ipv4>. L is only set when L flag is set.
+43 | EPE Peer Node SID | String | 128 | Peer node SID in the format of [L] **weight** **label/idx/ipv4**. L is only set when L flag is set.
 44 | isPrePolicy | Bool | 1 | Indicates if LS link BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 45 | isAdjIn | Bool | 1 | Indicates if LS link BGP prefix is Adj-RIB-In or Adj-RIB-Out
 

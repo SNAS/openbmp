@@ -289,7 +289,7 @@ void parseBMP::parseBMPv2(int sock) {
 void parseBMP::parseBMPv3(int sock) {
     struct common_hdr_v3 c_hdr = { 0 };
 
-    SELF_DEBUG("Parsing BMP version 3 (latest draft)");
+    SELF_DEBUG("Parsing BMP version 3 (rfc7854)");
     if ((Recv(sock, &c_hdr, BMP_HDRv3_LEN, MSG_WAITALL)) != BMP_HDRv3_LEN) {
         throw "ERROR: Cannot read v3 BMP common header.";
     }
