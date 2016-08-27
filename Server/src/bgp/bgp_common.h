@@ -183,9 +183,6 @@ namespace bgp {
         return afi_string;
     }
 
-    /*
-     * Decode the SAFI - http://www.iana.org/assignments/safi-namespace/safi-namespace.xhtml
-     */
     /**
      * Function to get string representation of SAFI code.
      * @param code SAFI http://www.iana.org/assignments/safi-namespace/safi-namespace.xhtml
