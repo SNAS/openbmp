@@ -155,6 +155,102 @@ namespace bgp {
 
     }
 
+    /**
+     * Function to get string representation of AFI code.
+     * @param code AFI http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
+     * @return string like "IPv6" or "IPv4"
+     */
+    inline std::string GET_AFI_STRING_BY_CODE(int code) {
+        std::string afi_string;
+
+        switch (code) {
+            case bgp::BGP_AFI_IPV4 :
+                afi_string = "IPv4";
+                break;
+
+            case bgp::BGP_AFI_IPV6 :
+                afi_string = "IPv6";
+                break;
+
+            case bgp::BGP_AFI_BGPLS :
+                afi_string = "BGP-LS";
+                break;
+
+            default:
+                afi_string = "unknown";
+                break;
+        }
+        return afi_string;
+    }
+
+    /*
+     * Decode the SAFI - http://www.iana.org/assignments/safi-namespace/safi-namespace.xhtml
+     */
+    /**
+     * Function to get string representation of SAFI code.
+     * @param code SAFI http://www.iana.org/assignments/safi-namespace/safi-namespace.xhtml
+     * @return string like "Unicast" or "Multicast"
+     */
+    inline std::string GET_SAFI_STRING_BY_CODE(int code) {
+        std::string safi_string;
+
+        switch (code) {
+            case bgp::BGP_SAFI_UNICAST : // Unicast IP forwarding
+                safi_string = "Unicast";
+                break;
+
+            case bgp::BGP_SAFI_MULTICAST : // Multicast IP forwarding
+                safi_string = "Multicast";
+                break;
+
+            case bgp::BGP_SAFI_NLRI_LABEL : // NLRI with MPLS Labels
+                safi_string = "Labeled Unicast";
+                break;
+
+            case bgp::BGP_SAFI_MCAST_VPN : // MCAST VPN
+                safi_string = "MCAST VPN";
+                break;
+
+            case bgp::BGP_SAFI_VPLS : // VPLS
+                safi_string = "VPLS";
+                break;
+
+            case bgp::BGP_SAFI_MDT : // BGP MDT
+                safi_string = "BGP MDT";
+                break;
+
+            case bgp::BGP_SAFI_4over6 : // BGP 4over6
+                safi_string = "BGP 4over6";
+                break;
+
+            case bgp::BGP_SAFI_6over4 : // BGP 6over4
+                safi_string = "BGP 6over4";
+                break;
+
+            case bgp::BGP_SAFI_EVPN : // BGP EVPNs
+                safi_string = "BGP EVPNs";
+                break;
+
+            case bgp::BGP_SAFI_BGPLS : // BGP-LS
+                safi_string = "BGP-LS";
+                break;
+
+            case bgp::BGP_SAFI_MPLS : // MPLS-Labeled VPN
+                safi_string = "MPLS-Labeled VPN";
+                break;
+
+            case bgp::BGP_SAFI_MCAST_MPLS_VPN : // Multicast BGP/MPLS VPN
+                safi_string = "Multicast BGP/MPLS VPN";
+                break;
+
+            case bgp::BGP_SAFI_RT_CONSTRAINS : // Route target constrains
+                safi_string = "RT constrains";
+                break;
+
+        }
+        return safi_string;
+    }
+
 }
 
 #endif /* BGPCOMMON_H */

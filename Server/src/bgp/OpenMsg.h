@@ -12,6 +12,7 @@
 
 #include "Logger.h"
 #include "bgp_common.h"
+#include "BMPReader.h"
 
 #include <list>
 
@@ -49,6 +50,16 @@ public:
     };
 
     /**
+     * Defines the Add Path BGP capability's send/recieve code
+     *      https://tools.ietf.org/html/rfc7911#section-4
+     */
+    enum BGP_CAP_ADD_PATH_SEND_RECEIVE_CODES {
+            BGP_CAP_ADD_PATH_RECEIVE=1,
+            BGP_CAP_ADD_PATH_SEND=2,
+            BGP_CAP_ADD_PATH_SEND_RECEIVE=3
+    };
+
+    /**
      * defines the Capability BGP header per RFC5492
      *      http://www.iana.org/assignments/capability-codes/capability-codes.xhtml
      */
@@ -65,6 +76,15 @@ public:
           u_char         reserved;               ///< Unused
           u_char         safi;                   ///< Subsequent address family
       } __attribute__ ((__packed__));
+
+    /**
+    * Defines the Add Path capability data
+    */
+    struct cap_add_path_data {
+        uint16_t       afi;
+        uint8_t        safi;
+        uint8_t        send_recieve;
+    } __attribute__ ((__packed__));
 
     /**
      * defines the OPEN BGP header per RFC4271
