@@ -378,6 +378,7 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
             // According to RFC 4456, the value is a sequence of cluster id's
             for (int i=0; i < attr_len; i += 4) {
                 memcpy(ipv4_raw, data, 4);
+                data += 4;
                 inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
                 decodeStr.append(ipv4_char);
                 decodeStr.append(" ");
