@@ -7,7 +7,6 @@
  *
  */
 #include "OpenMsg.h"
-#include "BMPReader.h"
 
 #include <string>
 #include <list>

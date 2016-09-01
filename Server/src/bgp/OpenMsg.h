@@ -12,7 +12,6 @@
 
 #include "Logger.h"
 #include "bgp_common.h"
-#include "BMPReader.h"
 
 #include <list>
 
