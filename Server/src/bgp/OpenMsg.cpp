@@ -188,11 +188,52 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
                         break;
 
                     case BGP_CAP_ADD_PATH: {
-                        //TODO: Decode ADD PATH AFI/SAFI's that are enabled.  Need to update peer_info_map for each afi/safi
+                        cap_add_path_data data;
 
-                        SELF_DEBUG("%s: supports add-path", peer_addr.c_str());
-                        snprintf(capStr, sizeof(capStr), "ADD Path (%d)", BGP_CAP_ADD_PATH);
-                        capabilities.push_back(capStr);
+                        if(cap->len == sizeof(data)){
+                            memcpy(&data, (cap_ptr + 2), sizeof(data));
+                            bgp::SWAP_BYTES(&data.afi);
+
+                            snprintf(capStr, sizeof(capStr), "ADD Path (%d) : afi=%d safi=%d send/receive=%d",
+                                     BGP_CAP_ADD_PATH, data.afi, data.safi, data.send_recieve);
+
+                            SELF_DEBUG("%s: supports Add Path afi = %d safi = %d send/receive = %d",
+                                       peer_addr.c_str(), data.afi, data.safi, data.send_recieve);
+
+                            std::string decodeStr(capStr);
+                            decodeStr.append(" : ");
+
+                            decodeStr.append(bgp::GET_SAFI_STRING_BY_CODE(data.safi));
+                            decodeStr.append(" ");
+
+                            decodeStr.append(bgp::GET_AFI_STRING_BY_CODE(data.afi));
+                            decodeStr.append(" ");
+
+                            switch (data.send_recieve) {
+                                case BGP_CAP_ADD_PATH_SEND :
+                                    decodeStr.append("Send");
+                                    break;
+
+                                case BGP_CAP_ADD_PATH_RECEIVE :
+                                    decodeStr.append("Receive");
+                                    break;
+
+                                case BGP_CAP_ADD_PATH_SEND_RECEIVE :
+                                    decodeStr.append("Send/Receive");
+                                    break;
+
+                                default:
+                                    decodeStr.append("unknown");
+                                    break;
+                            }
+
+                            capabilities.push_back(decodeStr);
+                        } else {
+                            LOG_NOTICE("%s: ADD PATH capability but length %d is invalid expected %d.",
+                                       peer_addr.c_str(), cap->len, sizeof(data));
+                            return 0;
+                        }
+
                         break;
                     }
 
@@ -227,86 +268,13 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
                             snprintf(capStr, sizeof(capStr), "MPBGP (%d) : afi=%d safi=%d",
                                      BGP_CAP_MPBGP, data.afi, data.safi);
 
-                            /*
-                             * Decode the SAFI - http://www.iana.org/assignments/safi-namespace/safi-namespace.xhtml
-                             */
-                            std::string decode_str = "unknown";
-                            switch (data.safi) {
-                                case bgp::BGP_SAFI_UNICAST : // Unicast IP forwarding
-                                    decode_str = "Unicast";
-                                    break;
+                            ///Building capability string
 
-                                case bgp::BGP_SAFI_MULTICAST : // Multicast IP forwarding
-                                    decode_str = "Multicast";
-                                    break;
-
-                                case bgp::BGP_SAFI_NLRI_LABEL : // NLRI with MPLS Labels
-                                    decode_str = "Labeled Unicast";
-                                    break;
-
-                                case bgp::BGP_SAFI_MCAST_VPN : // MCAST VPN
-                                    decode_str = "MCAST VPN";
-                                    break;
-
-                                case bgp::BGP_SAFI_VPLS : // VPLS
-                                    decode_str = "VPLS";
-                                    break;
-
-                                case bgp::BGP_SAFI_MDT : // BGP MDT
-                                    decode_str = "BGP MDT";
-                                    break;
-
-                                case bgp::BGP_SAFI_4over6 : // BGP 4over6
-                                    decode_str = "BGP 4over6";
-                                    break;
-
-                                case bgp::BGP_SAFI_6over4 : // BGP 6over4
-                                    decode_str = "BGP 6over4";
-                                    break;
-
-                                case bgp::BGP_SAFI_EVPN : // BGP EVPNs
-                                    decode_str = "BGP EVPNs";
-                                    break;
-
-                                case bgp::BGP_SAFI_BGPLS : // BGP-LS
-                                    decode_str = "BGP-LS";
-                                    break;
-
-                                case bgp::BGP_SAFI_MPLS : // MPLS-Labeled VPN
-                                    decode_str = "MPLS-Labeled VPN";
-                                    break;
-
-                                case bgp::BGP_SAFI_MCAST_MPLS_VPN : // Multicast BGP/MPLS VPN
-                                    decode_str = "Multicast BGP/MPLS VPN";
-                                    break;
-
-                                case bgp::BGP_SAFI_RT_CONSTRAINS : // Route target constrains
-                                    decode_str = "RT constrains";
-                                    break;
-                            }
-
-                            // Add decoded string with address family type
                             std::string decodedStr(capStr);
                             decodedStr.append(" : ");
-                            decodedStr.append(decode_str);
-
-                            switch (data.afi) {
-                                case bgp::BGP_AFI_IPV4 :
-                                    decodedStr.append(" IPv4");
-                                    break;
-
-                                case bgp::BGP_AFI_IPV6 :
-                                    decodedStr.append(" IPv6");
-                                    break;
-
-                                case bgp::BGP_AFI_BGPLS :
-                                    decodedStr.append(" BGP-LS");
-                                    break;
-
-                                default:
-                                    decodedStr.append(" unknown");
-                                    break;
-                            }
+                            decodedStr.append(bgp::GET_SAFI_STRING_BY_CODE(data.safi));
+                            decodedStr.append(" ");
+                            decodedStr.append(bgp::GET_AFI_STRING_BY_CODE(data.afi));
 
                             capabilities.push_back(decodedStr);
 
