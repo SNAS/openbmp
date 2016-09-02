@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -15,6 +15,7 @@
 #include <string>
 
 #include "UpdateMsg.h"
+#include "AddPathDataContainer.h"
 
 namespace bgp_msg {
 
@@ -46,12 +47,14 @@ public:
      *
      * \details Handles bgp MP_REACH attributes
      *
-     * \param [in]     logPtr       Pointer to existing Logger for app logging
-     * \param [in]     pperAddr     Printed form of peer address used for logging
-     * \param [in]     add_paths    True if add paths enabled, false if not
-     * \param [in]     enable_debug Debug true to enable, false to disable
+     * \param [in]     logPtr                   Pointer to existing Logger for app logging
+     * \param [in]     pperAddr                 Printed form of peer address used for logging
+     * \param [in]     addPathDataContainer     Stores information about Add Paths aviability
+     * \param [in]     enable_debug             Debug true to enable, false to disable
      */
-    MPReachAttr(Logger *logPtr, std::string peerAddr, bool add_paths, bool enable_debug=false);
+    MPReachAttr(Logger *logPtr, std::string peerAddr,
+                AddPathDataContainer *addPathDataContainer, bool enable_debug=false);
+
     virtual ~MPReachAttr();
 
     /**
@@ -74,23 +77,25 @@ public:
      * \details
      *      Will parse the NLRI encoding as defined in RFC4760 Section 5 (NLRI Encoding).
      *
-     * \param [in]   isIPv4     True false to indicate if IPv4 or IPv6
-     * \param [in]   data       Pointer to the start of the prefixes to be parsed
-     * \param [in]   len        Length of the data in bytes to be read
-     * \param [in]   add_paths  Indicates if add paths is enabled or not
-     * \param [out]  prefixes   Reference to a list<prefix_tuple> to be updated with entries
+     * \param [in]   isIPv4                     True false to indicate if IPv4 or IPv6
+     * \param [in]   data                       Pointer to the start of the prefixes to be parsed
+     * \param [in]   len                        Length of the data in bytes to be read
+     * \param [in]   addPathDataContainer       Stores information about Add Paths aviability
+     * \param [out]  prefixes                   Reference to a list<prefix_tuple> to be updated with entries
      */
-    static void parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len, bool add_paths,
+    static void parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
+                                       AddPathDataContainer *addPathDataContainer,
                                        std::list<bgp::prefix_tuple> &prefixes);
 
-    static void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len, bool add_paths,
+    static void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
+                                            AddPathDataContainer *addPathDataContainer,
                                             std::list<bgp::prefix_tuple> &prefixes);
 
 private:
-    bool             debug;                           ///< debug flag to indicate debugging
-    Logger           *logger;                         ///< Logging class pointer
-    std::string      peer_addr;                       ///< Printed form of the peer address for logging
-    bool             add_paths_enabled;               ///< Indicates if add paths are enabled or not
+    bool                    debug;                  ///< debug flag to indicate debugging
+    Logger                   *logger;               ///< Logging class pointer
+    std::string             peer_addr;              ///< Printed form of the peer address for logging
+    AddPathDataContainer    *addPathDataContainer;  ///< Stores information about Add Paths aviability
 
     /**
      * MP Reach NLRI parse based on AFI

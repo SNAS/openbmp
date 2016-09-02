@@ -37,8 +37,6 @@ public:
         bool recv_four_octet_asn;               ///< Indicates if 4 (true) or 2 (false) octet ASN is being used (recv cap)
         bool using_2_octet_asn;                 ///< Indicates if peer is using two octet ASN format or not (true=2 octet, false=4 octet)
         bool checked_asn_octet_length;          ///< Indicates if the ASN octet length has been checked or not
-        bool sent_add_paths;                    ///< Indicates if add-paths was advertised
-        bool recv_add_paths;                    ///< Indicates if add-paths was received
         string peer_group;                      ///< Peer group name of defined
     };
 

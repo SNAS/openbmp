@@ -17,6 +17,7 @@
 #include "MPReachAttr.h"
 #include "MPUnReachAttr.h"
 #include "MPLinkStateAttr.h"
+#include "AddPathDataContainer.h"
 
 namespace bgp_msg {
 
@@ -41,7 +42,8 @@ UpdateMsg::UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAdd
     this->peer_info = peer_info;
 
     four_octet_asn = peer_info->recv_four_octet_asn and peer_info->sent_four_octet_asn;
-    add_paths_enabled = peer_info->recv_add_paths and peer_info->sent_add_paths;
+
+    this->addPathDataContainer = new AddPathDataContainer(peer_info);
 }
 
 UpdateMsg::~UpdateMsg() {
@@ -185,7 +187,7 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
         bzero(tuple.prefix_bin, sizeof(tuple.prefix_bin));
 
         // Parse add-paths if enabled
-        if (add_paths_enabled and (len + read_size) >= 4) {
+        if (this->addPathDataContainer->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST) and (len + read_size) >= 4) {
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
             data += 4; read_size += 4;
@@ -429,14 +431,14 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
         {
-            MPReachAttr mp(logger, peer_addr, add_paths_enabled, debug);
+            MPReachAttr mp(logger, peer_addr, addPathDataContainer, debug);
             mp.parseReachNlriAttr(attr_len, data, parsed_data);
             break;
         }
 
         case ATTR_TYPE_MP_UNREACH_NLRI : // RFC4760
         {
-            MPUnReachAttr mp(logger, peer_addr, add_paths_enabled, debug);
+            MPUnReachAttr mp(logger, peer_addr, addPathDataContainer, debug);
             mp.parseUnReachNlriAttr(attr_len, data, parsed_data);
             break;
         }
