@@ -180,7 +180,6 @@ private:
     std::string             router_addr;                     ///< Router IP address - used for logging
     bool                    four_octet_asn;                  ///< Indicates true if 4 octets or false if 2
     BMPReader::peer_info    *peer_info;                      ///< Persistent Peer info pointer
-    AddPathDataContainer    *addPathDataContainer;           ///< Stores information about Add Paths aviability
 
 
     /**

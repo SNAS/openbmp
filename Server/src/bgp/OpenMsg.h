@@ -129,7 +129,7 @@ public:
       * \details Handles bgp open messages
       *
       * \param [in]     logPtr          Pointer to existing Logger for app logging
-      * \param [in]     pperAddr        Printed form of peer address used for logging
+      * \param [in]     peerAddr        Printed form of peer address used for logging
       * \param [in]     peer_info       Persistent peer information
       * \param [in]     enable_debug    Debug true to enable, false to disable
       */
@@ -158,10 +158,10 @@ public:
 
 
 private:
-    bool                    debug;                           ///< debug flag to indicate debugging
-    Logger                  *logger;                         ///< Logging class pointer
-    std::string             peer_addr;                       ///< Printed form of the peer address for logging
-    AddPathDataContainer    *addPathDataContainer;           ///< Stores information about Add Paths aviability
+    bool                    debug;          ///< debug flag to indicate debugging
+    Logger                  *logger;        ///< Logging class pointer
+    std::string             peer_addr;      ///< Printed form of the peer address for logging
+    BMPReader::peer_info    *peer_info;     ///< Persistent Peer info pointer
 
     /**
      * Parses capabilities from buffer

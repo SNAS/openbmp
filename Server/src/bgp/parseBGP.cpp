@@ -17,6 +17,7 @@
 #include <cstring>
 #include <string>
 #include <list>
+#include <memory>
 #include <arpa/inet.h>
 #include <bgp/linkstate/MPLinkStateAttr.h>
 
@@ -175,6 +176,7 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
     p_info->recv_four_octet_asn = false;
     p_info->sent_four_octet_asn = false;
     p_info->using_2_octet_asn = false;
+    p_info->add_path_capability = shared_ptr<AddPathDataContainer>(new AddPathDataContainer());
 
     /*
      * Process the sent open message
@@ -225,7 +227,7 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
     if (parseBgpHeader(data, size) == BGP_MSG_OPEN) {
         data += BGP_MSG_HDR_LEN;
 
-        read_size = oMsg.parseOpenMsg(data, data_bytes_remaining, true, up_event->remote_asn,
+        read_size = oMsg.parseOpenMsg(data, data_bytes_remaining, false, up_event->remote_asn,
                                       up_event->remote_hold_time, remote_bgp_id, cap_list);
 
         if (!read_size) {

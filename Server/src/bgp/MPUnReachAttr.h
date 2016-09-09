@@ -16,6 +16,7 @@
 
 #include "AddPathDataContainer.h"
 #include "MPReachAttr.h"
+#include "BMPReader.h"
 
 namespace bgp_msg {
 
@@ -46,10 +47,10 @@ public:
      *
      * \param [in]     logPtr                   Pointer to existing Logger for app logging
      * \param [in]     pperAddr                 Printed form of peer address used for logging
-     * \param [in]     addPathDataContainer     Stores information about Add Paths aviability
+     * \param [in]     peer_info                Persistent Peer info pointer
      * \param [in]     enable_debug             Debug true to enable, false to disable
      */
-    MPUnReachAttr(Logger *logPtr, std::string peerAddr, AddPathDataContainer *addPathDataContainer,
+    MPUnReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info,
                   bool enable_debug=false);
 
     virtual ~MPUnReachAttr();
@@ -69,10 +70,10 @@ public:
     void parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
 
 private:
-    bool                    debug;                  ///< debug flag to indicate debugging
-    Logger                  *logger;                ///< Logging class pointer
-    std::string             peer_addr;              ///< Printed form of the peer address for logging
-    AddPathDataContainer    *addPathDataContainer;  ///< Stores information about Add Paths aviability
+    bool                    debug;              ///< debug flag to indicate debugging
+    Logger                  *logger;            ///< Logging class pointer
+    std::string             peer_addr;          ///< Printed form of the peer address for logging
+    BMPReader::peer_info    *peer_info;         ///< Persistent Peer info pointer
 
     /**
      * MP UnReach NLRI parse based on AFI

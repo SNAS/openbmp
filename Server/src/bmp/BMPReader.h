@@ -12,11 +12,13 @@
 
 #include "BMPListener.h"
 #include "BMPReader.h"
+#include "AddPathDataContainer.h"
 #include "MsgBusInterface.hpp"
 #include "Logger.h"
 #include "Config.h"
 
 #include <map>
+#include <memory>
 
 /**
  * \class   BMPReader
@@ -33,11 +35,12 @@ public:
      *   OPEN and other updates can add/change persistent peer information.
      */
     struct peer_info {
-        bool sent_four_octet_asn;               ///< Indicates if 4 (true) or 2 (false) octet ASN is being used (sent cap)
-        bool recv_four_octet_asn;               ///< Indicates if 4 (true) or 2 (false) octet ASN is being used (recv cap)
-        bool using_2_octet_asn;                 ///< Indicates if peer is using two octet ASN format or not (true=2 octet, false=4 octet)
-        bool checked_asn_octet_length;          ///< Indicates if the ASN octet length has been checked or not
-        string peer_group;                      ///< Peer group name of defined
+        bool sent_four_octet_asn;                               ///< Indicates if 4 (true) or 2 (false) octet ASN is being used (sent cap)
+        bool recv_four_octet_asn;                               ///< Indicates if 4 (true) or 2 (false) octet ASN is being used (recv cap)
+        bool using_2_octet_asn;                                 ///< Indicates if peer is using two octet ASN format or not (true=2 octet, false=4 octet)
+        bool checked_asn_octet_length;                          ///< Indicates if the ASN octet length has been checked or not
+        shared_ptr<AddPathDataContainer> add_path_capability;   ///< Stores data about Add Path capability
+        string peer_group;                                      ///< Peer group name of defined
     };
 
 

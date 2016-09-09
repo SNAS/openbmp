@@ -9,6 +9,7 @@
 
 #include "MPReachAttr.h"
 #include "MPLinkState.h"
+#include "BMPReader.h"
 
 #include <arpa/inet.h>
 
@@ -21,17 +22,11 @@ namespace bgp_msg {
  *
  * \param [in]     logPtr                   Pointer to existing Logger for app logging
  * \param [in]     pperAddr                 Printed form of peer address used for logging
- * \param [in]     addPathDataContainer     Stores information about Add Paths aviability
+ * \param [in]     peer_info                Persistent Peer info pointer
  * \param [in]     enable_debug             Debug true to enable, false to disable
  */
-MPReachAttr::MPReachAttr(Logger *logPtr, std::string peerAddr, AddPathDataContainer *addPathDataContainer,
-                         bool enable_debug) {
-    logger = logPtr;
-    debug = enable_debug;
-
-    peer_addr = peerAddr;
-
-    this->addPathDataContainer = addPathDataContainer;
+MPReachAttr::MPReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug)
+    : logger{logPtr}, peer_addr{peerAddr}, peer_info{peer_info}, debug{enable_debug}{
 }
 
 MPReachAttr::~MPReachAttr() {
@@ -154,7 +149,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
 
             // Data is an IP address - parse the address and save it
-            parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, this->addPathDataContainer, parsed_data.advertised);
+            parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info, parsed_data.advertised);
             break;
 
         case bgp::BGP_SAFI_NLRI_LABEL:
@@ -172,7 +167,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
 
             // Data is an Label, IP address tuple parse and save it
-            parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, this->addPathDataContainer, parsed_data.advertised);
+            parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info, parsed_data.advertised);
             break;
             
         default :
@@ -191,11 +186,11 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
  * \param [in]   isIPv4                 True false to indicate if IPv4 or IPv6
  * \param [in]   data                   Pointer to the start of the prefixes to be parsed
  * \param [in]   len                    Length of the data in bytes to be read
- * \param [in]   addPathDataContainer   Stores information about Add Paths aviability
+ * \param [in]   peer_info              Persistent Peer info pointer
  * \param [out]  prefixes               Reference to a list<prefix_tuple> to be updated with entries
  */
 void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
-                                         AddPathDataContainer *addPathDataContainer,
+                                         BMPReader::peer_info * peer_info,
                                          std::list<bgp::prefix_tuple> &prefixes) {
     u_char            ip_raw[16];
     char              ip_char[40];
@@ -216,7 +211,7 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         bzero(ip_raw, sizeof(ip_raw));
 
         // Parse add-paths if enabled
-        if (addPathDataContainer->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST) and
+        if (peer_info->add_path_capability->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST) and
                 isIPv4 and (len + read_size) >= 4) {
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
@@ -264,11 +259,11 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
  * \param [in]   isIPv4                 True false to indicate if IPv4 or IPv6
  * \param [in]   data                   Pointer to the start of the label + prefixes to be parsed
  * \param [in]   len                    Length of the data in bytes to be read
- * \param [in]   addPathDataContainer   Stores information about Add Paths aviability
+ * \param [in]   peer_info              Persistent Peer info pointer
  * \param [out]  prefixes               Reference to a list<label, prefix_tuple> to be updated with entries
  */
 void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
-                                              AddPathDataContainer *addPathDataContainer,
+                                              BMPReader::peer_info * peer_info,
                                               std::list<bgp::prefix_tuple> &prefixes) {
     u_char            ip_raw[16];
     char              ip_char[40];
@@ -299,7 +294,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
     for (size_t read_size=0; read_size < len; read_size++) {
 
         // Parse add-paths if enabled
-        if (addPathDataContainer->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_NLRI_LABEL) and
+        if (peer_info->add_path_capability->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_NLRI_LABEL) and
                 isIPv4 and (len + read_size) >= 4) {
 
             memcpy(&tuple.path_id, data, 4);

@@ -24,16 +24,12 @@ namespace bgp_msg {
  * \details Handles bgp open messages
  *
  * \param [in]     logPtr          Pointer to existing Logger for app logging
- * \param [in]     pperAddr        Printed form of peer address used for logging
+ * \param [in]     peerAddr        Printed form of peer address used for logging
  * \param [in]     peer_info       Persistent peer information
  * \param [in]     enable_debug    Debug true to enable, false to disable
  */
-OpenMsg::OpenMsg(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug) {
-    logger = logPtr;
-    debug = enable_debug;
-    peer_addr = peerAddr;
-
-    this->addPathDataContainer = new AddPathDataContainer(peer_info);
+OpenMsg::OpenMsg(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug)
+        : logger{logPtr}, peer_addr{peerAddr}, peer_info{peer_info}, debug{enable_debug} {
 }
 
 OpenMsg::~OpenMsg() {
@@ -235,7 +231,7 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size, bool openMessageIsS
                                     break;
                             }
 
-                            this->addPathDataContainer->addAddPath(data.afi, data.safi, data.send_recieve,
+                            this->peer_info->add_path_capability->addAddPath(data.afi, data.safi, data.send_recieve,
                                                                    openMessageIsSent);
 
                             capabilities.push_back(decodeStr);

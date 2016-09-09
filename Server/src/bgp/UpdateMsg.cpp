@@ -17,7 +17,6 @@
 #include "MPReachAttr.h"
 #include "MPUnReachAttr.h"
 #include "MPLinkStateAttr.h"
-#include "AddPathDataContainer.h"
 
 namespace bgp_msg {
 
@@ -33,17 +32,14 @@ namespace bgp_msg {
  * \param [in]     enable_debug     Debug true to enable, false to disable
  */
 UpdateMsg::UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAddr, BMPReader::peer_info *peer_info,
-                     bool enable_debug) {
-    logger = logPtr;
-    debug = enable_debug;
-
-    peer_addr = peerAddr;
-    router_addr = routerAddr;
-    this->peer_info = peer_info;
+                     bool enable_debug)
+        : logger{logPtr},
+          peer_addr{peerAddr},
+          router_addr{routerAddr},
+          peer_info{peer_info},
+          debug{enable_debug} {
 
     four_octet_asn = peer_info->recv_four_octet_asn and peer_info->sent_four_octet_asn;
-
-    this->addPathDataContainer = new AddPathDataContainer(peer_info);
 }
 
 UpdateMsg::~UpdateMsg() {
@@ -187,7 +183,7 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
         bzero(tuple.prefix_bin, sizeof(tuple.prefix_bin));
 
         // Parse add-paths if enabled
-        if (this->addPathDataContainer->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST) and (len + read_size) >= 4) {
+        if (peer_info->add_path_capability->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST) and (len + read_size) >= 4) {
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
             data += 4; read_size += 4;
@@ -432,14 +428,14 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
         {
-            MPReachAttr mp(logger, peer_addr, addPathDataContainer, debug);
+            MPReachAttr mp(logger, peer_addr, peer_info, debug);
             mp.parseReachNlriAttr(attr_len, data, parsed_data);
             break;
         }
 
         case ATTR_TYPE_MP_UNREACH_NLRI : // RFC4760
         {
-            MPUnReachAttr mp(logger, peer_addr, addPathDataContainer, debug);
+            MPUnReachAttr mp(logger, peer_addr, peer_info, debug);
             mp.parseUnReachNlriAttr(attr_len, data, parsed_data);
             break;
         }

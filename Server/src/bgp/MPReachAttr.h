@@ -15,7 +15,6 @@
 #include <string>
 
 #include "UpdateMsg.h"
-#include "AddPathDataContainer.h"
 
 namespace bgp_msg {
 
@@ -49,11 +48,10 @@ public:
      *
      * \param [in]     logPtr                   Pointer to existing Logger for app logging
      * \param [in]     pperAddr                 Printed form of peer address used for logging
-     * \param [in]     addPathDataContainer     Stores information about Add Paths aviability
+     * \param [in]     peer_info                Persistent Peer info pointer
      * \param [in]     enable_debug             Debug true to enable, false to disable
      */
-    MPReachAttr(Logger *logPtr, std::string peerAddr,
-                AddPathDataContainer *addPathDataContainer, bool enable_debug=false);
+    MPReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug=false);
 
     virtual ~MPReachAttr();
 
@@ -80,22 +78,22 @@ public:
      * \param [in]   isIPv4                     True false to indicate if IPv4 or IPv6
      * \param [in]   data                       Pointer to the start of the prefixes to be parsed
      * \param [in]   len                        Length of the data in bytes to be read
-     * \param [in]   addPathDataContainer       Stores information about Add Paths aviability
+     * \param [in]   peer_info                  Persistent Peer info pointer
      * \param [out]  prefixes                   Reference to a list<prefix_tuple> to be updated with entries
      */
     static void parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
-                                       AddPathDataContainer *addPathDataContainer,
+                                       BMPReader::peer_info *peer_info,
                                        std::list<bgp::prefix_tuple> &prefixes);
 
     static void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
-                                            AddPathDataContainer *addPathDataContainer,
+                                            BMPReader::peer_info *peer_info,
                                             std::list<bgp::prefix_tuple> &prefixes);
 
 private:
     bool                    debug;                  ///< debug flag to indicate debugging
     Logger                   *logger;               ///< Logging class pointer
     std::string             peer_addr;              ///< Printed form of the peer address for logging
-    AddPathDataContainer    *addPathDataContainer;  ///< Stores information about Add Paths aviability
+    BMPReader::peer_info    *peer_info;
 
     /**
      * MP Reach NLRI parse based on AFI

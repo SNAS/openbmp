@@ -10,22 +10,15 @@
 #include "AddPathDataContainer.h"
 #include "OpenMsg.h"
 
-std::map<size_t, AddPathDataContainer::addPathMapType> AddPathDataContainer::peerInfoToAddPathMap;
+#include <memory>
 
 /**
  * Constructor for class
  *
- * \details Constructs peer related object with Add Path data.
+ * \details Constructs object with Add Path data.
  *
- * \param [in] peer_info   Persistent peer information
  */
-AddPathDataContainer::AddPathDataContainer(BMPReader::peer_info *peer_info){
-    if (AddPathDataContainer::peerInfoToAddPathMap.count((size_t)&peer_info) == 0){
-        AddPathDataContainer::addPathMapType addPathMap;
-        peerInfoToAddPathMap.insert(std::pair<size_t, AddPathDataContainer::addPathMapType>((size_t)&peer_info, addPathMap));
-    }
-
-    this->addPathMap = &AddPathDataContainer::peerInfoToAddPathMap[(size_t)&peer_info];
+AddPathDataContainer::AddPathDataContainer() : addPathMap{shared_ptr<AddPathMap>(new AddPathMap())} {
 }
 
 /**
@@ -37,7 +30,7 @@ AddPathDataContainer::AddPathDataContainer(BMPReader::peer_info *peer_info){
  * \param [in] sent_open        Is obtained from sent open message. False if from recieved
  */
 void AddPathDataContainer::addAddPath(int afi, int safi, int send_receive, bool sent_open) {
-    addPathMapType::iterator iterator = this->addPathMap->find(this->getAFiSafiKeyString(afi, safi));
+    AddPathMap::iterator iterator = this->addPathMap->find(this->getAFiSafiKeyString(afi, safi));
     if(iterator == this->addPathMap->end()) {
         sendReceiveCodesForSentAndReceivedOpenMessageStructure newStructure;
 
@@ -84,7 +77,7 @@ std::string AddPathDataContainer::getAFiSafiKeyString(int afi, int safi) {
  * \return is enabled
  */
 bool AddPathDataContainer::isAddPathEnabled(int afi, int safi) {
-    addPathMapType::iterator iterator = this->addPathMap->find(this->getAFiSafiKeyString(afi, safi));
+    AddPathMap::iterator iterator = this->addPathMap->find(this->getAFiSafiKeyString(afi, safi));
 
     if(iterator == this->addPathMap->end()) {
         return false;
