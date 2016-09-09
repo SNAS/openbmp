@@ -190,48 +190,53 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
                     case BGP_CAP_ADD_PATH: {
                         cap_add_path_data data;
 
-                        if(cap->len == sizeof(data)){
-                            memcpy(&data, (cap_ptr + 2), sizeof(data));
-                            bgp::SWAP_BYTES(&data.afi);
+                        /*
+                         * Move past the cap code and len, then iterate over all paths encoded
+                         */
+                        cap_ptr += 2;
+                        if (cap->len >= 4) {
 
-                            snprintf(capStr, sizeof(capStr), "ADD Path (%d) : afi=%d safi=%d send/receive=%d",
-                                     BGP_CAP_ADD_PATH, data.afi, data.safi, data.send_recieve);
+                            for (int l = 0; l < cap->len; l += 4) {
+                                memcpy(&data, cap_ptr, 4);
+                                cap_ptr += 4;
 
-                            SELF_DEBUG("%s: supports Add Path afi = %d safi = %d send/receive = %d",
-                                       peer_addr.c_str(), data.afi, data.safi, data.send_recieve);
+                                bgp::SWAP_BYTES(&data.afi);
 
-                            std::string decodeStr(capStr);
-                            decodeStr.append(" : ");
+                                snprintf(capStr, sizeof(capStr), "ADD Path (%d) : afi=%d safi=%d send/receive=%d",
+                                         BGP_CAP_ADD_PATH, data.afi, data.safi, data.send_recieve);
 
-                            decodeStr.append(bgp::GET_SAFI_STRING_BY_CODE(data.safi));
-                            decodeStr.append(" ");
+                                SELF_DEBUG("%s: supports Add Path afi = %d safi = %d send/receive = %d",
+                                           peer_addr.c_str(), data.afi, data.safi, data.send_recieve);
 
-                            decodeStr.append(bgp::GET_AFI_STRING_BY_CODE(data.afi));
-                            decodeStr.append(" ");
+                                std::string decodeStr(capStr);
+                                decodeStr.append(" : ");
 
-                            switch (data.send_recieve) {
-                                case BGP_CAP_ADD_PATH_SEND :
-                                    decodeStr.append("Send");
-                                    break;
+                                decodeStr.append(bgp::GET_SAFI_STRING_BY_CODE(data.safi));
+                                decodeStr.append(" ");
 
-                                case BGP_CAP_ADD_PATH_RECEIVE :
-                                    decodeStr.append("Receive");
-                                    break;
+                                decodeStr.append(bgp::GET_AFI_STRING_BY_CODE(data.afi));
+                                decodeStr.append(" ");
 
-                                case BGP_CAP_ADD_PATH_SEND_RECEIVE :
-                                    decodeStr.append("Send/Receive");
-                                    break;
+                                switch (data.send_recieve) {
+                                    case BGP_CAP_ADD_PATH_SEND :
+                                        decodeStr.append("Send");
+                                        break;
 
-                                default:
-                                    decodeStr.append("unknown");
-                                    break;
+                                    case BGP_CAP_ADD_PATH_RECEIVE :
+                                        decodeStr.append("Receive");
+                                        break;
+
+                                    case BGP_CAP_ADD_PATH_SEND_RECEIVE :
+                                        decodeStr.append("Send/Receive");
+                                        break;
+
+                                    default:
+                                        decodeStr.append("unknown");
+                                        break;
+                                }
+
+                                capabilities.push_back(decodeStr);
                             }
-
-                            capabilities.push_back(decodeStr);
-                        } else {
-                            LOG_NOTICE("%s: ADD PATH capability but length %d is invalid expected %d.",
-                                       peer_addr.c_str(), cap->len, sizeof(data));
-                            return 0;
                         }
 
                         break;
