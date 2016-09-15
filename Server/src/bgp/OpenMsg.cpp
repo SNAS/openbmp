@@ -28,8 +28,11 @@ namespace bgp_msg {
  * \param [in]     peer_info       Persistent peer information
  * \param [in]     enable_debug    Debug true to enable, false to disable
  */
-OpenMsg::OpenMsg(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug)
-        : logger{logPtr}, peer_addr{peerAddr}, peer_info{peer_info}, debug{enable_debug} {
+OpenMsg::OpenMsg(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug) {
+        logger = logPtr;
+        debug = enable_debug;
+        this->peer_info = peer_info;
+        peer_addr = peerAddr;
 }
 
 OpenMsg::~OpenMsg() {
