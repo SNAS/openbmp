@@ -12,13 +12,11 @@
 
 #include <memory>
 
-/**
- * Constructor for class
- *
- * \details Constructs object with Add Path data.
- *
- */
-AddPathDataContainer::AddPathDataContainer() : addPathMap{shared_ptr<AddPathMap>(new AddPathMap())} {
+AddPathDataContainer::AddPathDataContainer() : addPathMap(new AddPathMap()) {
+}
+
+AddPathDataContainer::~AddPathDataContainer() {
+    delete this->addPathMap;
 }
 
 /**

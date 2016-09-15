@@ -20,8 +20,8 @@ class AddPathDataContainer {
 private:
 
     struct sendReceiveCodesForSentAndReceivedOpenMessageStructure {
-        int     sendReceiveCodeForSentOpenMessage = 0;
-        int     sendReceiveCodeForReceivedOpenMessage = 0;
+        int     sendReceiveCodeForSentOpenMessage;
+        int     sendReceiveCodeForReceivedOpenMessage;
     };
 
     // Peer related data container. First key is afi safi unique key. Second is structure with Add Path information
@@ -41,13 +41,9 @@ private:
     std::string getAFiSafiKeyString(int afi, int safi);
 
 public:
-    /**
-     * Constructor for class
-     *
-     * \details Constructs object with Add Path data.
-     *
-     */
     AddPathDataContainer();
+
+    ~AddPathDataContainer();
 
     /**
      * Add Add Path data to persistent storage
