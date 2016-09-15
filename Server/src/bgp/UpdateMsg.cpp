@@ -33,11 +33,12 @@ namespace bgp_msg {
  */
 UpdateMsg::UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAddr, BMPReader::peer_info *peer_info,
                      bool enable_debug)
-        : logger{logPtr},
-          peer_addr{peerAddr},
-          router_addr{routerAddr},
-          peer_info{peer_info},
-          debug{enable_debug} {
+        : logger(logPtr),
+          debug(enable_debug),
+          peer_info(peer_info) {
+
+    this->peer_addr = peerAddr;
+    this->router_addr = routerAddr;
 
     four_octet_asn = peer_info->recv_four_octet_asn and peer_info->sent_four_octet_asn;
 }
@@ -197,7 +198,7 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
         addr_bytes = tuple.len / 8;
         if (tuple.len % 8)
             ++addr_bytes;
-        
+
         SELF_DEBUG("%s: rtr=%s: Reading NLRI data prefix bits=%d bytes=%d", peer_addr.c_str(),
                     router_addr.c_str(), tuple.len, addr_bytes);
 
@@ -417,10 +418,10 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
            ExtCommunity ec(logger, peer_addr, debug);
            ec.parseExtCommunities(attr_len, data, parsed_data);
            break;
-        } 
-            
+        }
+
         case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)
-        { 
+        {
             ExtCommunity ec6(logger, peer_addr, debug);
             ec6.parsev6ExtCommunities(attr_len, data, parsed_data);
             break;

@@ -60,9 +60,9 @@ void AddPathDataContainer::addAddPath(int afi, int safi, int send_receive, bool 
  * \return string unique for AFI and SAFI combination
  */
 std::string AddPathDataContainer::getAFiSafiKeyString(int afi, int safi) {
-    std::string result = std::to_string(afi);
+    std::string result = std::to_string(static_cast<long long>(afi));
     result.append("_");
-    result.append(std::to_string(safi));
+    result.append(std::to_string(static_cast<long long>(safi)));
     return result;
 }
 

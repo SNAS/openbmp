@@ -28,7 +28,7 @@ private:
     typedef std::map<std::string, sendReceiveCodesForSentAndReceivedOpenMessageStructure> AddPathMap;
 
     // Peer related information about Add Path
-    std::shared_ptr<AddPathMap> addPathMap;
+    AddPathMap* addPathMap;
 
     /**
      * Generates unique string from AFI and SAFI combination
