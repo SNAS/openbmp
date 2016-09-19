@@ -48,6 +48,11 @@ namespace bgp_msg {
             NODE_FLAG_MASK_V6                        = 0x04          ///< V6 bit (rfc5340)
         };
 
+        enum ATTR_LINK_FLAG_TYPES {
+            ATTR_LINK_FLAG_MASK_ADDRESS_FAMILY       = 0x20,
+            ATTR_LINK_FLAG_MASK_BACKUP               = 0x10
+        };
+
         /**
          * Link Attribute types
          */
@@ -67,9 +72,9 @@ namespace bgp_msg {
             ATTR_LINK_SRLG,                                     ///< Shared risk link group
             ATTR_LINK_OPAQUE,                                   ///< Opaque link attribute
             ATTR_LINK_NAME,                                     ///< Link name
+            ATTR_LINK_PEER_AJD_SID,                             ///< Peer Adjacency SID (draft-ietf-idr-bgpls-segment-routing-epe)
 
             ATTR_LINK_PEER_NODE_SID            = 1101,          ///< Peer Node SID (draft-ietf-idr-bgpls-segment-routing-epe)
-            ATTR_LINK_PEER_AJD_SID,                             ///< Peer Adjacency SID (draft-ietf-idr-bgpls-segment-routing-epe)
             ATTR_LINK_PEER_SET_SID                              ///< Peer Set SID (draft-ietf-idr-bgpls-segment-routing-epe)
         };
 

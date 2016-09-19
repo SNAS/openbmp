@@ -8,6 +8,7 @@
  */
 
 #include <arpa/inet.h>
+#include <bitset>
 
 #include "MPLinkStateAttr.h"
 
@@ -47,6 +48,7 @@ namespace bgp_msg {
         /*
          * Loop through all TLV's for the attribute
          */
+
         int tlv_len;
         while (attr_len > 0) {
             tlv_len = parseAttrLinkStateTLV(attr_len, data);
@@ -56,9 +58,8 @@ namespace bgp_msg {
                 data += tlv_len;
         }
     }
- 
-    uint32_t MPLinkStateAttr::ieee_float_to_kbps(int32_t float_val)
-    {
+
+    uint32_t MPLinkStateAttr::ieee_float_to_kbps(int32_t float_val) {
         int32_t sign, exponent, mantissa;
         int64_t bits_value = 0;
 
@@ -104,7 +105,7 @@ namespace bgp_msg {
 
     }
 
-    /*******************************************************************************//*
+    /**
      * Parse Link State attribute TLV
      *
      * \details Will handle parsing the link state attribute
@@ -127,7 +128,7 @@ namespace bgp_msg {
         if (attr_len < 4) {
             LOG_NOTICE("%s: bgp-ls: failed to parse attribute; too short",
                     peer_addr.c_str());
-            return len + 4;
+            return attr_len + 4;
         }
 
         memcpy(&type, data, 2);
@@ -137,6 +138,8 @@ namespace bgp_msg {
         bgp::SWAP_BYTES(&len);
 
         data += 4;
+
+        LOG_INFO("type: %d", type);
 
         switch (type) {
             case ATTR_NODE_FLAG: {
@@ -180,7 +183,7 @@ namespace bgp_msg {
                 SELF_DEBUG("%s: bgp-ls: parsed local IPv4 router id attribute: addr = %s", peer_addr.c_str(), ip_char);
                 break;
 
-            case ATTR_NODE_IPV6_ROUTER_ID_LOCAL: // Includes ATTR_LINK_IPV6_ROUTER_ID_LOCAL
+            case ATTR_NODE_IPV6_ROUTER_ID_LOCAL:  // Includes ATTR_LINK_IPV6_ROUTER_ID_LOCAL
                 if (len != 16) {
                     LOG_NOTICE("%s: bgp-ls: failed to parse attribute local router id IPv6 sub-tlv; too short",
                             peer_addr.c_str());
@@ -220,7 +223,7 @@ namespace bgp_msg {
                 }
 
                 memcpy(parsed_data->ls_attrs[ATTR_NODE_MT_ID].data(), val_ss.str().data(), val_ss.str().length());
-                //LOG_INFO("%s: bgp-ls: parsed node MT_ID %s (len=%d)", peer_addr.c_str(), val_ss.str().c_str(), len);
+                // LOG_INFO("%s: bgp-ls: parsed node MT_ID %s (len=%d)", peer_addr.c_str(), val_ss.str().c_str(), len);
 
                 break;
 
@@ -237,8 +240,7 @@ namespace bgp_msg {
                 break;
 
             case ATTR_LINK_ADMIN_GROUP:
-                if (len != 4) 
-                {
+                if (len != 4) {
                     LOG_NOTICE("%s: bgp-ls: failed to parse attribute link admin group sub-tlv, size not 4",
                             peer_addr.c_str());
                     break;
@@ -296,7 +298,7 @@ namespace bgp_msg {
                     LOG_NOTICE("%s: bgp-ls: failed to parse attribute maximum link bandwidth sub-tlv; too short",
                             peer_addr.c_str());
                     break;
-                } 
+                }
 
                 float_val = 0;
                 memcpy(&float_val, data, len);
@@ -341,6 +343,23 @@ namespace bgp_msg {
                 SELF_DEBUG("%s: bgp-ls: parsing link name attribute: name = %s", peer_addr.c_str(), parsed_data->ls_attrs[ATTR_LINK_NAME].data());
                 break;
             }
+
+            case ATTR_LINK_PEER_AJD_SID: {
+                for (int i=0; i < len; i += 1) {
+
+                    u_char buff = 0;
+                    memcpy(&buff, data, 1);
+                    bgp::SWAP_BYTES(&buff);
+                    data += 1;
+
+                    std::cout<<std::bitset<8>(buff)<< " (" << std::to_string((int)buff) << ")\t";
+                    if (((i + 1)%4 == 0 && i!=0) || (i+1 == len)){
+                        std::cout << std::endl;
+                    }
+                }
+                break;
+            }
+
             case ATTR_LINK_SRLG:
                 //SELF_DEBUG("%s: bgp-ls: parsing link SRLG attribute", peer_addr.c_str());
                 LOG_INFO("%s: bgp-ls: link SRLG attribute, not yet implemented", peer_addr.c_str());
@@ -456,10 +475,6 @@ namespace bgp_msg {
                 memcpy(parsed_data->ls_attrs[ATTR_LINK_PEER_NODE_SID].data(), val_ss.str().data(), val_ss.str().length());
                 break;
 
-            case ATTR_LINK_PEER_AJD_SID:
-                LOG_INFO("%s: bgp-ls: peer adjacency SID link attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
-                break;
-
             case ATTR_LINK_PEER_SET_SID:
                 LOG_INFO("%s: bgp-ls: peer set SID link attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
@@ -512,6 +527,22 @@ namespace bgp_msg {
             case ATTR_PREFIX_OPAQUE_PREFIX:
                 LOG_INFO("%s: bgp-ls: opaque prefix attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
+
+            case 1034: {
+                u_char *datacopy = data;
+                for (int i=0; i < len; i += 1) {
+
+                    u_char buff = 0;
+                    memcpy(&buff, datacopy, 1);
+                    datacopy += 1;
+
+                    std::cout<<std::bitset<8>(buff)<< " (" << std::to_string((int)buff) << ")\t";
+                    if (((i + 1)%4 == 0 && i!=0) || (i+1 == len)){
+                        std::cout << std::endl;
+                    }
+                }
+                break;
+            }
 
             default:
                 LOG_INFO("%s: bgp-ls: Attribute type=%d len=%d not yet implemented, skipping",
