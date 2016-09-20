@@ -32,16 +32,15 @@ namespace bgp_msg {
  * \param [in]     enable_debug     Debug true to enable, false to disable
  */
 UpdateMsg::UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAddr, BMPReader::peer_info *peer_info,
-                     bool enable_debug) {
-    logger = logPtr;
-    debug = enable_debug;
+                     bool enable_debug)
+        : logger(logPtr),
+          debug(enable_debug),
+          peer_info(peer_info) {
 
-    peer_addr = peerAddr;
-    router_addr = routerAddr;
-    this->peer_info = peer_info;
+    this->peer_addr = peerAddr;
+    this->router_addr = routerAddr;
 
     four_octet_asn = peer_info->recv_four_octet_asn and peer_info->sent_four_octet_asn;
-    add_paths_enabled = peer_info->recv_add_paths and peer_info->sent_add_paths;
 }
 
 UpdateMsg::~UpdateMsg() {
@@ -185,7 +184,7 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
         bzero(tuple.prefix_bin, sizeof(tuple.prefix_bin));
 
         // Parse add-paths if enabled
-        if (add_paths_enabled and (len + read_size) >= 4) {
+        if (peer_info->add_path_capability->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST) and (len + read_size) >= 4) {
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
             data += 4; read_size += 4;
@@ -199,7 +198,7 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
         addr_bytes = tuple.len / 8;
         if (tuple.len % 8)
             ++addr_bytes;
-        
+
         SELF_DEBUG("%s: rtr=%s: Reading NLRI data prefix bits=%d bytes=%d", peer_addr.c_str(),
                     router_addr.c_str(), tuple.len, addr_bytes);
 
@@ -419,10 +418,10 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
            ExtCommunity ec(logger, peer_addr, debug);
            ec.parseExtCommunities(attr_len, data, parsed_data);
            break;
-        } 
-            
+        }
+
         case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)
-        { 
+        {
             ExtCommunity ec6(logger, peer_addr, debug);
             ec6.parsev6ExtCommunities(attr_len, data, parsed_data);
             break;
@@ -430,14 +429,14 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
         {
-            MPReachAttr mp(logger, peer_addr, add_paths_enabled, debug);
+            MPReachAttr mp(logger, peer_addr, peer_info, debug);
             mp.parseReachNlriAttr(attr_len, data, parsed_data);
             break;
         }
 
         case ATTR_TYPE_MP_UNREACH_NLRI : // RFC4760
         {
-            MPUnReachAttr mp(logger, peer_addr, add_paths_enabled, debug);
+            MPUnReachAttr mp(logger, peer_addr, peer_info, debug);
             mp.parseUnReachNlriAttr(attr_len, data, parsed_data);
             break;
         }

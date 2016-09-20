@@ -151,7 +151,7 @@ private:
     MsgBusInterface::obj_bgp_peer    *p_entry;       ///< peer table entry - will be updated with BMP info
     MsgBusInterface::obj_path_attr   base_attr;      ///< Base attribute object
 
-    MsgBusInterface *mbus_ptr;       ///< Pointer to open DB implementation
+    MsgBusInterface *mbus_ptr;                       ///< Pointer to open DB implementation
     string                           router_addr;    ///< Router IP address - used for logging
     BMPReader::peer_info             *p_info;        ///< Persistent Peer information
 

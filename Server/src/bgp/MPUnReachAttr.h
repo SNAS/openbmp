@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -14,7 +14,9 @@
 #include <list>
 #include <string>
 
+#include "AddPathDataContainer.h"
 #include "MPReachAttr.h"
+#include "BMPReader.h"
 
 namespace bgp_msg {
 
@@ -43,12 +45,14 @@ public:
      *
      * \details Handles bgp MP_UNREACH attributes
      *
-     * \param [in]     logPtr       Pointer to existing Logger for app logging
-     * \param [in]     pperAddr     Printed form of peer address used for logging
-     * \param [in]     add_paths    True if add paths enabled, false if not
-     * \param [in]     enable_debug Debug true to enable, false to disable
+     * \param [in]     logPtr                   Pointer to existing Logger for app logging
+     * \param [in]     pperAddr                 Printed form of peer address used for logging
+     * \param [in]     peer_info                Persistent Peer info pointer
+     * \param [in]     enable_debug             Debug true to enable, false to disable
      */
-    MPUnReachAttr(Logger *logPtr, std::string peerAddr, bool add_paths, bool enable_debug=false);
+    MPUnReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info,
+                  bool enable_debug=false);
+
     virtual ~MPUnReachAttr();
 
     /**
@@ -66,10 +70,10 @@ public:
     void parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
 
 private:
-    bool             debug;                           ///< debug flag to indicate debugging
-    Logger           *logger;                         ///< Logging class pointer
-    std::string      peer_addr;                       ///< Printed form of the peer address for logging
-    bool             add_paths_enabled;               ///< Indicates if add paths are enabled or not
+    bool                    debug;              ///< debug flag to indicate debugging
+    Logger                  *logger;            ///< Logging class pointer
+    std::string             peer_addr;          ///< Printed form of the peer address for logging
+    BMPReader::peer_info    *peer_info;         ///< Persistent Peer info pointer
 
     /**
      * MP UnReach NLRI parse based on AFI

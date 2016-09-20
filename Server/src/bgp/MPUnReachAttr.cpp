@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -19,17 +19,15 @@ namespace bgp_msg {
  *
  * \details Handles BGP MP UnReach NLRI
  *
- * \param [in]     logPtr       Pointer to existing Logger for app logging
- * \param [in]     pperAddr     Printed form of peer address used for logging
- * \param [in]     add_paths    True if add paths enabled, false if not
- * \param [in]     enable_debug Debug true to enable, false to disable
+ * \param [in]     logPtr                   Pointer to existing Logger for app logging
+ * \param [in]     pperAddr                 Printed form of peer address used for logging
+ * \param [in]     peer_info                Persistent Peer info pointer
+ * \param [in]     enable_debug             Debug true to enable, false to disable
  */
-MPUnReachAttr::MPUnReachAttr(Logger *logPtr, std::string peerAddr, bool add_paths, bool enable_debug) {
-    logger = logPtr;
-    debug = enable_debug;
-
-    peer_addr = peerAddr;
-    add_paths_enabled = add_paths;
+MPUnReachAttr::MPUnReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug)
+        : logger{logPtr}, debug{enable_debug}{
+    this->peer_addr = peerAddr;
+    this->peer_info = peer_info;
 }
 
 MPUnReachAttr::~MPUnReachAttr() {
@@ -136,12 +134,12 @@ void MPUnReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_unreach_nlri &nlri, Update
         case bgp::BGP_SAFI_UNICAST: // Unicast IP address prefix
 
             // Data is an IP address - parse the address and save it
-            MPReachAttr::parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, add_paths_enabled,
+            MPReachAttr::parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info,
                                                 parsed_data.withdrawn);
             break;
 
         case bgp::BGP_SAFI_NLRI_LABEL: // Labeled unicast
-            MPReachAttr::parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, add_paths_enabled,
+            MPReachAttr::parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info,
                                                      parsed_data.withdrawn);
             break;
 
