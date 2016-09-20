@@ -212,8 +212,8 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         bzero(ip_raw, sizeof(ip_raw));
 
         // Parse add-paths if enabled
-        if (peer_info->add_path_capability->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST) and
-                isIPv4 and (len + read_size) >= 4) {
+        if (peer_info->add_path_capability->isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6, bgp::BGP_SAFI_UNICAST)
+                and (len - read_size) >= 4) {
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
             data += 4; read_size += 4;
@@ -295,8 +295,8 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
     for (size_t read_size=0; read_size < len; read_size++) {
 
         // Parse add-paths if enabled
-        if (peer_info->add_path_capability->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_NLRI_LABEL) and
-                isIPv4 and (len + read_size) >= 4) {
+        if (peer_info->add_path_capability->isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6, bgp::BGP_SAFI_NLRI_LABEL)
+                and (len - read_size) >= 4) {
 
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
@@ -326,6 +326,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         {
             memcpy(&label.data, data, 3);
             bgp::SWAP_BYTES(&label.data);     // change to host order
+
             data += 3;
             addr_bytes -= 3;
             read_size += 3;
@@ -335,7 +336,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
             convert << label.decode.value;
             tuple.labels.append(convert.str());
 
-            if (label.decode.bos == 1) {
+            if (label.decode.bos == 1 or label.data == 0x80000000 /* withdrawn label as 32bits instead of 24 */) {
                break;               // Reached EoS
 
             } else {

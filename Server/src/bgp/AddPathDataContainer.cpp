@@ -83,10 +83,10 @@ bool AddPathDataContainer::isAddPathEnabled(int afi, int safi) {
         // Following the rule:
         // add_path_<afi/safi> = true IF (SENT_OPEN has ADD-PATH sent or both) AND (RECV_OPEN has ADD-PATH recv or both)
         return (
-            iterator->second.sendReceiveCodeForSentOpenMessage == bgp_msg::OpenMsg::BGP_CAP_ADD_PATH_SEND or
+            iterator->second.sendReceiveCodeForSentOpenMessage == bgp_msg::OpenMsg::BGP_CAP_ADD_PATH_RECEIVE or
                     iterator->second.sendReceiveCodeForSentOpenMessage == bgp_msg::OpenMsg::BGP_CAP_ADD_PATH_SEND_RECEIVE
             ) and (
-            iterator->second.sendReceiveCodeForReceivedOpenMessage == bgp_msg::OpenMsg::BGP_CAP_ADD_PATH_RECEIVE or
+            iterator->second.sendReceiveCodeForReceivedOpenMessage == bgp_msg::OpenMsg::BGP_CAP_ADD_PATH_SEND or
                     iterator->second.sendReceiveCodeForReceivedOpenMessage == bgp_msg::OpenMsg::BGP_CAP_ADD_PATH_SEND_RECEIVE
             );
     }
