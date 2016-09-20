@@ -137,9 +137,27 @@ namespace bgp_msg {
         memcpy(&len, data+2, 2);
         bgp::SWAP_BYTES(&len);
 
-        data += 4;
-
         LOG_INFO("type: %d", type);
+
+        std::cout << "START" << std::endl;
+
+        u_char *datacopy = data;
+
+        for (int i=0; i < len + 4; i += 1) {
+
+            u_char buff = 0;
+            memcpy(&buff, datacopy, 1);
+            bgp::SWAP_BYTES(&buff);
+            datacopy += 1;
+
+            std::cout << std::bitset<8>(buff)<< "(" << std::to_string((int)buff) << ")\t";
+            if (((i + 1)%4 == 0 && i!=0) || (i+1 == len)){
+                std::cout << std::endl;
+            }
+        }
+        std::cout << "END" << std::endl;
+
+        data += 4;
 
         switch (type) {
             case ATTR_NODE_FLAG: {
@@ -529,6 +547,7 @@ namespace bgp_msg {
                 break;
 
             case 1034: {
+                std::cout << "START 1034" << std::endl;
                 u_char *datacopy = data;
                 for (int i=0; i < len; i += 1) {
 
@@ -536,11 +555,12 @@ namespace bgp_msg {
                     memcpy(&buff, datacopy, 1);
                     datacopy += 1;
 
-                    std::cout<<std::bitset<8>(buff)<< " (" << std::to_string((int)buff) << ")\t";
+                    std::cout << std::bitset<8>(buff)<< "(" << std::to_string((int)buff) << ")\t";
                     if (((i + 1)%4 == 0 && i!=0) || (i+1 == len)){
                         std::cout << std::endl;
                     }
                 }
+                std::cout << "END 1034" << std::endl;
                 break;
             }
 
