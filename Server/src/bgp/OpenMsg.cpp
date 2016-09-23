@@ -7,6 +7,8 @@
  *
  */
 #include "OpenMsg.h"
+#include "AddPathDataContainer.h"
+#include "BMPReader.h"
 
 #include <string>
 #include <list>
@@ -21,14 +23,16 @@ namespace bgp_msg {
  *
  * \details Handles bgp open messages
  *
- * \param [in]     logPtr       Pointer to existing Logger for app logging
- * \param [in]     pperAddr     Printed form of peer address used for logging
- * \param [in]     enable_debug Debug true to enable, false to disable
+ * \param [in]     logPtr          Pointer to existing Logger for app logging
+ * \param [in]     peerAddr        Printed form of peer address used for logging
+ * \param [in]     peer_info       Persistent peer information
+ * \param [in]     enable_debug    Debug true to enable, false to disable
  */
-OpenMsg::OpenMsg(Logger *logPtr, std::string peerAddr, bool enable_debug) {
-    logger = logPtr;
-    debug = enable_debug;
-    peer_addr = peerAddr;
+OpenMsg::OpenMsg(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug) {
+        logger = logPtr;
+        debug = enable_debug;
+        this->peer_info = peer_info;
+        peer_addr = peerAddr;
 }
 
 OpenMsg::~OpenMsg() {
@@ -41,17 +45,18 @@ OpenMsg::~OpenMsg() {
  *      Reads the open message from buffer.  The parsed data will be
  *      returned via the out params.
  *
- * \param [in]   data         Pointer to raw bgp payload data, starting at the notification message
- * \param [in]   size         Size of the data available to read; prevent overrun when reading
- * \param [out]  asn          Reference to the ASN that was discovered
- * \param [out]  holdTime     Reference to the hold time
- * \param [out]  bgp_id       Reference to string for bgp ID in printed form
- * \param [out]  capabilities Reference to the capabilities list<string> (decoded values)
+ * \param [in]   data               Pointer to raw bgp payload data, starting at the notification message
+ * \param [in]   size               Size of the data available to read; prevent overrun when reading
+ * \param [in]   openMessageIsSent  If open message is sent. False if received
+ * \param [out]  asn                Reference to the ASN that was discovered
+ * \param [out]  holdTime           Reference to the hold time
+ * \param [out]  bgp_id             Reference to string for bgp ID in printed form
+ * \param [out]  capabilities       Reference to the capabilities list<string> (decoded values)
  *
  * \return ZERO is error, otherwise a positive value indicating the number of bytes read for the open message
  */
-size_t OpenMsg::parseOpenMsg(u_char *data, size_t size,
-                            uint32_t &asn, uint16_t &holdTime, std::string &bgp_id, std::list<std::string> &capabilities) {
+size_t OpenMsg::parseOpenMsg(u_char *data, size_t size, bool openMessageIsSent, uint32_t &asn, uint16_t &holdTime,
+                             std::string &bgp_id, std::list<std::string> &capabilities) {
     char        bgp_id_char[16];
     size_t      read_size       = 0;
     u_char      *bufPtr         = data;
@@ -98,7 +103,7 @@ size_t OpenMsg::parseOpenMsg(u_char *data, size_t size,
         return 0;
     }
 
-    if (!parseCapabilities(bufPtr, open_hdr.param_len, asn, capabilities)) {
+    if (!parseCapabilities(bufPtr, open_hdr.param_len, openMessageIsSent, asn, capabilities)) {
         LOG_WARN("%s: Could not read capabilities correctly in buffer, message is invalid.", peer_addr.c_str());
         return 0;
     }
@@ -116,14 +121,16 @@ size_t OpenMsg::parseOpenMsg(u_char *data, size_t size,
  *      Reads the capabilities from buffer.  The parsed data will be
  *      returned via the out params.
  *
- * \param [in]   data         Pointer to raw bgp payload data, starting at the open/cap message
- * \param [in]   size         Size of the data available to read; prevent overrun when reading
- * \param [out]  asn          Reference to the ASN that was discovered
- * \param [out]  capabilities Reference to the capabilities list<string> (decoded values)
+ * \param [in]   data               Pointer to raw bgp payload data, starting at the open/cap message
+ * \param [in]   size               Size of the data available to read; prevent overrun when reading
+ * \param [in]   openMessageIsSent  If open message is sent. False if received
+ * \param [out]  asn                Reference to the ASN that was discovered
+ * \param [out]  capabilities       Reference to the capabilities list<string> (decoded values)
  *
  * \return ZERO is error, otherwise a positive value indicating the number of bytes read
  */
-size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std::list<std::string> &capabilities)
+size_t OpenMsg::parseCapabilities(u_char *data, size_t size, bool openMessageIsSent, uint32_t &asn,
+                         std::list<std::string> &capabilities)
 {
     size_t      read_size   = 0;
     u_char      *bufPtr     = data;
@@ -234,6 +241,9 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std
                                         decodeStr.append("unknown");
                                         break;
                                 }
+
+                                this->peer_info->add_path_capability->addAddPath(data.afi, data.safi, data.send_recieve,
+                                                                                 openMessageIsSent);
 
                                 capabilities.push_back(decodeStr);
                             }

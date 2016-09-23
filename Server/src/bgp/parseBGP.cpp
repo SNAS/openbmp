@@ -17,6 +17,7 @@
 #include <cstring>
 #include <string>
 #include <list>
+#include <memory>
 #include <arpa/inet.h>
 #include <bgp/linkstate/MPLinkStateAttr.h>
 
@@ -167,7 +168,7 @@ bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_p
  * \returns True if error, false if no error.
  */
 bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event) {
-    bgp_msg::OpenMsg    oMsg(logger, p_entry->peer_addr, debug);
+    bgp_msg::OpenMsg    oMsg(logger, p_entry->peer_addr, this->p_info, debug);
     list <string>       cap_list;
     string              local_bgp_id, remote_bgp_id;
     size_t              read_size;
@@ -175,8 +176,7 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
     p_info->recv_four_octet_asn = false;
     p_info->sent_four_octet_asn = false;
     p_info->using_2_octet_asn = false;
-    p_info->sent_add_paths = false;
-    p_info->recv_add_paths = false;
+    p_info->add_path_capability = shared_ptr<AddPathDataContainer>(new AddPathDataContainer());
 
     /*
      * Process the sent open message
@@ -184,7 +184,8 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
     if (parseBgpHeader(data, size) == BGP_MSG_OPEN) {
         data += BGP_MSG_HDR_LEN;
 
-        read_size = oMsg.parseOpenMsg(data, data_bytes_remaining, up_event->local_asn, up_event->local_hold_time, local_bgp_id, cap_list);
+        read_size = oMsg.parseOpenMsg(data, data_bytes_remaining, true, up_event->local_asn, up_event->local_hold_time,
+                                      local_bgp_id, cap_list);
 
         if (!read_size) {
             LOG_ERR("%s: rtr=%s: Failed to read sent open message",  p_entry->peer_addr, router_addr.c_str());
@@ -208,9 +209,6 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
             if ((*it).find("4 Octet ASN") != std::string::npos)
                 p_info->sent_four_octet_asn = true;
 
-            if ((*it).find("ADD Path") != std::string::npos)
-                p_info->sent_add_paths = true;
-
             cap_str.append((*it));
         }
 
@@ -229,7 +227,8 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
     if (parseBgpHeader(data, size) == BGP_MSG_OPEN) {
         data += BGP_MSG_HDR_LEN;
 
-        read_size = oMsg.parseOpenMsg(data, data_bytes_remaining, up_event->remote_asn, up_event->remote_hold_time, remote_bgp_id, cap_list);
+        read_size = oMsg.parseOpenMsg(data, data_bytes_remaining, false, up_event->remote_asn,
+                                      up_event->remote_hold_time, remote_bgp_id, cap_list);
 
         if (!read_size) {
             LOG_ERR("%s: rtr=%s: Failed to read sent open message", p_entry->peer_addr, router_addr.c_str());
@@ -253,9 +252,6 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
             if ((*it).find("4 Octet ASN") != std::string::npos)
                 p_info->recv_four_octet_asn = true;
 
-            if ((*it).find("ADD Path") != std::string::npos)
-                p_info->recv_add_paths = true;
-
             cap_str.append((*it));
         }
 
@@ -266,12 +262,6 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
                 p_entry->peer_addr, router_addr.c_str());
         throw "ERROR: Invalid BGP MSG for BMP Received OPEN message, expected OPEN message.";
     }
-
-
-    if (p_info->sent_add_paths and p_info->recv_add_paths)
-        LOG_INFO("%s: rtr=%s: add paths enabled and expected in NLRI's",
-                p_entry->peer_addr, router_addr.c_str());
-
 
     return false;
 }

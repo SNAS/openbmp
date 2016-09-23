@@ -14,6 +14,8 @@
 #include "bgp_common.h"
 
 #include <list>
+#include <bmp/BMPReader.h>
+#include "AddPathDataContainer.h"
 
 namespace bgp_msg {
 
@@ -126,11 +128,12 @@ public:
       *
       * \details Handles bgp open messages
       *
-      * \param [in]     logPtr       Pointer to existing Logger for app logging
-      * \param [in]     pperAddr     Printed form of peer address used for logging
-      * \param [in]     enable_debug Debug true to enable, false to disable
+      * \param [in]     logPtr          Pointer to existing Logger for app logging
+      * \param [in]     peerAddr        Printed form of peer address used for logging
+      * \param [in]     peer_info       Persistent peer information
+      * \param [in]     enable_debug    Debug true to enable, false to disable
       */
-    OpenMsg(Logger *logPtr, std::string peerAddr, bool enable_debug=false);
+    OpenMsg(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug=false);
     virtual ~OpenMsg();
 
     /**
@@ -142,6 +145,7 @@ public:
      *
      * \param [in]   data         Pointer to raw bgp payload data, starting at the notification message
      * \param [in]   size         Size of the data parsed_msg.error_textfer, to prevent overrun when reading
+     * \param [in]   openMessageIsSent  If open message is sent. False if received
      * \param [out]  asn          Reference to the ASN that was discovered
      * \param [out]  holdTime     Reference to the hold time
      * \param [out]  bgp_id       Reference to string for bgp ID in printed form
@@ -149,15 +153,15 @@ public:
      *
      * \return ZERO is error, otherwise a positive value indicating the number of bytes read for the open message
      */
-    size_t parseOpenMsg(u_char *data, size_t size,
-                                uint32_t &asn, uint16_t &holdTime, std::string &bgp_id, std::list<std::string> &capabilities);
+    size_t parseOpenMsg(u_char *data, size_t size, bool openMessageIsSent, uint32_t &asn, uint16_t &holdTime,
+                        std::string &bgp_id, std::list<std::string> &capabilities);
 
 
 private:
-    bool             debug;                           ///< debug flag to indicate debugging
-    Logger           *logger;                         ///< Logging class pointer
-    std::string      peer_addr;                       ///< Printed form of the peer address for logging
-
+    bool                    debug;          ///< debug flag to indicate debugging
+    Logger                  *logger;        ///< Logging class pointer
+    std::string             peer_addr;      ///< Printed form of the peer address for logging
+    BMPReader::peer_info    *peer_info;     ///< Persistent Peer info pointer
 
     /**
      * Parses capabilities from buffer
@@ -166,14 +170,16 @@ private:
      *      Reads the capabilities from buffer.  The parsed data will be
      *      returned via the out params.
      *
-     * \param [in]   data         Pointer to raw bgp payload data, starting at the open/cap message
-     * \param [in]   size         Size of the data available to read; prevent overrun when reading
-     * \param [out]  asn          Reference to the ASN that was discovered
-     * \param [out]  capabilities Reference to the capabilities list<string> (decoded values)
+     * \param [in]   data               Pointer to raw bgp payload data, starting at the open/cap message
+     * \param [in]   size               Size of the data available to read; prevent overrun when reading
+     * \param [in]   openMessageIsSent  If open message is sent. False if received
+     * \param [out]  asn                Reference to the ASN that was discovered
+     * \param [out]  capabilities       Reference to the capabilities list<string> (decoded values)
      *
      * \return ZERO is error, otherwise a positive value indicating the number of bytes read
      */
-    size_t parseCapabilities(u_char *data, size_t size,  uint32_t &asn, std::list<std::string> &capabilities);
+    size_t parseCapabilities(u_char *data, size_t size, bool openMessageIsSent, uint32_t &asn,
+                             std::list<std::string> &capabilities);
 };
 
 } /* namespace bgp */

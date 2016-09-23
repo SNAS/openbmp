@@ -13,6 +13,7 @@
 #include "Logger.h"
 #include "bgp_common.h"
 #include "MsgBusInterface.hpp"
+#include "AddPathDataContainer.h"
 
 #include <string>
 #include <list>
@@ -173,13 +174,12 @@ public:
 
 
 private:
-    bool             debug;                           ///< debug flag to indicate debugging
-    Logger           *logger;                         ///< Logging class pointer
-    std::string      peer_addr;                       ///< Printed form of the peer address for logging
-    std::string      router_addr;                     ///< Router IP address - used for logging
-    bool             four_octet_asn;                  ///< Indicates true if 4 octets or false if 2
-    bool             add_paths_enabled;               ///< Indicates true if add paths is used, false if not
-    BMPReader::peer_info *peer_info;                  ///< Persistent Peer info pointer
+    bool                    debug;                           ///< debug flag to indicate debugging
+    Logger                  *logger;                         ///< Logging class pointer
+    std::string             peer_addr;                       ///< Printed form of the peer address for logging
+    std::string             router_addr;                     ///< Router IP address - used for logging
+    bool                    four_octet_asn;                  ///< Indicates true if 4 octets or false if 2
+    BMPReader::peer_info    *peer_info;                      ///< Persistent Peer info pointer
 
 
     /**
