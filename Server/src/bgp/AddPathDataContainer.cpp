@@ -12,11 +12,10 @@
 
 #include <memory>
 
-AddPathDataContainer::AddPathDataContainer() : addPathMap(new AddPathMap()) {
+AddPathDataContainer::AddPathDataContainer() {
 }
 
 AddPathDataContainer::~AddPathDataContainer() {
-    delete this->addPathMap;
 }
 
 /**
@@ -28,8 +27,8 @@ AddPathDataContainer::~AddPathDataContainer() {
  * \param [in] sent_open        Is obtained from sent open message. False if from recieved
  */
 void AddPathDataContainer::addAddPath(int afi, int safi, int send_receive, bool sent_open) {
-    AddPathMap::iterator iterator = this->addPathMap->find(this->getAFiSafiKeyString(afi, safi));
-    if(iterator == this->addPathMap->end()) {
+    AddPathMap::iterator iterator = this->addPathMap.find(this->getAFiSafiKeyString(afi, safi));
+    if(iterator == this->addPathMap.end()) {
         sendReceiveCodesForSentAndReceivedOpenMessageStructure newStructure;
 
         if (sent_open) {
@@ -38,7 +37,7 @@ void AddPathDataContainer::addAddPath(int afi, int safi, int send_receive, bool 
             newStructure.sendReceiveCodeForReceivedOpenMessage = send_receive;
         }
 
-        this->addPathMap->insert(std::pair<std::string, sendReceiveCodesForSentAndReceivedOpenMessageStructure>(
+        this->addPathMap.insert(std::pair<std::string, sendReceiveCodesForSentAndReceivedOpenMessageStructure>(
                 this->getAFiSafiKeyString(afi, safi),
                 newStructure
         ));
@@ -75,9 +74,9 @@ std::string AddPathDataContainer::getAFiSafiKeyString(int afi, int safi) {
  * \return is enabled
  */
 bool AddPathDataContainer::isAddPathEnabled(int afi, int safi) {
-    AddPathMap::iterator iterator = this->addPathMap->find(this->getAFiSafiKeyString(afi, safi));
+    AddPathMap::iterator iterator = this->addPathMap.find(this->getAFiSafiKeyString(afi, safi));
 
-    if(iterator == this->addPathMap->end()) {
+    if(iterator == this->addPathMap.end()) {
         return false;
     } else {
         // Following the rule:

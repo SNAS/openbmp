@@ -242,7 +242,7 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size, bool openMessageIsS
                                         break;
                                 }
 
-                                this->peer_info->add_path_capability->addAddPath(data.afi, data.safi, data.send_recieve,
+                                this->peer_info->add_path_capability.addAddPath(data.afi, data.safi, data.send_recieve,
                                                                                  openMessageIsSent);
 
                                 capabilities.push_back(decodeStr);

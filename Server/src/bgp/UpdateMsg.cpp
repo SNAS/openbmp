@@ -184,7 +184,8 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
         bzero(tuple.prefix_bin, sizeof(tuple.prefix_bin));
 
         // Parse add-paths if enabled
-        if (peer_info->add_path_capability->isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST) and (len + read_size) >= 4) {
+        if (peer_info->add_path_capability.isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST)
+                and (len - read_size) >= 4) {
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
             data += 4; read_size += 4;
