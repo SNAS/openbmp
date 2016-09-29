@@ -44,7 +44,6 @@ namespace bgp_msg {
      * \param [in]   data           Pointer to the attribute data
      */
     void MPLinkStateAttr::parseAttrLinkState(int attr_len, u_char *data) {
-
         /*
          * Loop through all TLV's for the attribute
          */
@@ -87,7 +86,6 @@ namespace bgp_msg {
         bits_value = mantissa;
 
         if (exponent <= IEEE_MANTISSA_WIDTH) {
-
            bits_value >>= IEEE_MANTISSA_WIDTH - exponent;
         } else {
            bits_value <<= exponent - IEEE_MANTISSA_WIDTH;
@@ -101,7 +99,6 @@ namespace bgp_msg {
         bits_value /= 1000;     // to kbits
 
         return bits_value;
-
     }
 
     /*******************************************************************************//*
@@ -207,7 +204,6 @@ namespace bgp_msg {
                 val_ss.str(std::string());  // Clear
 
                 for (int i=0; i < len; i += 2) {
-
                     value_16bit = 0;
                     memcpy(&value_16bit, data, 2);
                     bgp::SWAP_BYTES(&value_16bit);
@@ -235,12 +231,12 @@ namespace bgp_msg {
             case ATTR_NODE_OPAQUE:
                 LOG_INFO("%s: bgp-ls: opaque node attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
-                
+
             case ATTR_NODE_SR_CAPABILITIES: {
-                
-                // Parsing flags: 
+
+                // Parsing flags:
                 // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-05#section-2.1
-                
+
                 if (*data & 0x80) val_ss << "R";
                 if (*data & 0x40) val_ss << "N";
                 if (*data & 0x20) val_ss << "P";
@@ -268,7 +264,7 @@ namespace bgp_msg {
 
                 val_ss << " " << type;
 
-                if(type == 1161) {
+                if (type == 1161) {
                     u_int16_t sid_label_size = 0;
                     memcpy(&sid_label_size, data, 2);
                     bgp::SWAP_BYTES(&sid_label_size);
@@ -277,7 +273,7 @@ namespace bgp_msg {
                     if (sid_label_size == 3 || sid_label_size == 4) {
                         memcpy(&value_32bit, data, sid_label_size);
                         bgp::SWAP_BYTES(&value_32bit);
-                        
+
                         if (sid_label_size == 3) {
                             value_32bit = value_32bit >> 8;
                         }
@@ -291,7 +287,7 @@ namespace bgp_msg {
                     LOG_NOTICE("%s: bgp-ls: parsed node sr capabilities, SID/Label type is unexpected",
                             peer_addr.c_str());
                 }
-                
+
                 SELF_DEBUG("%s: bgp-ls: parsed node sr capabilities %s", peer_addr.c_str(), val_ss.str().data());
 
                 memcpy(parsed_data->ls_attrs[ATTR_NODE_SR_CAPABILITIES].data(), val_ss.str().data(), val_ss.str().length());
@@ -382,16 +378,17 @@ namespace bgp_msg {
                 bgp::SWAP_BYTES(&float_val, len);
                 float_val = ieee_float_to_kbps(float_val);
                 memcpy(parsed_data->ls_attrs[ATTR_LINK_MAX_RESV_BW].data(), &float_val, 4);
-                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum reserved bandwidth %u Kbits (len=%d)", peer_addr.c_str(), *(uint32_t *)&float_val, len);
+                SELF_DEBUG("%s: bgp-ls: parsed attribute maximum reserved bandwidth %u Kbits (len=%d)",
+                    peer_addr.c_str(), *(uint32_t *)&float_val, len);
                 break;
 
             case ATTR_LINK_MPLS_PROTO_MASK:
-                //SELF_DEBUG("%s: bgp-ls: parsing link MPLS Protocol mask attribute", peer_addr.c_str());
+                // SELF_DEBUG("%s: bgp-ls: parsing link MPLS Protocol mask attribute", peer_ad dr.c_str());
                 LOG_INFO("%s: bgp-ls: link MPLS Protocol mask attribute, not yet implemented", peer_addr.c_str());
                 break;
 
             case ATTR_LINK_PROTECTION_TYPE:
-                //SELF_DEBUG("%s: bgp-ls: parsing link protection type attribute", peer_addr.c_str());
+                // SELF_DEBUG("%s: bgp-ls: parsing link protection type attribute", peer_addr.c_str());
                 LOG_INFO("%s: bgp-ls: link protection type attribute, not yet implemented", peer_addr.c_str());
                 break;
 
@@ -399,12 +396,13 @@ namespace bgp_msg {
                 parsed_data->ls_attrs[ATTR_LINK_NAME].fill(0);
                 strncpy((char *)parsed_data->ls_attrs[ATTR_LINK_NAME].data(), (char *)data, len);
 
-                SELF_DEBUG("%s: bgp-ls: parsing link name attribute: name = %s", peer_addr.c_str(), parsed_data->ls_attrs[ATTR_LINK_NAME].data());
+                SELF_DEBUG("%s: bgp-ls: parsing link name attribute: name = %s",
+                    peer_addr.c_str(), parsed_data->ls_attrs[ATTR_LINK_NAME].data());
                 break;
             }
 
             case ATTR_LINK_SRLG:
-                //SELF_DEBUG("%s: bgp-ls: parsing link SRLG attribute", peer_addr.c_str());
+                // SELF_DEBUG("%s: bgp-ls: parsing link SRLG attribute", peer_addr.c_str());
                 LOG_INFO("%s: bgp-ls: link SRLG attribute, not yet implemented", peer_addr.c_str());
                 break;
 
@@ -416,15 +414,11 @@ namespace bgp_msg {
                 if (len == 0) {
                     memcpy(parsed_data->ls_attrs[ATTR_LINK_TE_DEF_METRIC].data(), &value_32bit, len);
                     break;
-                }
-
-                else if (len > 4) {
+                } else if (len > 4) {
                     LOG_NOTICE("%s: bgp-ls: failed to parse attribute TE default metric sub-tlv; too long %d",
                             peer_addr.c_str(), len);
                     break;
-                }
-
-                else {
+                } else {
                     memcpy(&value_32bit, data, len);
                     bgp::SWAP_BYTES(&value_32bit, len);
                     memcpy(parsed_data->ls_attrs[ATTR_LINK_TE_DEF_METRIC].data(), &value_32bit, len);
@@ -448,7 +442,6 @@ namespace bgp_msg {
                 val_ss.str(std::string());  // Clear
 
                 for (int i=0; i < 32; i += 4) {
-
                     float_val = 0;
                     memcpy(&float_val, data, 4);
                     bgp::SWAP_BYTES(&float_val);
@@ -490,8 +483,7 @@ namespace bgp_msg {
                     bgp::SWAP_BYTES(&value_32bit, 3);
 
                     val_ss << "L " << (int)*(data + 1) << " " << value_32bit;
-                }
-                else if (len >= 20) {
+                } else if (len >= 20) {
                     // 16-octet - IPv6 address
                     if (*data & 0x40)
                         val_ss << "L ";
@@ -499,15 +491,13 @@ namespace bgp_msg {
                     inet_ntop(AF_INET6, (data + 4), ip_char, sizeof(ip_char));
 
                     val_ss << (int) *(data + 1) << " " << ip_char;
-                }
-                else if (len == 8) {
+                } else if (len == 8) {
                     // 4-octet encoded offset in the SID/Label space advertised by this router using the encodings
                     memcpy(&value_32bit, (data+4), 4);
                     bgp::SWAP_BYTES(&value_32bit);
 
                     val_ss << (int) *(data + 1) << " " << value_32bit;
-                }
-                else {
+                } else {
                     LOG_WARN("%s: bgp-ls: Peer Node SID attribute has unexpected length of %d", peer_addr.c_str(), len);
                     break;
                 }
@@ -523,13 +513,13 @@ namespace bgp_msg {
                 break;
 
             case ATTR_PREFIX_EXTEND_TAG:
-                //SELF_DEBUG("%s: bgp-ls: parsing prefix extended tag attribute", peer_addr.c_str());
+                // SELF_DEBUG("%s: bgp-ls: parsing prefix extended tag attribute", peer_addr.c_str());
                 LOG_INFO("%s: bgp-ls: prefix extended tag attribute (len=%d), not yet implemented",
                          peer_addr.c_str(), len);
                 break;
 
             case ATTR_PREFIX_IGP_FLAGS:
-                //SELF_DEBUG("%s: bgp-ls: parsing prefix IGP flags attribute", peer_addr.c_str());
+                // SELF_DEBUG("%s: bgp-ls: parsing prefix IGP flags attribute", peer_addr.c_str());
                 LOG_INFO("%s: bgp-ls: prefix IGP flags attribute, not yet implemented", peer_addr.c_str());
                 break;
 
@@ -548,7 +538,7 @@ namespace bgp_msg {
             {
                 SELF_DEBUG("%s: bgp-ls: parsing prefix route tag attribute (len=%d)", peer_addr.c_str(), len);
 
-                //TODO: Per RFC7752 section 3.3.3, prefix tag can be multiples, but for now we only decode the first one.
+                // TODO(undefined): Per RFC7752 section 3.3.3, prefix tag can be multiples, but for now we only decode the first one.
                 value_32bit = 0;
 
                 if (len == 4) {
@@ -563,7 +553,7 @@ namespace bgp_msg {
                 break;
             }
             case ATTR_PREFIX_OSPF_FWD_ADDR:
-                //SELF_DEBUG("%s: bgp-ls: parsing prefix OSPF forwarding address attribute", peer_addr.c_str());
+                // SELF_DEBUG("%s: bgp-ls: parsing prefix OSPF forwarding address attribute", peer_addr.c_str());
                 LOG_INFO("%s: bgp-ls: prefix OSPF forwarding address attribute, not yet implemented", peer_addr.c_str());
                 break;
 
@@ -578,4 +568,4 @@ namespace bgp_msg {
 
         return len + 4;
     }
-}
+}  // namespace bgp_msg
