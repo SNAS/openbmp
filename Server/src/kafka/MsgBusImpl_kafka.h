@@ -30,18 +30,17 @@
 #include "Config.h"
 
 /**
- * \class   mysqlMBP
+ * \class   msgBus_kafka
  *
- * \brief   Mysql database implementation
- * \details Enables a DB backend using mysql 5.5 or greater.
+ * \brief   Kafka message bus implementation
   */
 class msgBus_kafka: public MsgBusInterface {
 public:
     #define MSGBUS_WORKING_BUF_SIZE         1800000
-    #define MSGBUS_API_VERSION              "1.3"
+    #define MSGBUS_API_VERSION              "1.4"
 
     /******************************************************************//**
-     * \brief This function will initialize and connect to MySQL.  
+     * \brief This function will initialize and connect to Kafka.
      *
      * \details It is expected that this class will start off with a new connection.
      *

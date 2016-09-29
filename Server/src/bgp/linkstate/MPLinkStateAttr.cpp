@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2015-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -48,7 +48,6 @@ namespace bgp_msg {
         /*
          * Loop through all TLV's for the attribute
          */
-
         int tlv_len;
         while (attr_len > 0) {
             tlv_len = parseAttrLinkStateTLV(attr_len, data);
@@ -105,7 +104,7 @@ namespace bgp_msg {
 
     }
 
-    /**
+    /*******************************************************************************//*
      * Parse Link State attribute TLV
      *
      * \details Will handle parsing the link state attribute
@@ -136,26 +135,6 @@ namespace bgp_msg {
 
         memcpy(&len, data+2, 2);
         bgp::SWAP_BYTES(&len);
-
-        LOG_INFO("type: %d", type);
-
-        std::cout << "START" << std::endl;
-
-        u_char *datacopy = data;
-
-        for (int i=0; i < len + 4; i += 1) {
-
-            u_char buff = 0;
-            memcpy(&buff, datacopy, 1);
-            bgp::SWAP_BYTES(&buff);
-            datacopy += 1;
-
-            std::cout << std::bitset<8>(buff)<< "(" << std::to_string((int)buff) << ")\t";
-            if (((i + 1)%4 == 0 && i!=0) || (i+1 == len)){
-                std::cout << std::endl;
-            }
-        }
-        std::cout << "END" << std::endl;
 
         data += 4;
 
@@ -256,6 +235,68 @@ namespace bgp_msg {
             case ATTR_NODE_OPAQUE:
                 LOG_INFO("%s: bgp-ls: opaque node attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
+                
+            case ATTR_NODE_SR_CAPABILITIES: {
+                
+                // Parsing flags: 
+                // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-05#section-2.1
+                
+                if (*data & 0x80) val_ss << "R";
+                if (*data & 0x40) val_ss << "N";
+                if (*data & 0x20) val_ss << "P";
+                if (*data & 0x10) val_ss << "E";
+                if (*data & 0x08) val_ss << "V";
+                if (*data & 0x04) val_ss << "L";
+
+                // 1 byte reserved (skipping) + 1 byte flags (already parsed)
+                data += 2;
+
+                // 3 bytes for Range
+                memcpy(&value_32bit, data, 3);
+                bgp::SWAP_BYTES(&value_32bit);
+                data += 3;
+                value_32bit = value_32bit >> 8;
+
+                val_ss << " " << value_32bit;
+
+                // Parsing SID/Label Sub-TLV: https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-03#section-2.3.7.2
+
+                u_int16_t type;
+                memcpy(&type, data, 2);
+                bgp::SWAP_BYTES(&type);
+                data += 2;
+
+                val_ss << " " << type;
+
+                if(type == 1161) {
+                    u_int16_t sid_label_size = 0;
+                    memcpy(&sid_label_size, data, 2);
+                    bgp::SWAP_BYTES(&sid_label_size);
+                    data += 2;
+
+                    if (sid_label_size == 3 || sid_label_size == 4) {
+                        memcpy(&value_32bit, data, sid_label_size);
+                        bgp::SWAP_BYTES(&value_32bit);
+                        
+                        if (sid_label_size == 3) {
+                            value_32bit = value_32bit >> 8;
+                        }
+
+                        val_ss << " " << value_32bit;
+                    } else {
+                        LOG_NOTICE("%s: bgp-ls: parsed node sr capabilities, sid label size is unexpected",
+                                peer_addr.c_str());
+                    }
+                } else {
+                    LOG_NOTICE("%s: bgp-ls: parsed node sr capabilities, SID/Label type is unexpected",
+                            peer_addr.c_str());
+                }
+                
+                SELF_DEBUG("%s: bgp-ls: parsed node sr capabilities %s", peer_addr.c_str(), val_ss.str().data());
+
+                memcpy(parsed_data->ls_attrs[ATTR_NODE_SR_CAPABILITIES].data(), val_ss.str().data(), val_ss.str().length());
+                break;
+            }
 
             case ATTR_LINK_ADMIN_GROUP:
                 if (len != 4) {
@@ -359,22 +400,6 @@ namespace bgp_msg {
                 strncpy((char *)parsed_data->ls_attrs[ATTR_LINK_NAME].data(), (char *)data, len);
 
                 SELF_DEBUG("%s: bgp-ls: parsing link name attribute: name = %s", peer_addr.c_str(), parsed_data->ls_attrs[ATTR_LINK_NAME].data());
-                break;
-            }
-
-            case ATTR_LINK_PEER_AJD_SID: {
-                for (int i=0; i < len; i += 1) {
-
-                    u_char buff = 0;
-                    memcpy(&buff, data, 1);
-                    bgp::SWAP_BYTES(&buff);
-                    data += 1;
-
-                    std::cout<<std::bitset<8>(buff)<< " (" << std::to_string((int)buff) << ")\t";
-                    if (((i + 1)%4 == 0 && i!=0) || (i+1 == len)){
-                        std::cout << std::endl;
-                    }
-                }
                 break;
             }
 
@@ -545,24 +570,6 @@ namespace bgp_msg {
             case ATTR_PREFIX_OPAQUE_PREFIX:
                 LOG_INFO("%s: bgp-ls: opaque prefix attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
-
-            case 1034: {
-                std::cout << "START 1034" << std::endl;
-                u_char *datacopy = data;
-                for (int i=0; i < len; i += 1) {
-
-                    u_char buff = 0;
-                    memcpy(&buff, datacopy, 1);
-                    datacopy += 1;
-
-                    std::cout << std::bitset<8>(buff)<< "(" << std::to_string((int)buff) << ")\t";
-                    if (((i + 1)%4 == 0 && i!=0) || (i+1 == len)){
-                        std::cout << std::endl;
-                    }
-                }
-                std::cout << "END 1034" << std::endl;
-                break;
-            }
 
             default:
                 LOG_INFO("%s: bgp-ls: Attribute type=%d len=%d not yet implemented, skipping",

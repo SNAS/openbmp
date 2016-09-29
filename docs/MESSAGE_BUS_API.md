@@ -5,6 +5,11 @@
 
 ## Version Diff
 
+### Diff from 1.4 to 1.2
+
+* **ls_node**
+    * Added **field 27** - Segment Routing Capabilities TLV 
+
 ### Diff from 1.3 to 1.2
 
 * **unicast_prefix**
@@ -308,6 +313,7 @@ One or more link-state nodes.
 24 | Node Name | String | 255 | ISIS hostname
 25 | isPrePolicy | Bool | 1 | Indicates if LS node BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 26 | isAdjIn | Bool | 1 | Indicates if LS node BGP prefix is Adj-RIB-In or Adj-RIB-Out
+27 | SR-Capabilities TLV | String | 255 | SR-Capabilities TLV in the format of **[R][N][P][E][V][L] [Range Size] [SID/Label Type]** R, N, P, E, V, L are set only when corresponding flags are set. (More about flags: https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-03#section-2.3.7.2)
 
 
 ### Object: <font color="blue">ls\_link</font> (openbmp.parsed.ls\_link)

@@ -36,7 +36,7 @@
 using namespace std;
 
 /******************************************************************//**
- * \brief This function will initialize and connect to MySQL.
+ * \brief This function will initialize and connect to Kafka.
  *
  * \details It is expected that this class will start off with a new connection.
  *
@@ -971,12 +971,12 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 
         buf_len += snprintf(buf2, sizeof(buf2),
                         "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32 "\t%s"
-                                "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%d\t%d\n",
+                                "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\n",
                         action.c_str(),ls_node_seq, hash_str.c_str(),path_hash_str.c_str(), r_hash_str.c_str(),
                         router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
                         igp_router_id, router_id, node.id, node.bgp_ls_id,node.mt_id, ospf_area_id, isis_area_id,
                         node.protocol, node.flags, attr.as_path.c_str(), attr.local_pref, attr.med, attr.next_hop, node.name,
-                        peer.isPrePolicy, peer.isAdjIn);
+                        peer.isPrePolicy, peer.isAdjIn, node.sr_capabilities_tlv);
 
         // Cat the entry to the query buff
         if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)

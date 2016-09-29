@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -625,6 +625,10 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID) != ls_attrs.end())
                 memcpy((*it).isis_area_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID].data(), sizeof((*it).isis_area_id));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_SR_CAPABILITIES) != ls_attrs.end()) {
+                memcpy((*it).sr_capabilities_tlv, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_SR_CAPABILITIES].data(), sizeof((*it).sr_capabilities_tlv));
+            }
         }
 
         if (remove)
