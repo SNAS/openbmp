@@ -5,10 +5,13 @@
 
 ## Version Diff
 
-### Diff from 1.4 to 1.2
+### Diff from 1.4 to 1.3
 
 * **ls_node**
-    * Added **field 27** - Segment Routing Capabilities TLV 
+    * Added **field 27** - Segment Routing Capabilities TLV
+     
+* **ls_link**
+    * Added **field 46** - Adjacency Segment Identifier
 
 ### Diff from 1.3 to 1.2
 
@@ -366,6 +369,7 @@ One or more link-state links.
 43 | EPE Peer Node SID | String | 128 | Peer node SID in the format of [L] **weight** **label/idx/ipv4**. L is only set when L flag is set.
 44 | isPrePolicy | Bool | 1 | Indicates if LS link BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 45 | isAdjIn | Bool | 1 | Indicates if LS link BGP prefix is Adj-RIB-In or Adj-RIB-Out
+46 | Adjacency Segment Identifier | String | 128 | Adjacency Segment Identifier in the format of **[R][N][P][E][V][L] [Weight] [SID/Label]** R, N, P, E, V, L are set only when corresponding flags are set. (More about flags: https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-03#section-2.3.7.2)
 
 ### Object: <font color="blue">ls\_prefix</font> (openbmp.parsed.ls\_prefix)
 One or more link-state prefixes.

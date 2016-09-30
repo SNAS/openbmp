@@ -697,6 +697,9 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_NODE_SID) != ls_attrs.end())
                 memcpy((*it).peer_node_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_NODE_SID].data(), sizeof((*it).peer_node_sid));
+                
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_AJD_SID) != ls_attrs.end())
+                memcpy((*it).peer_adj_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_AJD_SID].data(), sizeof((*it).peer_adj_sid));
         }
 
         if (remove)

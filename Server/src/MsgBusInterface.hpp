@@ -323,6 +323,7 @@ public:
         char        srlg[128];                  ///< String representation of the shared risk link group values
         char        name[255];                  ///< Name of router
         char        peer_node_sid[128];         ///< Peer node side (draft-ietf-idr-bgpls-segment-routing-epe)
+        char        peer_adj_sid[128];          ///< Peer Adjency Segment Identifier
     };
 
     /**

@@ -8,7 +8,7 @@
  */
 
 #include <arpa/inet.h>
-#include <bitset>
+#include <string>
 
 #include "MPLinkStateAttr.h"
 
@@ -233,6 +233,7 @@ namespace bgp_msg {
                 break;
 
             case ATTR_NODE_SR_CAPABILITIES: {
+                val_ss.str(std::string());
 
                 // Parsing flags:
                 // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-05#section-2.1
@@ -398,6 +399,46 @@ namespace bgp_msg {
 
                 SELF_DEBUG("%s: bgp-ls: parsing link name attribute: name = %s",
                     peer_addr.c_str(), parsed_data->ls_attrs[ATTR_LINK_NAME].data());
+                break;
+            }
+            
+            case ATTR_LINK_PEER_AJD_SID: {
+                u_char flags;
+                memcpy(&flags, data, sizeof(flags));
+                
+                // Parsing flags:
+                // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-05#section-2.1
+
+                if (*data & 0x80) val_ss << "R";
+                if (*data & 0x40) val_ss << "N";
+                if (*data & 0x20) val_ss << "P";
+                if (*data & 0x10) val_ss << "E";
+                if (*data & 0x08) val_ss << "V";
+                if (*data & 0x04) val_ss << "L";
+                    
+                data += 1;
+                
+                u_int8_t weight;
+                memcpy(&weight, data, 1);
+                
+                val_ss << " " << (int)weight;
+                
+                // 1 byte for Weight + 2 bytes for Reserved
+                data += 3;
+                
+                memcpy(&value_32bit, data, 3);
+                bgp::SWAP_BYTES(&value_32bit);
+                data += 3;
+                
+                value_32bit = value_32bit >> 8;
+
+                val_ss << " " << value_32bit;
+                
+                std::cout << val_ss.str() << std::endl;
+                
+                SELF_DEBUG("%s: bgp-ls: parsed link adjency segment identifier %s", peer_addr.c_str(), val_ss.str().data());
+
+                memcpy(parsed_data->ls_attrs[ATTR_LINK_PEER_AJD_SID].data(), val_ss.str().data(), val_ss.str().length());
                 break;
             }
 
