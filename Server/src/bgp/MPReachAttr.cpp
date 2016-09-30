@@ -212,7 +212,7 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         bzero(ip_raw, sizeof(ip_raw));
 
         // Parse add-paths if enabled
-        if (peer_info->add_path_capability->isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6, bgp::BGP_SAFI_UNICAST)
+        if (peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6, bgp::BGP_SAFI_UNICAST)
                 and (len - read_size) >= 4) {
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
@@ -295,7 +295,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
     for (size_t read_size=0; read_size < len; read_size++) {
 
         // Parse add-paths if enabled
-        if (peer_info->add_path_capability->isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6, bgp::BGP_SAFI_NLRI_LABEL)
+        if (peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6, bgp::BGP_SAFI_NLRI_LABEL)
                 and (len - read_size) >= 4) {
 
             memcpy(&tuple.path_id, data, 4);

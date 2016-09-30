@@ -176,7 +176,7 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
     p_info->recv_four_octet_asn = false;
     p_info->sent_four_octet_asn = false;
     p_info->using_2_octet_asn = false;
-    p_info->add_path_capability = shared_ptr<AddPathDataContainer>(new AddPathDataContainer());
+
 
     /*
      * Process the sent open message
