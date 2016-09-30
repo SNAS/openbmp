@@ -407,6 +407,8 @@ namespace bgp_msg {
             }
             
             case ATTR_LINK_PEER_AJD_SID: {
+                val_ss.str(std::string());
+                
                 u_char flags;
                 memcpy(&flags, data, sizeof(flags));
                 
