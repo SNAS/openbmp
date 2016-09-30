@@ -316,7 +316,7 @@ One or more link-state nodes.
 24 | Node Name | String | 255 | ISIS hostname
 25 | isPrePolicy | Bool | 1 | Indicates if LS node BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 26 | isAdjIn | Bool | 1 | Indicates if LS node BGP prefix is Adj-RIB-In or Adj-RIB-Out
-27 | SR-Capabilities TLV | String | 255 | SR-Capabilities TLV in the format of **[R][N][P][E][V][L] [Range Size] [SID/Label Type]** R, N, P, E, V, L are set only when corresponding flags are set. (More about flags: https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-03#section-2.3.7.2)
+27 | SR-Capabilities TLV | String | 255 | SR-Capabilities TLV in the format of **[I][V][H] [Range Size] [SID/Label Type]** I, V, H are set only when corresponding flags are set. (More about flags: https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-07#section-3.1)
 
 
 ### Object: <font color="blue">ls\_link</font> (openbmp.parsed.ls\_link)

@@ -236,14 +236,11 @@ namespace bgp_msg {
                 val_ss.str(std::string());
 
                 // Parsing flags:
-                // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-05#section-2.1
+                // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-07#section-3.1
 
-                if (*data & 0x80) val_ss << "R";
-                if (*data & 0x40) val_ss << "N";
-                if (*data & 0x20) val_ss << "P";
-                if (*data & 0x10) val_ss << "E";
-                if (*data & 0x08) val_ss << "V";
-                if (*data & 0x04) val_ss << "L";
+                if (*data & 0x80) val_ss << "I";
+                if (*data & 0x40) val_ss << "V";
+                if (*data & 0x20) val_ss << "H";
 
                 // 1 byte reserved (skipping) + 1 byte flags (already parsed)
                 data += 2;
