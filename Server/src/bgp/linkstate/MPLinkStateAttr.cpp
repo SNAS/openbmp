@@ -105,7 +105,7 @@ namespace bgp_msg {
      * Parse flags to string
      *
      * \details   Will parse flags from binary representation to string. 
-     *            Example: flags "std::array<char, 8>{'I', '\0', 'H'}"" 
+     *            Example: flags "std::array<std::string, 8>{'I', '\0', 'H'}"" 
      *            means data "11100000" would be parsed as "IH"
      *
      * \param [in]   flags          Array of flags
@@ -113,10 +113,10 @@ namespace bgp_msg {
      *
      * \returns string with flags
      */
-    std::string MPLinkStateAttr::parse_flags_to_string(u_char data, std::array<char, 8> flags){
+    std::string MPLinkStateAttr::parse_flags_to_string(u_char data, std::array<std::string, 8> flags){
         std::string flags_string = "";
         u_char current_mask = 0x80;
-        for (std::array<char, 8>::iterator iterator = flags.begin(); iterator != flags.end(); ++iterator) {
+        for (std::array<std::string, 8>::iterator iterator = flags.begin(); iterator != flags.end(); ++iterator) {
             if(current_mask & data) {
                 flags_string += *iterator;
             }
@@ -166,7 +166,7 @@ namespace bgp_msg {
                              peer_addr.c_str(), len);
                 }
 
-                std::string flags = this->parse_flags_to_string(*data, std::array<char, 8>{'O', 'T', 'E', 'B', 'R', 'V'});
+                std::string flags = this->parse_flags_to_string(*data, std::array<std::string, 8>{"O", "T", "E", "B", "R", "V"});
 
                 SELF_DEBUG("%s: bgp-ls: parsed node flags %s %x (len=%d)", peer_addr.c_str(), flags.c_str(), *data, len);
 
@@ -247,7 +247,7 @@ namespace bgp_msg {
                 val_ss.str(std::string());
 
                 // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-07#section-3.1                
-                val_ss << this->parse_flags_to_string(*data, std::array<char, 8>{'I', 'V', 'H'});
+                val_ss << this->parse_flags_to_string(*data, std::array<std::string, 8>{"I", "V", "H"});
                 
                 // 1 byte reserved (skipping) + 1 byte flags (already parsed)
                 data += 2;
@@ -415,7 +415,7 @@ namespace bgp_msg {
                 // Parsing flags:
                 // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-05#section-2.1
 
-                val_ss << this->parse_flags_to_string(*data, std::array<char, 8>{'R', 'N', 'P', 'E', 'V', 'L'});
+                val_ss << this->parse_flags_to_string(*data, std::array<std::string, 8>{"R", "N", "P", "E", "V", "L"});
                 data += 1;
                 
                 u_int8_t weight;
@@ -599,6 +599,42 @@ namespace bgp_msg {
             case ATTR_PREFIX_OPAQUE_PREFIX:
                 LOG_INFO("%s: bgp-ls: opaque prefix attribute (len=%d), not yet implemented", peer_addr.c_str(), len);
                 break;
+                
+            case ATTR_PREFIX_SID_TLV: {
+                val_ss.str(std::string());
+                value_32bit = 0;
+                
+                // Package structure:
+                // https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-09#section-5
+                
+                val_ss << this->parse_flags_to_string(*data, std::array<std::string, 8>{"", "NP", "M", "E", "V", "L"});
+                
+                // 1 byte for Flags + 1 byte for reserved
+                data += 2;
+                
+                u_int8_t mt_id = 0;
+                memcpy(&mt_id, data, 1);
+                data += 1;
+                val_ss << " " << (int)mt_id;
+                
+                u_int8_t algorythm = 0;
+                memcpy(&algorythm, data, 1);
+                data += 1;
+                val_ss << " " << (int)algorythm;
+                
+                // 4 bytes already read, looking for SID/Index/Label
+                if (len - 4 <= 4) {
+                    memcpy(&value_32bit, data, len - 4);
+                    bgp::SWAP_BYTES(&value_32bit);
+                    val_ss << " " << value_32bit;
+                } else {
+                    LOG_WARN("%s: bgp-ls: Prefix SID/Index/Label has unexpected length: %d", peer_addr.c_str(), len - 4);
+                    break;
+                }
+                
+                memcpy(parsed_data->ls_attrs[ATTR_PREFIX_SID_TLV].data(), val_ss.str().data(), val_ss.str().length());
+                break;
+            }
 
             default:
                 LOG_INFO("%s: bgp-ls: Attribute type=%d len=%d not yet implemented, skipping",

@@ -409,6 +409,7 @@ One or more link-state prefixes.
 31 | Prefix Length | Int | 1 | Prefix length in bits
 32 | isPrePolicy | Bool | 1 | Indicates if LS prefix BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 33 | isAdjIn | Bool | 1 | Indicates if LS prefix BGP prefix is Adj-RIB-In or Adj-RIB-Out
+34 | Prefix-SID TLV | String | 128 | Prefix-SID TLV in the format of **[NP][M][E][V][L] [MT-ID] [Algorithm] [SID/Label]** NP, M, E, V, L are set only when corresponding flags are set. (More about flags: https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-09#section-5)
 
 Message API: BMP RAW Data
 ------------------------------------

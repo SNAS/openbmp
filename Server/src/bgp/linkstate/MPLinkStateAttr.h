@@ -96,7 +96,8 @@ namespace bgp_msg {
             ATTR_PREFIX_EXTEND_TAG,                             ///< Extended Tag (len=8*n)
             ATTR_PREFIX_PREFIX_METRIC,                          ///< Prefix Metric (len=4)
             ATTR_PREFIX_OSPF_FWD_ADDR,                          ///< OSPF Forwarding Address
-            ATTR_PREFIX_OPAQUE_PREFIX                           ///< Opaque prefix attribute (len=variable)
+            ATTR_PREFIX_OPAQUE_PREFIX,                          ///< Opaque prefix attribute (len=variable)
+            ATTR_PREFIX_SID_TLV                                 ///< Prefix-SID TLV (len=variable)
         };
 
         /**
@@ -163,7 +164,7 @@ namespace bgp_msg {
          * Parse flags to string
          *
          * \details   Will parse flags from binary representation to string. 
-         *            Example: flags "std::array<char, 8>{'I', '\0', 'H'}"" 
+         *            Example: flags "std::array<std::string, 8>{'I', '\0', 'H'}"" 
          *            means data "11100000" would be parsed as "IH"
          *
          * \param [in]   flags          Array of flags
@@ -171,7 +172,7 @@ namespace bgp_msg {
          *
          * \returns string with flags
          */
-        std::string parse_flags_to_string(u_char data, std::array<char, 8> flags);
+        std::string parse_flags_to_string(u_char data, std::array<std::string, 8> flags);
 
         uint32_t ieee_float_to_kbps(int32_t float_val);
     };

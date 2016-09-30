@@ -1270,13 +1270,14 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
         buf_len += snprintf(buf2, sizeof(buf2),
                 "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32
                         "\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%" PRIx32 "\t%s\t%s\t%" PRIu32 "\t%" PRIx64
-                            "\t%s\t%" PRIu32 "\t%s\t%d\t%d\t%d\n",
+                            "\t%s\t%" PRIu32 "\t%s\t%d\t%d\t%d\t%s\n",
                             action.c_str(), ls_prefix_seq, hash_str.c_str(), path_hash_str.c_str(), r_hash_str.c_str(),
                             router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
                             igp_router_id, router_id, prefix.id, prefix.bgp_ls_id, ospf_area_id, isis_area_id,
                             prefix.protocol, attr.as_path.c_str(), attr.local_pref, attr.med, attr.next_hop, local_node_hash_id.c_str(),
                             prefix.mt_id, prefix.ospf_route_type, prefix.igp_flags, prefix.route_tag, prefix.ext_route_tag,
-                            ospf_fwd_addr, prefix.metric, prefix_ip, prefix.prefix_len, peer.isPrePolicy, peer.isAdjIn);
+                            ospf_fwd_addr, prefix.metric, prefix_ip, prefix.prefix_len, peer.isPrePolicy, peer.isAdjIn,
+                            prefix.sid_tlv);
 
         // Cat the entry to the query buff
         if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)

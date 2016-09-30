@@ -356,6 +356,7 @@ public:
         uint32_t    route_tag;              ///< Route tag
         uint64_t    ext_route_tag;          ///< Extended route tag
         uint8_t     ospf_fwd_addr[16];      ///< IPv4/IPv6 OSPF forwarding address
+        char        sid_tlv[128];           ///< Prefix-SID TLV
     };
 
     /* ---------------------------------------------------------------------------
