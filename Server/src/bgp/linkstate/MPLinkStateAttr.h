@@ -158,7 +158,20 @@ namespace bgp_msg {
          * \returns length of the TLV attribute parsed
          */
         int parseAttrLinkStateTLV(int attr_len, u_char *data);
-
+        
+        /*******************************************************************************//*
+         * Parse flags to string
+         *
+         * \details   Will parse flags from binary representation to string. 
+         *            Example: flags "std::array<char, 8>{'I', '\0', 'H'}"" 
+         *            means data "11100000" would be parsed as "IH"
+         *
+         * \param [in]   flags          Array of flags
+         * \param [in]   data           Pointer to the attribute data
+         *
+         * \returns string with flags
+         */
+        std::string parse_flags_to_string(u_char data, std::array<char, 8> flags);
 
         uint32_t ieee_float_to_kbps(int32_t float_val);
     };

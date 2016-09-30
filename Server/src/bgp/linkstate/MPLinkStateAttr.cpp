@@ -100,6 +100,30 @@ namespace bgp_msg {
 
         return bits_value;
     }
+    
+    /*******************************************************************************//*
+     * Parse flags to string
+     *
+     * \details   Will parse flags from binary representation to string. 
+     *            Example: flags "std::array<char, 8>{'I', '\0', 'H'}"" 
+     *            means data "11100000" would be parsed as "IH"
+     *
+     * \param [in]   flags          Array of flags
+     * \param [in]   data           Pointer to the attribute data
+     *
+     * \returns string with flags
+     */
+    std::string MPLinkStateAttr::parse_flags_to_string(u_char data, std::array<char, 8> flags){
+        std::string flags_string = "";
+        u_char current_mask = 0x80;
+        for (std::array<char, 8>::iterator iterator = flags.begin(); iterator != flags.end(); ++iterator) {
+            if(current_mask & data) {
+                flags_string += *iterator;
+            }
+            current_mask = current_mask >> 1;
+        }
+        return flags_string;
+    }
 
     /*******************************************************************************//*
      * Parse Link State attribute TLV
@@ -142,20 +166,7 @@ namespace bgp_msg {
                              peer_addr.c_str(), len);
                 }
 
-                std::string flags = "";
-
-                if (*data & NODE_FLAG_MASK_OVERLOAD)
-                    flags += "O";
-                if (*data & NODE_FLAG_MASK_ATTACH)
-                    flags += "T";
-                if (*data & NODE_FLAG_MASK_EXTERNAL)
-                    flags += "E";
-                if (*data & NODE_FLAG_MASK_ABR)
-                    flags += "B";
-                if (*data & NODE_FLAG_MASK_ROUTER)
-                    flags += "R";
-                if (*data & NODE_FLAG_MASK_V6)
-                    flags += "V";
+                std::string flags = this->parse_flags_to_string(*data, std::array<char, 8>{'O', 'T', 'E', 'B', 'R', 'V'});
 
                 SELF_DEBUG("%s: bgp-ls: parsed node flags %s %x (len=%d)", peer_addr.c_str(), flags.c_str(), *data, len);
 
@@ -235,13 +246,9 @@ namespace bgp_msg {
             case ATTR_NODE_SR_CAPABILITIES: {
                 val_ss.str(std::string());
 
-                // Parsing flags:
-                // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-07#section-3.1
-
-                if (*data & 0x80) val_ss << "I";
-                if (*data & 0x40) val_ss << "V";
-                if (*data & 0x20) val_ss << "H";
-
+                // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-07#section-3.1                
+                val_ss << this->parse_flags_to_string(*data, std::array<char, 8>{'I', 'V', 'H'});
+                
                 // 1 byte reserved (skipping) + 1 byte flags (already parsed)
                 data += 2;
 
@@ -406,13 +413,7 @@ namespace bgp_msg {
                 // Parsing flags:
                 // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-05#section-2.1
 
-                if (*data & 0x80) val_ss << "R";
-                if (*data & 0x40) val_ss << "N";
-                if (*data & 0x20) val_ss << "P";
-                if (*data & 0x10) val_ss << "E";
-                if (*data & 0x08) val_ss << "V";
-                if (*data & 0x04) val_ss << "L";
-                    
+                val_ss << this->parse_flags_to_string(*data, std::array<char, 8>{'R', 'N', 'P', 'E', 'V', 'L'});
                 data += 1;
                 
                 u_int8_t weight;
