@@ -434,8 +434,6 @@ namespace bgp_msg {
 
                 val_ss << " " << value_32bit;
                 
-                std::cout << val_ss.str() << std::endl;
-                
                 SELF_DEBUG("%s: bgp-ls: parsed link adjency segment identifier %s", peer_addr.c_str(), val_ss.str().data());
 
                 memcpy(parsed_data->ls_attrs[ATTR_LINK_PEER_AJD_SID].data(), val_ss.str().data(), val_ss.str().length());
