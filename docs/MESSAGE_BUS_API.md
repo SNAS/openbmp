@@ -13,6 +13,9 @@
 * **ls_link**
     * Added **field 46** - Adjacency Segment Identifier
 
+* **ls_prefix**
+    * Added **field 34** - Prefix-SID TLV
+
 ### Diff from 1.3 to 1.2
 
 * **unicast_prefix**
