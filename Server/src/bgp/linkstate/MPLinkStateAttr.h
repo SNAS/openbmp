@@ -38,23 +38,6 @@ namespace bgp_msg {
         };
 
         /**
-         * ATTR_NODE_FLAG Bits Types See RFC7752 Section 3.3.1.1 for node flags
-         */
-        enum NODE_FLAG_TYPES {
-            NODE_FLAG_MASK_OVERLOAD                  = 0x80,         ///< Overload Bit (rfc1195)
-            NODE_FLAG_MASK_ATTACH                    = 0x40,         ///< Attached Bit (rfc1195)
-            NODE_FLAG_MASK_EXTERNAL                  = 0x20,         ///< External Bit (rfc2328)
-            NODE_FLAG_MASK_ABR                       = 0x10,         ///< ABR Bit (rfc2328)
-            NODE_FLAG_MASK_ROUTER                    = 0x08,         ///< Router bit (rfc5340)
-            NODE_FLAG_MASK_V6                        = 0x04          ///< V6 bit (rfc5340)
-        };
-
-        enum ATTR_LINK_FLAG_TYPES {
-            ATTR_LINK_FLAG_MASK_ADDRESS_FAMILY       = 0x20,
-            ATTR_LINK_FLAG_MASK_BACKUP               = 0x10
-        };
-
-        /**
          * Link Attribute types
          */
         enum ATTR_LINK_TYPES {
