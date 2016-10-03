@@ -33,7 +33,7 @@ namespace bgp_msg {
             ATTR_NODE_NAME,                               ///< Node Name (len=variable)
             ATTR_NODE_ISIS_AREA_ID,                       ///< IS-IS Area Identifier (len=variable)
             ATTR_NODE_IPV4_ROUTER_ID_LOCAL,               ///< Local NODE IPv4 Router ID (len=4) (rfc5305/4.3)
-            ATTR_NODE_IPV6_ROUTER_ID_LOCAL,                ///< Local NODE IPv6 Router ID (len=16) (rfc6119/4.1)
+            ATTR_NODE_IPV6_ROUTER_ID_LOCAL,               ///< Local NODE IPv6 Router ID (len=16) (rfc6119/4.1)
             ATTR_NODE_SR_CAPABILITIES           = 1034    ///< SR Capabilities
         };
 
