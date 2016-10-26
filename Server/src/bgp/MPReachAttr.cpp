@@ -12,6 +12,7 @@
 #include "BMPReader.h"
 
 #include <arpa/inet.h>
+#include <bitset>
 
 namespace bgp_msg {
 
@@ -26,7 +27,7 @@ namespace bgp_msg {
  * \param [in]     enable_debug             Debug true to enable, false to disable
  */
 MPReachAttr::MPReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug)
-    : logger{logPtr}, peer_info{peer_info}, debug{enable_debug}{
+    : logger{logPtr}, peer_info{peer_info}, debug{enable_debug} {
         this->peer_addr = peerAddr;
 }
 
@@ -47,6 +48,9 @@ MPReachAttr::~MPReachAttr() {
  * \param [out]  parsed_data            Reference to parsed_update_data; will be updated with all parsed data
  */
 void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::parsed_update_data &parsed_data) {
+    
+    std::cout << "parseReachNlriAttr" << std::endl;
+
     mp_reach_nlri nlri;
     /*
      * Set the MP NLRI struct
@@ -129,6 +133,8 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
     char        ip_char[40];
 
     bzero(ip_raw, sizeof(ip_raw));
+    
+    std::cout << (int)nlri.afi << " " << (int)nlri.safi << std::endl;
 
     /*
      * Decode based on SAFI
@@ -170,7 +176,189 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             // Data is an Label, IP address tuple parse and save it
             parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info, parsed_data.advertised);
             break;
-            
+
+        case bgp::BGP_SAFI_MPLS:
+            if (isIPv4) {
+
+    //        parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info, parsed_data.advertised);
+                
+    //u_char            ip_raw[16];
+    //char              ip_char[40];
+    //u_char            addr_bytes;
+    //bgp::prefix_tuple tuple;
+
+    //if (len <= 0 or data == NULL)
+    //    return;
+
+    // TODO: Can extend this to support multicast, but right now we set it to unicast v4/v6
+    //tuple.type = isIPv4 ? bgp::PREFIX_UNICAST_V4 : bgp::PREFIX_UNICAST_V6;
+    //tuple.isIPv4 = isIPv4;
+
+    // Loop through all prefixes
+    //for (size_t read_size=0; read_size < len; read_size++) {
+//        tuple.path_id = 0;
+//
+//        bzero(ip_raw, sizeof(ip_raw));
+//
+//        // Parse add-paths if enabled
+//        if (peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6, bgp::BGP_SAFI_UNICAST)
+//                and (len - read_size) >= 4) {
+//            memcpy(&tuple.path_id, data, 4);
+//            bgp::SWAP_BYTES(&tuple.path_id);
+//            data += 4; read_size += 4;
+//        } else
+//            tuple.path_id = 0;
+//
+//        // set the address in bits length
+//        tuple.len = *data++;
+//
+//        // Figure out how many bytes the bits requires
+//        addr_bytes = tuple.len / 8;
+//        if (tuple.len % 8)
+//           ++addr_bytes;
+//
+//        // if the route isn't a default route
+//        if (addr_bytes > 0) {
+//            memcpy(ip_raw, data, addr_bytes);
+//            data += addr_bytes;
+//            read_size += addr_bytes;
+//
+//            // Convert the IP to string printed format
+//            if (isIPv4)
+//                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+//            else
+//                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+//
+//            tuple.prefix.assign(ip_char);
+//
+//            // set the raw/binary address
+//            memcpy(tuple.prefix_bin, ip_raw, sizeof(ip_raw));
+//          
+//            // Add tuple to prefix list
+//            prefixes.push_back(tuple);
+//        }
+//    }
+
+
+                std::cout << "VPN DETECTED" << std::endl;
+                u_char *pointer = nlri.nlri_data;
+
+               // for( int i = 0 ; i < 7 ; i += 2 ){
+               //     u_char buff[2];
+               //     bzero(&buff, 2);
+               //     //std::cout << sizeof(buff) << " ";
+               //     memcpy(&buff, pointer, 2);
+               //     std::cout << "" << std::bitset<8>(buff[0]) << "";
+               //     std::cout << "" << std::bitset<8>(buff[1]) << "";
+               //     //std::cout << (long)pointer << " " << buff << " ";
+               //     pointer += 2;
+               // }  
+               // std::cout << std::endl;
+
+               // pointer = nlri.nlri_data;
+               //
+             //   for( int i = 0 ; i < 8 ; i += 1 ){
+             //       u_char buff = 0;
+             //       //std::cout << sizeof(buff) << " ";
+             //       memcpy(&buff, pointer, 1);
+             //       std::cout << "" << std::bitset<8>(buff) << " ";
+             //       //std::cout << (long)pointer << " " << (int)buff << " ";
+             //       pointer += 1;
+             //   }  
+             //   std::cout << std::endl;
+
+               // pointer = nlri.nlri_data;
+
+               // uint64_t buff = 0;
+               // memcpy(&buff, pointer, 8);
+               // std::cout << std::bitset<64>(buff) << std::endl;
+
+
+                pointer = nlri.nlri_data;
+
+                while(pointer < nlri.nlri_data + nlri.nlri_len){
+                          
+                      //buff = 0;
+                      //memcpy(&buff, pointer, 8);
+                      
+                      uint8_t len = 0;
+                      len = *pointer;
+                      pointer += 1;
+
+                    //  std::cout << "len1: " << std::bitset<8>(len) << std::endl;
+                      
+                      uint32_t label = 0;
+                      memcpy(&label, pointer, 3);
+                      pointer += 3;
+                      label = label >> 8;
+
+                      pointer += 1;
+                      u_char rd_type = *pointer;
+                      //memcpy(&rd_type, pointer, 2);
+
+                      //std::cout << std::bitset<8>(rd_type);
+                      //std::cout << std::bitset<8>(rd_type[1]);
+                      //std::cout << " " << (int)rd_type << "";
+
+                      pointer += 1;
+
+                      switch (rd_type) {
+                          case 1:
+                              u_char administration_subfield[4];
+                              bzero(&administration_subfield, 4);
+                              memcpy(&administration_subfield, pointer, 4);
+
+                              pointer += 4;
+
+                              int16_t assigned_number_subfield;
+                              bzero(&assigned_number_subfield, 2);
+                              memcpy(&assigned_number_subfield, pointer, 2);
+                              bgp::SWAP_BYTES(&assigned_number_subfield);
+
+                              pointer += 2;
+
+                    //          std::cout << bitset<8>((&assigned_number_subfield)[0]) << std::endl;
+                    //          std::cout << bitset<8>((&assigned_number_subfield)[1]) << std::endl;
+                    //
+                              std::string result = "";
+
+                              
+                              char str[INET_ADDRSTRLEN];
+                              inet_ntop(AF_INET, administration_subfield, str, INET_ADDRSTRLEN);
+                              std::cout << "administration_subfield: " << std::string(str) << std::endl;
+
+                              std::cout << "assigned_number_subfield: " << assigned_number_subfield << std::endl;
+                              
+                              bgp::vpn_tuple tuple; 
+                              
+                              tuple.rd_type = rd_type;
+                              tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
+                              tuple.rd_administrator_subfield = std::string(str);
+                              
+                              parsed_data.vpn.push_back(tuple);
+                              
+                              break;
+                      } 
+
+                      uint8_t prefix_len = (len - 24 - 64) / 8;
+                      pointer += std::abs(prefix_len);
+
+                    //  std::cout << (int)prefix_len << std::endl;
+                    //  std::cout << nlri.nlri_len << std::endl;
+                    //  std::cout << (long)pointer << std::endl;
+                    //  std::cout << (long)nlri.nlri_data << std::endl;
+                    //  std::cout << (long)(nlri.nlri_data + nlri.nlri_len) << std::endl;
+
+
+                    //  //std::cout << "Prefix len: " << prefix_len << std::endl;
+                    // 
+                    //  std::cout << "len: " << (int)len << std::endl;
+                    //  std::cout << "label: " << bitset<32>(label) << std::endl;
+                    //  std::cout << "rd type: " << (int)rd_type << std::endl;
+                }
+            }
+            break;
+
         default :
             LOG_INFO("%s: MP_REACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now",
                      peer_addr.c_str(), isIPv4, nlri.safi);

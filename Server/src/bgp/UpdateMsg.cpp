@@ -103,6 +103,9 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
     bgp::SWAP_BYTES(&uHdr.attr_len);
     SELF_DEBUG("%s: rtr=%s: Attribute len = %hu", peer_addr.c_str(), router_addr.c_str(), uHdr.attr_len);
 
+    std::cout << "parseAttributes: " << (int)uHdr.attr_len << std::endl;
+    std::cout << "parseAttributes: " << (int)size << std::endl;
+    std::cout << "parseAttributes: " << (int)read_size << std::endl;
     // Set the attributes data pointer
     if ((size - read_size) < uHdr.attr_len) {
         LOG_WARN("%s: rtr=%s: Update message is too short to parse attr data", peer_addr.c_str(), router_addr.c_str());
@@ -118,14 +121,16 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
      * Check if End-Of-RIB
      */
     if (not uHdr.withdrawn_len and (size - read_size) <= 0 and not uHdr.attr_len) {
-        LOG_INFO("%s: rtr=%s: End-Of-RIB marker", peer_addr.c_str(), router_addr.c_str());
-    }
 
-    else {
+        LOG_INFO("%s: rtr=%s: End-Of-RIB marker", peer_addr.c_str(), router_addr.c_str());
+
+    } else {
+
         /* ---------------------------------------------------------
          * Parse the withdrawn prefixes
          */
         SELF_DEBUG("%s: rtr=%s: Getting the IPv4 withdrawn data", peer_addr.c_str(), router_addr.c_str());
+        std::cout << (int)uHdr.withdrawn_len << std::endl;
         if (uHdr.withdrawn_len > 0)
             parseNlriData_v4(uHdr.withdrawnPtr, uHdr.withdrawn_len, parsed_data.withdrawn);
 
@@ -134,8 +139,12 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
          * Parse the attributes
          *      Handles MP_REACH/MP_UNREACH parsing as well
          */
-        if (uHdr.attr_len > 0)
+
+
+        if (uHdr.attr_len > 0) {
+            std::cout << "parseAttributes" << std::endl;
             parseAttributes(uHdr.attrPtr, uHdr.attr_len, parsed_data);
+        }
 
         /* ---------------------------------------------------------
          * Parse the NLRI data
@@ -167,7 +176,6 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
     u_char       addr_bytes;
 
     bgp::prefix_tuple tuple;
-
 
     if (len <= 0 or data == NULL)
         return;
@@ -320,6 +328,9 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
     /*
      * Parse based on attribute type
      */
+
+    std::cout << "Update message attr: " << (int)attr_type << std::endl;
+
     switch (attr_type) {
 
         case ATTR_TYPE_ORIGIN : // Origin
@@ -430,6 +441,7 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
         {
+            std::cout << "ATTR_TYPE_MP_REACH_NLRI" << std::endl;
             MPReachAttr mp(logger, peer_addr, peer_info, debug);
             mp.parseReachNlriAttr(attr_len, data, parsed_data);
             break;
@@ -449,6 +461,7 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_BGP_LS:
         {
+            std::cout << "ATTR_TYPE_BGP_LS" << std::endl;
             MPLinkStateAttr ls(logger, peer_addr, &parsed_data, debug);
             ls.parseAttrLinkState(attr_len, data);
             break;

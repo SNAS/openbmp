@@ -97,7 +97,6 @@ char parseBMP::handleMessage(int sock) {
     // check the version
     if (ver == 3) { // draft-ietf-grow-bmp-04 - 07
         parseBMPv3(sock);
-
     }
 
     // Handle the older versions

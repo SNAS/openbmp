@@ -212,6 +212,9 @@ private:
      */
     void UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefixes);
 
+    
+void UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
+                                   bgp_msg::UpdateMsg::parsed_attrs_map &attrs); 
     /**
      * Update the Database for bgp-ls
      *

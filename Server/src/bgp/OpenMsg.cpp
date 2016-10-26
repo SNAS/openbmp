@@ -224,6 +224,7 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size, bool openMessageIsS
                                 decodeStr.append(bgp::GET_AFI_STRING_BY_CODE(data.afi));
                                 decodeStr.append(" ");
 
+
                                 switch (data.send_recieve) {
                                     case BGP_CAP_ADD_PATH_SEND :
                                         decodeStr.append("Send");
@@ -290,6 +291,8 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size, bool openMessageIsS
                             decodedStr.append(bgp::GET_SAFI_STRING_BY_CODE(data.safi));
                             decodedStr.append(" ");
                             decodedStr.append(bgp::GET_AFI_STRING_BY_CODE(data.afi));
+
+                            std::cout << "Open Message: " << (int)data.afi << " " << (int)data.safi << std::endl; 
 
                             capabilities.push_back(decodedStr);
 

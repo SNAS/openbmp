@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -61,6 +61,7 @@ namespace bgp_msg {
         /*
          * Decode based on SAFI
          */
+        std::cout << "parseReachLinkState " << nlri.afi << " " << nlri.safi << std::endl; 
         switch (nlri.safi) {
             case bgp::BGP_SAFI_BGPLS: // Unicast BGP-LS
                 SELF_DEBUG("REACH: bgp-ls: len=%d", nlri.nlri_len);

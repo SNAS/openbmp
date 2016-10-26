@@ -128,6 +128,12 @@ namespace bgp {
          std::string   labels;               ///< Labels in the format of label, label, ...
      };
 
+     struct vpn_tuple {
+         std::string     rd_administrator_subfield;
+         std::string     rd_assigned_number;
+         uint8_t         rd_type;
+     };
+
     /*********************************************************************//**
      * Simple function to swap bytes around from network to host or
      *  host to networking.  This method will convert any size byte variable,
