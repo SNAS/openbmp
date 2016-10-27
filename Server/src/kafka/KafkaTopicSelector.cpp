@@ -330,8 +330,6 @@ RdKafka::Topic * KafkaTopicSelector::initTopic(const std::string &topic_var,
         topic_flags_map[topic_var].include_peerAsn = false;
     }
 
-    std::cout << "11111" << std::endl;
-
     // Update the topic key based on the peer_group/router_group
     std::string topic_key = getTopicKey(topic_var, router_group, peer_group, peer_asn);
 
@@ -356,9 +354,6 @@ RdKafka::Topic * KafkaTopicSelector::initTopic(const std::string &topic_var,
         }
     }
 
-    std::cout << "222222" << std::endl;
-
-
     SELF_DEBUG("Creating topic %s (map key=%s)" , topic_name.c_str(), topic_key.c_str());
 
     // Delete topic if it already exists
@@ -376,21 +371,13 @@ RdKafka::Topic * KafkaTopicSelector::initTopic(const std::string &topic_var,
         throw "ERROR: Failed to configure kafka partitioner callback";
     }
 
-    
-    std::cout << "333333" << std::endl;
-
     topic[topic_key] = RdKafka::Topic::create(producer, topic_name.c_str(), tconf, errstr);
 
-    std::cout << "3333335" << std::endl;
-
-
     if (topic[topic_key] == NULL) {
-        std::cout << "444444" << std::endl;
         LOG_ERR("Failed to create '%s' topic: %s", topic_name.c_str(), errstr.c_str());
         throw "ERROR: Failed to create topic";
 
     } else {
-        std::cout << "555555" << std::endl;
         std::cout << "Topic name: " << topic_name << std::endl;
         return topic[topic_key];
     }

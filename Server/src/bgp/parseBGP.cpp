@@ -467,7 +467,6 @@ void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
                                                 it != adv_prefixes.end();
                                                 it++) {
         bgp::vpn_tuple &tuple = (*it);
-        std::cout << "in UpdateDBVPN: " << (int)tuple.rd_type << " " << tuple.rd_assigned_number << " " << tuple.rd_administrator_subfield << std::endl;
 
         memcpy(rib_entry.path_attr_hash_id, path_hash_id, sizeof(rib_entry.path_attr_hash_id));
         memcpy(rib_entry.peer_hash_id, p_entry->hash_id, sizeof(rib_entry.peer_hash_id));
@@ -479,8 +478,8 @@ void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
         //---------
 
         strncpy(rib_entry.prefix, tuple.prefix.c_str(), sizeof(rib_entry.prefix));
-
-        rib_entry.prefix_len     = tuple.len;
+        
+        rib_entry.prefix_len = tuple.len;
         
         rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
 

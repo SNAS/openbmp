@@ -129,9 +129,10 @@ namespace bgp {
      };
 
      struct vpn_tuple: prefix_tuple {
-         std::string     rd_administrator_subfield;
-         std::string     rd_assigned_number;
-         uint8_t         rd_type;
+         std::string    rd_administrator_subfield;
+         std::string    rd_assigned_number;
+         uint8_t        rd_type;
+         uint8_t        vpn_label;
      };
 
     /*********************************************************************//**

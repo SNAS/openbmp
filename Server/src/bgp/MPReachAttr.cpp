@@ -49,8 +49,6 @@ MPReachAttr::~MPReachAttr() {
  */
 void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::parsed_update_data &parsed_data) {
     
-    std::cout << "parseReachNlriAttr" << std::endl;
-
     mp_reach_nlri nlri;
     /*
      * Set the MP NLRI struct
@@ -185,6 +183,8 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                 pointer = nlri.nlri_data;
 
                 while(pointer < nlri.nlri_data + nlri.nlri_len){
+                      bgp::vpn_tuple tuple;
+
                       uint8_t len = 0;
                       len = *pointer;
                       pointer += 1;
@@ -193,6 +193,8 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                       memcpy(&label, pointer, 3);
                       pointer += 3;
                       label = label >> 8;
+
+                      tuple.labels += std::to_string(label);
 
                       pointer += 1;
                       u_char rd_type = *pointer;
@@ -222,11 +224,11 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                               
                               char str[INET_ADDRSTRLEN];
                               inet_ntop(AF_INET, administration_subfield, str, INET_ADDRSTRLEN);
+
                               std::cout << "administration_subfield: " << std::string(str) << std::endl;
 
                               std::cout << "assigned_number_subfield: " << assigned_number_subfield << std::endl;
                               
-                              bgp::vpn_tuple tuple; 
                               
                               tuple.rd_type = rd_type;
                               tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
@@ -236,7 +238,6 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                               tuple.type = isIPv4 ? bgp::PREFIX_UNICAST_V4 : bgp::PREFIX_UNICAST_V6;
                               tuple.isIPv4 = isIPv4;
                               
-                              parsed_data.vpn.push_back(tuple);
                               
                               break;
                           }
@@ -246,8 +247,21 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                               break;
                       } 
 
-                      uint8_t prefix_len = (len - 24 - 64) / 8;
+                      uint8_t prefix_binary_len = len - 24 - 64;
+
+                      uint8_t prefix_len = prefix_binary_len / 8;
+
+                      u_char prefix[16];
+                      bzero(prefix, 16);
+                      char ip_char[40];
+                      memcpy(&prefix, pointer, prefix_len);
+                      inet_ntop(AF_INET, prefix, ip_char, sizeof(ip_char));
+
+                      tuple.prefix = std::string(ip_char);
+                      tuple.len = prefix_binary_len;
                       pointer += prefix_len;
+
+                      parsed_data.vpn.push_back(tuple);
 
                     //  std::cout << (int)prefix_len << std::endl;
                     //  std::cout << nlri.nlri_len << std::endl;
