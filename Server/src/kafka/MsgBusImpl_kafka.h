@@ -62,7 +62,7 @@ public:
     void update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr, base_attr_action_code code);
     void update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib, obj_path_attr *attr, unicast_prefix_action_code code);
     
-    void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib, obj_path_attr *attr, unicast_prefix_action_code code);
+    void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib, obj_path_attr *attr, vpn_action_code code);
 
     void add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats);
 

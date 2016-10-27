@@ -734,11 +734,8 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
 }
 
 
-/**
- * Abstract method Implementation - See MsgBusInterface.hpp for details
- */
 void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib,
-                                        obj_path_attr *attr, unicast_prefix_action_code code) {
+                                        obj_path_attr *attr, vpn_action_code code) {
     //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
     prep_buf[0] = 0;
 
@@ -807,16 +804,16 @@ void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib,
 
         switch (code) {
 
-            case UNICAST_PREFIX_ACTION_ADD:
+            case VPN_ACTION_ADD:
                 if (attr == NULL)
                     return;
 
                 std::cout << "From MSGBUS: " << rib[i].rd_administrator_subfield << std::endl;
-
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
-                                            "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\t%s\t%d\t%d\n",
-                                    action.c_str(), vpn_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
+                                            "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
+                                            "\t%s\t%d\t%d\t%s:%s\n",
+                                    action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
                                     rib[i].isIPv4, attr->origin,
@@ -824,18 +821,11 @@ void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib,
                                     attr->aggregator,
                                     attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
                                     attr->atomic_agg, attr->nexthop_isIPv4,
-                                    attr->originator_id, rib[i].rd_administrator_subfield.c_str(), rib[i].rd_assigned_number.c_str(), peer.isPrePolicy, peer.isAdjIn);
+                                    attr->originator_id, rib[i].path_id, rib[i].labels, peer.isPrePolicy, peer.isAdjIn,
+                                    rib[i].rd_administrator_subfield.c_str(), rib[i].rd_assigned_number.c_str());
+
                 break;
 
-            case UNICAST_PREFIX_ACTION_DEL:
-                buf_len += snprintf(buf2, sizeof(buf2),
-                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t%" PRIu32
-                                            "\t%s\t%d\t%d\n",
-                                    action.c_str(), vpn_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
-                                    router_ip.c_str(), p_hash_str.c_str(),
-                                    peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
-                                    rib[i].isIPv4, rib[i].path_id, rib[i].labels, peer.isPrePolicy, peer.isAdjIn);
-                break;
         }
 
         // Cat the entry to the query buff

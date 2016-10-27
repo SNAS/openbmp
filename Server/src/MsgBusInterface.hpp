@@ -228,27 +228,22 @@ public:
         char        labels[255];            ///< Labels delimited by comma
     };
 
-    struct obj_vpn {
+    struct obj_vpn: obj_rib {
         std::string     rd_administrator_subfield;
         std::string     rd_assigned_number;
         uint8_t         rd_type;       
-        
-        u_char      hash_id[16];            ///< hash of attr hash prefix, and prefix len
-        u_char      path_attr_hash_id[16];  ///< path attrs hash_id
-        u_char      peer_hash_id[16];       ///< BGP peer hash ID, need it here for withdraw routes support
-        u_char      isIPv4;                 ///< 0 if IPv6, 1 if IPv4
-        char        prefix[46];             ///< IPv4/IPv6 prefix in printed form
-        u_char      prefix_len;             ///< Length of prefix in bits
-        uint8_t     prefix_bin[16];         ///< Prefix in binary form
-        uint8_t     prefix_bcast_bin[16];   ///< Broadcast address/last address in binary form
-        uint32_t    path_id;                ///< Add path ID - zero if not used
-        char        labels[255];            ///< Labels delimited by comma
     };
 
     /// Unicast prefix action codes
     enum unicast_prefix_action_code {
         UNICAST_PREFIX_ACTION_ADD=0,
         UNICAST_PREFIX_ACTION_DEL,
+    };
+
+    /// Vpn action codes
+    enum vpn_action_code {
+        VPN_ACTION_ADD=0,
+        VPN_ACTION_DEL,
     };
 
     /**
@@ -463,7 +458,7 @@ public:
 
     
     virtual void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib, obj_path_attr *attr,
-                            unicast_prefix_action_code code) = 0;
+                            vpn_action_code code) = 0;
 
     /*****************************************************************//**
      * \brief       Add a stats report object

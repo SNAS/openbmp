@@ -476,72 +476,73 @@ void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
         rib_entry.rd_assigned_number = tuple.rd_assigned_number;
         rib_entry.rd_administrator_subfield = tuple.rd_administrator_subfield;
 
-//        strncpy(rib_entry.prefix, tuple.prefix.c_str(), sizeof(rib_entry.prefix));
+        //---------
 
-//        rib_entry.prefix_len     = tuple.len;
+        strncpy(rib_entry.prefix, tuple.prefix.c_str(), sizeof(rib_entry.prefix));
+
+        rib_entry.prefix_len     = tuple.len;
         
-        
-        //rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
-//
-//        memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
-//
-//        // Add the ending IP for the prefix based on bits
-//        if (rib_entry.isIPv4) {
-//            if (tuple.len < 32) {
-//                memcpy(&value_32bit, tuple.prefix_bin, 4);
-//                bgp::SWAP_BYTES(&value_32bit);
-//
-//                value_32bit |= 0xFFFFFFFF >> tuple.len;
-//                bgp::SWAP_BYTES(&value_32bit);
-//                memcpy(rib_entry.prefix_bcast_bin, &value_32bit, 4);
-//
-//            } else
-//                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
-//
-//        } else {
-//            if (tuple.len < 128) {
-//                if (tuple.len >= 64) {
-//                    // High order bytes are left alone
-//                    memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, 8);
-//
-//                    // Low order bytes are updated
-//                    memcpy(&value_64bit, &tuple.prefix_bin[8], 8);
-//                    bgp::SWAP_BYTES(&value_64bit);
-//
-//                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> (tuple.len - 64);
-//                    bgp::SWAP_BYTES(&value_64bit);
-//                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
-//
-//                } else {
-//                    // Low order types are all ones
-//                    value_64bit = 0xFFFFFFFFFFFFFFFF;
-//                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
-//
-//                    // High order bypes are updated
-//                    memcpy(&value_64bit, tuple.prefix_bin, 8);
-//                    bgp::SWAP_BYTES(&value_64bit);
-//
-//                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> tuple.len;
-//                    bgp::SWAP_BYTES(&value_64bit);
-//                    memcpy(rib_entry.prefix_bcast_bin, &value_64bit, 8);
-//                }
-//            } else
-//                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
-//        }
-//
-//        rib_entry.path_id = tuple.path_id;
-//        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
-//
-//        SELF_DEBUG("%s: Adding prefix=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
-//
-//        // Add entry to the list
+        rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
+
+        memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
+
+        // Add the ending IP for the prefix based on bits
+        if (rib_entry.isIPv4) {
+            if (tuple.len < 32) {
+                memcpy(&value_32bit, tuple.prefix_bin, 4);
+                bgp::SWAP_BYTES(&value_32bit);
+
+                value_32bit |= 0xFFFFFFFF >> tuple.len;
+                bgp::SWAP_BYTES(&value_32bit);
+                memcpy(rib_entry.prefix_bcast_bin, &value_32bit, 4);
+
+            } else
+                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
+
+        } else {
+            if (tuple.len < 128) {
+                if (tuple.len >= 64) {
+                    // High order bytes are left alone
+                    memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, 8);
+
+                    // Low order bytes are updated
+                    memcpy(&value_64bit, &tuple.prefix_bin[8], 8);
+                    bgp::SWAP_BYTES(&value_64bit);
+
+                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> (tuple.len - 64);
+                    bgp::SWAP_BYTES(&value_64bit);
+                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
+
+                } else {
+                    // Low order types are all ones
+                    value_64bit = 0xFFFFFFFFFFFFFFFF;
+                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
+
+                    // High order bypes are updated
+                    memcpy(&value_64bit, tuple.prefix_bin, 8);
+                    bgp::SWAP_BYTES(&value_64bit);
+
+                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> tuple.len;
+                    bgp::SWAP_BYTES(&value_64bit);
+                    memcpy(rib_entry.prefix_bcast_bin, &value_64bit, 8);
+                }
+            } else
+                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
+        }
+
+        rib_entry.path_id = tuple.path_id;
+        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
+
+        SELF_DEBUG("%s: Adding prefix=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
+
+        // Add entry to the list
         rib_list.insert(rib_list.end(), rib_entry);
     }
-//
-//    Update the DB
+
+    // Update the DB
     if (rib_list.size() > 0)
-        mbus_ptr->update_VPN(*p_entry, rib_list, &base_attr, mbus_ptr->UNICAST_PREFIX_ACTION_ADD);
-//
+        mbus_ptr->update_VPN(*p_entry, rib_list, &base_attr, mbus_ptr->VPN_ACTION_ADD);
+
     rib_list.clear();
     adv_prefixes.clear();
 }

@@ -128,7 +128,7 @@ namespace bgp {
          std::string   labels;               ///< Labels in the format of label, label, ...
      };
 
-     struct vpn_tuple {
+     struct vpn_tuple: prefix_tuple {
          std::string     rd_administrator_subfield;
          std::string     rd_assigned_number;
          uint8_t         rd_type;
