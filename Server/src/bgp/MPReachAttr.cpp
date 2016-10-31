@@ -49,17 +49,30 @@ MPReachAttr::~MPReachAttr() {
  */
 void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::parsed_update_data &parsed_data) {
     
+    
+    std::cout << "MPReachAttr::parseReachNlriAttr" << std::endl;
     mp_reach_nlri nlri;
     /*
      * Set the MP NLRI struct
      */
     // Read address family
+
+    std::cout << "Data: " <<  (long)data << std::endl;
     memcpy(&nlri.afi, data, 2); data += 2; attr_len -= 2;
     bgp::SWAP_BYTES(&nlri.afi);                     // change to host order
 
     nlri.safi = *data++; attr_len--;                 // Set the SAFI - 1 octet
     nlri.nh_len = *data++; attr_len--;              // Set the next-hop length - 1 octet
     nlri.next_hop = data;  data += nlri.nh_len; attr_len -= nlri.nh_len;    // Set pointer position for nh data
+
+    //char nh_char[40];
+    //u_char nh[4];
+    //bzero(&nh, 4);
+    //memcpy(&nh, nlri.next_hop + 8, 4);
+    //inet_ntop(AF_INET, nh, nh_char, sizeof(nh));
+
+    //std::cout << "Next hop: " << nh_char << std::endl; 
+
     nlri.reserved = *data++; attr_len--;             // Set the reserve octet
     nlri.nlri_data = data;                          // Set pointer position for nlri data
     nlri.nlri_len = attr_len;                       // Remaining attribute length is for NLRI data
@@ -93,6 +106,9 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::pars
  * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
 void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
+    
+    std::cout << "afi: " << nlri.afi << std::endl; 
+    std::cout << "safi: " << nlri.safi << std::endl; 
 
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6

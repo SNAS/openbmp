@@ -63,6 +63,7 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
     size_t      read_size       = 0;
     u_char      *bufPtr         = data;
 
+    std::cout << "begin data: " << (long)data << std::endl; 
     // Clear the parsed_data
     parsed_data.advertised.clear();
     parsed_data.attrs.clear();
@@ -442,6 +443,7 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
         {
+            std::cout << "PARSE MP REACH NLRI " << std::endl;
             MPReachAttr mp(logger, peer_addr, peer_info, debug);
             mp.parseReachNlriAttr(attr_len, data, parsed_data);
             break;
