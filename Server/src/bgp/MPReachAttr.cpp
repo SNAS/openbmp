@@ -57,12 +57,17 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::pars
      */
     // Read address family
 
-    std::cout << "Data: " <<  (long)data << std::endl;
     memcpy(&nlri.afi, data, 2); data += 2; attr_len -= 2;
     bgp::SWAP_BYTES(&nlri.afi);                     // change to host order
 
     nlri.safi = *data++; attr_len--;                 // Set the SAFI - 1 octet
     nlri.nh_len = *data++; attr_len--;              // Set the next-hop length - 1 octet
+    
+    char str[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, data + 8, str, INET_ADDRSTRLEN);
+    std::cout << "NH: " << std::string(str) << std::endl;
+
+    
     nlri.next_hop = data;  data += nlri.nh_len; attr_len -= nlri.nh_len;    // Set pointer position for nh data
 
     //char nh_char[40];
@@ -108,7 +113,7 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::pars
 void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
     
     std::cout << "afi: " << nlri.afi << std::endl; 
-    std::cout << "safi: " << nlri.safi << std::endl; 
+    std::cout << "safi: " << (int)nlri.safi << std::endl; 
 
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6
@@ -193,6 +198,13 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
 
         case bgp::BGP_SAFI_MPLS:
             if (isIPv4) {
+                
+                nlri.next_hop += 8;
+                nlri.nh_len -= 8;
+                memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
+                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+                parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
+
                 std::cout << "VPN DETECTED" << std::endl;
                 u_char *pointer = nlri.nlri_data;
 
@@ -217,6 +229,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                       
                       pointer += 1;
 
+
                       switch (rd_type) {
                           case 1: {
                               u_char administration_subfield[4];
@@ -231,13 +244,9 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                               bgp::SWAP_BYTES(&assigned_number_subfield);
 
                               pointer += 2;
-
-                    //          std::cout << bitset<8>((&assigned_number_subfield)[0]) << std::endl;
-                    //          std::cout << bitset<8>((&assigned_number_subfield)[1]) << std::endl;
-                    //
-                              std::string result = "";
-
                               
+                              std::string result = "";
+                               
                               char str[INET_ADDRSTRLEN];
                               inet_ntop(AF_INET, administration_subfield, str, INET_ADDRSTRLEN);
 
