@@ -481,6 +481,8 @@ void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
         
         rib_entry.prefix_len = tuple.len;
         
+        rib_entry.vpn_label = tuple.vpn_label;
+        
         rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
 
         memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));

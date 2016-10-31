@@ -220,15 +220,16 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                       uint32_t label = 0;
                       memcpy(&label, pointer, 3);
                       pointer += 3;
-                      label = label >> 8;
+                      label = label >> 4;
 
-                      tuple.labels += std::to_string(label);
+                      std::cout << "Label: " << (int)label << std::endl;
+
+                      tuple.vpn_label = label;
 
                       pointer += 1;
                       u_char rd_type = *pointer;
                       
                       pointer += 1;
-
 
                       switch (rd_type) {
                           case 1: {

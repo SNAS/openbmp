@@ -813,7 +813,7 @@ void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib,
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
                                             "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
-                                            "\t%s\t%d\t%d\t%s:%s\t%d\n",
+                                            "\t%s\t%d\t%d\t%s:%s\t%d\t%d\n",
                                     action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
@@ -823,7 +823,7 @@ void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib,
                                     attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
                                     attr->atomic_agg, attr->nexthop_isIPv4,
                                     attr->originator_id, rib[i].path_id, rib[i].labels, peer.isPrePolicy, peer.isAdjIn,
-                                    rib[i].rd_administrator_subfield.c_str(), rib[i].rd_assigned_number.c_str(), rib[i].rd_type);
+                                    rib[i].rd_administrator_subfield.c_str(), rib[i].rd_assigned_number.c_str(), rib[i].rd_type, rib[i].vpn_label);
 
                 break;
 

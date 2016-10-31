@@ -232,6 +232,7 @@ public:
         std::string     rd_administrator_subfield;
         std::string     rd_assigned_number;
         uint8_t         rd_type;       
+        uint32_t        vpn_label; 
     };
 
     /// Unicast prefix action codes
