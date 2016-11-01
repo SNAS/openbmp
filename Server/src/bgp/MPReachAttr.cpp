@@ -50,7 +50,7 @@ MPReachAttr::~MPReachAttr() {
 void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::parsed_update_data &parsed_data) {
     
     
-    std::cout << "MPReachAttr::parseReachNlriAttr" << std::endl;
+    //std::cout << "MPReachAttr::parseReachNlriAttr" << std::endl;
     mp_reach_nlri nlri;
     /*
      * Set the MP NLRI struct
@@ -65,7 +65,7 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::pars
     
     char str[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, data + 8, str, INET_ADDRSTRLEN);
-    std::cout << "NH: " << std::string(str) << std::endl;
+    //std::cout << "NH: " << std::string(str) << std::endl;
 
     
     nlri.next_hop = data;  data += nlri.nh_len; attr_len -= nlri.nh_len;    // Set pointer position for nh data
@@ -112,8 +112,8 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::pars
  */
 void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
     
-    std::cout << "afi: " << nlri.afi << std::endl; 
-    std::cout << "safi: " << (int)nlri.safi << std::endl; 
+    //std::cout << "afi: " << nlri.afi << std::endl; 
+    //std::cout << "safi: " << (int)nlri.safi << std::endl; 
 
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6
@@ -153,7 +153,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
 
     bzero(ip_raw, sizeof(ip_raw));
     
-    std::cout << (int)nlri.afi << " " << (int)nlri.safi << std::endl;
+    //std::cout << (int)nlri.afi << " " << (int)nlri.safi << std::endl;
 
     /*
      * Decode based on SAFI
@@ -205,7 +205,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                 inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
                 parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
 
-                std::cout << "VPN DETECTED" << std::endl;
+                //std::cout << "VPN DETECTED" << std::endl;
                 u_char *pointer = nlri.nlri_data;
 
                 pointer = nlri.nlri_data;
@@ -222,7 +222,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                       pointer += 3;
                       label = label >> 4;
 
-                      std::cout << "Label: " << (int)label << std::endl;
+                      //std::cout << "Label: " << (int)label << std::endl;
 
                       tuple.vpn_label = label;
 
@@ -251,9 +251,9 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
                               char str[INET_ADDRSTRLEN];
                               inet_ntop(AF_INET, administration_subfield, str, INET_ADDRSTRLEN);
 
-                              std::cout << "administration_subfield: " << std::string(str) << std::endl;
+                              //std::cout << "administration_subfield: " << std::string(str) << std::endl;
 
-                              std::cout << "assigned_number_subfield: " << assigned_number_subfield << std::endl;
+                              //std::cout << "assigned_number_subfield: " << assigned_number_subfield << std::endl;
                               
                               
                               tuple.rd_type = rd_type;

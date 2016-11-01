@@ -330,8 +330,6 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
      * Parse based on attribute type
      */
 
-    std::cout << "Update message attr: " << (int)attr_type << std::endl;
-
     switch (attr_type) {
 
         case ATTR_TYPE_ORIGIN : // Origin
