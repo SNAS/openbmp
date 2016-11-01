@@ -808,8 +808,6 @@ void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib,
                 if (attr == NULL)
                     return;
 
-                std::cout << "From MSGBUS: " << rib[i].prefix << std::endl;
-
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
                                             "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32

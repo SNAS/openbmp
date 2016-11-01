@@ -12,7 +12,6 @@
 #include "BMPReader.h"
 
 #include <arpa/inet.h>
-#include <bitset>
 
 namespace bgp_msg {
 

@@ -61,7 +61,6 @@ namespace bgp_msg {
         /*
          * Decode based on SAFI
          */
-        std::cout << "parseReachLinkState " << nlri.afi << " " << nlri.safi << std::endl; 
         switch (nlri.safi) {
             case bgp::BGP_SAFI_BGPLS: // Unicast BGP-LS
                 SELF_DEBUG("REACH: bgp-ls: len=%d", nlri.nlri_len);

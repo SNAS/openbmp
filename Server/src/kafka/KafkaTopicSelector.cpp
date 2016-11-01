@@ -78,7 +78,6 @@ RdKafka::Topic * KafkaTopicSelector::getTopic(const std::string &topic_var,
     }
     else {
         SELF_DEBUG("Requesting to create topic for key=%s", topic_key.c_str());
-        std::cout << "new topic" << std::endl;
         return initTopic(topic_var, router_group, peer_group, peer_asn);  // create and return newly created topic
     }
 
@@ -378,7 +377,6 @@ RdKafka::Topic * KafkaTopicSelector::initTopic(const std::string &topic_var,
         throw "ERROR: Failed to create topic";
 
     } else {
-        std::cout << "Topic name: " << topic_name << std::endl;
         return topic[topic_key];
     }
 

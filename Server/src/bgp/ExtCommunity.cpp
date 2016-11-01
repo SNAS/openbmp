@@ -72,37 +72,30 @@ namespace bgp_msg {
              */
             switch (ec_hdr.high_type << 2 >> 2) {
                 case EXT_TYPE_IPV4 :
-                    std::cout << "IPV4" << std::endl;
                     decodeStr.append(decodeType_common(ec_hdr, true, true));
                     break;
 
                 case EXT_TYPE_2OCTET_AS :
-                    std::cout << "20CCET_AS" << std::endl;
                     decodeStr.append(decodeType_common(ec_hdr));
                     break;
 
                 case EXT_TYPE_4OCTET_AS :
-                    std::cout << "40CTET_AS" << std::endl;
                     decodeStr.append(decodeType_common(ec_hdr, true));
                     break;
 
                 case EXT_TYPE_GENERIC :
-                    std::cout << "Generic" << std::endl;
                     decodeStr.append(decodeType_Generic(ec_hdr));
                     break;
 
                 case EXT_TYPE_GENERIC_4OCTET_AS :
-                    std::cout << "GENERIC 40 CTET AS" << std::endl;
                     decodeStr.append(decodeType_Generic(ec_hdr, true));
                     break;
 
                 case EXT_TYPE_GENERIC_IPV4 :
-                    std::cout << "GEN IPv4" << std::endl;
                     decodeStr.append(decodeType_Generic(ec_hdr, true, true));
                     break;
 
                 case EXT_TYPE_OPAQUE :
-                    std::cout << "OPAQUE" << std::endl;
                     decodeStr.append(decodeType_Opaque(ec_hdr));
                     break;
 
@@ -114,8 +107,6 @@ namespace bgp_msg {
                     LOG_INFO("%s: Extended community type %d,%d is not yet supported", peer_addr.c_str(),
                             ec_hdr.high_type, ec_hdr.low_type);
             }
-
-            std::cout << "ec_hdr: " << (int)ec_hdr.high_type << std::endl;
 
             // Move data pointer to next entry
             data += 8;
@@ -416,8 +407,6 @@ namespace bgp_msg {
         uint32_t            val_32b;
         char                ipv4_char[16] = {0};
 
-        std::cout << "decodeType_Generic" << std::endl;
-
         /*
          * Decode values based on bit size
          */
@@ -498,10 +487,8 @@ namespace bgp_msg {
                 val_ss << "flow-redir=";
 
                 // Route target
-                if (isGlobalIPv4) {
-                    std::cout << "Route target: " << ipv4_char << ":" << val_16b << std::endl;
+                if (isGlobalIPv4)
                     val_ss << ipv4_char << ":" << val_16b;
-                }
 
                 else if (isGlobal4Bytes)
                     val_ss << val_32b << ":" << val_16b;

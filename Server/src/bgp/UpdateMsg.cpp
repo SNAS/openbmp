@@ -63,7 +63,6 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
     size_t      read_size       = 0;
     u_char      *bufPtr         = data;
 
-    std::cout << "begin data: " << (long)data << std::endl; 
     // Clear the parsed_data
     parsed_data.advertised.clear();
     parsed_data.attrs.clear();
@@ -104,9 +103,6 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
     bgp::SWAP_BYTES(&uHdr.attr_len);
     SELF_DEBUG("%s: rtr=%s: Attribute len = %hu", peer_addr.c_str(), router_addr.c_str(), uHdr.attr_len);
 
-    std::cout << "parseAttributes: " << (int)uHdr.attr_len << std::endl;
-    std::cout << "parseAttributes: " << (int)size << std::endl;
-    std::cout << "parseAttributes: " << (int)read_size << std::endl;
     // Set the attributes data pointer
     if ((size - read_size) < uHdr.attr_len) {
         LOG_WARN("%s: rtr=%s: Update message is too short to parse attr data", peer_addr.c_str(), router_addr.c_str());
@@ -131,7 +127,6 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
          * Parse the withdrawn prefixes
          */
         SELF_DEBUG("%s: rtr=%s: Getting the IPv4 withdrawn data", peer_addr.c_str(), router_addr.c_str());
-        std::cout << (int)uHdr.withdrawn_len << std::endl;
         if (uHdr.withdrawn_len > 0)
             parseNlriData_v4(uHdr.withdrawnPtr, uHdr.withdrawn_len, parsed_data.withdrawn);
 
@@ -143,7 +138,6 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
 
 
         if (uHdr.attr_len > 0) {
-            std::cout << "parseAttributes" << std::endl;
             parseAttributes(uHdr.attrPtr, uHdr.attr_len, parsed_data);
         }
 
