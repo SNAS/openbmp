@@ -788,7 +788,7 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
                 break;
 
             case INIT_TYPE_ROUTER_BGP_ID:
-                if (sizeof(initMsg.len) != sizeof(in_addr_t)) {
+                if (initMsg.len != sizeof(in_addr_t)) {
                     LOG_NOTICE("Init message type BGP ID not of IPv4 addr length");
                     break;
                 }
