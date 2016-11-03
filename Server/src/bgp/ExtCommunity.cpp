@@ -487,6 +487,9 @@ namespace bgp_msg {
                 val_ss << "flow-redir=";
 
                 // Route target
+                
+                std::cout << "route target" << std::endl;
+
                 if (isGlobalIPv4)
                     val_ss << ipv4_char << ":" << val_16b;
 

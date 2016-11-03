@@ -420,10 +420,9 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
         }
         case ATTR_TYPE_EXT_COMMUNITY : // extended community list (RFC 4360)
         {
-           std::cout << "Ext community" << std::endl;
-           ExtCommunity ec(logger, peer_addr, debug);
-           ec.parseExtCommunities(attr_len, data, parsed_data);
-           break;
+            ExtCommunity ec(logger, peer_addr, debug);
+            ec.parseExtCommunities(attr_len, data, parsed_data);
+            break;
         }
 
         case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)
@@ -435,7 +434,6 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
         {
-            std::cout << "PARSE MP REACH NLRI " << std::endl;
             MPReachAttr mp(logger, peer_addr, peer_info, debug);
             mp.parseReachNlriAttr(attr_len, data, parsed_data);
             break;
