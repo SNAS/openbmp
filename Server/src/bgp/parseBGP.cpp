@@ -356,7 +356,7 @@ void parseBGP::UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
      * Update the advertised prefixes (both ipv4 and ipv6)
      */
     UpdateDBAdvPrefixes(parsed_data.advertised, parsed_data.attrs);
-    
+   
     UpdateDBVPN(parsed_data.vpn, parsed_data.attrs);
 
     /*
@@ -446,14 +446,14 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
 
 
 /**
- * Update the Database advertised prefixes
+ * Update the Database advertised l3vpn 
  *
  * \details This method will update the database for the supplied advertised prefixes
  *
- * \param  adv_prefixes         Reference to the list<prefix_tuple> of advertised prefixes
- * \param  attrs            Reference to the parsed attributes map
+ * \param  adv_vpn         Reference to the list<vpn_tuple> of advertised vpns
+ * \param  attrs           Reference to the parsed attributes map
  */
-void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
+void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_vpn,
                                    bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     vector<MsgBusInterface::obj_vpn> rib_list;
     MsgBusInterface::obj_vpn         rib_entry;
@@ -461,10 +461,10 @@ void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
     uint64_t                         value_64bit;
 
     /*
-     * Loop through all prefixes and add/update them in the DB
+     * Loop through all vpn and add/update them in the DB
      */
-    for (std::list<bgp::vpn_tuple>::iterator it = adv_prefixes.begin();
-                                                it != adv_prefixes.end();
+    for (std::list<bgp::vpn_tuple>::iterator it = adv_vpn.begin();
+                                                it != adv_vpn.end();
                                                 it++) {
         bgp::vpn_tuple &tuple = (*it);
 
@@ -474,8 +474,6 @@ void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
         rib_entry.rd_type = tuple.rd_type;
         rib_entry.rd_assigned_number = tuple.rd_assigned_number;
         rib_entry.rd_administrator_subfield = tuple.rd_administrator_subfield;
-
-        //---------
 
         strncpy(rib_entry.prefix, tuple.prefix.c_str(), sizeof(rib_entry.prefix));
         
@@ -534,7 +532,7 @@ void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
         rib_entry.path_id = tuple.path_id;
         snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
 
-        SELF_DEBUG("%s: Adding prefix=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
+        SELF_DEBUG("%s: Adding vpn=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
 
         // Add entry to the list
         rib_list.insert(rib_list.end(), rib_entry);
@@ -545,7 +543,7 @@ void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
         mbus_ptr->update_VPN(*p_entry, rib_list, &base_attr, mbus_ptr->VPN_ACTION_ADD);
 
     rib_list.clear();
-    adv_prefixes.clear();
+    adv_vpn.clear();
 }
 
 /**

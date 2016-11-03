@@ -212,9 +212,16 @@ private:
      */
     void UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefixes);
 
-    
-void UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_prefixes,
-                                   bgp_msg::UpdateMsg::parsed_attrs_map &attrs); 
+    /**
+     * Update the Database advertised l3vpn 
+     *
+     * \details This method will update the database for the supplied advertised prefixes
+     *
+     * \param  adv_vpn         Reference to the list<vpn_tuple> of advertised vpns
+     * \param  attrs           Reference to the parsed attributes map
+     */ 
+    void UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_vpn,bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
+
     /**
      * Update the Database for bgp-ls
      *

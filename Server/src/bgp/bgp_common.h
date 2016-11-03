@@ -69,7 +69,6 @@ namespace bgp {
              BGP_AFI_BGPLS=16388
              };
 
-
     /**
      * Defines the BGP subsequent address-families (SAFI)
      *      http://www.iana.org/assignments/safi-namespace/safi-namespace.xhtml
@@ -109,7 +108,6 @@ namespace bgp {
                 // Add BGP-LS types
     };
 
-
     /**
       * struct is used for nlri prefixes
       */
@@ -127,7 +125,10 @@ namespace bgp {
      
          std::string   labels;               ///< Labels in the format of label, label, ...
      };
-
+     
+     /**
+      * struct is used for l3vpn
+      */
      struct vpn_tuple: prefix_tuple {
          std::string    rd_administrator_subfield;
          std::string    rd_assigned_number;

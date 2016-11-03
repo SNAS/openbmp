@@ -453,7 +453,6 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
 
         case ATTR_TYPE_BGP_LS:
         {
-            std::cout << "ATTR_TYPE_BGP_LS" << std::endl;
             MPLinkStateAttr ls(logger, peer_addr, &parsed_data, debug);
             ls.parseAttrLinkState(attr_len, data);
             break;

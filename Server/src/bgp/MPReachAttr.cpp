@@ -13,6 +13,7 @@
 
 #include <math.h>
 #include <arpa/inet.h>
+
 namespace bgp_msg {
 
 /**
@@ -47,33 +48,17 @@ MPReachAttr::~MPReachAttr() {
  * \param [out]  parsed_data            Reference to parsed_update_data; will be updated with all parsed data
  */
 void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::parsed_update_data &parsed_data) {
-    
-    
     mp_reach_nlri nlri;
     /*
      * Set the MP NLRI struct
      */
     // Read address family
-
     memcpy(&nlri.afi, data, 2); data += 2; attr_len -= 2;
     bgp::SWAP_BYTES(&nlri.afi);                     // change to host order
 
     nlri.safi = *data++; attr_len--;                 // Set the SAFI - 1 octet
     nlri.nh_len = *data++; attr_len--;              // Set the next-hop length - 1 octet
-    
-    char str[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, data + 8, str, INET_ADDRSTRLEN);
-
-    
     nlri.next_hop = data;  data += nlri.nh_len; attr_len -= nlri.nh_len;    // Set pointer position for nh data
-
-    //char nh_char[40];
-    //u_char nh[4];
-    //bzero(&nh, 4);
-    //memcpy(&nh, nlri.next_hop + 8, 4);
-    //inet_ntop(AF_INET, nh, nh_char, sizeof(nh));
-
-
     nlri.reserved = *data++; attr_len--;             // Set the reserve octet
     nlri.nlri_data = data;                          // Set pointer position for nlri data
     nlri.nlri_len = attr_len;                       // Remaining attribute length is for NLRI data
@@ -95,7 +80,6 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::pars
      */
     parseAfi(nlri, parsed_data);
 }
-
 
 /**
  * MP Reach NLRI parse based on AFI
@@ -189,7 +173,6 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
 
         case bgp::BGP_SAFI_MPLS:
             if (isIPv4) {
-                
                 nlri.next_hop += 8;
                 nlri.nh_len -= 8;
                 memcpy(ip_raw, nlri.next_hop, nlri.nh_len);

@@ -62,8 +62,6 @@ public:
     void update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr, base_attr_action_code code);
     void update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib, obj_path_attr *attr, unicast_prefix_action_code code);
     
-    void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &rib, obj_path_attr *attr, vpn_action_code code);
-
     void add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats);
 
     void update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_node> &nodes,
@@ -72,6 +70,8 @@ public:
                      ls_action_code code);
     void update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
                       ls_action_code code);
+    
+    void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr, vpn_action_code code);
 
     void send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data, size_t data_len);
 
@@ -96,7 +96,7 @@ private:
     uint64_t        ls_node_seq;                ///< LS node sequence
     uint64_t        ls_link_seq;                ///< LS link sequence
     uint64_t        ls_prefix_seq;              ///< LS prefix sequence
-    uint64_t        vpn_seq;              ///< LS prefix sequence
+    uint64_t        vpn_seq;                    ///< LS prefix sequence
 
     Config          *cfg;                       ///< Pointer to config instance
 
