@@ -1,6 +1,6 @@
 # Message Bus API Specficiation
 
-> #### Current Version 1.3
+> #### Current Version 1.4
 
 
 ## Version Diff
