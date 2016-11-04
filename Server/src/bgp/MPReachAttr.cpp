@@ -195,6 +195,15 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
     }
 }
 
+/**
+ * Parses VPN data in nlri (IPv4)
+ *
+ * \details
+ *      Will parse the VPN as defined in https://tools.ietf.org/html/rfc4364
+ *
+ * \param [in]   nlri                   Reference to MP Reach Nlri object
+ * \param [out]  vpn_list               Reference to a list<vpn_tuple> to be updated with entries
+ */
 void MPReachAttr::parseNLRIData_VPNIPv4(mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpn_list) {
     
     u_char *pointer = nlri->nlri_data;

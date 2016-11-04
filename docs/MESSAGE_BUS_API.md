@@ -5,6 +5,11 @@
 
 ## Version Diff
 
+### Diff from 1.4 to 1.3
+
+* **l3vpn**
+    * Added **fields 1-34** - Implementation of https://tools.ietf.org/html/rfc4364
+
 ### Diff from 1.3 to 1.2
 
 * **unicast_prefix**
@@ -399,6 +404,45 @@ One or more link-state prefixes.
 31 | Prefix Length | Int | 1 | Prefix length in bits
 32 | isPrePolicy | Bool | 1 | Indicates if LS prefix BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 33 | isAdjIn | Bool | 1 | Indicates if LS prefix BGP prefix is Adj-RIB-In or Adj-RIB-Out
+
+### Object: <font color="blue">l3vpn</font> (openbmp.parsed.l3vpn)
+
+\# | Field | Data Type | Size in Bytes | Details
+---|-------|-----------|---------------|---------
+1 | Action | String | 32 | **add** = New/Update entry<br>**del** = Delete entry (withdrawn) - *Attributes are null/empty for withdrawn prefixes*
+2 | Sequence | Int | 8 | 64bit unsigned number indicating the sequence number.  This increments for each prefix record by peer and restarts on collector restart or number wrap.
+3 | Hash | String | 32 | Hash ID for this entry; Hash of fields [ prefix, prefix length, peer hash, path_id, 1 if has label(s) ]
+4 | Router Hash | String | 32 | Hash Id of router
+5 | Router IP | String | 46 | Router BMP source IP address
+6 | Base Attr Hash | String | 32 | Hash Id of the base attribute set
+7 | Peer Hash | String | 32 | Hash Id of the peer
+8 | Peer IP | String | 46 | Peer remote IP address
+9 | Peer ASN | Int | 4 | Peer remote ASN
+10 | Timestamp | String | 26 | In the format of: YYYY-MM-dd HH:MM:SS.ffffff
+11 | Prefix | String | 46 | Printed form of the Prefix IP address
+12 | Length | Int | 1 | Length of the prefix in bits
+13 | isIPv4 | Bool | 1 | Indicates if prefix is IPv4 or IPv6
+14 | Origin | String | 32 | Origin of the prefix (igp, egp, incomplete)
+15 | AS Path | String | 8K | AS Path string
+16 | AS Path Count | Int | 2 | Count of ASN's in the path
+17 | Origin AS | Int | 4 | Originating ASN (right most)
+18 | Next Hop | String | 46 | Printed form of the next hop IP address
+19 | MED | Int | 4 | MED value
+20 | Local Pref | Int | 4 | Local preference value
+21 | Aggregator | String | 64 | Aggregator in printed form {as} {IP}
+22 | Community List | String | 8K | String form of the communities
+23 | Ext Community List | String | 8K | String from of the extended communities
+24 | Cluster List | String | 1K | String form of the cluster id's
+25 | isAtomicAgg | Bool | 1 | Indicates if the aggregate is atomic
+26 | isNextHopIPv4 | Bool | 1 | Indicates if the next hop address is IPv4 or not
+27 | Originator Id | String | 46 | Originator ID in printed form (IP)
+28 | Path ID | Int | 4 | Unsigned 32 bit value for the path ID (draft-ietf-idr-add-paths-15).  Zero means add paths is not enabled/used.
+29 | Labels | String | 255 | Comma delimited list of 32bit unsigned values that represent the received labels.
+30 | isPrePolicy | Bool | 1 | Indicates if unicast BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
+31 | isAdjIn | Bool | 1 | Indicates if unicast BGP prefix is Adj-RIB-In or Adj-RIB-Out
+32 | Route Distinguisher | String | 255 | VPN Route Distinguisher following https://tools.ietf.org/html/rfc4364#section-4.2
+33 | Route Distinguisher | Int | 1 | Indicates type of Route Distinguisher
+34 | VPN Label | Int | 4 | VPN Label
 
 Message API: BMP RAW Data
 ------------------------------------
