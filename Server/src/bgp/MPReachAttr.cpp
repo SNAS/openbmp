@@ -171,147 +171,141 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info, parsed_data.advertised);
             break;
 
-        case bgp::BGP_SAFI_MPLS:
+        case bgp::BGP_SAFI_MPLS: {
+            
+            //AFI=1 & SAFI=128 means L3VPN
             if (isIPv4) {
+                //Next hop encoded in 12 bytes, last 4 bytes = IPv4
                 nlri.next_hop += 8;
                 nlri.nh_len -= 8;
+
                 memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
                 inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
                 parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
 
-                u_char *pointer = nlri.nlri_data;
-
-                pointer = nlri.nlri_data;
-
-                int i = 0;
-
-                pointer = nlri.nlri_data;
-
-                while(pointer < nlri.nlri_data + nlri.nlri_len) {
-                      bgp::vpn_tuple tuple;
-                      
-                      i += 1;
-                      
-                      uint8_t len = 0;
-                      len = *pointer;
-                      pointer += 1;
-                      
-                      uint32_t label = 0;
-                      memcpy(&label, pointer, 3);
-                      pointer += 3;
-                      label = label >> 4;
-
-                      tuple.vpn_label = label;
-
-                      pointer += 1;
-                      u_char rd_type = *pointer;
-                      
-                      pointer += 1;
-
-                      switch ((int)rd_type) {
-                         case 0: {
-                              uint16_t administration_subfield;
-                              bzero(&administration_subfield, 2);
-                              memcpy(&administration_subfield, pointer, 2);
-
-                              pointer += 2;
-
-                              uint32_t assigned_number_subfield;
-                              bzero(&assigned_number_subfield, 4);
-                              memcpy(&assigned_number_subfield, pointer, 4);
-                              pointer += 4;
-                              
-                              bgp::SWAP_BYTES(&administration_subfield);
-                              bgp::SWAP_BYTES(&assigned_number_subfield);
-
-                              tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
-                              tuple.rd_administrator_subfield = std::to_string(administration_subfield);
-
-                              break;
-                          };
-
-                          case 1: {
-                              u_char administration_subfield[4];
-                              bzero(&administration_subfield, 4);
-                              memcpy(&administration_subfield, pointer, 4);
-
-                              pointer += 4;
-
-                              uint16_t assigned_number_subfield;
-                              bzero(&assigned_number_subfield, 2);
-                              memcpy(&assigned_number_subfield, pointer, 2);
-                              pointer += 2;
-                              
-                              bgp::SWAP_BYTES(&assigned_number_subfield);
-                              
-                              char administration_subfield_chars[INET_ADDRSTRLEN];
-                              inet_ntop(AF_INET, administration_subfield, administration_subfield_chars, INET_ADDRSTRLEN);
-
-                              tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
-                              tuple.rd_administrator_subfield = std::string(administration_subfield_chars);
-                              
-                              break;
-                          };
-
-                          case 2: {
-                              uint32_t administration_subfield;
-                              bzero(&administration_subfield, 4);
-                              memcpy(&administration_subfield, pointer, 4);
-
-                              pointer += 4;
-
-                              uint16_t assigned_number_subfield;
-                              bzero(&assigned_number_subfield, 2);
-                              memcpy(&assigned_number_subfield, pointer, 2);
-                              
-                              pointer += 2;
-                              
-                              bgp::SWAP_BYTES(&administration_subfield);
-                              bgp::SWAP_BYTES(&assigned_number_subfield);
-                              
-                              tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
-                              tuple.rd_administrator_subfield = std::to_string(administration_subfield);
-                              
-                              break;
-                          };
-
-                          default : {
-                              pointer += 6;
-
-                              LOG_INFO("%s: MP_REACH RD type (%d) is not implemented yet, skipping for now",
-                                       peer_addr.c_str(), rd_type);                              
-                              break;
-                          };
-                      } 
-
-                      tuple.type = isIPv4 ? bgp::PREFIX_UNICAST_V4 : bgp::PREFIX_UNICAST_V6;
-                      tuple.isIPv4 = isIPv4;
-                      
-                      tuple.rd_type = rd_type;
-
-                      uint8_t prefix_bit_len = len - 24 - 64;
-
-                      uint8_t prefix_len = ceil((float)prefix_bit_len / 8);
-
-                      u_char prefix[16];
-                      bzero(prefix, 16);
-                      char ip_char[40];
-                      memcpy(&prefix, pointer, prefix_len);
-                      inet_ntop(AF_INET, prefix, ip_char, sizeof(ip_char));
-
-                      tuple.prefix = std::string(ip_char);
-                      tuple.len = prefix_bit_len;
-                      pointer += prefix_len;
-                      
-                      parsed_data.vpn.push_back(tuple);
-                }
+                parseNLRIData_VPNIPv4(&nlri, parsed_data.vpn);
             }
             break;
+        }
 
         default :
             LOG_INFO("%s: MP_REACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now",
                      peer_addr.c_str(), isIPv4, nlri.safi);
             return;
+    }
+}
+
+void MPReachAttr::parseNLRIData_VPNIPv4(mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpn_list) {
+    
+    u_char *pointer = nlri->nlri_data;
+        
+    while(pointer < nlri->nlri_data + nlri->nlri_len) {
+        bgp::vpn_tuple tuple;
+              
+        uint8_t len = 0;
+        len = *pointer;
+        pointer += 1;
+        
+        uint32_t label = 0;
+        memcpy(&label, pointer, 3);
+        pointer += 3;
+        label = label >> 4;
+
+        tuple.vpn_label = label;
+
+        pointer += 1;
+        u_char rd_type = *pointer;
+        
+        pointer += 1;
+
+        switch ((int)rd_type) {
+           case 0: {
+                uint16_t administration_subfield;
+                bzero(&administration_subfield, 2);
+                memcpy(&administration_subfield, pointer, 2);
+
+                pointer += 2;
+
+                uint32_t assigned_number_subfield;
+                bzero(&assigned_number_subfield, 4);
+                memcpy(&assigned_number_subfield, pointer, 4);
+                pointer += 4;
+                
+                bgp::SWAP_BYTES(&administration_subfield);
+                bgp::SWAP_BYTES(&assigned_number_subfield);
+
+                tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
+                tuple.rd_administrator_subfield = std::to_string(administration_subfield);
+
+                break;
+            };
+
+            case 1: {
+                u_char administration_subfield[4];
+                bzero(&administration_subfield, 4);
+                memcpy(&administration_subfield, pointer, 4);
+
+                pointer += 4;
+
+                uint16_t assigned_number_subfield;
+                bzero(&assigned_number_subfield, 2);
+                memcpy(&assigned_number_subfield, pointer, 2);
+                pointer += 2;
+                
+                bgp::SWAP_BYTES(&assigned_number_subfield);
+                
+                char administration_subfield_chars[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, administration_subfield, administration_subfield_chars, INET_ADDRSTRLEN);
+
+                tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
+                tuple.rd_administrator_subfield = std::string(administration_subfield_chars);
+                
+                break;
+            };
+
+            case 2: {
+                uint32_t administration_subfield;
+                bzero(&administration_subfield, 4);
+                memcpy(&administration_subfield, pointer, 4);
+
+                pointer += 4;
+
+                uint16_t assigned_number_subfield;
+                bzero(&assigned_number_subfield, 2);
+                memcpy(&assigned_number_subfield, pointer, 2);
+                
+                pointer += 2;
+                
+                bgp::SWAP_BYTES(&administration_subfield);
+                bgp::SWAP_BYTES(&assigned_number_subfield);
+                
+                tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
+                tuple.rd_administrator_subfield = std::to_string(administration_subfield);
+                
+                break;
+            };
+        } 
+
+        tuple.type = bgp::PREFIX_UNICAST_V4; 
+        tuple.isIPv4 = true;
+        
+        tuple.rd_type = rd_type;
+
+        uint8_t prefix_bit_len = len - 24 - 64;
+
+        uint8_t prefix_len = ceil((float)prefix_bit_len / 8);
+
+        u_char prefix[16];
+        bzero(prefix, 16);
+        char ip_char[40];
+        memcpy(&prefix, pointer, prefix_len);
+        inet_ntop(AF_INET, prefix, ip_char, sizeof(ip_char));
+
+        tuple.prefix = std::string(ip_char);
+        tuple.len = prefix_bit_len;
+        pointer += prefix_len;
+        
+        vpn_list.push_back(tuple);
     }
 }
 

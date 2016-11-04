@@ -85,6 +85,9 @@ public:
                                        BMPReader::peer_info *peer_info,
                                        std::list<bgp::prefix_tuple> &prefixes);
 
+
+    static void parseNLRIData_VPNIPv4(mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpns); 
+
     static void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
                                             BMPReader::peer_info *peer_info,
                                             std::list<bgp::prefix_tuple> &prefixes);
