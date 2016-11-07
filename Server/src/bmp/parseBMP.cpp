@@ -769,20 +769,20 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
          */
         switch (initMsg.type) {
             case INIT_TYPE_FREE_FORM_STRING :
-                infoLen = sizeof(r_entry.initiate_data) < initMsg.len ? sizeof(r_entry.initiate_data) : initMsg.len;
+                infoLen = sizeof(r_entry.initiate_data) < (initMsg.len - 1) ? sizeof(r_entry.initiate_data - 1) : initMsg.len;
                 memcpy(r_entry.initiate_data, initMsg.info, infoLen);
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.initiate_data);
 
                 break;
 
             case INIT_TYPE_SYSNAME :
-                infoLen = sizeof(r_entry.name) < initMsg.len ? sizeof(r_entry.name) : initMsg.len;
+                infoLen = sizeof(r_entry.name) < (initMsg.len - 1) ? sizeof(r_entry.name - 1) : initMsg.len;
                 strncpy((char *)r_entry.name, initMsg.info, infoLen);
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.name);
                 break;
 
             case INIT_TYPE_SYSDESCR :
-                infoLen = sizeof(r_entry.descr) < initMsg.len ? sizeof(r_entry.descr) : initMsg.len;
+                infoLen = sizeof(r_entry.descr) < (initMsg.len - 1) ? sizeof(r_entry.descr - 1) : initMsg.len;
                 strncpy((char *)r_entry.descr, initMsg.info, infoLen);
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.descr);
                 break;
