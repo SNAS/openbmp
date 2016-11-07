@@ -148,7 +148,7 @@ namespace bgp_msg {
         if (attr_len < 4) {
             LOG_NOTICE("%s: bgp-ls: failed to parse attribute; too short",
                     peer_addr.c_str());
-            return attr_len + 4;
+            return attr_len;
         }
 
         memcpy(&type, data, 2);
@@ -260,8 +260,6 @@ namespace bgp_msg {
 
                 val_ss << " " << value_32bit;
 
-                // Parsing SID/Label Sub-TLV: https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-03#section-2.3.7.2
-
                 u_int16_t type;
                 memcpy(&type, data, 2);
                 bgp::SWAP_BYTES(&type);
@@ -269,7 +267,9 @@ namespace bgp_msg {
 
                 val_ss << " " << type;
 
-                if (type == 1161) {
+                // Parsing SID/Label Sub-TLV: https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-03#section-2.3.7.2
+
+                if (type == SUB_TLV_SID_LABEL) {
                     u_int16_t sid_label_size = 0;
                     memcpy(&sid_label_size, data, 2);
                     bgp::SWAP_BYTES(&sid_label_size);
@@ -289,7 +289,7 @@ namespace bgp_msg {
                                 peer_addr.c_str());
                     }
                 } else {
-                    LOG_NOTICE("%s: bgp-ls: parsed node sr capabilities, SID/Label type is unexpected",
+                    LOG_NOTICE("%s: bgp-ls: parsed node sr capabilities, SUB TLV type is unexpected",
                             peer_addr.c_str());
                 }
 

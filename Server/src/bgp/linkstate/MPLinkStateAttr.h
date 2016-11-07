@@ -24,8 +24,8 @@ namespace bgp_msg {
     class MPLinkStateAttr {
     public:
         /**
-  * Node Attribute types
-  */
+         * Node Attribute types
+         */
         enum ATTR_NODE_TYPES {
             ATTR_NODE_MT_ID                     = 263,    ///< Multi-Topology Identifier (len=variable)
             ATTR_NODE_FLAG                      = 1024,   ///< Node Flag Bits see enum NODE_FLAG_TYPES (len=1)
@@ -35,6 +35,10 @@ namespace bgp_msg {
             ATTR_NODE_IPV4_ROUTER_ID_LOCAL,               ///< Local NODE IPv4 Router ID (len=4) (rfc5305/4.3)
             ATTR_NODE_IPV6_ROUTER_ID_LOCAL,               ///< Local NODE IPv6 Router ID (len=16) (rfc6119/4.1)
             ATTR_NODE_SR_CAPABILITIES           = 1034    ///< SR Capabilities
+        };
+
+        enum SUB_TLV_TYPES {
+            SUB_TLV_SID_LABEL = 1161    ///<SID/Label Sub-TLV
         };
 
         /**
