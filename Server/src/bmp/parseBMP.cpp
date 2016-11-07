@@ -769,22 +769,29 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
          */
         switch (initMsg.type) {
             case INIT_TYPE_FREE_FORM_STRING :
-                memcpy(r_entry.initiate_data, initMsg.info, initMsg.len);
+                infoLen = sizeof(r_entry.initiate_data) < (initMsg.len - 1) ? (sizeof(r_entry.initiate_data) - 1) : initMsg.len;
+                memcpy(r_entry.initiate_data, initMsg.info, infoLen);
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.initiate_data);
 
                 break;
 
             case INIT_TYPE_SYSNAME :
-                strncpy((char *)r_entry.name, initMsg.info, sizeof(r_entry.name));
+                infoLen = sizeof(r_entry.name) < (initMsg.len - 1) ? (sizeof(r_entry.name) - 1) : initMsg.len;
+                strncpy((char *)r_entry.name, initMsg.info, infoLen);
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.name);
                 break;
 
             case INIT_TYPE_SYSDESCR :
-                strncpy((char *)r_entry.descr, initMsg.info, sizeof(r_entry.descr));
+                infoLen = sizeof(r_entry.descr) < (initMsg.len - 1) ? (sizeof(r_entry.descr) - 1) : initMsg.len;
+                strncpy((char *)r_entry.descr, initMsg.info, infoLen);
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.descr);
                 break;
 
             case INIT_TYPE_ROUTER_BGP_ID:
+                if (initMsg.len != sizeof(in_addr_t)) {
+                    LOG_NOTICE("Init message type BGP ID not of IPv4 addr length");
+                    break;
+                }
                 inet_ntop(AF_INET, initMsg.info, r_entry.bgp_id, sizeof(r_entry.bgp_id));
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.bgp_id);
                 break;
