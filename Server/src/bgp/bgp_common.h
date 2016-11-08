@@ -63,11 +63,11 @@ namespace bgp {
      *      http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
      */
     enum BGP_AFI {
-             BGP_AFI_IPV4=1,
-             BGP_AFI_IPV6=2,
-
-             BGP_AFI_BGPLS=16388
-             };
+        BGP_AFI_IPV4=1,
+        BGP_AFI_IPV6=2,
+        BGP_AFI_L2VPN=25,
+        BGP_AFI_BGPLS=16388
+    };
 
 
     /**
