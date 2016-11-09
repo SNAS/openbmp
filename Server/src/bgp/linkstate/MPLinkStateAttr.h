@@ -74,6 +74,14 @@ namespace bgp_msg {
             MPLS_PROTO_RSVP_TE                  = 0x40          ///< Extension to RSVP for LSP tunnels (rfc3209)
         };
 
+        const std::array<std::string, 8> sid_sub_tlv_flags = {"", "NP", "M", "E", "V", "L"};
+
+        const std::array<std::string, 8> node_sr_capabilities_flags = {"I", "V", "H"};
+
+        const std::array<std::string, 8> peer_adj_sid_flags = {"R", "N", "P", "E", "V", "L"};
+
+        const std::array<std::string, 8> node_flags = {"O", "T", "E", "B", "R", "V"};
+
         /**
          * Prefix Attribute types
          */
@@ -159,7 +167,7 @@ namespace bgp_msg {
          *
          * \returns string with flags
          */
-        std::string parse_flags_to_string(u_char data, std::array<std::string, 8> flags);
+        std::string parse_flags_to_string(u_char data, const std::array<std::string, 8> flags);
 
         uint32_t ieee_float_to_kbps(int32_t float_val);
     };

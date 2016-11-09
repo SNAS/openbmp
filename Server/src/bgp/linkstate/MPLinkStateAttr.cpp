@@ -113,10 +113,10 @@ namespace bgp_msg {
      *
      * \returns string with flags
      */
-    std::string MPLinkStateAttr::parse_flags_to_string(u_char data, std::array<std::string, 8> flags){
+    std::string MPLinkStateAttr::parse_flags_to_string(u_char data, const std::array<std::string, 8> flags){
         std::string flags_string = "";
         u_char current_mask = 0x80;
-        for (std::array<std::string, 8>::iterator iterator = flags.begin(); iterator != flags.end(); ++iterator) {
+        for (std::array<std::string, 8>::const_iterator iterator = flags.begin(); iterator != flags.end(); ++iterator) {
             if(current_mask & data) {
                 flags_string += *iterator;
             }
@@ -166,7 +166,7 @@ namespace bgp_msg {
                              peer_addr.c_str(), len);
                 }
 
-                std::string flags = this->parse_flags_to_string(*data, std::array<std::string, 8>{"O", "T", "E", "B", "R", "V"});
+                std::string flags = this->parse_flags_to_string(*data, node_flags);
 
                 SELF_DEBUG("%s: bgp-ls: parsed node flags %s %x (len=%d)", peer_addr.c_str(), flags.c_str(), *data, len);
 
@@ -247,7 +247,7 @@ namespace bgp_msg {
                 val_ss.str(std::string());
 
                 // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-07#section-3.1                
-                val_ss << this->parse_flags_to_string(*data, std::array<std::string, 8>{"I", "V", "H"});
+                val_ss << this->parse_flags_to_string(*data, node_sr_capabilities_flags);
                 
                 // 1 byte reserved (skipping) + 1 byte flags (already parsed)
                 data += 2;
@@ -415,7 +415,7 @@ namespace bgp_msg {
                 // Parsing flags:
                 // https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-05#section-2.1
 
-                val_ss << this->parse_flags_to_string(*data, std::array<std::string, 8>{"R", "N", "P", "E", "V", "L"});
+                val_ss << this->parse_flags_to_string(*data, peer_adj_sid_flags);
                 data += 1;
                 
                 u_int8_t weight;
@@ -607,7 +607,7 @@ namespace bgp_msg {
                 // Package structure:
                 // https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-09#section-5
                 
-                val_ss << this->parse_flags_to_string(*data, std::array<std::string, 8>{"", "NP", "M", "E", "V", "L"});
+                val_ss << this->parse_flags_to_string(*data, sid_sub_tlv_flags);
                 
                 // 1 byte for Flags + 1 byte for reserved
                 data += 2;
