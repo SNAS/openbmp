@@ -35,6 +35,93 @@ MPReachAttr::~MPReachAttr() {
 }
 
 /**
+ * Parse Route Distinguisher
+ *
+ * \details
+ *      Will parse the Route Distinguisher. Based on https://tools.ietf.org/html/rfc4364#section-4.2
+ *
+ * \param [in/out]  rd_beginning_data_pointer  Pointer to the beginning of Route Distinguisher
+ * \param [out]     rd_type                    Reference to RD type.
+ * \param [out]     rd_assigned_number         Reference to Assigned Number subfield
+ * \param [out]     rd_administrator_subfield  Reference to Administrator subfield
+ */
+void MPReachAttr::parseRouteDistinguisher(u_char *rd_beginning_data_pointer, uint8_t *rd_type,
+                                          std::string *rd_assigned_number, std::string *rd_administrator_subfield) {
+
+    rd_beginning_data_pointer++;
+    *rd_type = *rd_beginning_data_pointer;
+    rd_beginning_data_pointer++;
+
+    switch (*rd_type) {
+        case 0: {
+            uint16_t administration_subfield;
+            bzero(&administration_subfield, 2);
+            memcpy(&administration_subfield, rd_beginning_data_pointer, 2);
+
+            rd_beginning_data_pointer += 2;
+
+            uint32_t assigned_number_subfield;
+            bzero(&assigned_number_subfield, 4);
+            memcpy(&assigned_number_subfield, rd_beginning_data_pointer, 4);
+            rd_beginning_data_pointer += 4;
+
+            bgp::SWAP_BYTES(&administration_subfield);
+            bgp::SWAP_BYTES(&assigned_number_subfield);
+
+            *rd_assigned_number = std::to_string(assigned_number_subfield);
+            *rd_administrator_subfield = std::to_string(administration_subfield);
+
+            break;
+        };
+
+        case 1: {
+            u_char administration_subfield[4];
+            bzero(&administration_subfield, 4);
+            memcpy(&administration_subfield, rd_beginning_data_pointer, 4);
+
+            rd_beginning_data_pointer += 4;
+
+            uint16_t assigned_number_subfield;
+            bzero(&assigned_number_subfield, 2);
+            memcpy(&assigned_number_subfield, rd_beginning_data_pointer, 2);
+            rd_beginning_data_pointer += 2;
+
+            bgp::SWAP_BYTES(&assigned_number_subfield);
+
+            char administration_subfield_chars[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, administration_subfield, administration_subfield_chars, INET_ADDRSTRLEN);
+
+            *rd_assigned_number = std::to_string(assigned_number_subfield);
+            *rd_administrator_subfield = std::string(administration_subfield_chars);
+
+            break;
+        };
+
+        case 2: {
+            uint32_t administration_subfield;
+            bzero(&administration_subfield, 4);
+            memcpy(&administration_subfield, rd_beginning_data_pointer, 4);
+
+            rd_beginning_data_pointer += 4;
+
+            uint16_t assigned_number_subfield;
+            bzero(&assigned_number_subfield, 2);
+            memcpy(&assigned_number_subfield, rd_beginning_data_pointer, 2);
+
+            rd_beginning_data_pointer += 2;
+
+            bgp::SWAP_BYTES(&administration_subfield);
+            bgp::SWAP_BYTES(&assigned_number_subfield);
+
+            *rd_assigned_number = std::to_string(assigned_number_subfield);
+            *rd_administrator_subfield = std::to_string(administration_subfield);
+
+            break;
+        };
+    }
+}
+
+/**
  * Parse the MP_REACH NLRI attribute data
  *
  * \details
@@ -222,83 +309,12 @@ void MPReachAttr::parseNLRIData_VPNIPv4(mp_reach_nlri *nlri, std::list<bgp::vpn_
 
         tuple.vpn_label = label;
 
-        pointer += 1;
-        u_char rd_type = *pointer;
-        
-        pointer += 1;
-
-        switch ((int)rd_type) {
-           case 0: {
-                uint16_t administration_subfield;
-                bzero(&administration_subfield, 2);
-                memcpy(&administration_subfield, pointer, 2);
-
-                pointer += 2;
-
-                uint32_t assigned_number_subfield;
-                bzero(&assigned_number_subfield, 4);
-                memcpy(&assigned_number_subfield, pointer, 4);
-                pointer += 4;
-                
-                bgp::SWAP_BYTES(&administration_subfield);
-                bgp::SWAP_BYTES(&assigned_number_subfield);
-
-                tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
-                tuple.rd_administrator_subfield = std::to_string(administration_subfield);
-
-                break;
-            };
-
-            case 1: {
-                u_char administration_subfield[4];
-                bzero(&administration_subfield, 4);
-                memcpy(&administration_subfield, pointer, 4);
-
-                pointer += 4;
-
-                uint16_t assigned_number_subfield;
-                bzero(&assigned_number_subfield, 2);
-                memcpy(&assigned_number_subfield, pointer, 2);
-                pointer += 2;
-                
-                bgp::SWAP_BYTES(&assigned_number_subfield);
-                
-                char administration_subfield_chars[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, administration_subfield, administration_subfield_chars, INET_ADDRSTRLEN);
-
-                tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
-                tuple.rd_administrator_subfield = std::string(administration_subfield_chars);
-                
-                break;
-            };
-
-            case 2: {
-                uint32_t administration_subfield;
-                bzero(&administration_subfield, 4);
-                memcpy(&administration_subfield, pointer, 4);
-
-                pointer += 4;
-
-                uint16_t assigned_number_subfield;
-                bzero(&assigned_number_subfield, 2);
-                memcpy(&assigned_number_subfield, pointer, 2);
-                
-                pointer += 2;
-                
-                bgp::SWAP_BYTES(&administration_subfield);
-                bgp::SWAP_BYTES(&assigned_number_subfield);
-                
-                tuple.rd_assigned_number = std::to_string(assigned_number_subfield);
-                tuple.rd_administrator_subfield = std::to_string(administration_subfield);
-                
-                break;
-            };
-        } 
+        parseRouteDistinguisher(pointer, &tuple.rd_type, &tuple.rd_assigned_number, &tuple.rd_administrator_subfield);
+        pointer += 8;
 
         tuple.type = bgp::PREFIX_UNICAST_V4; 
         tuple.isIPv4 = true;
-        
-        tuple.rd_type = rd_type;
+
 
         uint8_t prefix_bit_len = len - 24 - 64;
 
