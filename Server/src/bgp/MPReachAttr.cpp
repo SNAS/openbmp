@@ -196,6 +196,89 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
             break;
         }
 
+        case bgp::BGP_AFI_L2VPN :
+        {
+            switch (nlri.safi) {
+
+                case bgp::BGP_SAFI_EVPN : // https://tools.ietf.org/html/rfc7432
+                {
+                    u_char *pointer = nlri.nlri_data;
+                    bgp::evpn_tuple tuple;
+
+                    //------------------------------------------------------
+                    std::cout << "EVPN" << std::endl;
+
+
+                    while(pointer < nlri.nlri_data + nlri.nlri_len) {
+                        std::cout << std::hex << setfill('0') << setw(2) << (int)(*pointer);
+                        pointer += 1;
+                        if ((long)pointer % 8 == 0) {
+                            std::cout << std::endl;
+                        }
+
+                    }
+
+                    std::cout << std::endl;
+                    //------------------------------------------------------
+
+                    pointer = nlri.nlri_data;
+
+                    uint8_t route_type = *pointer;
+                    pointer++;
+
+                    uint8_t route_len
+
+                    std::cout << "Route type:" << (int)route_type << std::endl;
+
+                    parseRouteDistinguisher(
+                        pointer,
+                        &tuple.rd_type,
+                        &tuple.rd_assigned_number,
+                        &tuple.rd_administrator_subfield
+                    );
+
+                    pointer += 8;
+
+                    std::cout << "RD: " << (int)tuple.rd_type << " " << tuple.rd_assigned_number << " " << tuple.rd_administrator_subfield << std::endl;
+
+                    switch (route_type) {
+                        case 1:
+                        {
+//                            std::cout << "HELLO" << std::endl;
+                            break;
+                        }
+                        case 2:
+                        {
+//                            std::cout << "HELLO" << std::endl;
+                            break;
+                        }
+                        case 3:
+                        {
+                            std::cout << "HELLO" << std::endl;
+                            break;
+                        }
+                        case 4:
+                        {
+//                            std::cout << "HELLO" << std::endl;
+
+                            break;
+                        }
+                        default:
+                        {
+                            break;
+                        }
+                    }
+
+                    break;
+                }
+
+                default :
+                    LOG_INFO("%s: MP_REACH AFI=%d SAFI=%d is not implemented yet, skipping",
+                             peer_addr.c_str(), nlri.afi, nlri.safi);
+            }
+            break;
+        }
+
         default : // Unknown
             LOG_INFO("%s: MP_REACH AFI=%d is not implemented yet, skipping", peer_addr.c_str(), nlri.afi);
             return;

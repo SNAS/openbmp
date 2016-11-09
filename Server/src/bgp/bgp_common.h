@@ -63,11 +63,11 @@ namespace bgp {
      *      http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
      */
     enum BGP_AFI {
-             BGP_AFI_IPV4=1,
-             BGP_AFI_IPV6=2,
-
-             BGP_AFI_BGPLS=16388
-             };
+        BGP_AFI_IPV4=1,
+        BGP_AFI_IPV6=2,
+        BGP_AFI_L2VPN=25,
+        BGP_AFI_BGPLS=16388
+    };
 
     /**
      * Defines the BGP subsequent address-families (SAFI)
@@ -135,6 +135,15 @@ namespace bgp {
          uint8_t        rd_type;
          uint32_t       vpn_label;
      };
+
+    /**
+     * Struct is used for evpn
+     */
+    struct evpn_tuple: prefix_tuple {
+        std::string    rd_administrator_subfield;
+        std::string    rd_assigned_number;
+        uint8_t        rd_type;
+    };
 
     /*********************************************************************//**
      * Simple function to swap bytes around from network to host or
