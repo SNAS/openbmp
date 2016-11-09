@@ -44,12 +44,12 @@ MPReachAttr::~MPReachAttr() {
  * \param [out]     rd_assigned_number         Reference to Assigned Number subfield
  * \param [out]     rd_administrator_subfield  Reference to Administrator subfield
  */
-void MPReachAttr::parseRouteDistinguisher(u_char *rd_beginning_data_pointer, int *rd_type,
+void MPReachAttr::parseRouteDistinguisher(u_char *rd_beginning_data_pointer, uint8_t *rd_type,
                                           std::string *rd_assigned_number, std::string *rd_administrator_subfield) {
-    rd_beginning_data_pointer += 1;
-    *rd_type = (int)(*rd_beginning_data_pointer);
 
-    rd_beginning_data_pointer += 1;
+    rd_beginning_data_pointer++;
+    *rd_type = *rd_beginning_data_pointer;
+    rd_beginning_data_pointer++;
 
     switch (*rd_type) {
         case 0: {

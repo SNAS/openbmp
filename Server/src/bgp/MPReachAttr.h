@@ -61,12 +61,12 @@ public:
      * \details
      *      Will parse the Route Distinguisher. Based on https://tools.ietf.org/html/rfc4364#section-4.2
      *
-     * \param [in/out]   rd_beginning_data_pointer  Pointer to the beginning of Route Distinguisher
-     * \param [out]  rd_type                    Reference to RD type.
-     * \param [out]  rd_assigned_number         Reference to Assigned Number subfield
-     * \param [out]  rd_administrator_subfield  Reference to Administrator subfield
+     * \param [in/out]  rd_beginning_data_pointer  Pointer to the beginning of Route Distinguisher
+     * \param [out]     rd_type                    Reference to RD type.
+     * \param [out]     rd_assigned_number         Reference to Assigned Number subfield
+     * \param [out]     rd_administrator_subfield  Reference to Administrator subfield
      */
-    void parseRouteDistinguisher(u_char *rd_beginning_data_pointer, int *rd_type,
+    void parseRouteDistinguisher(u_char *rd_beginning_data_pointer, uint8_t *rd_type,
                                               std::string *rd_assigned_number, std::string *rd_administrator_subfield);
 
     /**
