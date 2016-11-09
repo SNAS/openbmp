@@ -34,6 +34,93 @@ MPReachAttr::~MPReachAttr() {
 }
 
 /**
+ * Parse Route Distinguisher
+ *
+ * \details
+ *      Will parse the Route Distinguisher. Based on https://tools.ietf.org/html/rfc4364#section-4.2
+ *
+ * \param [in/out]  rd_beginning_data_pointer  Pointer to the beginning of Route Distinguisher
+ * \param [out]     rd_type                    Reference to RD type.
+ * \param [out]     rd_assigned_number         Reference to Assigned Number subfield
+ * \param [out]     rd_administrator_subfield  Reference to Administrator subfield
+ */
+void MPReachAttr::parseRouteDistinguisher(u_char *rd_beginning_data_pointer, uint8_t *rd_type,
+                                          std::string *rd_assigned_number, std::string *rd_administrator_subfield) {
+
+    rd_beginning_data_pointer++;
+    *rd_type = *rd_beginning_data_pointer;
+    rd_beginning_data_pointer++;
+
+    switch (*rd_type) {
+        case 0: {
+            uint16_t administration_subfield;
+            bzero(&administration_subfield, 2);
+            memcpy(&administration_subfield, rd_beginning_data_pointer, 2);
+
+            rd_beginning_data_pointer += 2;
+
+            uint32_t assigned_number_subfield;
+            bzero(&assigned_number_subfield, 4);
+            memcpy(&assigned_number_subfield, rd_beginning_data_pointer, 4);
+            rd_beginning_data_pointer += 4;
+
+            bgp::SWAP_BYTES(&administration_subfield);
+            bgp::SWAP_BYTES(&assigned_number_subfield);
+
+            *rd_assigned_number = std::to_string(assigned_number_subfield);
+            *rd_administrator_subfield = std::to_string(administration_subfield);
+
+            break;
+        };
+
+        case 1: {
+            u_char administration_subfield[4];
+            bzero(&administration_subfield, 4);
+            memcpy(&administration_subfield, rd_beginning_data_pointer, 4);
+
+            rd_beginning_data_pointer += 4;
+
+            uint16_t assigned_number_subfield;
+            bzero(&assigned_number_subfield, 2);
+            memcpy(&assigned_number_subfield, rd_beginning_data_pointer, 2);
+            rd_beginning_data_pointer += 2;
+
+            bgp::SWAP_BYTES(&assigned_number_subfield);
+
+            char administration_subfield_chars[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET, administration_subfield, administration_subfield_chars, INET_ADDRSTRLEN);
+
+            *rd_assigned_number = std::to_string(assigned_number_subfield);
+            *rd_administrator_subfield = std::string(administration_subfield_chars);
+
+            break;
+        };
+
+        case 2: {
+            uint32_t administration_subfield;
+            bzero(&administration_subfield, 4);
+            memcpy(&administration_subfield, rd_beginning_data_pointer, 4);
+
+            rd_beginning_data_pointer += 4;
+
+            uint16_t assigned_number_subfield;
+            bzero(&assigned_number_subfield, 2);
+            memcpy(&assigned_number_subfield, rd_beginning_data_pointer, 2);
+
+            rd_beginning_data_pointer += 2;
+
+            bgp::SWAP_BYTES(&administration_subfield);
+            bgp::SWAP_BYTES(&assigned_number_subfield);
+
+            *rd_assigned_number = std::to_string(assigned_number_subfield);
+            *rd_administrator_subfield = std::to_string(administration_subfield);
+
+            break;
+        };
+    }
+}
+
+/**
  * Parse the MP_REACH NLRI attribute data
  *
  * \details
@@ -116,21 +203,22 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                 case bgp::BGP_SAFI_EVPN : // https://tools.ietf.org/html/rfc7432
                 {
                     u_char *pointer = nlri.nlri_data;
+                    bgp::evpn_tuple tuple;
 
                     //------------------------------------------------------
-//                    std::cout << "EVPN" << std::endl;
-//
-//
-//                    while(pointer < nlri.nlri_data + nlri.nlri_len) {
-//                        std::cout << std::hex << setfill('0') << setw(2) << (int)(*pointer);
-//                        pointer += 1;
-//                        if ((long)pointer % 8 == 0) {
-//                            std::cout << std::endl;
-//                        }
-//
-//                    }
-//
-//                    std::cout << std::endl;
+                    std::cout << "EVPN" << std::endl;
+
+
+                    while(pointer < nlri.nlri_data + nlri.nlri_len) {
+                        std::cout << std::hex << setfill('0') << setw(2) << (int)(*pointer);
+                        pointer += 1;
+                        if ((long)pointer % 8 == 0) {
+                            std::cout << std::endl;
+                        }
+
+                    }
+
+                    std::cout << std::endl;
                     //------------------------------------------------------
 
                     pointer = nlri.nlri_data;
@@ -138,20 +226,30 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                     uint8_t route_type = *pointer;
                     pointer++;
 
+                    uint8_t route_len
+
                     std::cout << "Route type:" << (int)route_type << std::endl;
 
-                    u_char rd[8];
-                    bzero(&rd, 8);
+                    parseRouteDistinguisher(
+                        pointer,
+                        &tuple.rd_type,
+                        &tuple.rd_assigned_number,
+                        &tuple.rd_administrator_subfield
+                    );
+
+                    pointer += 8;
+
+                    std::cout << "RD: " << (int)tuple.rd_type << " " << tuple.rd_assigned_number << " " << tuple.rd_administrator_subfield << std::endl;
 
                     switch (route_type) {
                         case 1:
                         {
-                            std::cout << "HELLO" << std::endl;
+//                            std::cout << "HELLO" << std::endl;
                             break;
                         }
                         case 2:
                         {
-                            std::cout << "HELLO" << std::endl;
+//                            std::cout << "HELLO" << std::endl;
                             break;
                         }
                         case 3:
@@ -161,7 +259,8 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                         }
                         case 4:
                         {
-                            std::cout << "HELLO" << std::endl;
+//                            std::cout << "HELLO" << std::endl;
+
                             break;
                         }
                         default:
