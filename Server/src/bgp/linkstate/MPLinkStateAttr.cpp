@@ -605,22 +605,19 @@ namespace bgp_msg {
                 value_32bit = 0;
                 
                 // Package structure:
-                // https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-09#section-5
+                // https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-03#section-2.2.1
                 
+                // Flags: https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-09#section-5
                 val_ss << this->parse_flags_to_string(*data, sid_sub_tlv_flags);
-                
-                // 1 byte for Flags + 1 byte for reserved
+                data += 1;
+
+                uint8_t weight;
+                weight = *data;
+                data += 1;
+                val_ss << " " << (int)weight;
+
+                // 2 bytes reserved
                 data += 2;
-                
-                u_int8_t mt_id = 0;
-                memcpy(&mt_id, data, 1);
-                data += 1;
-                val_ss << " " << (int)mt_id;
-                
-                u_int8_t algorythm = 0;
-                memcpy(&algorythm, data, 1);
-                data += 1;
-                val_ss << " " << (int)algorythm;
                 
                 // 4 bytes already read, looking for SID/Index/Label
                 if (len - 4 <= 4) {
