@@ -227,13 +227,24 @@ public:
         uint32_t    path_id;                ///< Add path ID - zero if not used
         char        labels[255];            ///< Labels delimited by comma
     };
-    
-    /// Rib extended with vpn specific fields
-    struct obj_vpn: obj_rib {
+
+    /// Rib extended with Route Distinguisher
+    struct obj_route_distinguisher {
         std::string     rd_administrator_subfield;
         std::string     rd_assigned_number;
-        uint8_t         rd_type;       
+        uint8_t         rd_type;
+    };
+    
+    /// Rib extended with vpn specific fields
+    struct obj_vpn: obj_rib, obj_route_distinguisher {
         uint32_t        vpn_label; 
+    };
+
+    /// Rib extended with evpn specific fields
+    struct obj_evpn: obj_rib, obj_route_distinguisher {
+        char        ethernet_tag_id_hex[16];
+        uint8_t     originating_router_ip_len;
+        char        originating_router_ip[46];
     };
 
     /// Unicast prefix action codes
@@ -475,6 +486,9 @@ public:
      *              safe to do so when this method returns.
      *****************************************************************/
     virtual void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr,
+                            vpn_action_code code) = 0;
+
+    virtual void update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn, obj_path_attr *attr,
                             vpn_action_code code) = 0;
 
     /*****************************************************************//**

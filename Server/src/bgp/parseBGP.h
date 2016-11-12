@@ -220,7 +220,9 @@ private:
      * \param  adv_vpn         Reference to the list<vpn_tuple> of advertised vpns
      * \param  attrs           Reference to the parsed attributes map
      */ 
-    void UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_vpn,bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
+    void UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_vpn, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
+
+    void UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_vpn, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
 
     /**
      * Update the Database for bgp-ls

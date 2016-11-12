@@ -206,19 +206,19 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                     bgp::evpn_tuple tuple;
 
                     //------------------------------------------------------
-                    std::cout << "EVPN" << std::endl;
-
-
-                    while(pointer < nlri.nlri_data + nlri.nlri_len) {
-                        std::cout << std::hex << setfill('0') << setw(2) << (int)(*pointer);
-                        pointer += 1;
-                        if ((long)pointer % 8 == 0) {
-                            std::cout << std::endl;
-                        }
-
-                    }
-
-                    std::cout << std::endl;
+//                    std::cout << "EVPN" << std::endl;
+//
+//
+//                    while(pointer < nlri.nlri_data + nlri.nlri_len) {
+//                        std::cout << " " << std::dec << pointer - nlri.nlri_data << ":" << std::hex << setfill('0') << setw(2) << (int)(*pointer);
+//                        pointer += 1;
+//                        if ((long)pointer % 8 == 0) {
+//                            std::cout << std::endl;
+//                        }
+//
+//                    }
+//
+//                    std::cout << std::endl;
                     //------------------------------------------------------
 
                     pointer = nlri.nlri_data;
@@ -226,9 +226,10 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                     uint8_t route_type = *pointer;
                     pointer++;
 
-                    uint8_t route_len
+                    uint8_t len = *pointer;
+                    pointer++;
 
-                    std::cout << "Route type:" << (int)route_type << std::endl;
+                    std::cout << "Route type:" << (int)route_type << " Len:" << (int)len << std::endl;
 
                     parseRouteDistinguisher(
                         pointer,
@@ -239,27 +240,181 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
 
                     pointer += 8;
 
-                    std::cout << "RD: " << (int)tuple.rd_type << " " << tuple.rd_assigned_number << " " << tuple.rd_administrator_subfield << std::endl;
+//                    std::cout << "RD: " << (int)tuple.rd_type << " " << tuple.rd_assigned_number << " " << tuple.rd_administrator_subfield << std::endl;
 
                     switch (route_type) {
                         case 1:
                         {
-//                            std::cout << "HELLO" << std::endl;
+                            pointer += 10;
+
+                            u_char ethernet_id[4];
+                            bzero(&ethernet_id, 4);
+                            memcpy(&ethernet_id, pointer, 4);
+                            pointer += 4;
+
+                            std::stringstream ethernet_tag_id_stream;
+
+                            for (int i = 0 ; i < 4 ; i++ ) {
+                                ethernet_tag_id_stream << std::hex << setfill('0') << setw(2) << (int)ethernet_id[i];
+                            }
+
+                            tuple.ethernet_tag_id_hex = ethernet_tag_id_stream.str();
+
+                            uint32_t mpls_label_1;
+                            bzero(&mpls_label_1, 4);
+                            memcpy(&mpls_label_1, pointer, 3);
+                            bgp::SWAP_BYTES(&mpls_label_1, 4);
+                            mpls_label_1 = mpls_label_1 >> 8;
+
+                            pointer += 3;
+
+//                            std::cout << "MPLS Label 1: " << std::dec << mpls_label_1 << std::endl;
+
                             break;
                         }
                         case 2:
                         {
-//                            std::cout << "HELLO" << std::endl;
+
+                            pointer += 10;
+
+                            u_char ethernet_id[4];
+                            bzero(&ethernet_id, 4);
+                            memcpy(&ethernet_id, pointer, 4);
+                            pointer += 4;
+
+                            std::stringstream ethernet_tag_id_stream;
+
+                            for (int i = 0 ; i < 4 ; i++ ) {
+                                ethernet_tag_id_stream << std::hex << setfill('0') << setw(2) << (int)ethernet_id[i];
+                            }
+
+                            tuple.ethernet_tag_id_hex = ethernet_tag_id_stream.str();
+
+                            uint8_t mac_address_length = *pointer;
+                            pointer++;
+
+//                            std::cout << "MAC Len: " << (int)mac_address_length << std::endl;
+
+                            u_char mac[6];
+                            bzero(&mac, 6);
+                            memcpy(&mac, pointer, 6);
+
+                            std::ostringstream ss;
+                            for (int i=0; i<6; ++i) {
+                                if (i != 0) ss << ':';
+                                ss.width(2); //< Use two chars for each byte
+                                ss.fill('0'); //< Fill up with '0' if the number is only one hexadecimal digit
+                                ss << std::hex << (int)(mac[i]);
+                            }
+
+                            pointer += 6;
+
+//                            std::cout << "MAC: " << ss.str() << std::endl;
+
+                            uint8_t ip_address_length = *pointer;
+                            pointer++;
+
+                            u_char ip_binary[16];
+                            bzero(ip_binary, 16);
+                            char ip_char[40];
+                            memcpy(&ip_binary, pointer, (int)ip_address_length / 8);
+                            inet_ntop(AF_INET, ip_binary, ip_char, sizeof(ip_char));
+
+//                            std::cout << "IP: " << string(ip_char) << std::endl;
+
+//                            std::cout << (long) pointer << std::endl;
+
+                            pointer += (int)ip_address_length / 8;
+
+//                            std::cout << (long) pointer << std::endl;
+
+//                            std::cout << "MPLS HEX " << std::hex << (int)*pointer << " " << (int)*(pointer + 1) << " " << (int)*(pointer + 2) << std::endl;
+
+                            uint32_t mpls_label_1;
+                            bzero(&mpls_label_1, 4);
+                            memcpy(&mpls_label_1, pointer, 3);
+                            bgp::SWAP_BYTES(&mpls_label_1, 4);
+                            mpls_label_1 = mpls_label_1 >> 8;
+
+                            pointer += 3;
+
+//                            std::cout << "MPLS Label 1: " << std::dec << mpls_label_1 << std::endl;
+
+                            if (len - 33 - ((int)ip_address_length / 8) == 3) {
+                                uint32_t mpls_label_2;
+                                bzero(&mpls_label_2, 4);
+                                memcpy(&mpls_label_2, pointer, 3);
+                                bgp::SWAP_BYTES(&mpls_label_2, 4);
+                                mpls_label_2 = mpls_label_2 >> 8;
+
+                                pointer += 3;
+
+//                                std::cout << "MPLS Label 2: " << std::dec << mpls_label_2 << std::endl;
+                            }
+
                             break;
                         }
                         case 3:
                         {
-                            std::cout << "HELLO" << std::endl;
+                            u_char ethernet_id[4];
+                            bzero(&ethernet_id, 4);
+                            memcpy(&ethernet_id, pointer, 4);
+                            pointer += 4;
+
+                            std::stringstream ethernet_tag_id_stream;
+
+                            for (int i = 0 ; i < 4 ; i++ ) {
+                                ethernet_tag_id_stream << std::hex << setfill('0') << setw(2) << (int)ethernet_id[i];
+                            }
+
+                            tuple.ethernet_tag_id_hex = ethernet_tag_id_stream.str();
+
+//                            std::cout << "Hex: " << tuple.ethernet_tag_id_hex << std::endl;
+
+                            uint8_t ip_address_length = *pointer;
+
+                            tuple.originating_router_ip_len = ip_address_length;
+
+//                            std::cout << "ip_address_length: " << std::dec << (int)ip_address_length << std::endl;
+
+                            u_char ip_binary[16];
+                            bzero(ip_binary, 16);
+                            char ip_char[40];
+                            memcpy(&ip_binary, pointer, (int)ip_address_length / 8);
+                            inet_ntop(AF_INET, ip_binary, ip_char, sizeof(ip_char));
+
+//                            std::cout << "IP " << string(ip_char) << std::endl;
+
+                            tuple.originating_router_ip = string(ip_char);
+
+//                            std::cout << "HELLO" << std::endl;
+
+//                            std::cout << "rd_administrator_subfield: " << tuple.rd_administrator_subfield << " rd_assigned_number: " << tuple.rd_assigned_number << std::endl;
+//                            std::cout << "originating_router_ip: " << tuple.originating_router_ip << " ethernet_tag_id_hex: " << tuple.ethernet_tag_id_hex << std::endl;
+
+                            parsed_data.evpn.push_back(tuple);
                             break;
                         }
                         case 4:
                         {
 //                            std::cout << "HELLO" << std::endl;
+                            pointer += 10;
+
+                            uint8_t ip_address_length = *pointer;
+
+                            tuple.originating_router_ip_len = ip_address_length;
+
+//                            std::cout << "ip_address_length: " << std::dec << (int)ip_address_length << std::endl;
+
+                            u_char ip_binary[16];
+                            bzero(ip_binary, 16);
+                            char ip_char[40];
+                            memcpy(&ip_binary, pointer, (int)ip_address_length / 8);
+                            inet_ntop(AF_INET, ip_binary, ip_char, sizeof(ip_char));
+
+//                            std::cout << "IP " << string(ip_char) << std::endl;
+
+                            tuple.originating_router_ip = string(ip_char);
 
                             break;
                         }

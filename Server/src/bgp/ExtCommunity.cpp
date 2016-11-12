@@ -99,7 +99,11 @@ namespace bgp_msg {
                     decodeStr.append(decodeType_Opaque(ec_hdr));
                     break;
 
-                case EXT_TYPE_EVPN      : // TODO: Implement
+                case EXT_TYPE_EVPN :
+                    // TODO: Implement
+//                    std::cout << "hello again" << std::endl;
+                    break;
+
                 case EXT_TYPE_QOS_MARK  : // TODO: Implement
                 case EXT_TYPE_FLOW_SPEC : // TODO: Implement
                 case EXT_TYPE_COS_CAP   : // TODO: Implement

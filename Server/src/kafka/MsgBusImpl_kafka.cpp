@@ -837,6 +837,120 @@ void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
+void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
+                              obj_path_attr *attr, vpn_action_code code) {
+
+//    std::cout << "111111111" << std::endl;
+
+    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+    prep_buf[0] = 0;
+
+    char    buf2[80000];                         // Second working buffer
+    size_t  buf_len = 0;                         // query buffer length
+
+    string vpn_hash_str;
+    string path_hash_str;
+    string p_hash_str;
+    string r_hash_str;
+
+    hash_toStr(peer.router_hash_id, r_hash_str);
+
+    if (attr != NULL)
+        hash_toStr(attr->hash_id, path_hash_str);
+
+    hash_toStr(peer.hash_id, p_hash_str);
+
+    string action = "add";
+
+    string ts;
+    getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
+
+    // Loop through the vector array of vpn entries
+    for (size_t i = 0; i < vpn.size(); i++) {
+
+        // Generate the hash
+        MD5 hash;
+
+        hash.update((unsigned char *) vpn[i].prefix, strlen(vpn[i].prefix));
+        hash.update(&vpn[i].prefix_len, sizeof(vpn[i].prefix_len));
+        hash.update((unsigned char *) p_hash_str.c_str(), p_hash_str.length());
+
+        // Add path ID to hash only if exists
+        if (vpn[i].path_id > 0)
+            hash.update((unsigned char *)&vpn[i].path_id, sizeof(vpn[i].path_id));
+
+        /*
+         * Add constant "1" to hash if labels are present
+         *      Withdrawn and updated NLRI's do not carry the original label, therefore we cannot
+         *      hash on the label string.  Instead, we has on a constant value of 1.
+         */
+        if (vpn[i].labels[0] != 0) {
+            buf2[0] = 1;
+            hash.update((unsigned char *) buf2, 1);
+            buf2[0] = 0;
+        }
+
+        hash.finalize();
+
+        // Save the hash
+        unsigned char *hash_raw = hash.raw_digest();
+        memcpy(vpn[i].hash_id, hash_raw, 16);
+        delete[] hash_raw;
+
+        // Build the query
+        hash_toStr(vpn[i].hash_id, vpn_hash_str);
+
+//        std::cout << "2223333" << (int)code <<std::endl;
+
+        switch (code) {
+
+            case VPN_ACTION_ADD:
+
+//                std::cout << "3333333" <<std::endl;
+                if (attr == NULL)
+                    return;
+
+                buf_len += snprintf(buf2, sizeof(buf2),
+                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
+                                        "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
+                                        "\t%s\t%d\t%d\t%s:%s\t%d\t%s\t%d\t%s\n",
+                                    action.c_str(), unicast_prefix_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
+                                    router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
+                                    peer.peer_addr, peer.peer_as, ts.c_str(), vpn[i].prefix, vpn[i].prefix_len,
+                                    vpn[i].isIPv4, attr->origin,
+                                    attr->as_path.c_str(), attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
+                                    attr->aggregator,
+                                    attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
+                                    attr->atomic_agg, attr->nexthop_isIPv4,
+                                    attr->originator_id, vpn[i].path_id, vpn[i].labels, peer.isPrePolicy, peer.isAdjIn,
+                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type, vpn[i].originating_router_ip, vpn[i].originating_router_ip_len, vpn[i].ethernet_tag_id_hex);
+
+                break;
+
+        }
+
+        // Cat the entry to the query buff
+        if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
+            strcat(prep_buf, buf2);
+
+        ++vpn_seq;
+    }
+
+//    std::cout << "44444444" << std::endl;
+//    std::cout << "44444444" << prep_buf << std::endl;
+//    std::cout << "44444444" << vpn.size() << std::endl;
+
+
+    produce(MSGBUS_TOPIC_VAR_EVPN, prep_buf, strlen(prep_buf), vpn.size(), p_hash_str,
+            &peer_list[p_hash_str], peer.peer_as);
+
+//    std::cout << "5555555" << std::endl;
+}
+
+
+/**
+ * Abstract method Implementation - See MsgBusInterface.hpp for details
+ */
 void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib,
                                         obj_path_attr *attr, unicast_prefix_action_code code) {
     //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
