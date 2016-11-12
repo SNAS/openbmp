@@ -67,6 +67,25 @@ namespace bgp_msg {
             ec_hdr.low_type  = data[1];
             ec_hdr.value     = data + 2;
 
+            //------------------------------------------------------
+                    std::cout << "E comm" << std::endl;
+
+                    u_char *pointer = data;
+
+                    while(pointer < data + 32) {
+                        std::cout << std::hex << setfill('0') << setw(2) << (int)(*pointer);
+                        pointer += 1;
+                        if ((long)pointer % 8 == 0) {
+                            std::cout << std::endl;
+                        }
+
+                    }
+
+                    std::cout << std::endl;
+            //------------------------------------------------------
+
+            std::cout << "H: "  << (int)ec_hdr.high_type << " L: " << (int)ec_hdr.low_type << std::endl;
+
             /*
              * Docode the community by type
              */
@@ -101,7 +120,7 @@ namespace bgp_msg {
 
                 case EXT_TYPE_EVPN :
                     // TODO: Implement
-//                    std::cout << "hello again" << std::endl;
+                    std::cout << "hello again" << std::endl;
                     break;
 
                 case EXT_TYPE_QOS_MARK  : // TODO: Implement
