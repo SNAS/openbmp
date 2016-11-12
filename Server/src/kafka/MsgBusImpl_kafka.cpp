@@ -907,13 +907,15 @@ void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
             case VPN_ACTION_ADD:
 
 //                std::cout << "3333333" <<std::endl;
+
+            std::cout << "vpn[i].mpls_label_1" << vpn[i].mac << std::endl;
                 if (attr == NULL)
                     return;
 
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
                                         "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
-                                        "\t%s\t%d\t%d\t%s:%s\t%d\t%s\t%d\t%s\n",
+                                        "\t%s\t%d\t%d\t%s:%s\t%d\t%d\t%s\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%d\t%d\n",
                                     action.c_str(), unicast_prefix_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), vpn[i].prefix, vpn[i].prefix_len,
@@ -923,7 +925,11 @@ void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
                                     attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
                                     attr->atomic_agg, attr->nexthop_isIPv4,
                                     attr->originator_id, vpn[i].path_id, vpn[i].labels, peer.isPrePolicy, peer.isAdjIn,
-                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type, vpn[i].originating_router_ip, vpn[i].originating_router_ip_len, vpn[i].ethernet_tag_id_hex);
+                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type,
+                                    vpn[i].originating_router_ip_len, vpn[i].originating_router_ip, vpn[i].ethernet_tag_id_hex,
+                                    vpn[i].ethernet_segment_identifier, vpn[i].ethernet_tag_id_hex, vpn[i].mac_len,
+                                    vpn[i].mac, vpn[i].ip_len, vpn[i].ip, vpn[i].mpls_label_1, vpn[i].mpls_label_2
+                );
 
                 break;
 

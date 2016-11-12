@@ -34,36 +34,143 @@ MPReachAttr::MPReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_i
 MPReachAttr::~MPReachAttr() {
 }
 
+void MPReachAttr::parseEthernetSegmentIdentifier(u_char *data_pointer, std::string *parsed_data) {
+    std::stringstream result;
+    uint8_t type = *data_pointer;
+
+    data_pointer++;
+
+    result << (int)type << " ";
+
+    switch (type) {
+        case 0: {
+            for (int i = 0; i < 9; i++) {
+                result << std::hex << setfill('0') << setw(2) << (int) data_pointer[i];
+            }
+            break;
+        }
+        case 1: {
+            for (int i = 0; i < 6; ++i) {
+                if (i != 0) result << ':';
+                result.width(2); //< Use two chars for each byte
+                result.fill('0'); //< Fill up with '0' if the number is only one hexadecimal digit
+                result << std::hex << (int) (data_pointer[i]);
+            }
+            data_pointer += 6;
+
+            result << " ";
+
+            uint16_t CE_LACP_port_key;
+            memcpy(&CE_LACP_port_key, data_pointer, 2);
+            bgp::SWAP_BYTES(&CE_LACP_port_key, 2);
+
+            result << std::dec << (int) CE_LACP_port_key;
+
+            break;
+        }
+        case 2: {
+            for (int i = 0; i < 6; ++i) {
+                if (i != 0) result << ':';
+                result.width(2); //< Use two chars for each byte
+                result.fill('0'); //< Fill up with '0' if the number is only one hexadecimal digit
+                result << std::hex << (int) (data_pointer[i]);
+            }
+            data_pointer += 6;
+
+            result << " ";
+
+            uint16_t root_bridge_priority;
+            memcpy(&root_bridge_priority, data_pointer, 2);
+            bgp::SWAP_BYTES(&root_bridge_priority, 2);
+
+            result << std::dec << (int) root_bridge_priority;
+
+            break;
+        }
+        case 3: {
+            for (int i=0; i<6; ++i) {
+                if (i != 0) result << ':';
+                result.width(2); //< Use two chars for each byte
+                result.fill('0'); //< Fill up with '0' if the number is only one hexadecimal digit
+                result << std::hex << (int)(data_pointer[i]);
+            }
+            data_pointer += 6;
+
+            result << " ";
+
+            uint32_t local_discriminator_value;
+            memcpy(&local_discriminator_value, data_pointer, 3);
+            bgp::SWAP_BYTES(&local_discriminator_value, 4);
+            local_discriminator_value = local_discriminator_value >> 8;
+            result << std::dec << (int)local_discriminator_value;
+
+            break;
+        }
+        case 4: {
+            uint32_t router_id;
+            memcpy(&router_id, data_pointer, 4);
+            bgp::SWAP_BYTES(&router_id, 4);
+            result << std::dec << (int)router_id << " ";
+
+            data_pointer += 4;
+
+            uint32_t local_discriminator_value;
+            memcpy(&local_discriminator_value, data_pointer, 4);
+            bgp::SWAP_BYTES(&local_discriminator_value, 4);
+            result << std::dec << (int)local_discriminator_value;
+            break;
+        }
+        case 5: {
+            uint32_t as_number;
+            memcpy(&as_number, data_pointer, 4);
+            bgp::SWAP_BYTES(&as_number, 4);
+            result << std::dec << (int)as_number << " ";
+
+            data_pointer += 4;
+
+            uint32_t local_discriminator_value;
+            memcpy(&local_discriminator_value, data_pointer, 4);
+            bgp::SWAP_BYTES(&local_discriminator_value, 4);
+            result << std::dec << (int)local_discriminator_value;
+            break;
+        }
+        default:
+            LOG_WARN("%s: MP_REACH Cannot parse ethernet segment identifyer type: %d", type);
+            break;
+    }
+
+    *parsed_data = result.str();
+}
+
 /**
  * Parse Route Distinguisher
  *
  * \details
  *      Will parse the Route Distinguisher. Based on https://tools.ietf.org/html/rfc4364#section-4.2
  *
- * \param [in/out]  rd_beginning_data_pointer  Pointer to the beginning of Route Distinguisher
+ * \param [in/out]  data_pointer  Pointer to the beginning of Route Distinguisher
  * \param [out]     rd_type                    Reference to RD type.
  * \param [out]     rd_assigned_number         Reference to Assigned Number subfield
  * \param [out]     rd_administrator_subfield  Reference to Administrator subfield
  */
-void MPReachAttr::parseRouteDistinguisher(u_char *rd_beginning_data_pointer, uint8_t *rd_type,
+void MPReachAttr::parseRouteDistinguisher(u_char *data_pointer, uint8_t *rd_type,
                                           std::string *rd_assigned_number, std::string *rd_administrator_subfield) {
 
-    rd_beginning_data_pointer++;
-    *rd_type = *rd_beginning_data_pointer;
-    rd_beginning_data_pointer++;
+    data_pointer++;
+    *rd_type = *data_pointer;
+    data_pointer++;
 
     switch (*rd_type) {
         case 0: {
             uint16_t administration_subfield;
             bzero(&administration_subfield, 2);
-            memcpy(&administration_subfield, rd_beginning_data_pointer, 2);
+            memcpy(&administration_subfield, data_pointer, 2);
 
-            rd_beginning_data_pointer += 2;
+            data_pointer += 2;
 
             uint32_t assigned_number_subfield;
             bzero(&assigned_number_subfield, 4);
-            memcpy(&assigned_number_subfield, rd_beginning_data_pointer, 4);
-            rd_beginning_data_pointer += 4;
+            memcpy(&assigned_number_subfield, data_pointer, 4);
 
             bgp::SWAP_BYTES(&administration_subfield);
             bgp::SWAP_BYTES(&assigned_number_subfield);
@@ -77,14 +184,13 @@ void MPReachAttr::parseRouteDistinguisher(u_char *rd_beginning_data_pointer, uin
         case 1: {
             u_char administration_subfield[4];
             bzero(&administration_subfield, 4);
-            memcpy(&administration_subfield, rd_beginning_data_pointer, 4);
+            memcpy(&administration_subfield, data_pointer, 4);
 
-            rd_beginning_data_pointer += 4;
+            data_pointer += 4;
 
             uint16_t assigned_number_subfield;
             bzero(&assigned_number_subfield, 2);
-            memcpy(&assigned_number_subfield, rd_beginning_data_pointer, 2);
-            rd_beginning_data_pointer += 2;
+            memcpy(&assigned_number_subfield, data_pointer, 2);
 
             bgp::SWAP_BYTES(&assigned_number_subfield);
 
@@ -100,15 +206,13 @@ void MPReachAttr::parseRouteDistinguisher(u_char *rd_beginning_data_pointer, uin
         case 2: {
             uint32_t administration_subfield;
             bzero(&administration_subfield, 4);
-            memcpy(&administration_subfield, rd_beginning_data_pointer, 4);
+            memcpy(&administration_subfield, data_pointer, 4);
 
-            rd_beginning_data_pointer += 4;
+            data_pointer += 4;
 
             uint16_t assigned_number_subfield;
             bzero(&assigned_number_subfield, 2);
-            memcpy(&assigned_number_subfield, rd_beginning_data_pointer, 2);
-
-            rd_beginning_data_pointer += 2;
+            memcpy(&assigned_number_subfield, data_pointer, 2);
 
             bgp::SWAP_BYTES(&administration_subfield);
             bgp::SWAP_BYTES(&assigned_number_subfield);
@@ -205,7 +309,17 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                     u_char *pointer = nlri.nlri_data;
                     bgp::evpn_tuple tuple;
 
-                    //------------------------------------------------------
+                    bzero(&tuple.ethernet_tag_id_hex, sizeof(tuple.ethernet_tag_id_hex));
+                    tuple.mpls_label_1 = 0;
+                    tuple.mpls_label_2 = 0;
+                    tuple.mac_len = 0;
+                    bzero(&tuple.mac, sizeof(tuple.mac));
+                    tuple.ip_len = 0;
+                    bzero(&tuple.ip, sizeof(tuple.ip));
+                    tuple.originating_router_ip_len = 0;
+                    bzero(&tuple.originating_router_ip, sizeof(tuple.originating_router_ip));
+
+//                    ------------------------------------------------------
 //                    std::cout << "EVPN" << std::endl;
 //
 //
@@ -219,7 +333,7 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
 //                    }
 //
 //                    std::cout << std::endl;
-                    //------------------------------------------------------
+//                    ------------------------------------------------------
 
                     pointer = nlri.nlri_data;
 
@@ -237,14 +351,12 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                         &tuple.rd_assigned_number,
                         &tuple.rd_administrator_subfield
                     );
-
                     pointer += 8;
-
-//                    std::cout << "RD: " << (int)tuple.rd_type << " " << tuple.rd_assigned_number << " " << tuple.rd_administrator_subfield << std::endl;
 
                     switch (route_type) {
                         case 1:
                         {
+                            parseEthernetSegmentIdentifier(pointer, &tuple.ethernet_segment_identifier);
                             pointer += 10;
 
                             u_char ethernet_id[4];
@@ -270,11 +382,13 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
 
 //                            std::cout << "MPLS Label 1: " << std::dec << mpls_label_1 << std::endl;
 
+                            tuple.mpls_label_1 = mpls_label_1;
+
                             break;
                         }
                         case 2:
                         {
-
+                            parseEthernetSegmentIdentifier(pointer, &tuple.ethernet_segment_identifier);
                             pointer += 10;
 
                             u_char ethernet_id[4];
@@ -291,6 +405,9 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                             tuple.ethernet_tag_id_hex = ethernet_tag_id_stream.str();
 
                             uint8_t mac_address_length = *pointer;
+
+                            tuple.mac_len = mac_address_length;
+
                             pointer++;
 
 //                            std::cout << "MAC Len: " << (int)mac_address_length << std::endl;
@@ -299,19 +416,23 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                             bzero(&mac, 6);
                             memcpy(&mac, pointer, 6);
 
-                            std::ostringstream ss;
-                            for (int i=0; i<6; ++i) {
-                                if (i != 0) ss << ':';
-                                ss.width(2); //< Use two chars for each byte
-                                ss.fill('0'); //< Fill up with '0' if the number is only one hexadecimal digit
-                                ss << std::hex << (int)(mac[i]);
+                            std::ostringstream mac_stringstream;
+                            for (int i = 0; i < 6; ++i) {
+                                if (i != 0) mac_stringstream << ':';
+                                mac_stringstream.width(2); //< Use two chars for each byte
+                                mac_stringstream.fill('0'); //< Fill up with '0' if the number is only one hexadecimal digit
+                                mac_stringstream << std::hex << (int)(mac[i]);
                             }
 
                             pointer += 6;
 
 //                            std::cout << "MAC: " << ss.str() << std::endl;
+                            tuple.mac = mac_stringstream.str();
 
                             uint8_t ip_address_length = *pointer;
+
+                            tuple.ip_len = ip_address_length;
+
                             pointer++;
 
                             u_char ip_binary[16];
@@ -321,6 +442,8 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                             inet_ntop(AF_INET, ip_binary, ip_char, sizeof(ip_char));
 
 //                            std::cout << "IP: " << string(ip_char) << std::endl;
+
+                            tuple.ip = string(ip_char);
 
 //                            std::cout << (long) pointer << std::endl;
 
@@ -336,6 +459,8 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                             bgp::SWAP_BYTES(&mpls_label_1, 4);
                             mpls_label_1 = mpls_label_1 >> 8;
 
+                            tuple.mpls_label_1 = mpls_label_1;
+
                             pointer += 3;
 
 //                            std::cout << "MPLS Label 1: " << std::dec << mpls_label_1 << std::endl;
@@ -346,6 +471,8 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                                 memcpy(&mpls_label_2, pointer, 3);
                                 bgp::SWAP_BYTES(&mpls_label_2, 4);
                                 mpls_label_2 = mpls_label_2 >> 8;
+
+                                tuple.mpls_label_2 = mpls_label_2;
 
                                 pointer += 3;
 
@@ -392,12 +519,11 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
 //                            std::cout << "rd_administrator_subfield: " << tuple.rd_administrator_subfield << " rd_assigned_number: " << tuple.rd_assigned_number << std::endl;
 //                            std::cout << "originating_router_ip: " << tuple.originating_router_ip << " ethernet_tag_id_hex: " << tuple.ethernet_tag_id_hex << std::endl;
 
-                            parsed_data.evpn.push_back(tuple);
                             break;
                         }
                         case 4:
                         {
-//                            std::cout << "HELLO" << std::endl;
+                            parseEthernetSegmentIdentifier(pointer, &tuple.ethernet_segment_identifier);
                             pointer += 10;
 
                             uint8_t ip_address_length = *pointer;
@@ -422,7 +548,13 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                         {
                             break;
                         }
+
+
                     }
+
+                    std::cout << "123" << tuple.ethernet_segment_identifier << std::endl;
+
+                    parsed_data.evpn.push_back(tuple);
 
                     break;
                 }

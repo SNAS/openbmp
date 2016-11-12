@@ -564,8 +564,6 @@ void parseBGP::UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_vpn,
     uint32_t                         value_32bit;
     uint64_t                         value_64bit;
 
-//    std::cout << "2222222222" << std::endl;
-
     /*
      * Loop through all vpn and add/update them in the DB
      */
@@ -581,11 +579,16 @@ void parseBGP::UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_vpn,
         rib_entry.rd_assigned_number = tuple.rd_assigned_number;
         rib_entry.rd_administrator_subfield = tuple.rd_administrator_subfield;
 
-
-        rib_entry.originating_router_ip_len = tuple.originating_router_ip_len;
-
-        strcpy(rib_entry.originating_router_ip, tuple.originating_router_ip.c_str());
         strcpy(rib_entry.ethernet_tag_id_hex, tuple.ethernet_tag_id_hex.c_str());
+        rib_entry.mpls_label_1 = tuple.mpls_label_1;
+        rib_entry.mac_len = tuple.mac_len;
+        strcpy(rib_entry.mac, tuple.mac.c_str());
+        rib_entry.ip_len = tuple.ip_len;
+        strcpy(rib_entry.ip, tuple.ip.c_str());
+        rib_entry.mpls_label_2 = tuple.mpls_label_2;
+        rib_entry.originating_router_ip_len = tuple.originating_router_ip_len;
+        strcpy(rib_entry.originating_router_ip, tuple.originating_router_ip.c_str());
+        strcpy(rib_entry.ethernet_segment_identifier, tuple.ethernet_segment_identifier.c_str());
 
         strncpy(rib_entry.prefix, tuple.prefix.c_str(), sizeof(rib_entry.prefix));
 

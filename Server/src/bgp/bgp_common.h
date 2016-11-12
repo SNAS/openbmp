@@ -146,7 +146,14 @@ namespace bgp {
     * Struct is used for evpn
     */
     struct evpn_tuple: prefix_tuple, rd_tuple {
+        std::string     ethernet_segment_identifier;
         std::string     ethernet_tag_id_hex;
+        uint8_t         mac_len;
+        std::string     mac;
+        uint8_t         ip_len;
+        std::string     ip;
+        int             mpls_label_1;
+        int             mpls_label_2;
         uint8_t         originating_router_ip_len;
         std::string     originating_router_ip;
     };

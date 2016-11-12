@@ -242,9 +242,16 @@ public:
 
     /// Rib extended with evpn specific fields
     struct obj_evpn: obj_rib, obj_route_distinguisher {
-        char        ethernet_tag_id_hex[16];
         uint8_t     originating_router_ip_len;
         char        originating_router_ip[46];
+        char        ethernet_segment_identifier[255];
+        char        ethernet_tag_id_hex[16];
+        uint8_t     mac_len;
+        char        mac[255];
+        uint8_t     ip_len;
+        char        ip[46];
+        int         mpls_label_1;
+        int         mpls_label_2;
     };
 
     /// Unicast prefix action codes
