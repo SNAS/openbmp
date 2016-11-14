@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2015-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -24,8 +24,8 @@ namespace bgp_msg {
     class MPLinkStateAttr {
     public:
         /**
-  * Node Attribute types
-  */
+         * Node Attribute types
+         */
         enum ATTR_NODE_TYPES {
             ATTR_NODE_MT_ID                     = 263,    ///< Multi-Topology Identifier (len=variable)
             ATTR_NODE_FLAG                      = 1024,   ///< Node Flag Bits see enum NODE_FLAG_TYPES (len=1)
@@ -33,19 +33,12 @@ namespace bgp_msg {
             ATTR_NODE_NAME,                               ///< Node Name (len=variable)
             ATTR_NODE_ISIS_AREA_ID,                       ///< IS-IS Area Identifier (len=variable)
             ATTR_NODE_IPV4_ROUTER_ID_LOCAL,               ///< Local NODE IPv4 Router ID (len=4) (rfc5305/4.3)
-            ATTR_NODE_IPV6_ROUTER_ID_LOCAL                ///< Local NODE IPv6 Router ID (len=16) (rfc6119/4.1)
+            ATTR_NODE_IPV6_ROUTER_ID_LOCAL,               ///< Local NODE IPv6 Router ID (len=16) (rfc6119/4.1)
+            ATTR_NODE_SR_CAPABILITIES           = 1034    ///< SR Capabilities
         };
 
-        /**
-         * ATTR_NODE_FLAG Bits Types See RFC7752 Section 3.3.1.1 for node flags
-         */
-        enum NODE_FLAG_TYPES {
-            NODE_FLAG_MASK_OVERLOAD                  = 0x80,         ///< Overload Bit (rfc1195)
-            NODE_FLAG_MASK_ATTACH                    = 0x40,         ///< Attached Bit (rfc1195)
-            NODE_FLAG_MASK_EXTERNAL                  = 0x20,         ///< External Bit (rfc2328)
-            NODE_FLAG_MASK_ABR                       = 0x10,         ///< ABR Bit (rfc2328)
-            NODE_FLAG_MASK_ROUTER                    = 0x08,         ///< Router bit (rfc5340)
-            NODE_FLAG_MASK_V6                        = 0x04          ///< V6 bit (rfc5340)
+        enum SUB_TLV_TYPES {
+            SUB_TLV_SID_LABEL = 1161    ///<SID/Label Sub-TLV
         };
 
         /**
@@ -67,9 +60,9 @@ namespace bgp_msg {
             ATTR_LINK_SRLG,                                     ///< Shared risk link group
             ATTR_LINK_OPAQUE,                                   ///< Opaque link attribute
             ATTR_LINK_NAME,                                     ///< Link name
+            ATTR_LINK_PEER_AJD_SID,                             ///< Peer Adjacency SID (draft-ietf-idr-bgpls-segment-routing-epe)
 
             ATTR_LINK_PEER_NODE_SID            = 1101,          ///< Peer Node SID (draft-ietf-idr-bgpls-segment-routing-epe)
-            ATTR_LINK_PEER_AJD_SID,                             ///< Peer Adjacency SID (draft-ietf-idr-bgpls-segment-routing-epe)
             ATTR_LINK_PEER_SET_SID                              ///< Peer Set SID (draft-ietf-idr-bgpls-segment-routing-epe)
         };
 
@@ -81,6 +74,14 @@ namespace bgp_msg {
             MPLS_PROTO_RSVP_TE                  = 0x40          ///< Extension to RSVP for LSP tunnels (rfc3209)
         };
 
+        const std::array<std::string, 8> sid_sub_tlv_flags = {"", "NP", "M", "E", "V", "L"};
+
+        const std::array<std::string, 8> node_sr_capabilities_flags = {"I", "V", "H"};
+
+        const std::array<std::string, 8> peer_adj_sid_flags = {"R", "N", "P", "E", "V", "L"};
+
+        const std::array<std::string, 8> node_flags = {"O", "T", "E", "B", "R", "V"};
+
         /**
          * Prefix Attribute types
          */
@@ -90,7 +91,8 @@ namespace bgp_msg {
             ATTR_PREFIX_EXTEND_TAG,                             ///< Extended Tag (len=8*n)
             ATTR_PREFIX_PREFIX_METRIC,                          ///< Prefix Metric (len=4)
             ATTR_PREFIX_OSPF_FWD_ADDR,                          ///< OSPF Forwarding Address
-            ATTR_PREFIX_OPAQUE_PREFIX                           ///< Opaque prefix attribute (len=variable)
+            ATTR_PREFIX_OPAQUE_PREFIX,                          ///< Opaque prefix attribute (len=variable)
+            ATTR_PREFIX_SID_TLV                                 ///< Prefix-SID TLV (len=variable)
         };
 
         /**
@@ -152,7 +154,20 @@ namespace bgp_msg {
          * \returns length of the TLV attribute parsed
          */
         int parseAttrLinkStateTLV(int attr_len, u_char *data);
-
+        
+        /*******************************************************************************//*
+         * Parse flags to string
+         *
+         * \details   Will parse flags from binary representation to string. 
+         *            Example: flags "std::array<std::string, 8>{'I', '\0', 'H'}"" 
+         *            means data "11100000" would be parsed as "IH"
+         *
+         * \param [in]   flags          Array of flags
+         * \param [in]   data           Pointer to the attribute data
+         *
+         * \returns string with flags
+         */
+        std::string parse_flags_to_string(u_char data, const std::array<std::string, 8> flags);
 
         uint32_t ieee_float_to_kbps(int32_t float_val);
     };
