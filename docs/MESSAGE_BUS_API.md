@@ -481,17 +481,16 @@ One or more link-state prefixes.
 31 | isAdjIn | Bool | 1 | Indicates if unicast BGP prefix is Adj-RIB-In or Adj-RIB-Out
 32 | Route Distinguisher | String | 255 | VPN Route Distinguisher following https://tools.ietf.org/html/rfc4364#section-4.2
 33 | Route Distinguisher | Int | 1 | Indicates type of Route Distinguisher
-34 | originating_router_ip_len | Int | 1 |
-35 | originating_router_ip | Int | 1 |
-36 | ethernet_tag_id_hex | Int | 1 |
-37 | ethernet_segment_identifier | Int | 1 |
-38 | ethernet_tag_id_hex | Int | 1 |
-39 | mac_len | Int | 1 |
-40 | mac | Int | 1 |
-41 | ip_len | Int | 1 |
-42 | ip | Int | 1 |
-43 | mpls_label_1 | Int | 1 |
-44 | mpls_label_2 | Int | 1 |
+34 | Originating Router Ip Len | Int | 1 | Len of Originating Router's IP address: https://tools.ietf.org/html/rfc7432#section-7.3
+35 | Originating Router Ip | String | 46 | Originating Router Ip: https://tools.ietf.org/html/rfc7432#section-7.3
+36 | Ethernet Tag Id Hex | String | 16 | Ethernet Tag Id in hexadecimal: https://tools.ietf.org/html/rfc7432#section-7.3
+37 | Ethernet Segment Identifier | String | 255 | Ethernet Segment Identifier: https://tools.ietf.org/html/rfc7432#section-7.4
+38 | Mac Len | Int | 1 | Length of Mac Address
+39 | Mac | Int | 1 | Mac Address: https://tools.ietf.org/html/rfc7432#section-7.2
+40 | Ip Len | Int | 1 | Len of IP address: https://tools.ietf.org/html/rfc7432#section-7.2
+41 | Ip | String | 46 | IP Address: https://tools.ietf.org/html/rfc7432#section-7.2
+42 | Mpls Label 1 | Int | 1 | MPLS Label 1: https://tools.ietf.org/html/rfc7432#section-7.2
+43 | Mpls Label 2 | Int | 1 | MPLS Label 2: https://tools.ietf.org/html/rfc7432#section-7.2
 
 Message API: BMP RAW Data
 ------------------------------------
