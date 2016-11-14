@@ -7,6 +7,9 @@
 
 ### Diff from 1.4 to 1.3
 
+* **evpn**
+    * Added **fields 1-43** - Implementation of https://tools.ietf.org/html/rfc7432
+    
 * **l3vpn**
     * Added **fields 1-34** - Implementation of https://tools.ietf.org/html/rfc4364
 
@@ -484,7 +487,7 @@ One or more link-state prefixes.
 34 | Originating Router Ip Len | Int | 1 | Len of Originating Router's IP address: https://tools.ietf.org/html/rfc7432#section-7.3
 35 | Originating Router Ip | String | 46 | Originating Router Ip: https://tools.ietf.org/html/rfc7432#section-7.3
 36 | Ethernet Tag Id Hex | String | 16 | Ethernet Tag Id in hexadecimal: https://tools.ietf.org/html/rfc7432#section-7.3
-37 | Ethernet Segment Identifier | String | 255 | Ethernet Segment Identifier: https://tools.ietf.org/html/rfc7432#section-7.4
+37 | Ethernet Segment Identifier | String | 255 | Ethernet Segment Identifier https://tools.ietf.org/html/rfc7432#section-5 in format of **type** [depends on type]. If type = 0: **ESI value** in hex. If type = 1: **CE LACP System Mac Address**[space]**CE LACP Port Key**. If type = 2: **Root Bridge Mac address**[space]**Root Bridge Priority**. If type = 3: **System Mac Address**[space]**Local Discriminator Value**. If type = 4: **Router ID**[space]**Local Discriminator value**. If type = 5: **AS Number**[space]**Local Discriminator Value**. 
 38 | Mac Len | Int | 1 | Length of Mac Address
 39 | Mac | Int | 1 | Mac Address: https://tools.ietf.org/html/rfc7432#section-7.2
 40 | Ip Len | Int | 1 | Len of IP address: https://tools.ietf.org/html/rfc7432#section-7.2
