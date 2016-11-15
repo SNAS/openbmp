@@ -67,6 +67,22 @@ namespace bgp_msg {
             ec_hdr.low_type  = data[1];
             ec_hdr.value     = data + 2;
 
+
+            u_char *pointer = ec_hdr.value;
+            std::cout << "EC" << std::endl;
+
+
+            while(pointer < ec_hdr.value + 8) {
+                std::cout << std::hex << setfill('0') << setw(2) << (int)(*pointer);
+                pointer += 1;
+                if ((long)pointer % 8 == 0) {
+                    std::cout << std::endl;
+                }
+
+            }
+
+            std::cout << std::endl;
+
             /*
              * Docode the community by type
              */
@@ -99,7 +115,62 @@ namespace bgp_msg {
                     decodeStr.append(decodeType_Opaque(ec_hdr));
                     break;
 
-                case EXT_TYPE_EVPN      : // TODO: Implement
+                case EXT_TYPE_EVPN      : {
+                    std::cout << "Type: " << (int) ec_hdr.high_type << " Sub type: " << (int) ec_hdr.low_type
+                              << std::endl;
+
+                    decodeStr.append(decodeType_EVPN(ec_hdr));
+
+//                    u_char *pointer = ec_hdr.value;
+//
+//                    switch (ec_hdr.low_type) {
+//                        case 0: {
+//                            u_char flags;
+//                            flags = *pointer;
+//                            pointer++;
+//
+//                            // Reserved 1 byte;
+//                            pointer++;
+//
+//                            uint64_t sequence_number;
+//                            memcpy(&sequence_number, pointer, 4);
+//                            bgp::SWAP_BYTES(&sequence_number);
+//                            break;
+//                        }
+//                        case 1: {
+//                            u_char flags;
+//                            flags = *pointer;
+//                            pointer++;
+//
+//                            // Reserved 2 bytes;
+//                            pointer += 2;
+//
+//                            uint64_t esi_label;
+//                            bzero(&esi_label, 4);
+//                            memcpy(&esi_label, pointer, 3);
+//                            esi_label = esi_label >> 8;
+//                            bgp::SWAP_BYTES(&esi_label);
+//
+//                            break;
+//                        }
+//                        case 2: {
+//                            uint16_t es_import;
+//                            memcpy(&es_import, pointer, 2);
+//                            pointer += 2;
+//
+//                            uint64_t es_import_cont;
+//                            memcpy(&es_import_cont, pointer, 4);
+//                            bgp::SWAP_BYTES(&es_import_cont);
+//
+//                            break;
+//                        }
+//                        default:
+//                            break;
+
+//                    }
+
+                    break;
+                }
                 case EXT_TYPE_QOS_MARK  : // TODO: Implement
                 case EXT_TYPE_FLOW_SPEC : // TODO: Implement
                 case EXT_TYPE_COS_CAP   : // TODO: Implement
@@ -282,6 +353,92 @@ namespace bgp_msg {
                 LOG_INFO("%s: Extended community common type %d subtype = %d is not yet supported", peer_addr.c_str(),
                         ec_hdr.high_type, ec_hdr.low_type);
                 break;
+        }
+
+        return val_ss.str();
+    }
+
+    /**
+     * Decode EVPN subtypes
+     *
+     * \details
+     *      Converts to human readable form.
+     *
+     * \param [in]   ec_hdr          Reference to the extended community header
+     *
+     * \return  Decoded string value
+     */
+    std::string ExtCommunity::decodeType_EVPN(const extcomm_hdr &ec_hdr) {
+        std::stringstream   val_ss;
+        uint32_t            val_32b;
+
+        switch(ec_hdr.low_type) {
+            case EXT_EVPN_MAC_MOBILITY: {
+                val_ss << "mac_mob_flags=";
+                u_char flags = ec_hdr.value[0];
+
+                val_ss << flags;
+
+                memcpy(&val_32b, ec_hdr.value + 2, 4);
+                bgp::SWAP_BYTES(&val_32b);
+
+                val_ss << " mac_mob_seq_num=";
+                val_ss << val_32b;
+                break;
+            }
+            case EXT_EVPN_MPLS_LABEL: {
+                val_ss << "esi_label_flags=";
+                u_char flags = ec_hdr.value[0];
+
+                val_ss << flags;
+
+                memcpy(&val_32b, ec_hdr.value + 3, 3);
+                bgp::SWAP_BYTES(&val_32b);
+                val_32b = val_32b >> 8;
+
+                val_ss << " esi_label=";
+                val_ss << val_32b;
+                break;
+            }
+            case EXT_EVPN_ES_IMPORT: {
+                val_ss << "es_import=";
+
+                u_char *pointer = ec_hdr.value;
+
+                std::ostringstream mac_stringstream;
+
+                for (int i = 0; i < 6; ++i) {
+                    if (i != 0) mac_stringstream << ':';
+                    mac_stringstream.width(2);
+                    mac_stringstream.fill('0');
+                    mac_stringstream << std::hex << (int)(pointer[i]);
+                }
+
+                val_ss << mac_stringstream.str();
+                break;
+            }
+            case EXT_EVPN_ROUTER_MAC: {
+                val_ss << "router_mac=";
+
+                u_char *pointer = ec_hdr.value;
+
+                std::ostringstream mac_stringstream;
+
+                for (int i = 0; i < 6; ++i) {
+                    if (i != 0) mac_stringstream << ':';
+                    mac_stringstream.width(2);
+                    mac_stringstream.fill('0');
+                    mac_stringstream << std::hex << (int)(pointer[i]);
+                }
+
+                val_ss << mac_stringstream.str();
+
+                break;
+            }
+            default: {
+                LOG_INFO("Extended community eVPN subtype is not implemented %d", ec_hdr.low_type);
+                break;
+            }
         }
 
         return val_ss.str();

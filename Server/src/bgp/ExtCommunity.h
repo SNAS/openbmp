@@ -38,7 +38,7 @@ public:
         // Either Transitive or non-Transitive high order byte Types
         EXT_TYPE_2OCTET_AS = 0,                      ///< Transitive Two-Octet AS-Specific (RFC7153)
         EXT_TYPE_IPV4,                               ///< Transitive IPv4-Address-Specific (RFC7153)
-        EXT_TYPE_4OCTET_AS,                          ///< Transitive Four-Octet AS-Specific (RFC7153)
+        EXT_TYPE_4OCTET_AS,                          ///< Transitive Four-Octet AS-Specific (я)
 
         EXT_TYPE_OPAQUE,                             ///< Transitive Opaque (RFC7153)
         EXT_TYPE_QOS_MARK,                           ///< QoS Marking (Thomas_Martin_Knoll)
@@ -209,6 +209,18 @@ private:
      * \return  Decoded string value
      */
     std::string decodeType_common(const extcomm_hdr &ec_hdr, bool isGlobal4Bytes = false, bool isGlobalIPv4 = false);
+
+    /**
+     * Decode EVPN subtypes
+     *
+     * \details
+     *      Converts to human readable form.
+     *
+     * \param [in]   ec_hdr          Reference to the extended community header
+     *
+     * \return  Decoded string value
+     */
+    std::string decodeType_EVPN(const extcomm_hdr &ec_hdr);
 
     /**
      * Decode Opaque subtypes

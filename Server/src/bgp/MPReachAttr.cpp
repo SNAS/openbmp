@@ -343,7 +343,7 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
                     uint8_t len = *pointer;
                     pointer++;
 
-                    std::cout << "Route type:" << (int)route_type << " Len:" << (int)len << std::endl;
+                    //std::cout << "Route type:" << (int)route_type << " Len:" << (int)len << std::endl;
 
                     parseRouteDistinguisher(
                         pointer,
@@ -552,7 +552,7 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
 
                     }
 
-                    std::cout << "123" << tuple.ethernet_segment_identifier << std::endl;
+//                    std::cout << "123" << tuple.ethernet_segment_identifier << std::endl;
 
                     parsed_data.evpn.push_back(tuple);
 

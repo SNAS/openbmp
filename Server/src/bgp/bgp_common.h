@@ -158,6 +158,29 @@ namespace bgp {
         std::string     originating_router_ip;
     };
 
+//    /*********************************************************************//**
+//     * Simple function to swap bytes around from network to host or
+//     *  host to networking.  This method will convert any size byte variable,
+//     *  unlike ntohs and ntohl.
+//     *
+//     * @param [in/out] var   Variable containing data to update
+//     * @param [in]     size  Size of var - Default is size of var
+//     *********************************************************************/
+//    std::string parse_mac(u_char *data_pointer) {
+//        u_char *pointer = data_pointer;
+//
+//        std::ostringstream mac_stringstream;
+//
+//        for (int i = 0; i < 6; ++i) {
+//            if (i != 0) mac_stringstream << ':';
+//            mac_stringstream.width(2);
+//            mac_stringstream.fill('0');
+//            mac_stringstream << std::hex << (int)(pointer[i]);
+//        }
+//
+//        val_ss << mac_stringstream.str();
+//    }
+
     /*********************************************************************//**
      * Simple function to swap bytes around from network to host or
      *  host to networking.  This method will convert any size byte variable,
