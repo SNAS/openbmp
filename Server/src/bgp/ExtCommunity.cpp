@@ -115,62 +115,10 @@ namespace bgp_msg {
                     decodeStr.append(decodeType_Opaque(ec_hdr));
                     break;
 
-                case EXT_TYPE_EVPN      : {
-                    std::cout << "Type: " << (int) ec_hdr.high_type << " Sub type: " << (int) ec_hdr.low_type
-                              << std::endl;
-
+                case EXT_TYPE_EVPN :
                     decodeStr.append(decodeType_EVPN(ec_hdr));
-
-//                    u_char *pointer = ec_hdr.value;
-//
-//                    switch (ec_hdr.low_type) {
-//                        case 0: {
-//                            u_char flags;
-//                            flags = *pointer;
-//                            pointer++;
-//
-//                            // Reserved 1 byte;
-//                            pointer++;
-//
-//                            uint64_t sequence_number;
-//                            memcpy(&sequence_number, pointer, 4);
-//                            bgp::SWAP_BYTES(&sequence_number);
-//                            break;
-//                        }
-//                        case 1: {
-//                            u_char flags;
-//                            flags = *pointer;
-//                            pointer++;
-//
-//                            // Reserved 2 bytes;
-//                            pointer += 2;
-//
-//                            uint64_t esi_label;
-//                            bzero(&esi_label, 4);
-//                            memcpy(&esi_label, pointer, 3);
-//                            esi_label = esi_label >> 8;
-//                            bgp::SWAP_BYTES(&esi_label);
-//
-//                            break;
-//                        }
-//                        case 2: {
-//                            uint16_t es_import;
-//                            memcpy(&es_import, pointer, 2);
-//                            pointer += 2;
-//
-//                            uint64_t es_import_cont;
-//                            memcpy(&es_import_cont, pointer, 4);
-//                            bgp::SWAP_BYTES(&es_import_cont);
-//
-//                            break;
-//                        }
-//                        default:
-//                            break;
-
-//                    }
-
                     break;
-                }
+
                 case EXT_TYPE_QOS_MARK  : // TODO: Implement
                 case EXT_TYPE_FLOW_SPEC : // TODO: Implement
                 case EXT_TYPE_COS_CAP   : // TODO: Implement
@@ -401,38 +349,11 @@ namespace bgp_msg {
                 break;
             }
             case EXT_EVPN_ES_IMPORT: {
-                val_ss << "es_import=";
-
-                u_char *pointer = ec_hdr.value;
-
-                std::ostringstream mac_stringstream;
-
-                for (int i = 0; i < 6; ++i) {
-                    if (i != 0) mac_stringstream << ':';
-                    mac_stringstream.width(2);
-                    mac_stringstream.fill('0');
-                    mac_stringstream << std::hex << (int)(pointer[i]);
-                }
-
-                val_ss << mac_stringstream.str();
+                val_ss << "es_import=" << bgp::parse_mac(ec_hdr.value);
                 break;
             }
             case EXT_EVPN_ROUTER_MAC: {
-                val_ss << "router_mac=";
-
-                u_char *pointer = ec_hdr.value;
-
-                std::ostringstream mac_stringstream;
-
-                for (int i = 0; i < 6; ++i) {
-                    if (i != 0) mac_stringstream << ':';
-                    mac_stringstream.width(2);
-                    mac_stringstream.fill('0');
-                    mac_stringstream << std::hex << (int)(pointer[i]);
-                }
-
-                val_ss << mac_stringstream.str();
-
+                val_ss << "router_mac=" << bgp::parse_mac(ec_hdr.value);
                 break;
             }
             default: {
