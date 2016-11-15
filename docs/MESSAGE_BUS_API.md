@@ -13,6 +13,15 @@
 * **l3vpn**
     * Added **fields 1-34** - Implementation of https://tools.ietf.org/html/rfc4364
 
+* **ls_node**
+    * Added **field 27** - Segment Routing Capabilities TLV
+     
+* **ls_link**
+    * Added **field 46** - Adjacency Segment Identifier
+
+* **ls_prefix**
+    * Added **field 34** - Prefix-SID TLV
+
 ### Diff from 1.3 to 1.2
 
 * **unicast_prefix**
@@ -316,6 +325,7 @@ One or more link-state nodes.
 24 | Node Name | String | 255 | ISIS hostname
 25 | isPrePolicy | Bool | 1 | Indicates if LS node BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 26 | isAdjIn | Bool | 1 | Indicates if LS node BGP prefix is Adj-RIB-In or Adj-RIB-Out
+27 | SR-Capabilities TLV | String | 255 | SR-Capabilities TLV in the format of **[FLAGS] \<list of [Range Size] [Base SID/Label Type]\>**.  List is delimited by comma. 
 
 
 ### Object: <font color="blue">ls\_link</font> (openbmp.parsed.ls\_link)
@@ -368,6 +378,7 @@ One or more link-state links.
 43 | EPE Peer Node SID | String | 128 | Peer node SID in the format of [L] **weight** **label/idx/ipv4**. L is only set when L flag is set.
 44 | isPrePolicy | Bool | 1 | Indicates if LS link BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 45 | isAdjIn | Bool | 1 | Indicates if LS link BGP prefix is Adj-RIB-In or Adj-RIB-Out
+46 | Adjacency Segment Identifier | String | 255 | Delimited by comma list of Adjacency Segment Identifier in the format of **[FLAGS] [Weight] [SID/Label]**.  Flags are different by protocol, see [draft-gredler-idr-bgp-ls-segment-routing-ext](https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.2.1) for more details. 
 
 ### Object: <font color="blue">ls\_prefix</font> (openbmp.parsed.ls\_prefix)
 One or more link-state prefixes.
@@ -407,6 +418,8 @@ One or more link-state prefixes.
 31 | Prefix Length | Int | 1 | Prefix length in bits
 32 | isPrePolicy | Bool | 1 | Indicates if LS prefix BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 33 | isAdjIn | Bool | 1 | Indicates if LS prefix BGP prefix is Adj-RIB-In or Adj-RIB-Out
+34 | Prefix-SID TLV | String | 255 | Delimited by comma list of Prefix-SID TLV in the format of **[FLAGS] [Weight] [SID/Label]**. **[FLAGS] [Weight] [SID/Label]**.  Flags are different by protocol, see [draft-gredler-idr-bgp-ls-segment-routing-ext](https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.3.1) for more details. 
+
 
 ### Object: <font color="blue">l3vpn</font> (openbmp.parsed.l3vpn)
 

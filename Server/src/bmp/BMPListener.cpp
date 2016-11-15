@@ -82,7 +82,7 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
     int on = 1;
 
     if (ipv4) {
-        if ((sock = socket(PF_INET, SOCK_STREAM, 0)) <= 0) {
+        if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
             throw "ERROR: Cannot open IPv4 socket.";
         }
 
@@ -103,7 +103,7 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
     }
 
     if (ipv6) {
-        if ((sockv6 = socket(AF_INET6, SOCK_STREAM, 0)) <= 0) {
+        if ((sockv6 = socket(AF_INET6, SOCK_STREAM, 0)) < 0) {
             throw "ERROR: Cannot open IPv6 socket.";
         }
 
