@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2015-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -24,8 +24,8 @@ namespace bgp_msg {
     class MPLinkStateAttr {
     public:
         /**
-  * Node Attribute types
-  */
+         * Node Attribute types
+         */
         enum ATTR_NODE_TYPES {
             ATTR_NODE_MT_ID                     = 263,    ///< Multi-Topology Identifier (len=variable)
             ATTR_NODE_FLAG                      = 1024,   ///< Node Flag Bits see enum NODE_FLAG_TYPES (len=1)
@@ -33,19 +33,15 @@ namespace bgp_msg {
             ATTR_NODE_NAME,                               ///< Node Name (len=variable)
             ATTR_NODE_ISIS_AREA_ID,                       ///< IS-IS Area Identifier (len=variable)
             ATTR_NODE_IPV4_ROUTER_ID_LOCAL,               ///< Local NODE IPv4 Router ID (len=4) (rfc5305/4.3)
-            ATTR_NODE_IPV6_ROUTER_ID_LOCAL                ///< Local NODE IPv6 Router ID (len=16) (rfc6119/4.1)
+            ATTR_NODE_IPV6_ROUTER_ID_LOCAL,               ///< Local NODE IPv6 Router ID (len=16) (rfc6119/4.1)
+            ATTR_NODE_SR_CAPABILITIES           = 1034,   ///< SR Capabilities
+            ATTR_NODE_SR_ALGORITHM,                       ///< SR Algorithm
+            ATTR_NODE_SR_LOCAL_BLOCK,                     ///< SR Local block
+            ATTR_NODE_SR_SRMS_PREF                        ///< SR mapping server preference
         };
 
-        /**
-         * ATTR_NODE_FLAG Bits Types See RFC7752 Section 3.3.1.1 for node flags
-         */
-        enum NODE_FLAG_TYPES {
-            NODE_FLAG_MASK_OVERLOAD                  = 0x80,         ///< Overload Bit (rfc1195)
-            NODE_FLAG_MASK_ATTACH                    = 0x40,         ///< Attached Bit (rfc1195)
-            NODE_FLAG_MASK_EXTERNAL                  = 0x20,         ///< External Bit (rfc2328)
-            NODE_FLAG_MASK_ABR                       = 0x10,         ///< ABR Bit (rfc2328)
-            NODE_FLAG_MASK_ROUTER                    = 0x08,         ///< Router bit (rfc5340)
-            NODE_FLAG_MASK_V6                        = 0x04          ///< V6 bit (rfc5340)
+        enum SUB_TLV_TYPES {
+            SUB_TLV_SID_LABEL = 1161    ///<SID/Label Sub-TLV
         };
 
         /**
@@ -67,10 +63,11 @@ namespace bgp_msg {
             ATTR_LINK_SRLG,                                     ///< Shared risk link group
             ATTR_LINK_OPAQUE,                                   ///< Opaque link attribute
             ATTR_LINK_NAME,                                     ///< Link name
+            ATTR_LINK_ADJACENCY_SID,                            ///< Peer Adjacency SID (https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.2.1)
 
-            ATTR_LINK_PEER_NODE_SID            = 1101,          ///< Peer Node SID (draft-ietf-idr-bgpls-segment-routing-epe)
-            ATTR_LINK_PEER_AJD_SID,                             ///< Peer Adjacency SID (draft-ietf-idr-bgpls-segment-routing-epe)
-            ATTR_LINK_PEER_SET_SID                              ///< Peer Set SID (draft-ietf-idr-bgpls-segment-routing-epe)
+            ATTR_LINK_PEER_EPE_NODE_SID        = 1101,          ///< Peer Node SID (draft-ietf-idr-bgpls-segment-routing-epe)
+            ATTR_LINK_PEER_EPE_ADJ_SID,                         ///< Peer Adjacency SID (draft-ietf-idr-bgpls-segment-routing-epe)
+            ATTR_LINK_PEER_EPE_SET_SID                          ///< Peer Set SID (draft-ietf-idr-bgpls-segment-routing-epe)
         };
 
         /**
@@ -81,6 +78,85 @@ namespace bgp_msg {
             MPLS_PROTO_RSVP_TE                  = 0x40          ///< Extension to RSVP for LSP tunnels (rfc3209)
         };
 
+
+        /* BGP-LS Node flags : https://tools.ietf.org/html/rfc7752#section-3.3.1.1
+         *
+         * +-----------------+-------------------------+------------+
+         * |       Bit       | Description             | Reference  |
+         * +-----------------+-------------------------+------------+
+         * |       'O'       | Overload Bit            | [ISO10589] |
+         * |       'T'       | Attached Bit            | [ISO10589] |
+         * |       'E'       | External Bit            | [RFC2328]  |
+         * |       'B'       | ABR Bit                 | [RFC2328]  |
+         * |       'R'       | Router Bit              | [RFC5340]  |
+         * |       'V'       | V6 Bit                  | [RFC5340]  |
+         * | Reserved (Rsvd) | Reserved for future use |            |
+         * +-----------------+-------------------------+------------+
+         */
+        const char *LS_FLAGS_NODE_NLRI[6] = {
+                "O", "T", "E", "B", "R", "V"
+        };
+
+
+
+        /* https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.2.1
+         *      ISIS: https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-09#section-2.2.1
+         *      OSPF: https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-10#section-7.1
+         *            https://tools.ietf.org/html/draft-ietf-ospf-ospfv3-segment-routing-extensions-07#section-7.1
+         */
+        const char *LS_FLAGS_PEER_ADJ_SID_ISIS[5] = {
+                "F",            // Address family flag; unset adj is IPv4, set adj is IPv6
+                "B",            // Backup flag; set if adj is eligible for protection
+                "V",            // Value flag; set = sid carries a value, default is set
+                "L",            // Local flag; set = value has local significance
+                "S"             // Set flag; set = SID refers to a set of adjacencies
+        };
+
+        // Currently ospfv3 is the same except that G is S, but means the same thing
+        const char *LS_FLAGS_PEER_ADJ_SID_OSPF[4] = {
+                "B",            // Backup flag; set if adj is eligible for protection
+                "V",            // Value flag; set = sid carries a value, default is set
+                "L",            // Local flag; set = value has local significance
+                "G"             // Group flag; set = sid referes to a group of adjacencies
+        };
+
+        /* https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.1.1
+         *
+         *      ISIS: https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-09#section-3.1
+         *      OSPF: https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#ref-I-D.ietf-ospf-ospfv3-segment-routing-extensions
+         *
+         */
+        const char *LS_FLAGS_SR_CAP_ISIS[3] = {
+                "I",            // MPLS IPv4 flag; set = router is capable of SR MPLS encaps IPv4 all interfaces
+                "V",            // MPLS IPv6 flag; set = router is capable of SR MPLS encaps IPv6 all interfaces
+                "H"             // SR-IPv6 flag; set = rouer is capable of IPv6 SR header on all interfaces defined in ...
+        };
+
+
+        /* https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.3.1
+         *      ISIS: https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-09#section-2.1.1
+         *      OSPF: https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-10#section-5
+         */
+        const char *LS_FLAGS_PREFIX_SID_ISIS[6] = {
+                "R",            // Re-advertisement flag; set = prefix was redistributed or from l1 to l2
+                "N",            // Node-SID flag; set = sid refers to the router
+                "P",            // no-PHP flag; set = penultimate hop MUST NOT pop before delivering the packet
+                "E",            // Explicit-Null flag; set = upstream neighbor must replace SID with Exp-Null label
+                "V",            // Value flag; set = SID carries a value instead of an index; default unset
+                "L"             // Local flag; set = value/index has local significance; default is unset
+        };
+
+        const char *LS_FLAGS_PREFIX_SID_OSPF[6] = {
+                "",             // unused
+                "NP",           // no-PHP flag; set = penultimate hop MUST NOT pop before delivering the packet
+                "M",            // Mapping server flag; set = SID was advertised by mapping server
+                "E",            // Explicit-Null flag; set = upstream neighbor must replace SID with Exp-Null label
+                "V",            // Value flag; set = SID carries a value instead of an index; default unset
+                "L"             // Local flag; set = value/index has local significance; default is unset
+        };
+
+
+
         /**
          * Prefix Attribute types
          */
@@ -90,7 +166,8 @@ namespace bgp_msg {
             ATTR_PREFIX_EXTEND_TAG,                             ///< Extended Tag (len=8*n)
             ATTR_PREFIX_PREFIX_METRIC,                          ///< Prefix Metric (len=4)
             ATTR_PREFIX_OSPF_FWD_ADDR,                          ///< OSPF Forwarding Address
-            ATTR_PREFIX_OPAQUE_PREFIX                           ///< Opaque prefix attribute (len=variable)
+            ATTR_PREFIX_OPAQUE_PREFIX,                          ///< Opaque prefix attribute (len=variable)
+            ATTR_PREFIX_SID                                     ///< Prefix-SID TLV (len=variable)
         };
 
         /**
@@ -141,7 +218,7 @@ namespace bgp_msg {
         #define IEEE_INFINITE           ((1 << IEEE_EXP_WIDTH) - 1)
         #define IEEE_BIAS               ((1 << (IEEE_EXP_WIDTH - 1)) - 1)
 
-        /*******************************************************************************//*
+        /*******************************************************************************//**
          * Parse Link State attribute TLV
          *
          * \details Will handle parsing the link state attribute
@@ -152,7 +229,34 @@ namespace bgp_msg {
          * \returns length of the TLV attribute parsed
          */
         int parseAttrLinkStateTLV(int attr_len, u_char *data);
+        
+        /*******************************************************************************//**
+         * Parse flags to string
+         *
+         * \details   Will parse flags from binary representation to string.
+         *            Bits are read left to right as documented in RFC/drafts.   Left most
+         *            bit == index 0 in array and so on.
+         *
+         * \param [in]   data             Flags byte
+         * \param [in]   flags_array      Array of flags - Array item equals the bit position for flag
+         *                                Must have a size of 8 or less.
+         * \param [in]   flags_array_len  Length of flags array
+         *
+         * \returns string with flags
+         */
+        std::string parse_flags_to_string(u_char data, const char **flags_array, int flags_array_len);
 
+        /*******************************************************************************//**
+         * Parse SID/Label value to string
+         *
+         * \details Parses the SID to index, label, or IPv6 string value
+         *
+         * \param [in]  data            Raw SID data to be parsed
+         * \param [in]  len             Length of the data (min is 3 and max is 16).
+         *
+         * \returns string value of SID
+         */
+        std::string parse_sid_value(u_char *data, int len);
 
         uint32_t ieee_float_to_kbps(int32_t float_val);
     };

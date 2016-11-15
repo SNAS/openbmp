@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2013-2016 Cisco Systems, Inc. and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
@@ -625,6 +625,10 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID) != ls_attrs.end())
                 memcpy((*it).isis_area_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID].data(), sizeof((*it).isis_area_id));
+
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_SR_CAPABILITIES) != ls_attrs.end()) {
+                memcpy((*it).sr_capabilities_tlv, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_SR_CAPABILITIES].data(), sizeof((*it).sr_capabilities_tlv));
+            }
         }
 
         if (remove)
@@ -691,8 +695,11 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME) != ls_attrs.end())
                 memcpy((*it).name, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME].data(), sizeof((*it).name));
 
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_NODE_SID) != ls_attrs.end())
-                memcpy((*it).peer_node_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_NODE_SID].data(), sizeof((*it).peer_node_sid));
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_EPE_NODE_SID) != ls_attrs.end())
+                memcpy((*it).peer_node_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_EPE_NODE_SID].data(), sizeof((*it).peer_node_sid));
+                
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_ADJACENCY_SID) != ls_attrs.end())
+                memcpy((*it).peer_adj_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_ADJACENCY_SID].data(), sizeof((*it).peer_adj_sid));
         }
 
         if (remove)
@@ -734,6 +741,8 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_OSPF_FWD_ADDR) != ls_attrs.end())
                 memcpy((*it).ospf_fwd_addr, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_OSPF_FWD_ADDR].data(), sizeof((*it).ospf_fwd_addr));
 
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_SID) != ls_attrs.end())
+                memcpy((*it).sid_tlv, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_SID].data(), sizeof((*it).sid_tlv));
         }
 
         if (remove)
