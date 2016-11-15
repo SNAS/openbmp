@@ -92,7 +92,7 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::pars
  * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
  */
 void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data) {
-    
+
     switch (nlri.afi) {
         case bgp::BGP_AFI_IPV6 :  // IPv6
             parseAfi_IPv4IPv6(false, nlri, parsed_data);
@@ -110,9 +110,8 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
             break;
         }
 
-        case bgp::BGP_AFI_L2VPN :
+        case bgp::BGP_AFI_L2VPN : // EVPN (rfc7432)
         {
-
             EVPN evpn(logger, peer_addr, &parsed_data, debug);
             evpn.parse(nlri);
 

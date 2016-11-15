@@ -498,6 +498,22 @@ public:
     virtual void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr,
                             vpn_action_code code) = 0;
 
+    /*****************************************************************//**
+     * \brief       Add/Update evpn objects
+     *
+     * \details     Will generate a message to add new evpn objects
+     *
+     * \param[in]       peer    Peer object
+     * \param[in,out]   rib     List of one or more RIB entries
+     * \param[in]       attr    Path attribute object (can be null if n/a)
+     * \param[in]       code    Vpn action code
+     *
+     * \returns     The vpn.hash_id will be updated based on the
+     *              supplied data for each object.
+     *
+     * \note        Caller must free any allocated memory, which is
+     *              safe to do so when this method returns.
+     *****************************************************************/
     virtual void update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn, obj_path_attr *attr,
                             vpn_action_code code) = 0;
 
