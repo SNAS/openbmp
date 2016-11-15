@@ -91,10 +91,11 @@ public:
      * \details
      *      Will parse the VPN as defined in https://tools.ietf.org/html/rfc4364
      *
+     * \param [in]   isIPv4                     True false to indicate if IPv4 or IPv6
      * \param [in]   nlri                   Reference to MP Reach Nlri object
      * \param [out]  vpn_list               Reference to a list<vpn_tuple> to be updated with entries
      */
-    static void parseNLRIData_VPNIPv4(mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpns); 
+    static void parseNLRIData_VPN(bool isIPv4, mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpns);
 
     static void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
                                             BMPReader::peer_info *peer_info,

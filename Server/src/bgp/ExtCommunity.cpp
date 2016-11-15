@@ -67,22 +67,6 @@ namespace bgp_msg {
             ec_hdr.low_type  = data[1];
             ec_hdr.value     = data + 2;
 
-
-            u_char *pointer = ec_hdr.value;
-            std::cout << "EC" << std::endl;
-
-
-            while(pointer < ec_hdr.value + 8) {
-                std::cout << std::hex << setfill('0') << setw(2) << (int)(*pointer);
-                pointer += 1;
-                if ((long)pointer % 8 == 0) {
-                    std::cout << std::endl;
-                }
-
-            }
-
-            std::cout << std::endl;
-
             /*
              * Docode the community by type
              */

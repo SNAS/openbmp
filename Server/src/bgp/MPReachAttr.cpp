@@ -181,19 +181,27 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             break;
 
         case bgp::BGP_SAFI_MPLS: {
-            
-            //AFI=1 & SAFI=128 means L3VPN
             if (isIPv4) {
                 //Next hop encoded in 12 bytes, last 4 bytes = IPv4
                 nlri.next_hop += 8;
                 nlri.nh_len -= 8;
-
-                memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
-                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
-                parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
-
-                parseNLRIData_VPNIPv4(&nlri, parsed_data.vpn);
             }
+
+            // Next-hop is an IP address - Change/set the next-hop attribute in parsed data to use this next-hop
+            if (nlri.nh_len > 16)
+                memcpy(ip_raw, nlri.next_hop, 16);
+            else
+                memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
+
+            if (not isIPv4)
+                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+            else
+                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+
+            parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
+
+            parseNLRIData_VPN(isIPv4, &nlri, parsed_data.vpn);
+
             break;
         }
 
@@ -210,11 +218,12 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
  * \details
  *      Will parse the VPN as defined in https://tools.ietf.org/html/rfc4364
  *
+ * \param [in]   isIPv4                     True false to indicate if IPv4 or IPv6
  * \param [in]   nlri                   Reference to MP Reach Nlri object
  * \param [out]  vpn_list               Reference to a list<vpn_tuple> to be updated with entries
  */
-void MPReachAttr::parseNLRIData_VPNIPv4(mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpn_list) {
-    
+void MPReachAttr::parseNLRIData_VPN(bool isIPv4, mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpn_list) {
+
     u_char *pointer = nlri->nlri_data;
         
     while(pointer < nlri->nlri_data + nlri->nlri_len) {
