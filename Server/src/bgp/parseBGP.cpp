@@ -695,11 +695,11 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME) != ls_attrs.end())
                 memcpy((*it).name, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME].data(), sizeof((*it).name));
 
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_NODE_SID) != ls_attrs.end())
-                memcpy((*it).peer_node_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_NODE_SID].data(), sizeof((*it).peer_node_sid));
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_EPE_NODE_SID) != ls_attrs.end())
+                memcpy((*it).peer_node_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_EPE_NODE_SID].data(), sizeof((*it).peer_node_sid));
                 
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_AJD_SID) != ls_attrs.end())
-                memcpy((*it).peer_adj_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_AJD_SID].data(), sizeof((*it).peer_adj_sid));
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_ADJACENCY_SID) != ls_attrs.end())
+                memcpy((*it).peer_adj_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_ADJACENCY_SID].data(), sizeof((*it).peer_adj_sid));
         }
 
         if (remove)
@@ -741,8 +741,8 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_OSPF_FWD_ADDR) != ls_attrs.end())
                 memcpy((*it).ospf_fwd_addr, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_OSPF_FWD_ADDR].data(), sizeof((*it).ospf_fwd_addr));
 
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_SID_TLV) != ls_attrs.end())
-                memcpy((*it).sid_tlv, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_SID_TLV].data(), sizeof((*it).sid_tlv));
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_SID) != ls_attrs.end())
+                memcpy((*it).sid_tlv, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_SID].data(), sizeof((*it).sid_tlv));
         }
 
         if (remove)

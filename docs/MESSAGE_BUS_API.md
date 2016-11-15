@@ -319,7 +319,7 @@ One or more link-state nodes.
 24 | Node Name | String | 255 | ISIS hostname
 25 | isPrePolicy | Bool | 1 | Indicates if LS node BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 26 | isAdjIn | Bool | 1 | Indicates if LS node BGP prefix is Adj-RIB-In or Adj-RIB-Out
-27 | SR-Capabilities TLV | String | 255 | SR-Capabilities TLV in the format of **[I][V][H] [Range Size] [SID/Label Type]** I, V, H are set only when corresponding flags are set. (More about flags: https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-07#section-3.1)
+27 | SR-Capabilities TLV | String | 255 | SR-Capabilities TLV in the format of **[FLAGS] \<list of [Range Size] [Base SID/Label Type]\>**.  List is delimited by comma. 
 
 
 ### Object: <font color="blue">ls\_link</font> (openbmp.parsed.ls\_link)
@@ -372,7 +372,7 @@ One or more link-state links.
 43 | EPE Peer Node SID | String | 128 | Peer node SID in the format of [L] **weight** **label/idx/ipv4**. L is only set when L flag is set.
 44 | isPrePolicy | Bool | 1 | Indicates if LS link BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 45 | isAdjIn | Bool | 1 | Indicates if LS link BGP prefix is Adj-RIB-In or Adj-RIB-Out
-46 | Adjacency Segment Identifier | String | 128 | Adjacency Segment Identifier in the format of **[R][N][P][E][V][L] [Weight] [SID/Label]** R, N, P, E, V, L are set only when corresponding flags are set. (More about flags: https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-03#section-2.3.7.2)
+46 | Adjacency Segment Identifier | String | 255 | Delimited by comma list of Adjacency Segment Identifier in the format of **[FLAGS] [Weight] [SID/Label]**.  Flags are different by protocol, see [draft-gredler-idr-bgp-ls-segment-routing-ext](https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.2.1) for more details. 
 
 ### Object: <font color="blue">ls\_prefix</font> (openbmp.parsed.ls\_prefix)
 One or more link-state prefixes.
@@ -412,7 +412,8 @@ One or more link-state prefixes.
 31 | Prefix Length | Int | 1 | Prefix length in bits
 32 | isPrePolicy | Bool | 1 | Indicates if LS prefix BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 33 | isAdjIn | Bool | 1 | Indicates if LS prefix BGP prefix is Adj-RIB-In or Adj-RIB-Out
-34 | Prefix-SID TLV | String | 128 | Prefix-SID TLV in the format of **[NP][M][E][V][L] [Weight] [SID/Label]** NP, M, E, V, L are set only when corresponding flags are set. (More about flags: https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-09#section-5)
+34 | Prefix-SID TLV | String | 255 | Delimited by comma list of Prefix-SID TLV in the format of **[FLAGS] [Weight] [SID/Label]**. **[FLAGS] [Weight] [SID/Label]**.  Flags are different by protocol, see [draft-gredler-idr-bgp-ls-segment-routing-ext](https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.3.1) for more details. 
+
 
 Message API: BMP RAW Data
 ------------------------------------
