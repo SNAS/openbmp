@@ -222,7 +222,15 @@ private:
      */ 
     void UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_vpn, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
 
-    void UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_vpn, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
+    /**
+     * Update the Database advertised evpn
+     *
+     * \details This method will update the database for the supplied advertised prefixes
+     *
+     * \param  adv_evpn        Reference to the list<evpn_tuple> of advertised evpns
+     * \param  attrs           Reference to the parsed attributes map
+     */
+    void UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_evpn, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
 
     /**
      * Update the Database for bgp-ls

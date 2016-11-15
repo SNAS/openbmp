@@ -55,23 +55,6 @@ public:
 
     virtual ~MPReachAttr();
 
-    void parseEthernetSegmentIdentifier(u_char *data_pointer, std::string *parsed_data);
-
-
-        /**
-         * Parse Route Distinguisher
-         *
-         * \details
-         *      Will parse the Route Distinguisher. Based on https://tools.ietf.org/html/rfc4364#section-4.2
-         *
-         * \param [in/out]  data_pointer  Pointer to the beginning of Route Distinguisher
-         * \param [out]     rd_type                    Reference to RD type.
-         * \param [out]     rd_assigned_number         Reference to Assigned Number subfield
-         * \param [out]     rd_administrator_subfield  Reference to Administrator subfield
-         */
-    static void parseRouteDistinguisher(u_char *data_pointer, uint8_t *rd_type,
-                                              std::string *rd_assigned_number, std::string *rd_administrator_subfield);
-
     /**
      * Parse the MP_REACH NLRI attribute data
      *

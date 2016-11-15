@@ -135,8 +135,6 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
          * Parse the attributes
          *      Handles MP_REACH/MP_UNREACH parsing as well
          */
-
-
         if (uHdr.attr_len > 0) {
             parseAttributes(uHdr.attrPtr, uHdr.attr_len, parsed_data);
         }
@@ -323,7 +321,6 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
     /*
      * Parse based on attribute type
      */
-
     switch (attr_type) {
 
         case ATTR_TYPE_ORIGIN : // Origin

@@ -446,7 +446,6 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     memcpy(path_hash_id, base_attr.hash_id, sizeof(path_hash_id));
 }
 
-
 /**
  * Update the Database advertised l3vpn 
  *
@@ -548,16 +547,15 @@ void parseBGP::UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_vpn,
     adv_vpn.clear();
 }
 
-
 /**
- * Update the Database advertised l3vpn
- *
- * \details This method will update the database for the supplied advertised prefixes
- *
- * \param  adv_vpn         Reference to the list<vpn_tuple> of advertised vpns
- * \param  attrs           Reference to the parsed attributes map
- */
-void parseBGP::UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_vpn,
+* Update the Database advertised evpn
+*
+* \details This method will update the database for the supplied advertised prefixes
+*
+* \param  adv_evpn        Reference to the list<evpn_tuple> of advertised evpns
+* \param  attrs           Reference to the parsed attributes map
+*/
+void parseBGP::UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_evpn,
                            bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     vector<MsgBusInterface::obj_evpn> rib_list;
     MsgBusInterface::obj_evpn         rib_entry;
@@ -567,8 +565,8 @@ void parseBGP::UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_vpn,
     /*
      * Loop through all vpn and add/update them in the DB
      */
-    for (std::list<bgp::evpn_tuple>::iterator it = adv_vpn.begin();
-         it != adv_vpn.end();
+    for (std::list<bgp::evpn_tuple>::iterator it = adv_evpn.begin();
+         it != adv_evpn.end();
          it++) {
         bgp::evpn_tuple &tuple = (*it);
 
@@ -656,7 +654,7 @@ void parseBGP::UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_vpn,
         mbus_ptr->update_eVPN(*p_entry, rib_list, &base_attr, mbus_ptr->VPN_ACTION_ADD);
 
     rib_list.clear();
-    adv_vpn.clear();
+    adv_evpn.clear();
 }
 
 

@@ -738,7 +738,7 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
  */
 void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
                                         obj_path_attr *attr, vpn_action_code code) {
-    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+
     prep_buf[0] = 0;
 
     char    buf2[80000];                         // Second working buffer
@@ -840,9 +840,6 @@ void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
 void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
                               obj_path_attr *attr, vpn_action_code code) {
 
-//    std::cout << "111111111" << std::endl;
-
-    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
     prep_buf[0] = 0;
 
     char    buf2[80000];                         // Second working buffer
@@ -900,8 +897,6 @@ void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
         // Build the query
         hash_toStr(vpn[i].hash_id, vpn_hash_str);
 
-//        std::cout << "2223333" << (int)code <<std::endl;
-
         switch (code) {
 
             case VPN_ACTION_ADD:
@@ -938,15 +933,8 @@ void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
         ++vpn_seq;
     }
 
-//    std::cout << "44444444" << std::endl;
-//    std::cout << "44444444" << prep_buf << std::endl;
-//    std::cout << "44444444" << vpn.size() << std::endl;
-
-
     produce(MSGBUS_TOPIC_VAR_EVPN, prep_buf, strlen(prep_buf), vpn.size(), p_hash_str,
             &peer_list[p_hash_str], peer.peer_as);
-
-//    std::cout << "5555555" << std::endl;
 }
 
 
