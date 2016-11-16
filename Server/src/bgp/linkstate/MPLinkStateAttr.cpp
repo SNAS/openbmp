@@ -13,6 +13,82 @@
 #include "MPLinkStateAttr.h"
 
 namespace bgp_msg {
+    /* BGP-LS Node flags : https://tools.ietf.org/html/rfc7752#section-3.3.1.1
+     *
+     * +-----------------+-------------------------+------------+
+     * |        Bit       | Description             | Reference  |
+     * +-----------------+-------------------------+------------+
+     * |       'O'       | Overload Bit            | [ISO10589] |
+     * |       'T'       | Attached Bit            | [ISO10589] |
+     * |       'E'       | External Bit            | [RFC2328]  |
+     * |       'B'       | ABR Bit                 | [RFC2328]  |
+     * |       'R'       | Router Bit              | [RFC5340]  |
+     * |       'V'       | V6 Bit                  | [RFC5340]  |
+     * | Reserved (Rsvd) | Reserved for future use |            |
+     * +-----------------+-------------------------+------------+
+     */
+    const char * const MPLinkStateAttr::LS_FLAGS_NODE_NLRI[] = {
+            "O", "T", "E", "B", "R", "V"
+    };
+
+    /* https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.2.1
+     *      ISIS: https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-09#section-2.2.1
+     *      OSPF: https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-10#section-7.1
+     *            https://tools.ietf.org/html/draft-ietf-ospf-ospfv3-segment-routing-extensions-07#section-7.1
+     */
+    const char * const MPLinkStateAttr::LS_FLAGS_PEER_ADJ_SID_ISIS[] = {
+            "F",            // Address family flag; unset adj is IPv4, set adj is IPv6
+            "B",            // Backup flag; set if adj is eligible for protection
+            "V",            // Value flag; set = sid carries a value, default is set
+            "L",            // Local flag; set = value has local significance
+            "S"             // Set flag; set = SID refers to a set of adjacencies
+    };
+
+    // Currently ospfv3 is the same except that G is S, but means the same thing
+    const char * const MPLinkStateAttr::LS_FLAGS_PEER_ADJ_SID_OSPF[] = {
+            "B",            // Backup flag; set if adj is eligible for protection
+            "V",            // Value flag; set = sid carries a value, default is set
+            "L",            // Local flag; set = value has local significance
+            "G"             // Group flag; set = sid referes to a group of adjacencies
+    };
+
+    /* https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.1.1
+     *
+     *      ISIS: https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-09#section-3.1
+     *      OSPF: https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#ref-I-D.ietf-ospf-ospfv3-segment-routing-extensions
+     *
+     */
+    const char * const MPLinkStateAttr::LS_FLAGS_SR_CAP_ISIS[] = {
+            "I",            // MPLS IPv4 flag; set = router is capable of SR MPLS encaps IPv4 all interfaces
+            "V",            // MPLS IPv6 flag; set = router is capable of SR MPLS encaps IPv6 all interfaces
+            "H"             // SR-IPv6 flag; set = rouer is capable of IPv6 SR header on all interfaces defined in ...
+    };
+
+
+    /* https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.3.1
+     *      ISIS: https://tools.ietf.org/html/draft-ietf-isis-segment-routing-extensions-09#section-2.1.1
+     *      OSPF: https://tools.ietf.org/html/draft-ietf-ospf-segment-routing-extensions-10#section-5
+     */
+    const char * const MPLinkStateAttr::LS_FLAGS_PREFIX_SID_ISIS[] = {
+            "R",            // Re-advertisement flag; set = prefix was redistributed or from l1 to l2
+            "N",            // Node-SID flag; set = sid refers to the router
+            "P",            // no-PHP flag; set = penultimate hop MUST NOT pop before delivering the packet
+            "E",            // Explicit-Null flag; set = upstream neighbor must replace SID with Exp-Null label
+            "V",            // Value flag; set = SID carries a value instead of an index; default unset
+            "L"             // Local flag; set = value/index has local significance; default is unset
+    };
+
+    const char * const MPLinkStateAttr::LS_FLAGS_PREFIX_SID_OSPF[] = {
+            "",             // unused
+            "NP",           // no-PHP flag; set = penultimate hop MUST NOT pop before delivering the packet
+            "M",            // Mapping server flag; set = SID was advertised by mapping server
+            "E",            // Explicit-Null flag; set = upstream neighbor must replace SID with Exp-Null label
+            "V",            // Value flag; set = SID carries a value instead of an index; default unset
+            "L"             // Local flag; set = value/index has local significance; default is unset
+    };
+
+
+
     /**
      * Constructor for class
      *
@@ -115,7 +191,7 @@ namespace bgp_msg {
      *
      * \returns string with flags
      */
-    std::string MPLinkStateAttr::parse_flags_to_string(u_char data, const char *flags_array[], int flags_array_len) {
+    std::string MPLinkStateAttr::parse_flags_to_string(u_char data, const char * const flags_array[], int flags_array_len) {
         std::string flags_string = "";
         u_char current_mask = 0x80;
 
