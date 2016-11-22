@@ -5,6 +5,7 @@ script:
   - ./configure
   - make
   - sudo make install
+  - cd ..
   - mkdir -p build;
   - cmake ./
   - make ./
