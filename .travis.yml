@@ -15,9 +15,9 @@ matrix:
 before_install:
   - sudo apt-get update
   - echo 'DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock -s devicemapper"' | sudo tee /etc/default/docker > /dev/null
-  - sudo service docker restart
+  - docker restart
   - sleep 5
-  - if [[ "$TRAVIS_OS_NAME" == "centos" ]]; then sudo docker run centos:centos7 -it bash ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "centos" ]]; then docker run centos:centos7 -it bash ; fi
 
 script:
   - git clone https://github.com/edenhill/librdkafka.git
