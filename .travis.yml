@@ -7,10 +7,10 @@ matrix:
 #          sudo: required
 #        - os: osx
 #          osx_image: xcode8.1
-        - os: centos/7
+        - os: centos
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "centos/7" ]]; then sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget openssl-libs openssl-devel cyrus-sasl-devel cyrus-sasl-lib          ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "centos" ]]; then sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget openssl-libs openssl-devel cyrus-sasl-devel cyrus-sasl-lib          ; fi
 
 script:
   - git clone https://github.com/edenhill/librdkafka.git
