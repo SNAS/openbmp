@@ -1,16 +1,17 @@
 sudo: required
 language: cpp
-services:
-  - docker
 
 matrix:
     include:
-#        - os: linux
-#          dist: trusty
-#          sudo: required
+        - os: linux
+          dist: trusty
+          sudo: required
 #        - os: osx
 #          osx_image: xcode8.1
-        - os: centos
+#        - os: centos
+
+services:
+  - docker
 
 before_install:
   - sudo apt-get update
