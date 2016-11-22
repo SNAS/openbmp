@@ -2,5 +2,5 @@ language: cpp
 script:
   - mkdir -p collector/build;
   - cd collector/build;
-  - cmake ../
-  - make
+  - cmake ./collector/
+  - make ./collector/build
