@@ -1,4 +1,7 @@
+sudo: required
 language: cpp
+services:
+  - docker
 
 matrix:
     include:
@@ -10,7 +13,11 @@ matrix:
         - os: centos
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "centos" ]]; then sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget openssl-libs openssl-devel cyrus-sasl-devel cyrus-sasl-lib          ; fi
+  - sudo apt-get update
+  - echo 'DOCKER_OPTS="-H tcp://127.0.0.1:2375 -H unix:///var/run/docker.sock -s devicemapper"' | sudo tee /etc/default/docker > /dev/null
+  - sudo service docker restart
+  - sleep 5
+  - if [[ "$TRAVIS_OS_NAME" == "centos" ]]; then sudo docker run centos:centos7 -it bash ; fi
 
 script:
   - git clone https://github.com/edenhill/librdkafka.git
