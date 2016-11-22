@@ -14,7 +14,7 @@ services:
   - docker
 
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "centos" ]]; then docker run centos:centos7 -it bash ; fi
+  - docker run centos:centos7 -it bash
 
 script:
   - git clone https://github.com/edenhill/librdkafka.git
