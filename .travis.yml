@@ -9,6 +9,9 @@ matrix:
 #          osx_image: xcode8.1
         - os: centos/7
 
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "centos/7" ]]; then sudo yum install -y gcc gcc-c++ libstdc++-devel boost-devel cmake git wget openssl-libs openssl-devel cyrus-sasl-devel cyrus-sasl-lib          ; fi
+
 script:
   - git clone https://github.com/edenhill/librdkafka.git
   - cd librdkafka
@@ -26,5 +29,5 @@ script:
   - sudo make install
 
   - mkdir -p build;
-  - cmake ./
+  - cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ./
   - make ./
