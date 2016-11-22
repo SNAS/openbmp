@@ -1,4 +1,11 @@
 language: cpp
+
+matrix:
+    include:
+        - os: linux
+          dist: trusty
+          sudo: required
+
 script:
   - git clone https://github.com/edenhill/librdkafka.git
   - cd librdkafka
