@@ -1,1 +1,6 @@
 language: cpp
+script:
+  - mkdir -p collector/build;
+  - cd collector/build;
+  - cmake ../
+  - make
