@@ -25,6 +25,6 @@ services:
 
 script:
 
-  - if [[ $docker ]]; docker run -it -v $(pwd):/openbmp $docker_image /bin/sh -c "cd openbmp && `cat install_build_run_test_ci.sh`" ; fi
+  - if [[ $docker_image ]]; docker run -it -v $(pwd):/openbmp $docker_image /bin/sh -c "cd openbmp && `cat install_build_run_test_ci.sh`" ; fi
 
-  - if ! [[ $docker ]]; sh install_build_run_test_ci.sh ; fi
+  - if [[ -z $docker_image ]]; sh install_build_run_test_ci.sh ; fi
