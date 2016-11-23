@@ -16,6 +16,8 @@ make
 make install
 cd ..
 
+echo "Hello";
+
 mkdir -p build;
 cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ./
 make ./
