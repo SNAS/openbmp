@@ -14,4 +14,4 @@ services:
   - docker
 
 script:
-  - docker run -it centos:centos7 /bin/sh -c "`cat install_build_run_test_ci.sh`"
+  - docker run -it -v $(pwd):/openbmp centos:centos7 /bin/sh -c "cd openbmp && `cat install_build_run_test_ci.sh`"

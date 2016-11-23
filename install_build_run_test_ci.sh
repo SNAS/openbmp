@@ -1,3 +1,7 @@
+echo "Hello";
+ls
+pwd
+
 yum install -y gcc gcc-c++ libstdc++-devel boost-devel make cmake git wget openssl-libs openssl-devel cyrus-sasl-devel cyrus-sasl-lib
 
 git clone https://github.com/edenhill/librdkafka.git
