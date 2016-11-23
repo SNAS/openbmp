@@ -13,10 +13,8 @@ matrix:
 services:
   - docker
 
-before_install:
-  - docker run -it centos:centos7 bash
-
 script:
+  - docker run -it centos:centos7 bash
   - git clone https://github.com/edenhill/librdkafka.git
   - cd librdkafka
   - ./configure
