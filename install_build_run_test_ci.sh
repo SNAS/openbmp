@@ -15,6 +15,7 @@ cmake -DBUILD_SHARED_LIBS=OFF ..
 make
 make install
 cd ..
+cd ..
 
 echo "Hello";
 ls
