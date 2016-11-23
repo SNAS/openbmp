@@ -19,6 +19,14 @@ cd ..
 
 git clone https://github.com/jbeder/yaml-cpp.git
 cd yaml-cpp
+
+if $operatingsystem == "CentOS" {
+    if $operatingsystemrelease =~ /^6.*/ {
+        git checkout release-0.5.3;
+        sed -i '116,117 s/^/#/' ../CMakeLists.txt;
+    }
+}
+
 mkdir build
 cd build
 cmake -DBUILD_SHARED_LIBS=OFF ..
