@@ -14,22 +14,4 @@ services:
   - docker
 
 script:
-  - docker run -it centos:centos7 bash
-  - git clone https://github.com/edenhill/librdkafka.git
-  - cd librdkafka
-  - ./configure
-  - make
-  - sudo make install
-  - cd ..
-
-  - git clone https://github.com/jbeder/yaml-cpp.git
-  - cd yaml-cpp
-  - mkdir build
-  - cd build
-  - cmake -DBUILD_SHARED_LIBS=OFF ..
-  - make
-  - sudo make install
-
-  - mkdir -p build;
-  - cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ./
-  - make ./
+  - docker run -it centos:centos7 /bin/sh -c "`cat install_build_run_test_ci.sh`"
