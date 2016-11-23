@@ -1,3 +1,6 @@
+CENTOS_VERSION=`rpm -q --queryformat '%{VERSION}' centos-release`
+
+
 # Installing dependencies
 
 if [ -f /etc/redhat-release ]; then
@@ -20,12 +23,10 @@ cd ..
 git clone https://github.com/jbeder/yaml-cpp.git
 cd yaml-cpp
 
-if $operatingsystem == "CentOS" {
-    if $operatingsystemrelease =~ /^6.*/ {
-        git checkout release-0.5.3;
-        sed -i '116,117 s/^/#/' ../CMakeLists.txt;
-    }
-}
+if [ "$CENTOS_VERSION" == 6 ]; then
+    git checkout release-0.5.3;
+    sed -i '116,117 s/^/#/' ../CMakeLists.txt;
+fi
 
 mkdir build
 cd build
