@@ -12,12 +12,18 @@ matrix:
           sudo: required
           env: docker_image=centos:centos7
 
+        - os: linux
+          dist: trusty
+          sudo: required
+          env: docker_image=centos:centos6
+
 
 services:
   - docker
 
 script:
-
+  # Building inside docker image.
   - if [[ $docker_image ]]; then docker run -it -v $(pwd):/openbmp $docker_image /bin/sh -c "cd openbmp && `cat install_build_run_test_ci.sh`" ; fi
 
+  # Building in host machine
   - if [[ -z $docker_image ]]; then sh install_build_run_test_ci.sh ; fi

@@ -1,8 +1,12 @@
+# Installing dependencies
+
 if [ -f /etc/redhat-release ]; then
     yum install -y gcc gcc-c++ libstdc++-devel boost-devel make cmake git wget openssl-libs openssl-devel cyrus-sasl-devel cyrus-sasl-lib
 else
     sudo apt-get install gcc g++ libboost-dev cmake zlib1g-dev libssl1.0.0 libsasl2-2 libssl-dev libsasl2-dev
 fi
+
+# Installing librdkafka
 
 git clone https://github.com/edenhill/librdkafka.git
 cd librdkafka
@@ -10,6 +14,8 @@ cd librdkafka
 make
 make install
 cd ..
+
+# Installing yaml-cpp
 
 git clone https://github.com/jbeder/yaml-cpp.git
 cd yaml-cpp
@@ -20,6 +26,8 @@ make
 make install
 cd ..
 cd ..
+
+# Building OpenBMP
 
 mkdir -p build;
 cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ./
