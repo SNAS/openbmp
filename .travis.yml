@@ -6,12 +6,25 @@ matrix:
         - os: linux
           dist: trusty
           sudo: required
-#        - os: osx
-#          osx_image: xcode8.1
-#        - os: centos
+          env: docker=false
+
+        - os: osx
+          osx_image: xcode8.1
+          env: docker=false
+
+        - os: linux
+          dist: trusty
+          sudo: required
+
+          env: docker=true
+          env: docker_image=centos:centos7
+
 
 services:
   - docker
 
 script:
-  - docker run -it -v $(pwd):/openbmp centos:centos7 /bin/sh -c "cd openbmp && `cat install_build_run_test_ci.sh`"
+
+  - if [[ $docker ]]; docker run -it -v $(pwd):/openbmp $docker_image /bin/sh -c "cd openbmp && `cat install_build_run_test_ci.sh`" ; fi
+
+  - if ! [[ $docker ]]; sh install_build_run_test_ci.sh ; fi
