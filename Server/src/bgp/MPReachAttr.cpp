@@ -228,26 +228,23 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         if (tuple.len % 8)
            ++addr_bytes;
 
-        // if the route isn't a default route
-        if (addr_bytes > 0) {
-            memcpy(ip_raw, data, addr_bytes);
-            data += addr_bytes;
-            read_size += addr_bytes;
+        memcpy(ip_raw, data, addr_bytes);
+        data += addr_bytes;
+        read_size += addr_bytes;
 
-            // Convert the IP to string printed format
-            if (isIPv4)
-                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
-            else
-                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+        // Convert the IP to string printed format
+        if (isIPv4)
+            inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+        else
+            inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
 
-            tuple.prefix.assign(ip_char);
+        tuple.prefix.assign(ip_char);
 
-            // set the raw/binary address
-            memcpy(tuple.prefix_bin, ip_raw, sizeof(ip_raw));
-          
-            // Add tuple to prefix list
-            prefixes.push_back(tuple);
-        }
+        // set the raw/binary address
+        memcpy(tuple.prefix_bin, ip_raw, sizeof(ip_raw));
+
+        // Add tuple to prefix list
+        prefixes.push_back(tuple);
     }
 }
 
