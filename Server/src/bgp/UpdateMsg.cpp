@@ -203,8 +203,7 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
         SELF_DEBUG("%s: rtr=%s: Reading NLRI data prefix bits=%d bytes=%d", peer_addr.c_str(),
                     router_addr.c_str(), tuple.len, addr_bytes);
 
-        // if the route isn't a default route
-        if (addr_bytes > 0 and addr_bytes <= 4) {
+        if (addr_bytes <= 4) {
             memcpy(ipv4_raw, data, addr_bytes);
             read_size += addr_bytes;
             data += addr_bytes;

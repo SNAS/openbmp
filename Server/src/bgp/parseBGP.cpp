@@ -617,8 +617,10 @@ void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_
                 (*it).isIPv4 = false;
             }
 
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID) != ls_attrs.end())
-                memcpy(&(*it).mt_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID].data(), 4);
+            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID) != ls_attrs.end()) {
+                strncpy((char *)&(*it).mt_id, (char *)ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID].data(),
+                       strlen((char *)ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID].data()) + 1);
+            }
 
             if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_FLAG) != ls_attrs.end())
                 memcpy((*it).flags, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_FLAG].data(), sizeof((*it).flags));

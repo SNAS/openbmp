@@ -352,9 +352,8 @@ namespace bgp_msg {
                         val_ss << ", " << value_16bit;
                 }
 
-                memcpy(parsed_data->ls_attrs[ATTR_NODE_MT_ID].data(), val_ss.str().data(), val_ss.str().length());
+                strncpy((char *)parsed_data->ls_attrs[ATTR_NODE_MT_ID].data(), val_ss.str().data(), val_ss.str().length()+1);
                 // LOG_INFO("%s: bgp-ls: parsed node MT_ID %s (len=%d)", peer_addr.c_str(), val_ss.str().c_str(), len);
-
                 break;
 
             case ATTR_NODE_NAME:
