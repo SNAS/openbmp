@@ -32,6 +32,72 @@ parseBgpLib::~parseBgpLib(){
 }
 
 /**
+ * Get internal afi
+ *
+ * \details
+ * Given the official AFI, get the lib internal AFI
+ * \param [in]   afi           AFI
+ *
+ * \returns internal AFI
+ */
+BGP_AFI_INTERNAL parseBgpLib::getInternalAfi(parse_bgp_lib::BGP_AFI oafi) {
+    switch (oafi) {
+        case BGP_AFI_IPV4:
+            return BGP_AFI_IPV4_INTERNAL;
+        case BGP_AFI_IPV6:
+            return BGP_AFI_IPV6_INTERNAL;
+        case BGP_AFI_BGPLS:
+            return BGP_AFI_BGPLS_INTERNAL;
+    }
+    LOG_WARN("Unknown AFI: %d", oafi);
+    return BGP_AFI_MAX_INTERNAL;
+}
+
+
+/**
+ * Get internal safi
+ *
+ * \details
+ * Given the official SAFI, get the lib internal SAFI
+ * \param [in]  safi           SAFI
+ *
+ * \returns internal SAFI
+ */
+BGP_SAFI_INTERNAL parseBgpLib::getInternalSafi(parse_bgp_lib::BGP_SAFI osafi) {
+        switch (osafi) {
+            case BGP_SAFI_UNICAST:
+                return BGP_SAFI_UNICAST_INTERNAL;
+            case BGP_SAFI_MULTICAST:
+                return BGP_SAFI_MULTICAST_INTERNAL;
+            case BGP_SAFI_NLRI_LABEL:
+                return BGP_SAFI_NLRI_LABEL_INTERNAL;
+            case  BGP_SAFI_MCAST_VPN:
+                return BGP_SAFI_MCAST_VPN_INTERNAL;
+            case BGP_SAFI_VPLS:
+                return BGP_SAFI_VPLS_INTERNAL;
+            case BGP_SAFI_MDT:
+                return BGP_SAFI_MDT_INTERNAL;
+            case BGP_SAFI_4over6:
+                return BGP_SAFI_4over6_INTERNAL;
+            case BGP_SAFI_6over4:
+                return BGP_SAFI_6over4_INTERNAL;
+            case BGP_SAFI_EVPN:
+                return BGP_SAFI_EVPN_INTERNAL;
+            case BGP_SAFI_BGPLS:
+                return BGP_SAFI_BGPLS_INTERNAL;
+            case BGP_SAFI_MPLS:
+                return BGP_SAFI_MPLS_INTERNAL;
+            case BGP_SAFI_MCAST_MPLS_VPN:
+                return BGP_SAFI_MCAST_MPLS_VPN_INTERNAL;
+            case BGP_SAFI_RT_CONSTRAINTS:
+                return BGP_SAFI_RT_CONSTRAINTS_INTERNAL;
+        }
+        LOG_WARN("Unknown SAFI: %d", osafi);
+        return BGP_SAFI_MAX_INTERNAL;
+}
+
+
+/**
  * Addpath capability for a peer
  *
  * \details
@@ -41,9 +107,9 @@ parseBgpLib::~parseBgpLib(){
  *
  * \return void
  */
-void enableAddpathCapability(parse_bgp_lib::BGP_AFI, parse_bgp_lib::BGP_SAFI){
-        
-    }
+void parseBgpLib::enableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi){
+    addPathCap[getInternalAfi(afi)][getInternalSafi(safi)] = true;
+}
 
 /**
  * Addpath capability for a peer
@@ -55,8 +121,8 @@ void enableAddpathCapability(parse_bgp_lib::BGP_AFI, parse_bgp_lib::BGP_SAFI){
  *
  * \return void
  */
-void disableAddpathCapability(parse_bgp_lib::BGP_AFI, parse_bgp_lib::BGP_SAFI){
-
+void parseBgpLib::disableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi){
+        addPathCap[getInternalAfi(afi)][getInternalSafi(safi)] = false;
     }
 
 /**

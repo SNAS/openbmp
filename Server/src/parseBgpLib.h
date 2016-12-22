@@ -8,7 +8,7 @@
  */
 
 #ifndef PARSE_BGP_LIB_H_
-#define PARSE_BHP_LIB_H_
+#define PARSE_BGP_LIB_H_
 
 #include <string>
 #include <list>
@@ -45,7 +45,7 @@ enum BGP_SAFI {
     BGP_SAFI_BGPLS=71,              // draft-ietf-idr-ls-distribution
     BGP_SAFI_MPLS=128,              // RFC4364
     BGP_SAFI_MCAST_MPLS_VPN,        // RFC6513, RFC6514
-    BGP_SAFI_RT_CONSTRAINS=132      // RFC4684
+    BGP_SAFI_RT_CONSTRAINTS=132      // RFC4684
 };
 
 
@@ -160,9 +160,8 @@ class parseBgpLib {
      * \param [in]   afi           AFI
      * \param [in]   safi          SAFI
      *
-     * \return void
      */
-    void enableAddpathCapability(parse_bgp_lib::BGP_AFI, parse_bgp_lib::BGP_SAFI);
+    void enableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi);
 
     /**
      * Addpath capability for a peer
@@ -174,7 +173,7 @@ class parseBgpLib {
      *
      * \return void
      */
-    void disableAddpathCapability(parse_bgp_lib::BGP_AFI, parse_bgp_lib::BGP_SAFI);
+    void disableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi);
 
 
 private:
@@ -208,7 +207,7 @@ private:
         BGP_SAFI_BGPLS_INTERNAL,                // draft-ietf-idr-ls-distribution
         BGP_SAFI_MPLS_INTERNAL,                 // RFC4364
         BGP_SAFI_MCAST_MPLS_VPN_INTERNAL,       // RFC6513, RFC6514
-        BGP_SAFI_RT_CONSTRAINS_INTERNAL,        // RFC4684
+        BGP_SAFI_RT_CONSTRAINTS_INTERNAL,        // RFC4684
         BGP_SAFI_MAX_INTERNAL
     };
 
@@ -216,6 +215,30 @@ private:
      * An array to track if AddPath is enabled for a AFI/SAFI, this should be populated
      */
     bool addPathCap[BGP_AFI_MAX_INTERNAL][BGP_SAFI_MAX_INTERNAL] = { {0} };
+
+
+    /**
+     * Get internal afi
+     *
+     * \details
+     * Given the official AFI, get the lib internal AFI
+     * \param [in]   afi           AFI
+     *
+     * \returns internal AFI
+     */
+    BGP_AFI_INTERNAL getInternalAfi(parse_bgp_lib::BGP_AFI oafi);
+
+
+    /**
+     * Get internal safi
+     *
+     * \details
+     * Given the official SAFI, get the lib internal SAFI
+     * \param [in]  safi           SAFI
+     *
+     * \returns internal SAFI
+     */
+    BGP_SAFI_INTERNAL getInternalSafi(parse_bgp_lib::BGP_SAFI osafi);
 
     /**
      * Parses the BGP attributes in the update
