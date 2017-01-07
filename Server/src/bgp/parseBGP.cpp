@@ -30,6 +30,8 @@
 #include "UpdateMsg.h"
 #include "bgp_common.h"
 
+#include "parseBgpLib.h"
+
 using namespace std;
 
 /**
@@ -102,13 +104,19 @@ bool parseBGP::handleUpdate(u_char *data, size_t size) {
             return true;
         }
 
+        //TODO: Remove
+        parse_bgp_lib::parseBgpLib::parsed_update update;
+        parse_bgp_lib::parseBgpLib parser(logger, debug);
+        parser.parseBgpUpdate(data, data_bytes_remaining, update);
+
         data_bytes_remaining -= read_size;
 
         /*
          * Update the DB with the update data
          */
         UpdateDB(parsed_data);
-    }
+
+      }
 
     return false;
 }

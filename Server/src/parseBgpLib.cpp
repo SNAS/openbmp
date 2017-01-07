@@ -25,10 +25,11 @@ namespace parse_bgp_lib {
  */
 parseBgpLib::parseBgpLib(Logger *logPtr, bool enable_debug)
         : logger(logPtr),
-          debug(enable_debug) {
+          debug(enable_debug),
+          asn_octet_size(4) {
 }
 
-parseBgpLib::~parseBgpLib(){
+parseBgpLib::~parseBgpLib() {
 }
 
 /**
@@ -40,7 +41,7 @@ parseBgpLib::~parseBgpLib(){
  *
  * \returns internal AFI
  */
-BGP_AFI_INTERNAL parseBgpLib::getInternalAfi(parse_bgp_lib::BGP_AFI oafi) {
+parseBgpLib::BGP_AFI_INTERNAL parseBgpLib::getInternalAfi(parse_bgp_lib::BGP_AFI oafi) {
     switch (oafi) {
         case BGP_AFI_IPV4:
             return BGP_AFI_IPV4_INTERNAL;
@@ -48,94 +49,117 @@ BGP_AFI_INTERNAL parseBgpLib::getInternalAfi(parse_bgp_lib::BGP_AFI oafi) {
             return BGP_AFI_IPV6_INTERNAL;
         case BGP_AFI_BGPLS:
             return BGP_AFI_BGPLS_INTERNAL;
+        default:
+            LOG_WARN("Unknown AFI: %d", oafi);
     }
-    LOG_WARN("Unknown AFI: %d", oafi);
     return BGP_AFI_MAX_INTERNAL;
 }
 
 
 /**
- * Get internal safi
- *
- * \details
- * Given the official SAFI, get the lib internal SAFI
- * \param [in]  safi           SAFI
- *
- * \returns internal SAFI
- */
-BGP_SAFI_INTERNAL parseBgpLib::getInternalSafi(parse_bgp_lib::BGP_SAFI osafi) {
-        switch (osafi) {
-            case BGP_SAFI_UNICAST:
-                return BGP_SAFI_UNICAST_INTERNAL;
-            case BGP_SAFI_MULTICAST:
-                return BGP_SAFI_MULTICAST_INTERNAL;
-            case BGP_SAFI_NLRI_LABEL:
-                return BGP_SAFI_NLRI_LABEL_INTERNAL;
-            case  BGP_SAFI_MCAST_VPN:
-                return BGP_SAFI_MCAST_VPN_INTERNAL;
-            case BGP_SAFI_VPLS:
-                return BGP_SAFI_VPLS_INTERNAL;
-            case BGP_SAFI_MDT:
-                return BGP_SAFI_MDT_INTERNAL;
-            case BGP_SAFI_4over6:
-                return BGP_SAFI_4over6_INTERNAL;
-            case BGP_SAFI_6over4:
-                return BGP_SAFI_6over4_INTERNAL;
-            case BGP_SAFI_EVPN:
-                return BGP_SAFI_EVPN_INTERNAL;
-            case BGP_SAFI_BGPLS:
-                return BGP_SAFI_BGPLS_INTERNAL;
-            case BGP_SAFI_MPLS:
-                return BGP_SAFI_MPLS_INTERNAL;
-            case BGP_SAFI_MCAST_MPLS_VPN:
-                return BGP_SAFI_MCAST_MPLS_VPN_INTERNAL;
-            case BGP_SAFI_RT_CONSTRAINTS:
-                return BGP_SAFI_RT_CONSTRAINTS_INTERNAL;
-        }
-        LOG_WARN("Unknown SAFI: %d", osafi);
-        return BGP_SAFI_MAX_INTERNAL;
+* Get internal safi
+*
+* \details
+* Given the official SAFI, get the lib internal SAFI
+* \param [in]  safi           SAFI
+*
+* \returns internal SAFI
+*/
+parseBgpLib::BGP_SAFI_INTERNAL parseBgpLib::getInternalSafi(parse_bgp_lib::BGP_SAFI osafi) {
+    switch (osafi) {
+        case BGP_SAFI_UNICAST:
+            return BGP_SAFI_UNICAST_INTERNAL;
+        case BGP_SAFI_MULTICAST:
+            return BGP_SAFI_MULTICAST_INTERNAL;
+        case BGP_SAFI_NLRI_LABEL:
+            return BGP_SAFI_NLRI_LABEL_INTERNAL;
+        case BGP_SAFI_MCAST_VPN:
+            return BGP_SAFI_MCAST_VPN_INTERNAL;
+        case BGP_SAFI_VPLS:
+            return BGP_SAFI_VPLS_INTERNAL;
+        case BGP_SAFI_MDT:
+            return BGP_SAFI_MDT_INTERNAL;
+        case BGP_SAFI_4over6:
+            return BGP_SAFI_4over6_INTERNAL;
+        case BGP_SAFI_6over4:
+            return BGP_SAFI_6over4_INTERNAL;
+        case BGP_SAFI_EVPN:
+            return BGP_SAFI_EVPN_INTERNAL;
+        case BGP_SAFI_BGPLS:
+            return BGP_SAFI_BGPLS_INTERNAL;
+        case BGP_SAFI_MPLS:
+            return BGP_SAFI_MPLS_INTERNAL;
+        case BGP_SAFI_MCAST_MPLS_VPN:
+            return BGP_SAFI_MCAST_MPLS_VPN_INTERNAL;
+        case BGP_SAFI_RT_CONSTRAINTS:
+            return BGP_SAFI_RT_CONSTRAINTS_INTERNAL;
+    }
+    LOG_WARN("Unknown SAFI: %d", osafi);
+    return BGP_SAFI_MAX_INTERNAL;
 }
 
 
 /**
- * Addpath capability for a peer
- *
- * \details
- * Enable Addpath capability for a peer which sent the Update message to be parsed
- * \param [in]   afi           AFI
- * \param [in]   safi          SAFI
- *
- * \return void
- */
-void parseBgpLib::enableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi){
+* Addpath capability for a peer
+*
+* \details
+* Enable Addpath capability for a peer which sent the Update message to be parsed
+* \param [in]   afi           AFI
+* \param [in]   safi          SAFI
+*
+* \return void
+*/
+void parseBgpLib::enableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi) {
     addPathCap[getInternalAfi(afi)][getInternalSafi(safi)] = true;
 }
 
 /**
- * Addpath capability for a peer
- *
- * \details
- * Disable Addpath capability for a peer which sent the Update message to be parsed
- * \param [in]   afi           AFI
- * \param [in]   safi          SAFI
- *
- * \return void
- */
-void parseBgpLib::disableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi){
-        addPathCap[getInternalAfi(afi)][getInternalSafi(safi)] = false;
-    }
+* Addpath capability for a peer
+*
+* \details
+* Disable Addpath capability for a peer which sent the Update message to be parsed
+* \param [in]   afi           AFI
+* \param [in]   safi          SAFI
+*
+* \return void
+*/
+void parseBgpLib::disableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi) {
+    addPathCap[getInternalAfi(afi)][getInternalSafi(safi)] = false;
+}
 
 /**
-  * Parses the update message
+* 4-octet capability for a peer
+*
+* \details
+* Enable 4-octet capability for a peer which sent the Update message to be parsed
+*
+*/
+void parseBgpLib::enableFourOctetCapability(){
+        asn_octet_size = 4;
+}
+
+/**
+ * 4-octet capability for a peer
  *
  * \details
- * Parse BGP update message
- * \param [in]   data           Pointer to raw bgp payload data
- * \param [in]   size           Size of the data available to read; prevent overrun when reading
- * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
+ * Disable 4-octet capability for a peer which sent the Update message to be parsed
  *
- * \return ZERO is error, otherwise a positive value indicating the number of bytes read from update message
  */
+void parseBgpLib::disableFourOctetCapability(){
+        asn_octet_size = 2;
+}
+
+    /**
+* Parses the update message
+*
+* \details
+* Parse BGP update message
+* \param [in]   data           Pointer to raw bgp payload data
+* \param [in]   size           Size of the data available to read; prevent overrun when reading
+* \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
+*
+* \return ZERO is error, otherwise a positive value indicating the number of bytes read from update message
+*/
 size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &update) {
     size_t read_size = 0;
     u_char *bufPtr = data;
@@ -149,7 +173,7 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
     // Clear the parsed_data
     update.nlri_list.clear();
     update.withdrawn_nlri_list.clear();
-    update.attr.clear();
+    update.attrs.clear();
 
     SELF_DEBUG("Parsing update message of size %d", size);
 
@@ -225,97 +249,456 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
             read_size = size;
         }
     }
+
+    /*
+     * Print the list of NLRIs and all of the fields
+     */
+    for (std::list<parseBgpLib::parse_bgp_lib_nlri>::iterator it = update.nlri_list.begin();
+         it != update.nlri_list.end();
+         it++) {
+
+        std::cout << __FILE__ << __LINE__ << " AFI/SAFI/TYPE: " << it->afi << "/" << it->safi << "/" << it->type <<
+                  " Prefix fields are: " << it->nlri[LIB_NLRI_PREFIX] << "/"
+                  << it->nlri[LIB_NLRI_PREFIX_LENGTH] << " binary: " << it->nlri[LIB_NLRI_PREFIX_BIN].c_str()
+                  << " pathid: " << it->nlri[LIB_NLRI_PATH_ID] << std::endl;
+    }
+
+    /*
+     * Now print the list of all parsed attributes
+     */
+    for (std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib_attr>::iterator it = update.attrs.begin();
+         it != update.attrs.end();
+         it++) {
+        parse_bgp_lib_attr print_attr = it->second;
+        std::list<std::string>::iterator last_value = print_attr.attr_value.end();
+        last_value--;
+        std::cout << __FILE__ << __LINE__ << " ATTR lib type: " << it->first << ", official type: " << print_attr.official_type
+                  <<  " name: " << print_attr.attr_name << " value: ";
+        for (std::list<std::string>::iterator it = print_attr.attr_value.begin();
+             it != print_attr.attr_value.end();
+             it++) {
+            std::cout << *it;
+            if (it != last_value) {
+                std::cout << ", ";
+            }
+        }
+        std::cout << std::endl;
+    }
     return read_size;
+}
+
+/**
+* Parses the BGP prefixes (advertised and withdrawn) in the update
+*
+* \details
+*     Parses all attributes.  Decoded values are updated in 'parsed_data'
+*
+* \param [in]   data       Pointer to the start of the prefixes to be parsed
+* \param [in]   len        Length of the data in bytes to be read
+* \param [in]   prefix_list Reference to parsed_update_data;
+*/
+void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bgp_lib_nlri> &nlri_list) {
+    u_char ipv4_raw[4];
+    char ipv4_char[16];
+    u_char addr_bytes;
+    uint32_t path_id;
+    u_char prefix_len;
+    std::ostringstream numString;
+
+    parse_bgp_lib_nlri nlri;
+
+    if (len <= 0 or data == NULL)
+        return;
+
+    nlri.afi = parse_bgp_lib::BGP_AFI_IPV4;
+    nlri.safi = parse_bgp_lib::BGP_SAFI_UNICAST;
+    nlri.type = parse_bgp_lib::NLRI_TYPE_NONE;
+
+
+    // Loop through all prefixes
+    for (size_t read_size = 0; read_size < len; read_size++) {
+
+        bzero(ipv4_raw, sizeof(ipv4_raw));
+
+        // Parse add-paths if enabled
+        if (addPathCap[BGP_AFI_IPV4_INTERNAL][BGP_SAFI_UNICAST_INTERNAL]
+            and (len - read_size) >= 4) {
+            memcpy(&path_id, data, 4);
+            parse_bgp_lib::SWAP_BYTES(&path_id);
+            data += 4;
+            read_size += 4;
+        } else
+            path_id = 0;
+        numString.str(std::string());
+        numString << path_id;
+        nlri.nlri[LIB_NLRI_PATH_ID].assign(numString.str());
+
+        // set the address in bits length
+        prefix_len = *data++;
+        numString.str(std::string());
+        numString << static_cast<unsigned>(prefix_len);
+        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].assign(numString.str());
+
+        // Figure out how many bytes the bits requires
+        addr_bytes = prefix_len / 8;
+        if (prefix_len % 8)
+            ++addr_bytes;
+
+        SELF_DEBUG("Reading NLRI data prefix bits=%d bytes=%d", prefix_len, addr_bytes);
+
+        if (addr_bytes <= 4) {
+            memcpy(ipv4_raw, data, addr_bytes);
+            read_size += addr_bytes;
+            data += addr_bytes;
+
+            // Convert the IP to string printed format
+            inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
+            nlri.nlri[LIB_NLRI_PREFIX].assign(ipv4_char);
+            SELF_DEBUG("Adding prefix %s len %d", ipv4_char, prefix_len);
+
+            // set the raw/binary address
+            nlri.nlri[LIB_NLRI_PREFIX_BIN] = std::string(ipv4_raw, ipv4_raw + 4);
+
+            // Add tuple to prefix list
+            nlri_list.push_back(nlri);
+
+        } else if (addr_bytes > 4) {
+            LOG_NOTICE("NRLI v4 address is larger than 4 bytes bytes=%d len=%d", addr_bytes, prefix_len);
+        }
+    }
+}
+
+/**
+* Parses the BGP attributes in the update
+*
+* \details
+*     Parses all attributes.  Decoded values are updated in 'parsed_data'
+*
+* \param [in]   data       Pointer to the start of the prefixes to be parsed
+* \param [in]   len        Length of the data in bytes to be read
+* \param [in]  parsed_data    Reference to parsed_update;
+*/
+void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update) {
+    /*
+     * Per RFC4271 Section 4.3, flag indicates if the length is 1 or 2 octets
+     */
+    u_char attr_flags;
+    u_char attr_type;
+    uint16_t attr_len;
+
+    if (len == 0)
+        return;
+
+    else if (len < 3) {
+        LOG_WARN("Cannot parse the attributes due to the data being too short, error in update message. len=%d",
+                 len);
+        return;
+    }
+
+    /*
+     * Iterate through all attributes and parse them
+     */
+    for (int read_size = 0; read_size < len; read_size += 2) {
+        attr_flags = *data++;
+        attr_type = *data++;
+
+        // Check if the length field is 1 or two bytes
+        if (ATTR_FLAG_EXTENDED(attr_flags)) {
+            SELF_DEBUG("Extended length path attribute bit set for an entry");
+            memcpy(&attr_len, data, 2);
+            data += 2;
+            read_size += 2;
+            parse_bgp_lib::SWAP_BYTES(&attr_len);
+        } else
+            attr_len = *data++;
+        read_size++;
+
+        std::cout << __FILE__ << __LINE__ << " Attribute type = " << static_cast<int>(attr_type) << " len_sz = " <<
+                  static_cast<int>(attr_len) << std::endl;
+
+        // Get the attribute data, if we have any; making sure to not overrun buffer
+        if (attr_len > 0 and (read_size + attr_len) <= len) {
+            // Data pointer is currently at the data position of the attribute
+
+            /*
+             * Parse data based on attribute type
+             */
+            parseAttrData(attr_type, attr_len, data, update);
+            data += attr_len;
+            read_size += attr_len;
+
+            SELF_DEBUG("Parsed attr Type=%d, size=%hu", attr_type, attr_len);
+        } else if (attr_len) {
+            LOG_NOTICE("%Attribute data len of %hu is larger than available data in update message of %hu",
+                       attr_len, (len - read_size));
+            return;
+        }
+    }
 }
 
 
 /**
- * Parses the BGP attributes in the update
- *
- * \details
- *     Parses all attributes.  Decoded values are updated in 'parsed_data'
- *
- * \param [in]   data       Pointer to the start of the prefixes to be parsed
- * \param [in]   len        Length of the data in bytes to be read
- * \param [in]  parsed_data    Reference to parsed_update;
- */
-void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update){
+* Parse attribute data based on attribute type
+*
+* \details
+*      Parses the attribute data based on the passed attribute type.
+*      Parsed_data will be updated based on the attribute data parsed.
+*
+* \param [in]   attr_type      Attribute type
+* \param [in]   attr_len       Length of the attribute data
+* \param [in]   data           Pointer to the attribute data
+* \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+*/
+void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_update &update) {
+    u_char ipv4_raw[4];
+    char ipv4_char[16];
+    uint32_t value32bit;
+    uint16_t value16bit;
 
-    }
+    /*
+     * Parse based on attribute type
+     */
+    switch (attr_type) {
+
+        case ATTR_TYPE_ORIGIN : // Origin
+            update.attrs[LIB_ATTR_ORIGIN].official_type = ATTR_TYPE_ORIGIN;
+            update.attrs[LIB_ATTR_ORIGIN].attr_name.assign("origin");
+            switch (data[0]) {
+                case 0 :
+                    update.attrs[LIB_ATTR_ORIGIN].attr_value.push_back(std::string("igp"));
+                    break;
+                case 1 :
+                    update.attrs[LIB_ATTR_ORIGIN].attr_value.push_back(std::string("egp"));
+                    break;
+                case 2 :
+                    update.attrs[LIB_ATTR_ORIGIN].attr_value.push_back(std::string("incomplete"));
+                    break;
+            }
+
+            break;
+
+        case ATTR_TYPE_AS_PATH : // AS_PATH
+            parseAttrDataAsPath(attr_len, data, update);
+            break;
+
+        case ATTR_TYPE_NEXT_HOP : // Next hop v4
+            memcpy(ipv4_raw, data, 4);
+            inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
+            update.attrs[LIB_ATTR_NEXT_HOP].official_type = ATTR_TYPE_NEXT_HOP;
+            update.attrs[LIB_ATTR_NEXT_HOP].attr_name.assign("nextHop");
+            update.attrs[LIB_ATTR_NEXT_HOP].attr_value.push_back(std::string(ipv4_char));
+            break;
+
+        case ATTR_TYPE_MED : // MED value
+        {
+            memcpy(&value32bit, data, 4);
+            parse_bgp_lib::SWAP_BYTES(&value32bit);
+            std::ostringstream numString;
+            numString << value32bit;
+            update.attrs[LIB_ATTR_MED].official_type = ATTR_TYPE_MED;
+            update.attrs[LIB_ATTR_MED].attr_name.assign("med");
+            update.attrs[LIB_ATTR_MED].attr_value.push_back(numString.str());
+            break;
+        }
+        case ATTR_TYPE_LOCAL_PREF : // local pref value
+        {
+            memcpy(&value32bit, data, 4);
+            parse_bgp_lib::SWAP_BYTES(&value32bit);
+            std::ostringstream numString;
+            numString << value32bit;
+            update.attrs[LIB_ATTR_LOCAL_PREF].official_type = ATTR_TYPE_LOCAL_PREF;
+            update.attrs[LIB_ATTR_LOCAL_PREF].attr_name.assign("localPref");
+            update.attrs[LIB_ATTR_LOCAL_PREF].attr_value.push_back(numString.str());
+            break;
+        }
+        case ATTR_TYPE_ATOMIC_AGGREGATE : // Atomic aggregate
+            update.attrs[LIB_ATTR_ATOMIC_AGGREGATE].official_type = ATTR_TYPE_ATOMIC_AGGREGATE;
+            update.attrs[LIB_ATTR_ATOMIC_AGGREGATE].attr_name.assign("atomicAggregate");
+            update.attrs[LIB_ATTR_ATOMIC_AGGREGATE].attr_value.push_back(std::string("1"));
+            break;
+
+        case ATTR_TYPE_AGGEGATOR : // Aggregator
+//            parseAttr_Aggegator(attr_len, data, parsed_data.attrs);
+            break;
+
+        case ATTR_TYPE_ORIGINATOR_ID : // Originator ID
+            memcpy(ipv4_raw, data, 4);
+            inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
+            update.attrs[LIB_ATTR_ORIGINATOR_ID].official_type = ATTR_TYPE_ORIGINATOR_ID;
+            update.attrs[LIB_ATTR_ORIGINATOR_ID].attr_name.assign("originatorId");
+            update.attrs[LIB_ATTR_ORIGINATOR_ID].attr_value.push_back(std::string(ipv4_char));
+            break;
+
+        case ATTR_TYPE_CLUSTER_LIST : // Cluster List (RFC 4456)
+            // According to RFC 4456, the value is a sequence of cluster id's
+            update.attrs[LIB_ATTR_CLUSTER_LIST].official_type = ATTR_TYPE_CLUSTER_LIST;
+            update.attrs[LIB_ATTR_CLUSTER_LIST].attr_name.assign("clusterList");
+            for (int i = 0; i < attr_len; i += 4) {
+                memcpy(ipv4_raw, data, 4);
+                data += 4;
+                inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
+                update.attrs[LIB_ATTR_CLUSTER_LIST].attr_value.push_back(std::string(ipv4_char));
+            }
+            break;
+
+        case ATTR_TYPE_COMMUNITIES : // Community list
+        {
+            update.attrs[LIB_ATTR_COMMUNITIES].official_type = ATTR_TYPE_COMMUNITIES;
+            update.attrs[LIB_ATTR_COMMUNITIES].attr_name.assign("communities");
+            for (int i = 0; i < attr_len; i += 4) {
+                std::ostringstream numString;
+                // Add entry
+                memcpy(&value16bit, data, 2);
+                data += 2;
+                parse_bgp_lib::SWAP_BYTES(&value16bit);
+                numString << value16bit;
+                numString << ":";
+
+                memcpy(&value16bit, data, 2);
+                data += 2;
+                parse_bgp_lib::SWAP_BYTES(&value16bit);
+                numString << value16bit;
+                update.attrs[LIB_ATTR_COMMUNITIES].attr_value.push_back(numString.str());
+            }
+
+            break;
+        }
+        case ATTR_TYPE_EXT_COMMUNITY : // extended community list (RFC 4360)
+        {
+//            ExtCommunity ec(logger, peer_addr, debug);
+//            ec.parseExtCommunities(attr_len, data, parsed_data);
+            break;
+        }
+
+        case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)
+        {
+//            ExtCommunity ec6(logger, peer_addr, debug);
+//            ec6.parsev6ExtCommunities(attr_len, data, parsed_data);
+            break;
+        }
+
+        case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
+        {
+//            MPReachAttr mp(logger, peer_addr, peer_info, debug);
+//            mp.parseReachNlriAttr(attr_len, data, parsed_data);
+            break;
+        }
+
+        case ATTR_TYPE_MP_UNREACH_NLRI : // RFC4760
+        {
+//            MPUnReachAttr mp(logger, peer_addr, peer_info, debug);
+//            mp.parseUnReachNlriAttr(attr_len, data, parsed_data);
+            break;
+        }
+
+        case ATTR_TYPE_AS_PATHLIMIT : // deprecated
+        {
+            break;
+        }
+
+        case ATTR_TYPE_BGP_LS: {
+//            MPLinkStateAttr ls(logger, peer_addr, &parsed_data, debug);
+//            ls.parseAttrLinkState(attr_len, data);
+            break;
+        }
+
+        case ATTR_TYPE_AS4_PATH: {
+            SELF_DEBUG("Attribute type AS4_PATH is not yet implemented, skipping for now.");
+            break;
+        }
+
+        case ATTR_TYPE_AS4_AGGREGATOR: {
+            SELF_DEBUG("Attribute type AS4_AGGREGATOR is not yet implemented, skipping for now.");
+            break;
+        }
+
+        default:
+            LOG_INFO("Attribute type %d is not yet implemented or intentionally ignored, skipping for now.",
+                     attr_type);
+            break;
+
+    } // END OF SWITCH ATTR TYPE
+}
 
 /**
- * Parses the BGP prefixes (advertised and withdrawn) in the update
- *
- * \details
- *     Parses all attributes.  Decoded values are updated in 'parsed_data'
- *
- * \param [in]   data       Pointer to the start of the prefixes to be parsed
- * \param [in]   len        Length of the data in bytes to be read
- * \param [in]   prefix_list Reference to parsed_update_data;
- */
-void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bgp_lib_nlri> &nlri_list){
-        u_char       ipv4_raw[4];
-        char         ipv4_char[16];
-        u_char       addr_bytes;
+* Parse attribute AS_PATH data
+*
+* \param [in]   attr_len       Length of the attribute data
+* \param [in]   data           Pointer to the attribute data
+* \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+*/
+void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_update &update) {
+    int         path_len    = attr_len;
+    u_char      seg_type;
+    u_char      seg_len;
+    uint32_t    seg_asn;
 
-        parse_bgp_lib::parse_bgp_lib_nlri nlri;
+    if (path_len < 4) // Nothing to parse if length doesn't include at least one asn
+        return;
 
+    update.attrs[LIB_ATTR_AS_PATH].official_type = ATTR_TYPE_AS_PATH;
+    update.attrs[LIB_ATTR_AS_PATH].attr_name.assign("asPath");
+    /*
+     * Loop through each path segment
+     */
+    while (path_len > 0) {
 
-        if (len <= 0 or data == NULL)
-            return;
+        seg_type = *data++;
+        seg_len  = *data++;                  // Count of AS's, not bytes
+        path_len -= 2;
+        std::string decoded_path;
 
-        // Set the type for all to be unicast V4
-        nlri.afi = parse_bgp_lib::BGP_AFI_IPV4;
-        nlri.safi = parse_bgp_lib::BGP_SAFI_UNICAST;
+        if (seg_type == 1) {                 // If AS-SET open with a brace
+            decoded_path.append(" {");
+        }
 
-        // Loop through all prefixes
-        for (size_t read_size=0; read_size < len; read_size++) {
+        SELF_DEBUG("as_path seg_len = %d seg_type = %d, path_len = %d total_len = %d as_octet_size = %d",
+                   seg_len, seg_type, path_len, attr_len, asn_octet_size);
 
-            bzero(ipv4_raw, sizeof(ipv4_raw));
-            bzero(nlri.prefix_bin, sizeof(nlri.prefix_bin));
+        if ((seg_len * asn_octet_size) > path_len){
 
-            // Parse add-paths if enabled
-            if (peer_info->add_path_capability.isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST)
-                and (len - read_size) >= 4) {
-                memcpy(&tuple.path_id, data, 4);
-                bgp::SWAP_BYTES(&tuple.path_id);
-                data += 4; read_size += 4;
-            } else
-                tuple.path_id = 0;
+            LOG_NOTICE("Could not parse the AS PATH due to update message buffer being too short when using ASN octet size %d",
+                       asn_octet_size);
+            LOG_NOTICE("Switching encoding size to 2-octet due to parsing failure");
 
-            // set the address in bits length
-            tuple.len = *data++;
+            asn_octet_size = 2;
+        }
 
-            // Figure out how many bytes the bits requires
-            addr_bytes = tuple.len / 8;
-            if (tuple.len % 8)
-                ++addr_bytes;
+        // The rest of the data is the as path sequence, in blocks of 2 or 4 bytes
+        for (; seg_len > 0; seg_len--) {
+            seg_asn = 0;
+            memcpy(&seg_asn, data, asn_octet_size);
+            data += asn_octet_size;
+            path_len -= asn_octet_size;                               // Adjust the path length for what was read
 
-            SELF_DEBUG("%s: rtr=%s: Reading NLRI data prefix bits=%d bytes=%d", peer_addr.c_str(),
-                       router_addr.c_str(), tuple.len, addr_bytes);
-
-            if (addr_bytes <= 4) {
-                memcpy(ipv4_raw, data, addr_bytes);
-                read_size += addr_bytes;
-                data += addr_bytes;
-
-                // Convert the IP to string printed format
-                inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
-                tuple.prefix.assign(ipv4_char);
-                SELF_DEBUG("%s: rtr=%s: Adding prefix %s len %d", peer_addr.c_str(),
-                           router_addr.c_str(), ipv4_char, tuple.len);
-
-                // set the raw/binary address
-                memcpy(tuple.prefix_bin, ipv4_raw, sizeof(ipv4_raw));
-
-                // Add tuple to prefix list
-                prefixes.push_back(tuple);
-
-            } else if (addr_bytes > 4) {
-                LOG_NOTICE("%s: rtr=%s: NRLI v4 address is larger than 4 bytes bytes=%d len=%d",
-                           peer_addr.c_str(), router_addr.c_str(), addr_bytes, tuple.len);
+            parse_bgp_lib::SWAP_BYTES(&seg_asn, asn_octet_size);
+            std::ostringstream numString;
+            numString << seg_asn;
+            if (seg_type == 2) {
+                update.attrs[LIB_ATTR_AS_PATH].attr_value.push_back(numString.str());
+            } else if (seg_type == 1) {
+                decoded_path.append(" ");
+                decoded_path.append(numString.str());
+            } else {
+                std::cout << "Malformed AS path segment of type: " << static_cast<int>(seg_type) <<std::endl;
             }
         }
+
+        if (seg_type == 1) {            // If AS-SET close with a brace
+            decoded_path.append(" }");
+            update.attrs[LIB_ATTR_AS_PATH].attr_value.push_back(decoded_path);
+        }
     }
+
+    std::cout << "parsed as_path count " << update.attrs[LIB_ATTR_AS_PATH].attr_value.size() <<
+              ", origin as: ";
+    if (update.attrs[LIB_ATTR_AS_PATH].attr_value.size() > 0)
+        std::cout << update.attrs[LIB_ATTR_AS_PATH].attr_value.front() << std::endl;
+    else
+        std::cout << "NULL" <<std::endl;
+
+    SELF_DEBUG("Parsed AS_PATH count %d, origin as: %s", update.attrs[LIB_ATTR_AS_PATH].attr_value.size(),
+               update.attrs[LIB_ATTR_AS_PATH].attr_value.size() > 0 ? update.attrs[LIB_ATTR_AS_PATH].attr_value.front().c_str() : "NULL");
+}
 
 }
