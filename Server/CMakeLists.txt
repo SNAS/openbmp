@@ -111,7 +111,7 @@ set (SRC_FILES
     src/bgp/AddPathDataContainer.cpp
     src/bgp/linkstate/MPLinkState.cpp
     src/bgp/linkstate/MPLinkStateAttr.cpp
-        src/parseBgpLib.cpp)
+        src/parseBgpLib.cpp src/parseBgpLibExtCommunity.h src/parseBgpLibExtCommunity.cpp)
 
 # Disable warnings
 add_definitions ("-Wno-unused-result")

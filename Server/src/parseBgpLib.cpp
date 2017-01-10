@@ -14,6 +14,7 @@
 #include <arpa/inet.h>
 //TODO:Remove
 #include "Logger.h"
+#include "parseBgpLibExtCommunity.h"
 
 namespace parse_bgp_lib {
 
@@ -517,8 +518,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
             update.attrs[LIB_ATTR_ATOMIC_AGGREGATE].attr_value.push_back(std::string("1"));
             break;
 
-        case ATTR_TYPE_AGGEGATOR : // Aggregator
-//            parseAttr_Aggegator(attr_len, data, parsed_data.attrs);
+        case ATTR_TYPE_AGGREGATOR : // Aggregator
+            parseAttrDataAggregator(attr_len, data, update);
             break;
 
         case ATTR_TYPE_ORIGINATOR_ID : // Originator ID
@@ -565,15 +566,19 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
         }
         case ATTR_TYPE_EXT_COMMUNITY : // extended community list (RFC 4360)
         {
-//            ExtCommunity ec(logger, peer_addr, debug);
-//            ec.parseExtCommunities(attr_len, data, parsed_data);
+            update.attrs[LIB_ATTR_EXT_COMMUNITY].official_type = ATTR_TYPE_EXT_COMMUNITY;
+            update.attrs[LIB_ATTR_EXT_COMMUNITY].attr_name.assign("extended-communities");
+            parse_bgp_lib::ExtCommunity ec(logger, debug);
+            ec.parseExtCommunities(attr_len, data, update);
             break;
         }
 
         case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)
         {
-//            ExtCommunity ec6(logger, peer_addr, debug);
-//            ec6.parsev6ExtCommunities(attr_len, data, parsed_data);
+            update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].official_type = ATTR_TYPE_IPV6_EXT_COMMUNITY;
+            update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].attr_name.assign("ipv6-extended-communities");
+            parse_bgp_lib::ExtCommunity ec6(logger, debug);
+            ec6.parsev6ExtCommunities(attr_len, data, update);
             break;
         }
 
@@ -621,6 +626,51 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
 }
 
 /**
+* Parse attribute AGGEGATOR data
+*
+* \param [in]   attr_len       Length of the attribute data
+* \param [in]   data           Pointer to the attribute data
+* \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+*/
+void parseBgpLib::parseAttrDataAggregator(uint16_t attr_len, u_char *data, parsed_update &update) {
+    std::string decodeStr;
+    uint32_t    value32bit = 0;
+    uint16_t    value16bit = 0;
+    u_char      ipv4_raw[4];
+    char        ipv4_char[16];
+
+    // If using RFC6793, the len will be 8 instead of 6
+    if (attr_len == 8) { // RFC6793 ASN of 4 octets
+        memcpy(&value32bit, data, 4); data += 4;
+        parse_bgp_lib::SWAP_BYTES(&value32bit);
+        std::ostringstream numString;
+        numString << value32bit;
+        decodeStr.assign(numString.str());
+
+    } else if (attr_len == 6) {
+        memcpy(&value16bit, data, 2); data += 2;
+        parse_bgp_lib::SWAP_BYTES(&value16bit);
+        std::ostringstream numString;
+        numString << value16bit;
+        decodeStr.assign(numString.str());
+
+    } else {
+        LOG_ERR("Path attribute is not the correct size of 6 or 8 octets.");
+        return;
+    }
+
+    decodeStr.append(" ");
+    memcpy(ipv4_raw, data, 4);
+    inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
+    decodeStr.append(ipv4_char);
+
+        update.attrs[LIB_ATTR_AGGREGATOR].official_type = ATTR_TYPE_AGGREGATOR;
+        update.attrs[LIB_ATTR_AGGREGATOR].attr_name.assign("aggregator");
+        update.attrs[LIB_ATTR_AGGREGATOR].attr_value.push_back(decodeStr);
+}
+
+
+    /**
 * Parse attribute AS_PATH data
 *
 * \param [in]   attr_len       Length of the attribute data

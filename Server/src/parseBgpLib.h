@@ -33,7 +33,7 @@ namespace parse_bgp_lib {
         ATTR_TYPE_MED,
         ATTR_TYPE_LOCAL_PREF,
         ATTR_TYPE_ATOMIC_AGGREGATE,
-        ATTR_TYPE_AGGEGATOR,
+        ATTR_TYPE_AGGREGATOR,
         ATTR_TYPE_COMMUNITIES,
         ATTR_TYPE_ORIGINATOR_ID,
         ATTR_TYPE_CLUSTER_LIST,
@@ -118,11 +118,12 @@ namespace parse_bgp_lib {
         LIB_ATTR_MED,
         LIB_ATTR_LOCAL_PREF,
         LIB_ATTR_ATOMIC_AGGREGATE,
-        LIB_ATTR_AGGEGATOR,
+        LIB_ATTR_AGGREGATOR,
         LIB_ATTR_COMMUNITIES,
         LIB_ATTR_ORIGINATOR_ID,
         LIB_ATTR_CLUSTER_LIST,
         LIB_ATTR_EXT_COMMUNITY,
+        LIB_ATTR_IPV6_EXT_COMMUNITY,
     };
 
     enum BGP_LIB_NLRI {
@@ -370,6 +371,15 @@ namespace parse_bgp_lib {
          * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
          */
         void parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_update &update);
+
+        /**
+         * Parse attribute AGGREGATOR data
+         *
+         * \param [in]   attr_len       Length of the attribute data
+         * \param [in]   data           Pointer to the attribute data
+         * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+         */
+        void parseAttrDataAggregator(uint16_t attr_len, u_char *data, parsed_update &update);
 
         /**
          * Parse attribute AS_PATH data
