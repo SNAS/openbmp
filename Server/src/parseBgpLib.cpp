@@ -15,6 +15,8 @@
 //TODO:Remove
 #include "Logger.h"
 #include "parseBgpLibExtCommunity.h"
+#include "parseBgpLibMpReach.h"
+#include "parseBgpLibMpUnReach.h"
 
 namespace parse_bgp_lib {
 
@@ -126,6 +128,20 @@ void parseBgpLib::enableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_
 */
 void parseBgpLib::disableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi) {
     addPathCap[getInternalAfi(afi)][getInternalSafi(safi)] = false;
+}
+
+/**
+* Addpath capability for a peer
+*
+* \details
+* Get Addpath capability for a peer which sent the Update message to be parsed
+* \param [in]   afi           AFI
+* \param [in]   safi          SAFI
+*
+* \return void
+*/
+bool parseBgpLib::getAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi) {
+    return addPathCap[getInternalAfi(afi)][getInternalSafi(safi)];
 }
 
 /**
@@ -257,11 +273,23 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
     for (std::list<parseBgpLib::parse_bgp_lib_nlri>::iterator it = update.nlri_list.begin();
          it != update.nlri_list.end();
          it++) {
+        parse_bgp_lib_nlri print_nlri = *it;
+        std::list<std::string>::iterator last_value = print_nlri.nlri[LIB_NLRI_LABELS].end();
+        last_value--;
 
-        std::cout << __FILE__ << __LINE__ << " AFI/SAFI/TYPE: " << it->afi << "/" << it->safi << "/" << it->type <<
-                  " Prefix fields are: " << it->nlri[LIB_NLRI_PREFIX] << "/"
-                  << it->nlri[LIB_NLRI_PREFIX_LENGTH] << " binary: " << it->nlri[LIB_NLRI_PREFIX_BIN].c_str()
-                  << " pathid: " << it->nlri[LIB_NLRI_PATH_ID] << std::endl;
+        std::cout << __FILE__ << __LINE__ << " AFI/SAFI/TYPE: " << print_nlri.afi << "/" << print_nlri.safi << "/" << print_nlri.type <<
+                  " Prefix fields are: " << print_nlri.nlri[LIB_NLRI_PREFIX].front() << "/"
+                  << print_nlri.nlri[LIB_NLRI_PREFIX_LENGTH].front() << " binary: " << print_nlri.nlri[LIB_NLRI_PREFIX_BIN].front().c_str()
+                  << " pathid: " << print_nlri.nlri[LIB_NLRI_PATH_ID].front() << " Labels: ";
+        for (std::list<std::string>::iterator it = print_nlri.nlri[LIB_NLRI_LABELS].begin();
+             it != print_nlri.nlri[LIB_NLRI_LABELS].end();
+             it++) {
+            std::cout << *it;
+            if (it != last_value) {
+                std::cout << ", ";
+            }
+        }
+        std::cout << std::endl;
     }
 
     /*
@@ -296,7 +324,7 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
 *
 * \param [in]   data       Pointer to the start of the prefixes to be parsed
 * \param [in]   len        Length of the data in bytes to be read
-* \param [in]   prefix_list Reference to parsed_update_data;
+* \param [in]   nlri_list Reference to parsed_update_data nlri list;
 */
 void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bgp_lib_nlri> &nlri_list) {
     u_char ipv4_raw[4];
@@ -332,13 +360,13 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
             path_id = 0;
         numString.str(std::string());
         numString << path_id;
-        nlri.nlri[LIB_NLRI_PATH_ID].assign(numString.str());
+        nlri.nlri[LIB_NLRI_PATH_ID].push_back(numString.str());
 
         // set the address in bits length
         prefix_len = *data++;
         numString.str(std::string());
         numString << static_cast<unsigned>(prefix_len);
-        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].assign(numString.str());
+        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].push_back(numString.str());
 
         // Figure out how many bytes the bits requires
         addr_bytes = prefix_len / 8;
@@ -354,11 +382,11 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
 
             // Convert the IP to string printed format
             inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
-            nlri.nlri[LIB_NLRI_PREFIX].assign(ipv4_char);
+            nlri.nlri[LIB_NLRI_PREFIX].push_back(ipv4_char);
             SELF_DEBUG("Adding prefix %s len %d", ipv4_char, prefix_len);
 
             // set the raw/binary address
-            nlri.nlri[LIB_NLRI_PREFIX_BIN] = std::string(ipv4_raw, ipv4_raw + 4);
+            nlri.nlri[LIB_NLRI_PREFIX_BIN].push_back(std::string(ipv4_raw, ipv4_raw + 4));
 
             // Add tuple to prefix list
             nlri_list.push_back(nlri);
@@ -377,7 +405,7 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
 *
 * \param [in]   data       Pointer to the start of the prefixes to be parsed
 * \param [in]   len        Length of the data in bytes to be read
-* \param [in]  parsed_data    Reference to parsed_update;
+* \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
 */
 void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update) {
     /*
@@ -448,7 +476,7 @@ void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update
 * \param [in]   attr_type      Attribute type
 * \param [in]   attr_len       Length of the attribute data
 * \param [in]   data           Pointer to the attribute data
-* \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+* \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
 */
 void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_update &update) {
     u_char ipv4_raw[4];
@@ -584,15 +612,15 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
 
         case ATTR_TYPE_MP_REACH_NLRI :  // RFC4760
         {
-//            MPReachAttr mp(logger, peer_addr, peer_info, debug);
-//            mp.parseReachNlriAttr(attr_len, data, parsed_data);
+            parse_bgp_lib::MPReachAttr mp(this, logger, debug);
+            mp.parseReachNlriAttr(attr_len, data, update);
             break;
         }
 
         case ATTR_TYPE_MP_UNREACH_NLRI : // RFC4760
         {
-//            MPUnReachAttr mp(logger, peer_addr, peer_info, debug);
-//            mp.parseUnReachNlriAttr(attr_len, data, parsed_data);
+            parse_bgp_lib::MPUnReachAttr mp(this, logger, debug);
+            mp.parseUnReachNlriAttr(attr_len, data, update);
             break;
         }
 
@@ -630,7 +658,7 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
 *
 * \param [in]   attr_len       Length of the attribute data
 * \param [in]   data           Pointer to the attribute data
-* \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+* \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
 */
 void parseBgpLib::parseAttrDataAggregator(uint16_t attr_len, u_char *data, parsed_update &update) {
     std::string decodeStr;
@@ -664,9 +692,9 @@ void parseBgpLib::parseAttrDataAggregator(uint16_t attr_len, u_char *data, parse
     inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
     decodeStr.append(ipv4_char);
 
-        update.attrs[LIB_ATTR_AGGREGATOR].official_type = ATTR_TYPE_AGGREGATOR;
-        update.attrs[LIB_ATTR_AGGREGATOR].attr_name.assign("aggregator");
-        update.attrs[LIB_ATTR_AGGREGATOR].attr_value.push_back(decodeStr);
+    update.attrs[LIB_ATTR_AGGREGATOR].official_type = ATTR_TYPE_AGGREGATOR;
+    update.attrs[LIB_ATTR_AGGREGATOR].attr_name.assign("aggregator");
+    update.attrs[LIB_ATTR_AGGREGATOR].attr_value.push_back(decodeStr);
 }
 
 
@@ -675,7 +703,7 @@ void parseBgpLib::parseAttrDataAggregator(uint16_t attr_len, u_char *data, parse
 *
 * \param [in]   attr_len       Length of the attribute data
 * \param [in]   data           Pointer to the attribute data
-* \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+* \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
 */
 void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_update &update) {
     int         path_len    = attr_len;

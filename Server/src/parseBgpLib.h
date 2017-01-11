@@ -199,7 +199,7 @@ namespace parse_bgp_lib {
         };
 
         typedef std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib_attr> attr_map;
-        typedef std::map<parse_bgp_lib::BGP_LIB_NLRI, std::string> nlri_map;
+        typedef std::map<parse_bgp_lib::BGP_LIB_NLRI, std::list<std::string>> nlri_map;
 
         struct parse_bgp_lib_nlri {
             parse_bgp_lib::BGP_AFI afi;
@@ -249,6 +249,19 @@ namespace parse_bgp_lib {
          * \return void
          */
         void disableAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi);
+
+
+        /**
+         * Addpath capability for a peer
+         *
+         * \details
+         * Get Addpath capability for a peer which sent the Update message to be parsed
+         * \param [in]   afi           AFI
+         * \param [in]   safi          SAFI
+         *
+         */
+        bool getAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi);
+
 
 
         /**

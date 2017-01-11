@@ -23,7 +23,6 @@ namespace parse_bgp_lib {
      * \details Handles bgp Extended Communities
      *
      * \param [in]     logPtr       Pointer to existing Logger for app logging
-     * \param [in]     pperAddr     Printed form of peer address used for logging
      * \param [in]     enable_debug Debug true to enable, false to disable
      */
     ExtCommunity::ExtCommunity(Logger *logPtr, bool enable_debug) {
@@ -44,7 +43,7 @@ namespace parse_bgp_lib {
      *
      * \param [in]   attr_len       Length of the attribute data
      * \param [in]   data           Pointer to the attribute data
-     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+     * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      *
      */
     void ExtCommunity::parseExtCommunities(int attr_len, u_char *data, parse_bgp_lib::parseBgpLib::parsed_update &update) {
@@ -509,7 +508,7 @@ namespace parse_bgp_lib {
      *
      * \param [in]   attr_len       Length of the attribute data
      * \param [in]   data           Pointer to the attribute data
-     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+     * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      *
      */
     void ExtCommunity::parsev6ExtCommunities(int attr_len, u_char *data, parse_bgp_lib::parseBgpLib::parsed_update &update) {
