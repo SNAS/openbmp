@@ -10,6 +10,7 @@
 #include "parseBgpLibMpUNReach.h"
 #include "parseBgpLib.h"
 #include "Logger.h"
+#include "parseBgpLibMpLinkstate.h"
 
 #include <arpa/inet.h>
 
@@ -100,7 +101,7 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, parse_bgp_lib::parseBgpLib::
 
         case parse_bgp_lib::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
         {
-//            MPLinkState ls(logger, debug);
+//            MPLinkState ls(logger, &update, debug);
 //            ls.parseUnReachLinkState(nlri);
             break;
         }

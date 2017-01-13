@@ -10,6 +10,7 @@
 #include "parseBgpLibMpReach.h"
 #include "parseBgpLib.h"
 #include "Logger.h"
+#include "parseBgpLibMpLinkstate.h"
 
 #include <arpa/inet.h>
 
@@ -100,7 +101,7 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, parse_bgp_lib::parseBgpLib::pars
 
         case parse_bgp_lib::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
         {
-//                MPLinkState ls(logger, peer_addr, &parsed_data, debug);
+//                MPLinkState ls(logger, &update, debug);
 //                ls.parseReachLinkState(nlri);
 
             break;
@@ -144,8 +145,8 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, parse_bgp_
             else
                 inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
             update.attrs[LIB_ATTR_NEXT_HOP].official_type = ATTR_TYPE_NEXT_HOP;
-            update.attrs[LIB_ATTR_NEXT_HOP].attr_name.assign("nextHop");
-            update.attrs[LIB_ATTR_NEXT_HOP].attr_value.push_back(std::string(ip_char));
+            update.attrs[LIB_ATTR_NEXT_HOP].name = parse_bgp_lib_attr_names[LIB_ATTR_NEXT_HOP];
+            update.attrs[LIB_ATTR_NEXT_HOP].value.push_back(std::string(ip_char));
 
             // Data is an IP address - parse the address and save it
             parseNlriData_IPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, update.nlri_list, caller, debug, logger);
@@ -164,8 +165,8 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, parse_bgp_
                 inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
 
             update.attrs[LIB_ATTR_NEXT_HOP].official_type = ATTR_TYPE_NEXT_HOP;
-            update.attrs[LIB_ATTR_NEXT_HOP].attr_name.assign("nextHop");
-            update.attrs[LIB_ATTR_NEXT_HOP].attr_value.push_back(std::string(ip_char));
+            update.attrs[LIB_ATTR_NEXT_HOP].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_NEXT_HOP];
+            update.attrs[LIB_ATTR_NEXT_HOP].value.push_back(std::string(ip_char));
 
             // Data is an Label, IP address tuple parse and save it
             parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, update.nlri_list, caller, debug, logger);
@@ -199,19 +200,19 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
     u_char            prefix_len;
     std::ostringstream numString;
 
-    parseBgpLib::parse_bgp_lib_nlri nlri;
 
     if (len <= 0 or data == NULL)
         return;
 
-    // TODO: Can extend this to support multicast, but right now we set it to unicast v4/v6
-    nlri.afi = isIPv4 ? parse_bgp_lib::BGP_AFI_IPV4 : parse_bgp_lib::BGP_AFI_IPV6;
-    nlri.safi = parse_bgp_lib::BGP_SAFI_UNICAST;
-    nlri.type = parse_bgp_lib::NLRI_TYPE_NONE;
-
 
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
+        parseBgpLib::parse_bgp_lib_nlri nlri;
+        // TODO: Can extend this to support multicast, but right now we set it to unicast v4/v6
+        nlri.afi = isIPv4 ? parse_bgp_lib::BGP_AFI_IPV4 : parse_bgp_lib::BGP_AFI_IPV6;
+        nlri.safi = parse_bgp_lib::BGP_SAFI_UNICAST;
+        nlri.type = parse_bgp_lib::LIB_NLRI_TYPE_NONE;
+
         bzero(ip_raw, sizeof(ip_raw));
 
         // Parse add-paths if enabled
@@ -226,13 +227,15 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
 
         numString.str(std::string());
         numString << path_id;
-        nlri.nlri[LIB_NLRI_PATH_ID].push_back(numString.str());
+        nlri.nlri[LIB_NLRI_PATH_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PATH_ID];
+        nlri.nlri[LIB_NLRI_PATH_ID].value.push_back(numString.str());
 
         // set the address in bits length
         prefix_len = *data++;
         numString.str(std::string());
         numString << static_cast<unsigned>(prefix_len);
-        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].push_back(numString.str());
+        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_LENGTH];
+        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].value.push_back(numString.str());
 
         // Figure out how many bytes the bits requires
         addr_bytes = prefix_len / 8;
@@ -250,12 +253,13 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
             inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
         else
             inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
-
-        nlri.nlri[LIB_NLRI_PREFIX].push_back(ip_char);
+        nlri.nlri[LIB_NLRI_PREFIX].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX];
+        nlri.nlri[LIB_NLRI_PREFIX].value.push_back(ip_char);
         SELF_DEBUG("Adding prefix %s len %d", ip_char, prefix_len);
 
         // set the raw/binary address
-        nlri.nlri[LIB_NLRI_PREFIX_BIN].push_back(std::string(ip_raw, ip_raw + 4));
+        nlri.nlri[LIB_NLRI_PREFIX_BIN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_BIN];
+        nlri.nlri[LIB_NLRI_PREFIX_BIN].value.push_back(std::string(ip_raw, ip_raw + 4));
 
         // Add tuple to prefix list
         nlri_list.push_back(nlri);
@@ -283,8 +287,6 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
     u_char prefix_len;
     std::ostringstream numString;
 
-    parseBgpLib::parse_bgp_lib_nlri nlri;
-
     typedef union {
         struct {
             uint8_t ttl     : 8;          // TTL - not present since only 3 octets are used
@@ -300,14 +302,14 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
     if (len <= 0 or data == NULL)
         return;
 
-    nlri.afi = isIPv4 ? parse_bgp_lib::BGP_AFI_IPV4 : parse_bgp_lib::BGP_AFI_IPV6;
-    nlri.safi = parse_bgp_lib::BGP_SAFI_NLRI_LABEL;
-    nlri.type = parse_bgp_lib::NLRI_TYPE_NONE;
-
     int parsed_bytes = 0;
 
     // Loop through all prefixes
     for (size_t read_size = 0; read_size < len; read_size++) {
+        parseBgpLib::parse_bgp_lib_nlri nlri;
+        nlri.afi = isIPv4 ? parse_bgp_lib::BGP_AFI_IPV4 : parse_bgp_lib::BGP_AFI_IPV6;
+        nlri.safi = parse_bgp_lib::BGP_SAFI_NLRI_LABEL;
+        nlri.type = parse_bgp_lib::LIB_NLRI_TYPE_NONE;
 
         // Parse add-paths if enabled
         if (parser->getAddpathCapability(nlri.afi, nlri.safi)
@@ -321,7 +323,8 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
 
         numString.str(std::string());
         numString << path_id;
-        nlri.nlri[LIB_NLRI_PATH_ID].push_back(numString.str());
+        nlri.nlri[LIB_NLRI_PATH_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PATH_ID];
+        nlri.nlri[LIB_NLRI_PATH_ID].value.push_back(numString.str());
 
         if (parsed_bytes == len) {
             break;
@@ -340,6 +343,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
 
         SELF_DEBUG("Reading NLRI data prefix bits=%d bytes=%d", prefix_len, addr_bytes);
 
+        nlri.nlri[LIB_NLRI_LABELS].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LABELS];
         // the label is 3 octets long
         while (addr_bytes >= 3) {
             memcpy(&label.data, data, 3);
@@ -349,19 +353,21 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
             addr_bytes -= 3;
             read_size += 3;
             prefix_len -= 24;        // Update prefix len to not include the label just parsed
-            numString.str(std::string());
-            numString << static_cast<unsigned>(prefix_len);
-            nlri.nlri[LIB_NLRI_PREFIX_LENGTH].push_back(numString.str());
-
             std::ostringstream convert;
             convert << label.decode.value;
-            nlri.nlri[LIB_NLRI_LABELS].push_back(convert.str());
+            nlri.nlri[LIB_NLRI_LABELS].value.push_back(convert.str());
 
             if (label.decode.bos == 1 or label.data == 0x80000000 /* withdrawn label as 32bits instead of 24 */) {
                 break;               // Reached EoS
 
             }
         }
+
+        numString.str(std::string());
+        numString << static_cast<unsigned>(prefix_len);
+        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_LENGTH];
+        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].value.push_back(numString.str());
+
 
         memcpy(ip_raw, data, addr_bytes);
         data += addr_bytes;
@@ -373,11 +379,13 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         else
             inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
 
-        nlri.nlri[LIB_NLRI_PREFIX].push_back(ip_char);
+        nlri.nlri[LIB_NLRI_PREFIX].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX];
+        nlri.nlri[LIB_NLRI_PREFIX].value.push_back(ip_char);
         SELF_DEBUG("Adding prefix %s len %d", ip_char, prefix_len);
 
         // set the raw/binary address
-        nlri.nlri[LIB_NLRI_PREFIX_BIN].push_back(std::string(ip_raw, ip_raw + 4));
+        nlri.nlri[LIB_NLRI_PREFIX_BIN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_BIN];
+        nlri.nlri[LIB_NLRI_PREFIX_BIN].value.push_back(std::string(ip_raw, ip_raw + 4));
 
         // Add tuple to prefix list
         nlri_list.push_back(nlri);

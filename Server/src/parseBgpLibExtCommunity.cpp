@@ -70,31 +70,31 @@ namespace parse_bgp_lib {
              */
             switch (ec_hdr.high_type << 2 >> 2) {
                 case EXT_TYPE_IPV4 :
-                    update.attrs[LIB_ATTR_EXT_COMMUNITY].attr_value.push_back(decodeType_common(ec_hdr, true, true));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_common(ec_hdr, true, true));
                     break;
 
                 case EXT_TYPE_2OCTET_AS :
-                    update.attrs[LIB_ATTR_EXT_COMMUNITY].attr_value.push_back(decodeType_common(ec_hdr));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_common(ec_hdr));
                     break;
 
                 case EXT_TYPE_4OCTET_AS :
-                    update.attrs[LIB_ATTR_EXT_COMMUNITY].attr_value.push_back(decodeType_common(ec_hdr, true));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_common(ec_hdr, true));
                     break;
 
                 case EXT_TYPE_GENERIC :
-                    update.attrs[LIB_ATTR_EXT_COMMUNITY].attr_value.push_back(decodeType_Generic(ec_hdr));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_Generic(ec_hdr));
                     break;
 
                 case EXT_TYPE_GENERIC_4OCTET_AS :
-                    update.attrs[LIB_ATTR_EXT_COMMUNITY].attr_value.push_back(decodeType_Generic(ec_hdr, true));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_Generic(ec_hdr, true));
                     break;
 
                 case EXT_TYPE_GENERIC_IPV4 :
-                    update.attrs[LIB_ATTR_EXT_COMMUNITY].attr_value.push_back(decodeType_Generic(ec_hdr, true, true));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_Generic(ec_hdr, true, true));
                     break;
 
                 case EXT_TYPE_OPAQUE :
-                    update.attrs[LIB_ATTR_EXT_COMMUNITY].attr_value.push_back(decodeType_Opaque(ec_hdr));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_Opaque(ec_hdr));
                     break;
 
                 case EXT_TYPE_EVPN      : // TODO: Implement
@@ -536,7 +536,7 @@ namespace parse_bgp_lib {
              */
             switch (ec_hdr.high_type << 2 >> 2) {
                 case 0 :  // Currently IPv6 specific uses this type field
-                    update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].attr_value.push_back(decodeType_IPv6Specific(ec_hdr));
+                    update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].value.push_back(decodeType_IPv6Specific(ec_hdr));
                     break;
 
                 default :

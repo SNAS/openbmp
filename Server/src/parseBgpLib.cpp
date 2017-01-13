@@ -17,6 +17,7 @@
 #include "parseBgpLibExtCommunity.h"
 #include "parseBgpLibMpReach.h"
 #include "parseBgpLibMpUnReach.h"
+#include "parseBgpLibMpLinkstateAttr.h"
 
 namespace parse_bgp_lib {
 
@@ -274,20 +275,25 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
          it != update.nlri_list.end();
          it++) {
         parse_bgp_lib_nlri print_nlri = *it;
-        std::list<std::string>::iterator last_value = print_nlri.nlri[LIB_NLRI_LABELS].end();
-        last_value--;
-
-        std::cout << __FILE__ << __LINE__ << " AFI/SAFI/TYPE: " << print_nlri.afi << "/" << print_nlri.safi << "/" << print_nlri.type <<
-                  " Prefix fields are: " << print_nlri.nlri[LIB_NLRI_PREFIX].front() << "/"
-                  << print_nlri.nlri[LIB_NLRI_PREFIX_LENGTH].front() << " binary: " << print_nlri.nlri[LIB_NLRI_PREFIX_BIN].front().c_str()
-                  << " pathid: " << print_nlri.nlri[LIB_NLRI_PATH_ID].front() << " Labels: ";
-        for (std::list<std::string>::iterator it = print_nlri.nlri[LIB_NLRI_LABELS].begin();
-             it != print_nlri.nlri[LIB_NLRI_LABELS].end();
-             it++) {
-            std::cout << *it;
-            if (it != last_value) {
-                std::cout << ", ";
+        std::cout << __FILE__ << __LINE__ << " AFI/SAFI/TYPE: " << print_nlri.afi << "/" << print_nlri.safi << "/"
+                  << print_nlri.type;
+        for (std::map<parse_bgp_lib::BGP_LIB_NLRI, parse_bgp_lib_data>::iterator it2 = print_nlri.nlri.begin();
+             it2 != print_nlri.nlri.end();
+             it2++) {
+            parse_bgp_lib_data print_nlri_data = it2->second;
+            std::list<std::string>::iterator last_value = print_nlri_data.value.end();
+            last_value--;
+            std::cout << " NLRI lib type: " << it2->first << ", official type: "
+                      << print_nlri_data.official_type
+                      << " name: " << print_nlri_data.name << " value: ";
+            for (std::list<std::string>::iterator it3 = print_nlri_data.value.begin();
+                 it3 != print_nlri_data.value.end();
+                 it3++) {
+                std::cout << *it3;
+                if (it3 != last_value)
+                    std::cout << ", ";
             }
+            std::cout << std::endl;
         }
         std::cout << std::endl;
     }
@@ -295,16 +301,16 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
     /*
      * Now print the list of all parsed attributes
      */
-    for (std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib_attr>::iterator it = update.attrs.begin();
+    for (std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib_data>::iterator it = update.attrs.begin();
          it != update.attrs.end();
          it++) {
-        parse_bgp_lib_attr print_attr = it->second;
-        std::list<std::string>::iterator last_value = print_attr.attr_value.end();
+        parse_bgp_lib_data print_attr = it->second;
+        std::list<std::string>::iterator last_value = print_attr.value.end();
         last_value--;
         std::cout << __FILE__ << __LINE__ << " ATTR lib type: " << it->first << ", official type: " << print_attr.official_type
-                  <<  " name: " << print_attr.attr_name << " value: ";
-        for (std::list<std::string>::iterator it = print_attr.attr_value.begin();
-             it != print_attr.attr_value.end();
+                  <<  " name: " << print_attr.name << " value: ";
+        for (std::list<std::string>::iterator it = print_attr.value.begin();
+             it != print_attr.value.end();
              it++) {
             std::cout << *it;
             if (it != last_value) {
@@ -334,18 +340,16 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
     u_char prefix_len;
     std::ostringstream numString;
 
-    parse_bgp_lib_nlri nlri;
 
     if (len <= 0 or data == NULL)
         return;
 
-    nlri.afi = parse_bgp_lib::BGP_AFI_IPV4;
-    nlri.safi = parse_bgp_lib::BGP_SAFI_UNICAST;
-    nlri.type = parse_bgp_lib::NLRI_TYPE_NONE;
-
-
     // Loop through all prefixes
     for (size_t read_size = 0; read_size < len; read_size++) {
+        parse_bgp_lib_nlri nlri;
+        nlri.afi = parse_bgp_lib::BGP_AFI_IPV4;
+        nlri.safi = parse_bgp_lib::BGP_SAFI_UNICAST;
+        nlri.type = parse_bgp_lib::LIB_NLRI_TYPE_NONE;
 
         bzero(ipv4_raw, sizeof(ipv4_raw));
 
@@ -360,13 +364,15 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
             path_id = 0;
         numString.str(std::string());
         numString << path_id;
-        nlri.nlri[LIB_NLRI_PATH_ID].push_back(numString.str());
+        nlri.nlri[LIB_NLRI_PATH_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PATH_ID];
+        nlri.nlri[LIB_NLRI_PATH_ID].value.push_back(numString.str());
 
         // set the address in bits length
         prefix_len = *data++;
         numString.str(std::string());
         numString << static_cast<unsigned>(prefix_len);
-        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].push_back(numString.str());
+        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_LENGTH];
+        nlri.nlri[LIB_NLRI_PREFIX_LENGTH].value.push_back(numString.str());
 
         // Figure out how many bytes the bits requires
         addr_bytes = prefix_len / 8;
@@ -382,11 +388,13 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
 
             // Convert the IP to string printed format
             inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
-            nlri.nlri[LIB_NLRI_PREFIX].push_back(ipv4_char);
+            nlri.nlri[LIB_NLRI_PREFIX].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX];
+            nlri.nlri[LIB_NLRI_PREFIX].value.push_back(ipv4_char);
             SELF_DEBUG("Adding prefix %s len %d", ipv4_char, prefix_len);
 
             // set the raw/binary address
-            nlri.nlri[LIB_NLRI_PREFIX_BIN].push_back(std::string(ipv4_raw, ipv4_raw + 4));
+            nlri.nlri[LIB_NLRI_PREFIX_BIN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_BIN];
+            nlri.nlri[LIB_NLRI_PREFIX_BIN].value.push_back(std::string(ipv4_raw, ipv4_raw + 4));
 
             // Add tuple to prefix list
             nlri_list.push_back(nlri);
@@ -491,16 +499,16 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
 
         case ATTR_TYPE_ORIGIN : // Origin
             update.attrs[LIB_ATTR_ORIGIN].official_type = ATTR_TYPE_ORIGIN;
-            update.attrs[LIB_ATTR_ORIGIN].attr_name.assign("origin");
+            update.attrs[LIB_ATTR_ORIGIN].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_ORIGIN];
             switch (data[0]) {
                 case 0 :
-                    update.attrs[LIB_ATTR_ORIGIN].attr_value.push_back(std::string("igp"));
+                    update.attrs[LIB_ATTR_ORIGIN].value.push_back(std::string("igp"));
                     break;
                 case 1 :
-                    update.attrs[LIB_ATTR_ORIGIN].attr_value.push_back(std::string("egp"));
+                    update.attrs[LIB_ATTR_ORIGIN].value.push_back(std::string("egp"));
                     break;
                 case 2 :
-                    update.attrs[LIB_ATTR_ORIGIN].attr_value.push_back(std::string("incomplete"));
+                    update.attrs[LIB_ATTR_ORIGIN].value.push_back(std::string("incomplete"));
                     break;
             }
 
@@ -514,8 +522,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
             memcpy(ipv4_raw, data, 4);
             inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
             update.attrs[LIB_ATTR_NEXT_HOP].official_type = ATTR_TYPE_NEXT_HOP;
-            update.attrs[LIB_ATTR_NEXT_HOP].attr_name.assign("nextHop");
-            update.attrs[LIB_ATTR_NEXT_HOP].attr_value.push_back(std::string(ipv4_char));
+            update.attrs[LIB_ATTR_NEXT_HOP].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_NEXT_HOP];
+            update.attrs[LIB_ATTR_NEXT_HOP].value.push_back(std::string(ipv4_char));
             break;
 
         case ATTR_TYPE_MED : // MED value
@@ -525,8 +533,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
             std::ostringstream numString;
             numString << value32bit;
             update.attrs[LIB_ATTR_MED].official_type = ATTR_TYPE_MED;
-            update.attrs[LIB_ATTR_MED].attr_name.assign("med");
-            update.attrs[LIB_ATTR_MED].attr_value.push_back(numString.str());
+            update.attrs[LIB_ATTR_MED].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_MED];
+            update.attrs[LIB_ATTR_MED].value.push_back(numString.str());
             break;
         }
         case ATTR_TYPE_LOCAL_PREF : // local pref value
@@ -536,14 +544,14 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
             std::ostringstream numString;
             numString << value32bit;
             update.attrs[LIB_ATTR_LOCAL_PREF].official_type = ATTR_TYPE_LOCAL_PREF;
-            update.attrs[LIB_ATTR_LOCAL_PREF].attr_name.assign("localPref");
-            update.attrs[LIB_ATTR_LOCAL_PREF].attr_value.push_back(numString.str());
+            update.attrs[LIB_ATTR_LOCAL_PREF].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LOCAL_PREF];
+            update.attrs[LIB_ATTR_LOCAL_PREF].value.push_back(numString.str());
             break;
         }
         case ATTR_TYPE_ATOMIC_AGGREGATE : // Atomic aggregate
             update.attrs[LIB_ATTR_ATOMIC_AGGREGATE].official_type = ATTR_TYPE_ATOMIC_AGGREGATE;
-            update.attrs[LIB_ATTR_ATOMIC_AGGREGATE].attr_name.assign("atomicAggregate");
-            update.attrs[LIB_ATTR_ATOMIC_AGGREGATE].attr_value.push_back(std::string("1"));
+            update.attrs[LIB_ATTR_ATOMIC_AGGREGATE].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_ATOMIC_AGGREGATE];
+            update.attrs[LIB_ATTR_ATOMIC_AGGREGATE].value.push_back(std::string("1"));
             break;
 
         case ATTR_TYPE_AGGREGATOR : // Aggregator
@@ -554,26 +562,26 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
             memcpy(ipv4_raw, data, 4);
             inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
             update.attrs[LIB_ATTR_ORIGINATOR_ID].official_type = ATTR_TYPE_ORIGINATOR_ID;
-            update.attrs[LIB_ATTR_ORIGINATOR_ID].attr_name.assign("originatorId");
-            update.attrs[LIB_ATTR_ORIGINATOR_ID].attr_value.push_back(std::string(ipv4_char));
+            update.attrs[LIB_ATTR_ORIGINATOR_ID].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_ORIGINATOR_ID];
+            update.attrs[LIB_ATTR_ORIGINATOR_ID].value.push_back(std::string(ipv4_char));
             break;
 
         case ATTR_TYPE_CLUSTER_LIST : // Cluster List (RFC 4456)
             // According to RFC 4456, the value is a sequence of cluster id's
             update.attrs[LIB_ATTR_CLUSTER_LIST].official_type = ATTR_TYPE_CLUSTER_LIST;
-            update.attrs[LIB_ATTR_CLUSTER_LIST].attr_name.assign("clusterList");
+            update.attrs[LIB_ATTR_CLUSTER_LIST].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_CLUSTER_LIST];
             for (int i = 0; i < attr_len; i += 4) {
                 memcpy(ipv4_raw, data, 4);
                 data += 4;
                 inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
-                update.attrs[LIB_ATTR_CLUSTER_LIST].attr_value.push_back(std::string(ipv4_char));
+                update.attrs[LIB_ATTR_CLUSTER_LIST].value.push_back(std::string(ipv4_char));
             }
             break;
 
         case ATTR_TYPE_COMMUNITIES : // Community list
         {
             update.attrs[LIB_ATTR_COMMUNITIES].official_type = ATTR_TYPE_COMMUNITIES;
-            update.attrs[LIB_ATTR_COMMUNITIES].attr_name.assign("communities");
+            update.attrs[LIB_ATTR_COMMUNITIES].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_COMMUNITIES];
             for (int i = 0; i < attr_len; i += 4) {
                 std::ostringstream numString;
                 // Add entry
@@ -587,7 +595,7 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
                 data += 2;
                 parse_bgp_lib::SWAP_BYTES(&value16bit);
                 numString << value16bit;
-                update.attrs[LIB_ATTR_COMMUNITIES].attr_value.push_back(numString.str());
+                update.attrs[LIB_ATTR_COMMUNITIES].value.push_back(numString.str());
             }
 
             break;
@@ -595,7 +603,7 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
         case ATTR_TYPE_EXT_COMMUNITY : // extended community list (RFC 4360)
         {
             update.attrs[LIB_ATTR_EXT_COMMUNITY].official_type = ATTR_TYPE_EXT_COMMUNITY;
-            update.attrs[LIB_ATTR_EXT_COMMUNITY].attr_name.assign("extended-communities");
+            update.attrs[LIB_ATTR_EXT_COMMUNITY].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_EXT_COMMUNITY];
             parse_bgp_lib::ExtCommunity ec(logger, debug);
             ec.parseExtCommunities(attr_len, data, update);
             break;
@@ -604,7 +612,7 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
         case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)
         {
             update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].official_type = ATTR_TYPE_IPV6_EXT_COMMUNITY;
-            update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].attr_name.assign("ipv6-extended-communities");
+            update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_IPV6_EXT_COMMUNITY];
             parse_bgp_lib::ExtCommunity ec6(logger, debug);
             ec6.parsev6ExtCommunities(attr_len, data, update);
             break;
@@ -630,8 +638,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
         }
 
         case ATTR_TYPE_BGP_LS: {
-//            MPLinkStateAttr ls(logger, peer_addr, &parsed_data, debug);
-//            ls.parseAttrLinkState(attr_len, data);
+            MPLinkStateAttr ls(logger, &update, debug);
+            ls.parseAttrLinkState(attr_len, data);
             break;
         }
 
@@ -693,8 +701,8 @@ void parseBgpLib::parseAttrDataAggregator(uint16_t attr_len, u_char *data, parse
     decodeStr.append(ipv4_char);
 
     update.attrs[LIB_ATTR_AGGREGATOR].official_type = ATTR_TYPE_AGGREGATOR;
-    update.attrs[LIB_ATTR_AGGREGATOR].attr_name.assign("aggregator");
-    update.attrs[LIB_ATTR_AGGREGATOR].attr_value.push_back(decodeStr);
+    update.attrs[LIB_ATTR_AGGREGATOR].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_AGGREGATOR];
+    update.attrs[LIB_ATTR_AGGREGATOR].value.push_back(decodeStr);
 }
 
 
@@ -715,7 +723,7 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
         return;
 
     update.attrs[LIB_ATTR_AS_PATH].official_type = ATTR_TYPE_AS_PATH;
-    update.attrs[LIB_ATTR_AS_PATH].attr_name.assign("asPath");
+    update.attrs[LIB_ATTR_AS_PATH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_AS_PATH];
     /*
      * Loop through each path segment
      */
@@ -753,7 +761,7 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
             std::ostringstream numString;
             numString << seg_asn;
             if (seg_type == 2) {
-                update.attrs[LIB_ATTR_AS_PATH].attr_value.push_back(numString.str());
+                update.attrs[LIB_ATTR_AS_PATH].value.push_back(numString.str());
             } else if (seg_type == 1) {
                 decoded_path.append(" ");
                 decoded_path.append(numString.str());
@@ -764,19 +772,19 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
 
         if (seg_type == 1) {            // If AS-SET close with a brace
             decoded_path.append(" }");
-            update.attrs[LIB_ATTR_AS_PATH].attr_value.push_back(decoded_path);
+            update.attrs[LIB_ATTR_AS_PATH].value.push_back(decoded_path);
         }
     }
 
-    std::cout << "parsed as_path count " << update.attrs[LIB_ATTR_AS_PATH].attr_value.size() <<
+    std::cout << "parsed as_path count " << update.attrs[LIB_ATTR_AS_PATH].value.size() <<
               ", origin as: ";
-    if (update.attrs[LIB_ATTR_AS_PATH].attr_value.size() > 0)
-        std::cout << update.attrs[LIB_ATTR_AS_PATH].attr_value.front() << std::endl;
+    if (update.attrs[LIB_ATTR_AS_PATH].value.size() > 0)
+        std::cout << update.attrs[LIB_ATTR_AS_PATH].value.front() << std::endl;
     else
         std::cout << "NULL" <<std::endl;
 
-    SELF_DEBUG("Parsed AS_PATH count %d, origin as: %s", update.attrs[LIB_ATTR_AS_PATH].attr_value.size(),
-               update.attrs[LIB_ATTR_AS_PATH].attr_value.size() > 0 ? update.attrs[LIB_ATTR_AS_PATH].attr_value.front().c_str() : "NULL");
+    SELF_DEBUG("Parsed AS_PATH count %d, origin as: %s", update.attrs[LIB_ATTR_AS_PATH].value.size(),
+               update.attrs[LIB_ATTR_AS_PATH].value.size() > 0 ? update.attrs[LIB_ATTR_AS_PATH].value.front().c_str() : "NULL");
 }
 
 }

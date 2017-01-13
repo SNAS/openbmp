@@ -13,6 +13,7 @@
 #include <string>
 #include <list>
 #include <map>
+#include <array>
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/exception/all.hpp>
 
@@ -108,11 +109,13 @@ namespace parse_bgp_lib {
     };
 
 /*
- * Define the library BGP attrs, well known attributes keep the same value as defined by iana, new attributes
+ * Define the library BGP attrs, well known attributes keep the same value as defined by iana,
+ * followed by the library names of the attrs.
+ * NOTE: The positions of these elements of these enums and names MUST be the same
  */
     enum BGP_LIB_ATTRS {
-        LIB_ATTR_ORIGIN = 1,
-        LIB_ATTR_ORIGIN_BIN,
+        //Common attributes
+        LIB_ATTR_ORIGIN,
         LIB_ATTR_AS_PATH,
         LIB_ATTR_NEXT_HOP,
         LIB_ATTR_MED,
@@ -124,24 +127,144 @@ namespace parse_bgp_lib {
         LIB_ATTR_CLUSTER_LIST,
         LIB_ATTR_EXT_COMMUNITY,
         LIB_ATTR_IPV6_EXT_COMMUNITY,
+
+        //Linkstate Node attributes
+        LIB_ATTR_LS_MT_ID,
+        LIB_ATTR_LS_FLAGS,
+        LIB_ATTR_LS_NODE_NAME,
+        LIB_ATTR_LS_ISIS_AREA_ID,
+        LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4,
+        LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6,
+        LIB_ATTR_LS_SR_CAPABILITIES_TLV,
+
+        //Linkstate Link attributes
+        LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV4,
+        LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6,
+        LIB_ATTR_LS_ADMIN_GROUP,
+        LIB_ATTR_LS_MAX_LINK_BW,
+        LIB_ATTR_LS_MAX_RESV_BW,
+        LIB_ATTR_LS_UNRESV_BW,
+        LIB_ATTR_LS_TE_DEF_METRIC,
+        LIB_ATTR_LS_PROTECTION_TYPE,
+        LIB_ATTR_LS_MPLS_PROTO_MASK,
+        LIB_ATTR_LS_IGP_METRIC,
+        LIB_ATTR_LS_SRLG,
+        LIB_ATTR_LS_OPAQUE,
+        LIB_ATTR_LS_LINK_NAME,
+        LIB_ATTR_LS_ADJACENCY_SID,
+        LIB_ATTR_LS_PEER_EPE_NODE_SID,
+        LIB_ATTR_LS_PEER_EPE_ADJ_SID,
+        LIB_ATTR_LS_PEER_EPE_SET_SID,
+
+        //Linkstate Prefix attributes
+        LIB_ATTR_LS_PREFIX_IGP_FLAGS,
+        LIB_ATTR_LS_ROUTE_TAG,
+        LIB_ATTR_LS_EXTENDED_TAG,
+        LIB_ATTR_LS_PREFIX_METRIC,
+        LIB_ATTR_LS_OSPF_FWD_ADDR,
+        LIB_ATTR_LS_OPAQUE_PREFIX,
+        LIB_ATTR_LS_PREFIX_SID,
+
+
+        LIB_ATTR_MAX
     };
 
+    const std::array<std::string, parse_bgp_lib::LIB_ATTR_MAX> parse_bgp_lib_attr_names = {
+            //Common attributes
+            std::string("origin"),
+            "asPath",
+            "nextHop",
+            "med",
+            "localPref",
+            "atomicAggregate",
+            "aggregator",
+            "communities",
+            "originator",
+            "clusterList",
+            "extendedCommunities",
+            "ipv6ExtendedCommunities",
+
+            //Linkstate Node attributes
+            "linkstateMtId",
+            "linkstateFlags",
+            "linkstateNodeName",
+            "linkstateIsisAreaId",
+            "linkstateLocalRouterIdIpv4",
+            "linkstateLocalRouterIdIpv6",
+            "linkstateSrCapabilitiesTlv",
+
+            //Linkstate Link attributes
+            "linkstateRemoteRouterIdIpv4",
+            "linkstateRemoteRouterIdIpv6",
+            "linkstateAdminGroup",
+            "linkstateMaxLinkBw",
+            "linkstateMaxReservedBw",
+            "linkstateUnreservedBw",
+            "linkstateTeDefaultMetric",
+            "linkstateProtectionType",
+            "linkstateMplsProtoMask",
+            "linkstateIgpMetric",
+            "linkstateSrlg",
+            "linkstateOpaque",
+            "linkstateLinkName",
+            "linkstateAdjacencySid",
+            "linkstatePeerEpeNodeSid",
+            "linkstatePeerEpeAdjSid",
+            "linkstatePeerEpeSetSid",
+
+            //Linkstate Prefix attributes
+            "linkstatePrefixIgpFlags",
+            "linkstateRouteTag",
+            "linkstatExtendedTag",
+            "linkstatePrefixMetric",
+            "linkstateOspfForwardingAddr",
+            "linkstateOpaquePrefix",
+            "linkstatePrefixSid"
+    };
+
+/*
+* Define the library BGP nlri fields, followed by the library names of the prefix fields.
+* NOTE: The positions of these elements of these enums and names MUST be the same
+*/
     enum BGP_LIB_NLRI {
-        LIB_NLRI_PREFIX = 1,
+        LIB_NLRI_PREFIX,
         LIB_NLRI_PREFIX_BIN,
         LIB_NLRI_PREFIX_LENGTH,
         LIB_NLRI_PATH_ID,
         LIB_NLRI_LABELS,
+
+        LIB_NLRI_LS_PROTOCOL,
+        LIB_NLRI_LS_ROUTING_ID, //Identified in Linkstate NLRI header
+        LIB_NLRI_LS_ASN,
+        LIB_NLRI_LS_IGP_LS_ID,
+        LIB_NLRI_LS_OSPF_AREA_ID,
+        LIB_NLRI_LS_IGP_ROUTER_ID,
+        LIB_NLRI_MAX
+    };
+
+    const std::array<std::string, parse_bgp_lib::LIB_NLRI_MAX> parse_bgp_lib_nlri_names = {
+            std::string("prefix"),
+            "prefixBinary",
+            "prefixLength",
+            "pathId",
+            "labels",
+
+            "linkstateProtocol",
+            "linkstateRoutingId",
+            "linkstateAsn",
+            "linkstateLsId",
+            "linkstateOspfAreaId",
+            "linkstateIgpRouterId",
     };
 
     /**
      * ENUM to define the prefix type used for prefix nlri in case AFI/SAFI is not sufficient, eg, BGP-LS nodes/link/prefix
      */
     enum BGP_LIB_NLRI_TYPES {
-        NLRI_TYPE_NONE,
-        NLRI_LS_NODE,
-        NLRI_LS_LINK,
-        NLRI_LS_PREFIX,
+        LIB_NLRI_TYPE_NONE,
+        LIB_NLRI_LS_NODE,
+        LIB_NLRI_LS_LINK,
+        LIB_NLRI_LS_PREFIX,
     };
 
     /*********************************************************************//**
@@ -188,18 +311,18 @@ namespace parse_bgp_lib {
         virtual ~parseBgpLib();
 
         /*
-         * attr structure consisting of
+         * Internal structure consisting of
          * iana or standard codepoint, included well known BGP attribute types and other types defined in an ietf draft
          * eg., BGP-LS TLV types carried over from IGP
          */
-        struct parse_bgp_lib_attr {
+        struct parse_bgp_lib_data {
             uint32_t    official_type;
-            std::string attr_name;
-            std::list<std::string> attr_value;
+            std::string name;
+            std::list<std::string> value;
         };
 
-        typedef std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib_attr> attr_map;
-        typedef std::map<parse_bgp_lib::BGP_LIB_NLRI, std::list<std::string>> nlri_map;
+        typedef std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib_data> attr_map;
+        typedef std::map<parse_bgp_lib::BGP_LIB_NLRI, parse_bgp_lib_data> nlri_map;
 
         struct parse_bgp_lib_nlri {
             parse_bgp_lib::BGP_AFI afi;
