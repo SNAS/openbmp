@@ -12,6 +12,7 @@
 
 #include <string>
 #include <cstdint>
+#include <sstream>
 #include <cinttypes>
 #include <cstring>
 #include <sys/types.h>
@@ -63,12 +64,11 @@ namespace bgp {
      *      http://www.iana.org/assignments/address-family-numbers/address-family-numbers.xhtml
      */
     enum BGP_AFI {
-             BGP_AFI_IPV4=1,
-             BGP_AFI_IPV6=2,
-
-             BGP_AFI_BGPLS=16388
-             };
-
+        BGP_AFI_IPV4=1,
+        BGP_AFI_IPV6=2,
+        BGP_AFI_L2VPN=25,
+        BGP_AFI_BGPLS=16388
+    };
 
     /**
      * Defines the BGP subsequent address-families (SAFI)
@@ -109,24 +109,78 @@ namespace bgp {
                 // Add BGP-LS types
     };
 
-
     /**
       * struct is used for nlri prefixes
       */
-     struct prefix_tuple {
-         /**
-          * len in bits of the IP address prefix
-          *      length of 0 indicates a prefix that matches all IP addresses
-          */
-         PREFIX_TYPE   type;                 ///< Prefix type - RIB type
-         unsigned char len;                  ///< Length of prefix in bits
-         std::string   prefix;               ///< Printed form of the IP address
-         uint8_t       prefix_bin[16];       ///< Prefix in binary form
-         uint32_t      path_id;              ///< Path ID (add path draft-ietf-idr-add-paths-15)
-         bool          isIPv4;               ///< True if IPv4, false if IPv6
+    struct prefix_tuple {
+        /**
+        * len in bits of the IP address prefix
+        *      length of 0 indicates a prefix that matches all IP addresses
+        */
+        PREFIX_TYPE   type;                 ///< Prefix type - RIB type
+        unsigned char len;                  ///< Length of prefix in bits
+        std::string   prefix;               ///< Printed form of the IP address
+        uint8_t       prefix_bin[16];       ///< Prefix in binary form
+        uint32_t      path_id;              ///< Path ID (add path draft-ietf-idr-add-paths-15)
+        bool          isIPv4;               ///< True if IPv4, false if IPv6
+
+        std::string   labels;               ///< Labels in the format of label, label, ...
+    };
+
+    /**
+    * Struct for Route Distinguisher
+    */
+    struct rd_tuple {
+        std::string    rd_administrator_subfield;
+        std::string    rd_assigned_number;
+        uint8_t        rd_type;
+    };
      
-         std::string   labels;               ///< Labels in the format of label, label, ...
-     };
+    /**
+    * struct is used for l3vpn
+    */
+    struct vpn_tuple: prefix_tuple, rd_tuple {
+        uint32_t       vpn_label;
+    };
+
+    /**
+    * Struct is used for evpn
+    */
+    struct evpn_tuple: prefix_tuple, rd_tuple {
+        std::string     ethernet_segment_identifier;
+        std::string     ethernet_tag_id_hex;
+        uint8_t         mac_len;
+        std::string     mac;
+        uint8_t         ip_len;
+        std::string     ip;
+        int             mpls_label_1;
+        int             mpls_label_2;
+        uint8_t         originating_router_ip_len;
+        std::string     originating_router_ip;
+    };
+
+    /*********************************************************************//**
+     * Simple function to swap bytes around from network to host or
+     *  host to networking.  This method will convert any size byte variable,
+     *  unlike ntohs and ntohl.
+     *
+     * @param [in/out] var   Variable containing data to update
+     * @param [in]     size  Size of var - Default is size of var
+     *********************************************************************/
+    inline std::string parse_mac(u_char *data_pointer) {
+        u_char *pointer = data_pointer;
+
+        std::ostringstream mac_stringstream;
+
+        for (int i = 0; i < 6; ++i) {
+            if (i != 0) mac_stringstream << ':';
+            mac_stringstream.width(2);
+            mac_stringstream.fill('0');
+            mac_stringstream << std::hex << (int)(pointer[i]);
+        }
+
+        return mac_stringstream.str();
+    }
 
     /*********************************************************************//**
      * Simple function to swap bytes around from network to host or

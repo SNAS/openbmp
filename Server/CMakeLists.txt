@@ -109,6 +109,7 @@ set (SRC_FILES
 	src/bgp/MPUnReachAttr.cpp
     src/bgp/ExtCommunity.cpp
     src/bgp/AddPathDataContainer.cpp
+    src/bgp/EVPN.cpp
     src/bgp/linkstate/MPLinkState.cpp
     src/bgp/linkstate/MPLinkStateAttr.cpp
     )

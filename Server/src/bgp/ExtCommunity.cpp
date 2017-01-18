@@ -99,7 +99,10 @@ namespace bgp_msg {
                     decodeStr.append(decodeType_Opaque(ec_hdr));
                     break;
 
-                case EXT_TYPE_EVPN      : // TODO: Implement
+                case EXT_TYPE_EVPN :
+                    decodeStr.append(decodeType_EVPN(ec_hdr));
+                    break;
+
                 case EXT_TYPE_QOS_MARK  : // TODO: Implement
                 case EXT_TYPE_FLOW_SPEC : // TODO: Implement
                 case EXT_TYPE_COS_CAP   : // TODO: Implement
@@ -282,6 +285,65 @@ namespace bgp_msg {
                 LOG_INFO("%s: Extended community common type %d subtype = %d is not yet supported", peer_addr.c_str(),
                         ec_hdr.high_type, ec_hdr.low_type);
                 break;
+        }
+
+        return val_ss.str();
+    }
+
+    /**
+     * Decode EVPN subtypes
+     *
+     * \details
+     *      Converts to human readable form.
+     *
+     * \param [in]   ec_hdr          Reference to the extended community header
+     *
+     * \return  Decoded string value
+     */
+    std::string ExtCommunity::decodeType_EVPN(const extcomm_hdr &ec_hdr) {
+        std::stringstream   val_ss;
+        uint32_t            val_32b;
+
+        switch(ec_hdr.low_type) {
+            case EXT_EVPN_MAC_MOBILITY: {
+                val_ss << "mac_mob_flags=";
+                u_char flags = ec_hdr.value[0];
+
+                val_ss << flags;
+
+                memcpy(&val_32b, ec_hdr.value + 2, 4);
+                bgp::SWAP_BYTES(&val_32b);
+
+                val_ss << " mac_mob_seq_num=";
+                val_ss << val_32b;
+                break;
+            }
+            case EXT_EVPN_MPLS_LABEL: {
+                val_ss << "esi_label_flags=";
+                u_char flags = ec_hdr.value[0];
+
+                val_ss << flags;
+
+                memcpy(&val_32b, ec_hdr.value + 3, 3);
+                bgp::SWAP_BYTES(&val_32b);
+                val_32b = val_32b >> 8;
+
+                val_ss << " esi_label=";
+                val_ss << val_32b;
+                break;
+            }
+            case EXT_EVPN_ES_IMPORT: {
+                val_ss << "es_import=" << bgp::parse_mac(ec_hdr.value);
+                break;
+            }
+            case EXT_EVPN_ROUTER_MAC: {
+                val_ss << "router_mac=" << bgp::parse_mac(ec_hdr.value);
+                break;
+            }
+            default: {
+                LOG_INFO("Extended community eVPN subtype is not implemented %d", ec_hdr.low_type);
+                break;
+            }
         }
 
         return val_ss.str();

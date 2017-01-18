@@ -64,6 +64,7 @@ msgBus_kafka::msgBus_kafka(Logger *logPtr, Config *cfg, u_char *c_hash_id) {
     peer_seq            = 0L;
     base_attr_seq       = 0L;
     unicast_prefix_seq  = 0L;
+    vpn_seq             = 0L;
     ls_node_seq         = 0L;
     ls_link_seq         = 0L;
     ls_prefix_seq       = 0L;
@@ -730,6 +731,210 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
     produce(MSGBUS_TOPIC_VAR_BASE_ATTRIBUTE, prep_buf, buf_len, 1, p_hash_str, &peer_list[p_hash_str], peer.peer_as);
 
     ++base_attr_seq;
+}
+
+/**
+ * Abstract method Implementation - See MsgBusInterface.hpp for details
+ */
+void msgBus_kafka::update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
+                                        obj_path_attr *attr, vpn_action_code code) {
+
+    prep_buf[0] = 0;
+
+    char    buf2[80000];                         // Second working buffer
+    size_t  buf_len = 0;                         // query buffer length
+
+    string vpn_hash_str;
+    string path_hash_str;
+    string p_hash_str;
+    string r_hash_str;
+
+    hash_toStr(peer.router_hash_id, r_hash_str);
+
+    if (attr != NULL)
+        hash_toStr(attr->hash_id, path_hash_str);
+
+    hash_toStr(peer.hash_id, p_hash_str);
+
+    string action = "add";
+
+    string ts;
+    getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
+
+    // Loop through the vector array of vpn entries
+    for (size_t i = 0; i < vpn.size(); i++) {
+
+        // Generate the hash
+        MD5 hash;
+
+        hash.update((unsigned char *) vpn[i].prefix, strlen(vpn[i].prefix));
+        hash.update(&vpn[i].prefix_len, sizeof(vpn[i].prefix_len));
+        hash.update((unsigned char *) p_hash_str.c_str(), p_hash_str.length());
+
+        // Add path ID to hash only if exists
+        if (vpn[i].path_id > 0)
+            hash.update((unsigned char *)&vpn[i].path_id, sizeof(vpn[i].path_id));
+
+        /*
+         * Add constant "1" to hash if labels are present
+         *      Withdrawn and updated NLRI's do not carry the original label, therefore we cannot
+         *      hash on the label string.  Instead, we has on a constant value of 1.
+         */
+        if (vpn[i].labels[0] != 0) {
+            buf2[0] = 1;
+            hash.update((unsigned char *) buf2, 1);
+            buf2[0] = 0;
+        }
+
+        hash.finalize();
+
+        // Save the hash
+        unsigned char *hash_raw = hash.raw_digest();
+        memcpy(vpn[i].hash_id, hash_raw, 16);
+        delete[] hash_raw;
+
+        // Build the query
+        hash_toStr(vpn[i].hash_id, vpn_hash_str);
+
+        switch (code) {
+
+            case VPN_ACTION_ADD:
+                if (attr == NULL)
+                    return;
+
+                buf_len += snprintf(buf2, sizeof(buf2),
+                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
+                                            "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
+                                            "\t%s\t%d\t%d\t%s:%s\t%d\t%d\n",
+                                    action.c_str(), unicast_prefix_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
+                                    router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
+                                    peer.peer_addr, peer.peer_as, ts.c_str(), vpn[i].prefix, vpn[i].prefix_len,
+                                    vpn[i].isIPv4, attr->origin,
+                                    attr->as_path.c_str(), attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
+                                    attr->aggregator,
+                                    attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
+                                    attr->atomic_agg, attr->nexthop_isIPv4,
+                                    attr->originator_id, vpn[i].path_id, vpn[i].labels, peer.isPrePolicy, peer.isAdjIn,
+                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type, vpn[i].vpn_label);
+
+                break;
+
+        }
+
+        // Cat the entry to the query buff
+        if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
+            strcat(prep_buf, buf2);
+
+        ++vpn_seq;
+    }
+
+
+    produce(MSGBUS_TOPIC_VAR_L3VPN, prep_buf, strlen(prep_buf), vpn.size(), p_hash_str,
+            &peer_list[p_hash_str], peer.peer_as);
+}
+
+
+/**
+ * Abstract method Implementation - See MsgBusInterface.hpp for details
+ */
+void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
+                              obj_path_attr *attr, vpn_action_code code) {
+
+    prep_buf[0] = 0;
+
+    char    buf2[80000];                         // Second working buffer
+    size_t  buf_len = 0;                         // query buffer length
+
+    string vpn_hash_str;
+    string path_hash_str;
+    string p_hash_str;
+    string r_hash_str;
+
+    hash_toStr(peer.router_hash_id, r_hash_str);
+
+    if (attr != NULL)
+        hash_toStr(attr->hash_id, path_hash_str);
+
+    hash_toStr(peer.hash_id, p_hash_str);
+
+    string action = "add";
+
+    string ts;
+    getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
+
+    // Loop through the vector array of vpn entries
+    for (size_t i = 0; i < vpn.size(); i++) {
+
+        // Generate the hash
+        MD5 hash;
+
+        hash.update((unsigned char *) vpn[i].prefix, strlen(vpn[i].prefix));
+        hash.update(&vpn[i].prefix_len, sizeof(vpn[i].prefix_len));
+        hash.update((unsigned char *) p_hash_str.c_str(), p_hash_str.length());
+
+        // Add path ID to hash only if exists
+        if (vpn[i].path_id > 0)
+            hash.update((unsigned char *)&vpn[i].path_id, sizeof(vpn[i].path_id));
+
+        /*
+         * Add constant "1" to hash if labels are present
+         *      Withdrawn and updated NLRI's do not carry the original label, therefore we cannot
+         *      hash on the label string.  Instead, we has on a constant value of 1.
+         */
+        if (vpn[i].labels[0] != 0) {
+            buf2[0] = 1;
+            hash.update((unsigned char *) buf2, 1);
+            buf2[0] = 0;
+        }
+
+        hash.finalize();
+
+        // Save the hash
+        unsigned char *hash_raw = hash.raw_digest();
+        memcpy(vpn[i].hash_id, hash_raw, 16);
+        delete[] hash_raw;
+
+        // Build the query
+        hash_toStr(vpn[i].hash_id, vpn_hash_str);
+
+        switch (code) {
+
+            case VPN_ACTION_ADD:
+                if (attr == NULL)
+                    return;
+
+                buf_len += snprintf(buf2, sizeof(buf2),
+                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
+                                        "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
+                                        "\t%s\t%d\t%d\t%s:%s\t%d\t%d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%d\t%d\n",
+                                    action.c_str(), unicast_prefix_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
+                                    router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
+                                    peer.peer_addr, peer.peer_as, ts.c_str(), vpn[i].prefix, vpn[i].prefix_len,
+                                    vpn[i].isIPv4, attr->origin,
+                                    attr->as_path.c_str(), attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
+                                    attr->aggregator,
+                                    attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
+                                    attr->atomic_agg, attr->nexthop_isIPv4,
+                                    attr->originator_id, vpn[i].path_id, vpn[i].labels, peer.isPrePolicy, peer.isAdjIn,
+                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type,
+                                    vpn[i].originating_router_ip_len, vpn[i].originating_router_ip, vpn[i].ethernet_tag_id_hex,
+                                    vpn[i].ethernet_segment_identifier, vpn[i].mac_len,
+                                    vpn[i].mac, vpn[i].ip_len, vpn[i].ip, vpn[i].mpls_label_1, vpn[i].mpls_label_2
+                );
+
+                break;
+
+        }
+
+        // Cat the entry to the query buff
+        if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
+            strcat(prep_buf, buf2);
+
+        ++vpn_seq;
+    }
+
+    produce(MSGBUS_TOPIC_VAR_EVPN, prep_buf, strlen(prep_buf), vpn.size(), p_hash_str,
+            &peer_list[p_hash_str], peer.peer_as);
 }
 
 
