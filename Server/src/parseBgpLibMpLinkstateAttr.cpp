@@ -274,7 +274,6 @@ namespace parse_bgp_lib {
         std::stringstream   val_ss;
         char    buf[8192];
         int     i;
-        int protocol;
 
         if (attr_len < 4) {
             LOG_NOTICE("bgp-ls: failed to parse attribute; too short");
@@ -393,17 +392,15 @@ namespace parse_bgp_lib {
                      it != update->nlri_list.end();
                      it++) {
                     if (it->afi == BGP_AFI_BGPLS) {
-                        protocol = it->nlri[LIB_NLRI_LS_PROTOCOL].official_type;
+                        if (strcmp(it->nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str(), "IS-IS") >= 0) {
+                            val_ss << this->parse_flags_to_string(*data, LS_FLAGS_SR_CAP_ISIS, sizeof(LS_FLAGS_SR_CAP_ISIS));
+                            update->attrs[LIB_ATTR_LS_SR_CAPABILITIES_TLV].value.push_back(val_ss.str());
+                        } else if (strcmp(it->nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str(), "OSPF") >= 0) {
+                            val_ss << int(*data);   //this->parse_flags_to_string(*data, LS_FLAGS_SR_CAP_OSPF, sizeof(LS_FLAGS_SR_CAP_OSPF));
+                            update->attrs[LIB_ATTR_LS_SR_CAPABILITIES_TLV].value.push_back(val_ss.str());
+                        }
                         break;
                     }
-                }
-
-                if ((protocol == NLRI_PROTO_ISIS_L1) or (protocol == NLRI_PROTO_ISIS_L2)) {
-                    val_ss << this->parse_flags_to_string(*data, LS_FLAGS_SR_CAP_ISIS, sizeof(LS_FLAGS_SR_CAP_ISIS));
-                    update->attrs[LIB_ATTR_LS_SR_CAPABILITIES_TLV].value.push_back(val_ss.str());
-                } else if ((protocol == NLRI_PROTO_OSPFV2) or (protocol == NLRI_PROTO_OSPFV3)) {
-                    val_ss << int(*data);   //this->parse_flags_to_string(*data, LS_FLAGS_SR_CAP_OSPF, sizeof(LS_FLAGS_SR_CAP_OSPF));
-                    update->attrs[LIB_ATTR_LS_SR_CAPABILITIES_TLV].value.push_back(val_ss.str());
                 }
 
                 // 1 byte reserved (skipping) + 1 byte flags (already parsed)
@@ -619,21 +616,20 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_ADJACENCY_SID].official_type = ATTR_LINK_ADJACENCY_SID;
                 update->attrs[LIB_ATTR_LS_ADJACENCY_SID].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_ADJACENCY_SID];
 
+                // https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.1.1
                 for (std::list<parseBgpLib::parse_bgp_lib_nlri>::iterator it = update->nlri_list.begin();
                      it != update->nlri_list.end();
                      it++) {
                     if (it->afi == BGP_AFI_BGPLS) {
-                        protocol = it->nlri[LIB_NLRI_LS_PROTOCOL].official_type;
+                        if (strcmp(it->nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str(), "IS-IS") >= 0) {
+                            update->attrs[LIB_ATTR_LS_ADJACENCY_SID].value.push_back(this->parse_flags_to_string(*data,
+                                                                                                                 LS_FLAGS_PEER_ADJ_SID_ISIS, sizeof(LS_FLAGS_PEER_ADJ_SID_ISIS)));
+                        } else if (strcmp(it->nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str(), "OSPF") >= 0) {
+                            update->attrs[LIB_ATTR_LS_ADJACENCY_SID].value.push_back(this->parse_flags_to_string(*data,
+                                                                                                                 LS_FLAGS_PEER_ADJ_SID_OSPF, sizeof(LS_FLAGS_PEER_ADJ_SID_OSPF)));
+                        }
                         break;
                     }
-                }
-
-                if ((protocol == NLRI_PROTO_ISIS_L1) or (protocol == NLRI_PROTO_ISIS_L2)) {
-                    update->attrs[LIB_ATTR_LS_ADJACENCY_SID].value.push_back(this->parse_flags_to_string(*data,
-                                                                                                         LS_FLAGS_PEER_ADJ_SID_ISIS, sizeof(LS_FLAGS_PEER_ADJ_SID_ISIS)));
-                } else if ((protocol == NLRI_PROTO_OSPFV2) or (protocol == NLRI_PROTO_OSPFV3)) {
-                    update->attrs[LIB_ATTR_LS_ADJACENCY_SID].value.push_back(this->parse_flags_to_string(*data,
-                                                                                                         LS_FLAGS_PEER_ADJ_SID_OSPF, sizeof(LS_FLAGS_PEER_ADJ_SID_OSPF)));
                 }
 
                 data += 1;
@@ -650,7 +646,7 @@ namespace parse_bgp_lib {
                 // Parse the sid/value
                 val_ss << " " << parse_sid_value(data, len - 4);
                 update->attrs[LIB_ATTR_LS_ADJACENCY_SID].value.push_back(val_ss.str());
-                
+
                 SELF_DEBUG("bgp-ls: parsed sr link adjacency segment identifier %s", val_ss.str().c_str());
                 break;
             }
@@ -817,25 +813,21 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_PREFIX_SID].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_PREFIX_SID];
 
                 val_ss.str(std::string());
-
-                // Package structure:
-                // https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.3.1
-
+                // https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.1.1
                 for (std::list<parseBgpLib::parse_bgp_lib_nlri>::iterator it = update->nlri_list.begin();
                      it != update->nlri_list.end();
                      it++) {
                     if (it->afi == BGP_AFI_BGPLS) {
-                        protocol = it->nlri[LIB_NLRI_LS_PROTOCOL].official_type;
+                        if (strcmp(it->nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str(), "IS-IS") >= 0) {
+                            update->attrs[LIB_ATTR_LS_PREFIX_SID].value.push_back(parse_flags_to_string(*data,
+                                                                                                        LS_FLAGS_PREFIX_SID_ISIS, sizeof(LS_FLAGS_PREFIX_SID_ISIS)));
+                        } else if (strcmp(it->nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str(), "OSPF") >= 0) {
+                            update->attrs[LIB_ATTR_LS_PREFIX_SID].value.push_back(parse_flags_to_string(*data,
+                                                                                                        LS_FLAGS_PREFIX_SID_OSPF, sizeof(LS_FLAGS_PREFIX_SID_OSPF)));
+                        }
                         break;
                     }
                 }
-
-                if ((protocol == NLRI_PROTO_ISIS_L1) or (protocol == NLRI_PROTO_ISIS_L2)) {
-                    update->attrs[LIB_ATTR_LS_PREFIX_SID].value.push_back(parse_flags_to_string(*data,
-                                                                                                   LS_FLAGS_PREFIX_SID_ISIS, sizeof(LS_FLAGS_PREFIX_SID_ISIS)));
-                } else if ((protocol == NLRI_PROTO_OSPFV2) or (protocol == NLRI_PROTO_OSPFV3)) {
-                    update->attrs[LIB_ATTR_LS_PREFIX_SID].value.push_back(parse_flags_to_string(*data,
-                                                                                                   LS_FLAGS_PREFIX_SID_OSPF, sizeof(LS_FLAGS_PREFIX_SID_OSPF)));   }
 
                 uint8_t alg;
                 alg = *data;

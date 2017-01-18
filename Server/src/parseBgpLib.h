@@ -235,10 +235,29 @@ namespace parse_bgp_lib {
 
         LIB_NLRI_LS_PROTOCOL,
         LIB_NLRI_LS_ROUTING_ID, //Identified in Linkstate NLRI header
-        LIB_NLRI_LS_ASN,
-        LIB_NLRI_LS_IGP_LS_ID,
-        LIB_NLRI_LS_OSPF_AREA_ID,
-        LIB_NLRI_LS_IGP_ROUTER_ID,
+        LIB_NLRI_LS_ASN_LOCAL,
+        LIB_NLRI_LS_BGP_LS_ID_LOCAL,
+        LIB_NLRI_LS_OSPF_AREA_ID_LOCAL,
+        LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL,
+        LIB_NLRI_LS_BGP_ROUTER_ID_LOCAL,
+        LIB_NLRI_LS_ASN_REMOTE,
+        LIB_NLRI_LS_BGP_LS_ID_REMOTE,
+        LIB_NLRI_LS_OSPF_AREA_ID_REMOTE,
+        LIB_NLRI_LS_IGP_ROUTER_ID_REMOTE,
+        LIB_NLRI_LS_BGP_ROUTER_ID_REMOTE,
+
+        LIB_NLRI_LS_LINK_ID,
+        LIB_NLRI_LS_IPV4_INTF_ADDR,
+        LIB_NLRI_LS_IPV6_INTF_ADDR,
+        LIB_NLRI_LS_IPV4_NEIGHBOR_ADDR,
+        LIB_NLRI_LS_IPV6_NEIGHBOR_ADDR,
+        LIB_NLRI_LS_MT_ID,
+
+        LIB_NLRI_LS_OSPF_ROUTE_TYPE,
+        LIB_NLRI_LS_IP_REACH_PREFIX,
+        LIB_NLRI_LS_IP_REACH_PREFIX_LENGTH,
+        LIB_NLRI_LS_IP_REACH_PREFIX_BCAST,
+
         LIB_NLRI_MAX
     };
 
@@ -251,10 +270,29 @@ namespace parse_bgp_lib {
 
             "linkstateProtocol",
             "linkstateRoutingId",
-            "linkstateAsn",
-            "linkstateLsId",
-            "linkstateOspfAreaId",
-            "linkstateIgpRouterId",
+            "linkstateAsnLocal",
+            "linkstateBgpLsIdLocal",
+            "linkstateOspfAreaIdLocal",
+            "linkstateIgpRouterIdLocal",
+            "linkstateBgpRouterIdLocal",
+            "linkstateAsnRemote",
+            "linkstateBgpLsIdRemote",
+            "linkstateOspfAreaIdRemote",
+            "linkstateIgpRouterIdRemote",
+            "linkstateBgpRouterIdRemote",
+
+            "linkstateLinkId",
+            "linkstateIpv4InterfaceAddr",
+            "linkstateIpv6InterfaceAddr",
+            "linkstateIpv4NeighborAddr",
+            "linkstateIpv6NeighborAddr",
+            "linkstateMtId"
+
+            "linkstateOspfRouteType",
+            "linkstateIpReachPrefix",
+            "linkstateIpReachPrefixLength",
+            "linkstateIpReachPrefixBcast",
+
     };
 
     /**
@@ -262,9 +300,9 @@ namespace parse_bgp_lib {
      */
     enum BGP_LIB_NLRI_TYPES {
         LIB_NLRI_TYPE_NONE,
-        LIB_NLRI_LS_NODE,
-        LIB_NLRI_LS_LINK,
-        LIB_NLRI_LS_PREFIX,
+        LIB_NLRI_TYPE_LS_NODE,
+        LIB_NLRI_TYPE_LS_LINK,
+        LIB_NLRI_TYPE_LS_PREFIX,
     };
 
     /*********************************************************************//**

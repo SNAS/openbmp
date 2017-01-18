@@ -101,8 +101,8 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, parse_bgp_lib::parseBgpLib::
 
         case parse_bgp_lib::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
         {
-//            MPLinkState ls(logger, &update, debug);
-//            ls.parseUnReachLinkState(nlri);
+            MPLinkState ls(logger, &update, debug);
+            ls.parseUnReachLinkState(nlri);
             break;
         }
 

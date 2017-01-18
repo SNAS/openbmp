@@ -101,8 +101,8 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, parse_bgp_lib::parseBgpLib::pars
 
         case parse_bgp_lib::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
         {
-//                MPLinkState ls(logger, &update, debug);
-//                ls.parseReachLinkState(nlri);
+                MPLinkState ls(logger, &update, debug);
+                ls.parseReachLinkState(nlri);
 
             break;
         }

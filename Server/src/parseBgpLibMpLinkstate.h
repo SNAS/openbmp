@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <cinttypes>
 #include <sys/types.h>
+#include <string.h>
 
 #include "parseBgpLibMpReach.h"
 #include "parseBgpLibMpUnReach.h"
@@ -35,7 +36,6 @@ namespace parse_bgp_lib {
         NLRI_PROTO_EPE=7                           ///< EPE per draft-ietf-idr-bgpls-segment-routing-epe
     };
 
-
     class MPLinkState {
 
 public:
@@ -52,7 +52,6 @@ public:
 
     /**
      * Node (local and remote) common fields
-     */
     struct node_descriptor {
         uint32_t    asn;                           ///< BGP ASN
         uint32_t    bgp_ls_id;                     ///< BGP-LS Identifier
@@ -61,6 +60,7 @@ public:
         uint32_t    bgp_router_id;                 ///< BGP router ID (draft-ietf-idr-bgpls-segment-routing-epe)
         uint8_t     hash_bin[16];                  ///< binary hash for node descriptor
     };
+     */
 
     /**
      * Node descriptor Sub-TLV's
@@ -80,7 +80,6 @@ public:
 
     /**
      * Node (local and remote) common fields
-     */
     struct link_descriptor {
         uint32_t    local_id;                           ///< Link Local ID
         uint32_t    remote_id;                          ///< Link Remote ID
@@ -89,8 +88,10 @@ public:
         uint32_t    mt_id;                              ///< Multi-Topology ID
         bool        isIPv4;                             ///< True if IPv4, false if IPv6
     };
+          */
 
-    /**
+
+        /**
      * Link Descriptor Sub-TLV's
      */
     enum LINK_DESCR_SUB_TYPES {
@@ -105,7 +106,6 @@ public:
 
     /**
      * Node (local and remote) common fields
-     */
     struct prefix_descriptor {
         char        ospf_route_type[32];                ///< OSPF Route type in string form for DB enum
         uint32_t    mt_id;                              ///< Multi-Topology ID
@@ -113,6 +113,7 @@ public:
         uint8_t     prefix_bcast[16];                   ///< Prefix broadcast/ending binary address
         uint8_t     prefix_len;                         ///< Length of prefix in bits
     };
+     */
 
     /**
      * Prefix Descriptor Sub-TLV's
@@ -205,7 +206,7 @@ private:
      * \param [in]   id             NLRI/type identifier
      * \param [in]   proto_id       NLRI protocol type id
      */
-//    void parseNlriLink(u_char *data, int data_len, uint64_t id, uint8_t proto_id);
+    void parseNlriLink(u_char *data, int data_len, uint64_t id, uint8_t proto_id);
 
     /**********************************************************************************//*
      * Parse PREFIX NLRI
@@ -218,7 +219,7 @@ private:
      * \param [in]   proto_id       NLRI protocol type id
      * \param [in]   isIPv4         Bool value to indicate IPv4(true) or IPv6(false)
      */
-//    void parseNlriPrefix(u_char *data, int data_len, uint64_t id, uint8_t proto_id, bool isIPv4);
+    void parseNlriPrefix(u_char *data, int data_len, uint64_t id, uint8_t proto_id, bool isIPv4);
 
     /**********************************************************************************//*
      * Parse Node Descriptor
@@ -227,11 +228,11 @@ private:
      *
      * \param [in]   data           Pointer to the start of the node NLRI data
      * \param [in]   data_len       Length of the data
-     * \param [out]  info           Node descriptor information returned/updated
+     * \param [out]  parsed_nlri    Parsed NLRI filled with node descriptor fields
      *
      * \returns number of bytes read
      */
-//    int parseDescrLocalRemoteNode(u_char *data, int data_len, node_descriptor &info);
+    int parseDescrLocalRemoteNode(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool local);
 
     /**********************************************************************************//*
      * Parse Link Descriptor sub-tlvs
@@ -244,7 +245,7 @@ private:
      *
      * \returns number of bytes read
      */
-//    int parseDescrLink(u_char *data, int data_len, link_descriptor &info);
+    int parseDescrLink(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri);
 
     /**********************************************************************************//*
      * Parse Prefix Descriptor sub-tlvs
@@ -258,7 +259,7 @@ private:
      *
      * \returns number of bytes read
      */
-//    int parseDescrPrefix(u_char *data, int data_len, prefix_descriptor &info, bool isIPv4);
+    int parseDescrPrefix(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool isIPv4);
 
     /**********************************************************************************//*
      * Decode Protocol ID
@@ -272,6 +273,18 @@ private:
      */
     std::string decodeNlriProtocolId(uint8_t proto_id);
 
+
+    /**
+    * \brief Method to resolve the IP address to a hostname
+    *
+    *  \param [in]   name      String name (ip address)
+    *  \param [out]  hostname  String reference for hostname
+    *
+    *  \returns true if error, false if no error
+    */
+    bool resolveIp(std::string name, std::string &hostname);
+
+
     /**********************************************************************************//*
      * Hash node descriptor info
      *
@@ -280,7 +293,7 @@ private:
      * \param [in/out]  info           Node descriptor information returned/updated
      * \param [out]  hash_bin       Node descriptor information returned/updated
      */
-    void genNodeHashId(node_descriptor &info);
+//    void genNodeHashId(node_descriptor &info);
 
 };
 
