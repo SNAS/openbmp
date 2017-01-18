@@ -228,10 +228,42 @@ public:
         char        labels[255];            ///< Labels delimited by comma
     };
 
+    /// Rib extended with Route Distinguisher
+    struct obj_route_distinguisher {
+        std::string     rd_administrator_subfield;
+        std::string     rd_assigned_number;
+        uint8_t         rd_type;
+    };
+    
+    /// Rib extended with vpn specific fields
+    struct obj_vpn: obj_rib, obj_route_distinguisher {
+        uint32_t        vpn_label; 
+    };
+
+    /// Rib extended with evpn specific fields
+    struct obj_evpn: obj_rib, obj_route_distinguisher {
+        uint8_t     originating_router_ip_len;
+        char        originating_router_ip[46];
+        char        ethernet_segment_identifier[255];
+        char        ethernet_tag_id_hex[16];
+        uint8_t     mac_len;
+        char        mac[255];
+        uint8_t     ip_len;
+        char        ip[46];
+        int         mpls_label_1;
+        int         mpls_label_2;
+    };
+
     /// Unicast prefix action codes
     enum unicast_prefix_action_code {
         UNICAST_PREFIX_ACTION_ADD=0,
         UNICAST_PREFIX_ACTION_DEL,
+    };
+
+    /// Vpn action codes
+    enum vpn_action_code {
+        VPN_ACTION_ADD=0,
+        VPN_ACTION_DEL,
     };
 
     /**
@@ -436,7 +468,7 @@ public:
      * \param[in]       peer    Peer object
      * \param[in,out]   rib     List of one or more RIB entries
      * \param[in]       attr    Path attribute object (can be null if n/a)
-     * \param[in]       code    unicast prefix action code
+     * \param[in]       code    Unicast prefix action code
      *
      * \returns     The rib.hash_id will be updated based on the
      *              supplied data for each object.
@@ -446,6 +478,44 @@ public:
      *****************************************************************/
     virtual void update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib, obj_path_attr *attr,
                                       unicast_prefix_action_code code) = 0;
+
+     /*****************************************************************//**
+     * \brief       Add/Update vpn objects
+     *
+     * \details     Will generate a message to add new vpn objects
+     *
+     * \param[in]       peer    Peer object
+     * \param[in,out]   rib     List of one or more RIB entries
+     * \param[in]       attr    Path attribute object (can be null if n/a)
+     * \param[in]       code    Vpn action code
+     *
+     * \returns     The vpn.hash_id will be updated based on the
+     *              supplied data for each object.
+     * 
+     * \note        Caller must free any allocated memory, which is
+     *              safe to do so when this method returns.
+     *****************************************************************/
+    virtual void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr,
+                            vpn_action_code code) = 0;
+
+    /*****************************************************************//**
+     * \brief       Add/Update evpn objects
+     *
+     * \details     Will generate a message to add new evpn objects
+     *
+     * \param[in]       peer    Peer object
+     * \param[in,out]   rib     List of one or more RIB entries
+     * \param[in]       attr    Path attribute object (can be null if n/a)
+     * \param[in]       code    Vpn action code
+     *
+     * \returns     The vpn.hash_id will be updated based on the
+     *              supplied data for each object.
+     *
+     * \note        Caller must free any allocated memory, which is
+     *              safe to do so when this method returns.
+     *****************************************************************/
+    virtual void update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn, obj_path_attr *attr,
+                            vpn_action_code code) = 0;
 
     /*****************************************************************//**
      * \brief       Add a stats report object

@@ -118,10 +118,11 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
      * Check if End-Of-RIB
      */
     if (not uHdr.withdrawn_len and (size - read_size) <= 0 and not uHdr.attr_len) {
-        LOG_INFO("%s: rtr=%s: End-Of-RIB marker", peer_addr.c_str(), router_addr.c_str());
-    }
 
-    else {
+        LOG_INFO("%s: rtr=%s: End-Of-RIB marker", peer_addr.c_str(), router_addr.c_str());
+
+    } else {
+
         /* ---------------------------------------------------------
          * Parse the withdrawn prefixes
          */
@@ -134,8 +135,9 @@ size_t UpdateMsg::parseUpdateMsg(u_char *data, size_t size, parsed_update_data &
          * Parse the attributes
          *      Handles MP_REACH/MP_UNREACH parsing as well
          */
-        if (uHdr.attr_len > 0)
+        if (uHdr.attr_len > 0) {
             parseAttributes(uHdr.attrPtr, uHdr.attr_len, parsed_data);
+        }
 
         /* ---------------------------------------------------------
          * Parse the NLRI data
@@ -167,7 +169,6 @@ void UpdateMsg::parseNlriData_v4(u_char *data, uint16_t len, std::list<bgp::pref
     u_char       addr_bytes;
 
     bgp::prefix_tuple tuple;
-
 
     if (len <= 0 or data == NULL)
         return;
@@ -415,9 +416,9 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
         }
         case ATTR_TYPE_EXT_COMMUNITY : // extended community list (RFC 4360)
         {
-           ExtCommunity ec(logger, peer_addr, debug);
-           ec.parseExtCommunities(attr_len, data, parsed_data);
-           break;
+            ExtCommunity ec(logger, peer_addr, debug);
+            ec.parseExtCommunities(attr_len, data, parsed_data);
+            break;
         }
 
         case ATTR_TYPE_IPV6_EXT_COMMUNITY : // IPv6 specific extended community list (RFC 5701)

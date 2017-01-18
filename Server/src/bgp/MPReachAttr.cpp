@@ -10,7 +10,9 @@
 #include "MPReachAttr.h"
 #include "MPLinkState.h"
 #include "BMPReader.h"
+#include "EVPN.h"
 
+#include <math.h>
 #include <arpa/inet.h>
 
 namespace bgp_msg {
@@ -26,7 +28,7 @@ namespace bgp_msg {
  * \param [in]     enable_debug             Debug true to enable, false to disable
  */
 MPReachAttr::MPReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug)
-    : logger{logPtr}, peer_info{peer_info}, debug{enable_debug}{
+    : logger{logPtr}, peer_info{peer_info}, debug{enable_debug} {
         this->peer_addr = peerAddr;
 }
 
@@ -80,7 +82,6 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, UpdateMsg::pars
     parseAfi(nlri, parsed_data);
 }
 
-
 /**
  * MP Reach NLRI parse based on AFI
  *
@@ -109,6 +110,14 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
             break;
         }
 
+        case bgp::BGP_AFI_L2VPN : // EVPN (rfc7432)
+        {
+            EVPN evpn(logger, peer_addr, &parsed_data, debug);
+            evpn.parse(nlri);
+
+            break;
+        }
+
         default : // Unknown
             LOG_INFO("%s: MP_REACH AFI=%d is not implemented yet, skipping", peer_addr.c_str(), nlri.afi);
             return;
@@ -129,7 +138,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
     char        ip_char[40];
 
     bzero(ip_raw, sizeof(ip_raw));
-
+    
     /*
      * Decode based on SAFI
      */
@@ -170,11 +179,89 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             // Data is an Label, IP address tuple parse and save it
             parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info, parsed_data.advertised);
             break;
-            
+
+        case bgp::BGP_SAFI_MPLS: {
+            if (isIPv4) {
+                //Next hop encoded in 12 bytes, last 4 bytes = IPv4
+                nlri.next_hop += 8;
+                nlri.nh_len -= 8;
+            }
+
+            // Next-hop is an IP address - Change/set the next-hop attribute in parsed data to use this next-hop
+            if (nlri.nh_len > 16)
+                memcpy(ip_raw, nlri.next_hop, 16);
+            else
+                memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
+
+            if (not isIPv4)
+                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+            else
+                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+
+            parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
+
+            parseNLRIData_VPN(isIPv4, &nlri, parsed_data.vpn);
+
+            break;
+        }
+
         default :
             LOG_INFO("%s: MP_REACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now",
                      peer_addr.c_str(), isIPv4, nlri.safi);
             return;
+    }
+}
+
+/**
+ * Parses VPN data in nlri (IPv4)
+ *
+ * \details
+ *      Will parse the VPN as defined in https://tools.ietf.org/html/rfc4364
+ *
+ * \param [in]   isIPv4                     True false to indicate if IPv4 or IPv6
+ * \param [in]   nlri                   Reference to MP Reach Nlri object
+ * \param [out]  vpn_list               Reference to a list<vpn_tuple> to be updated with entries
+ */
+void MPReachAttr::parseNLRIData_VPN(bool isIPv4, mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpn_list) {
+
+    u_char *pointer = nlri->nlri_data;
+        
+    while(pointer < nlri->nlri_data + nlri->nlri_len) {
+        bgp::vpn_tuple tuple;
+              
+        uint8_t len = 0;
+        len = *pointer;
+        pointer += 1;
+        
+        uint32_t label = 0;
+        memcpy(&label, pointer, 3);
+        pointer += 3;
+        label = label >> 4;
+
+        tuple.vpn_label = label;
+
+        EVPN::parseRouteDistinguisher(pointer, &tuple.rd_type, &tuple.rd_assigned_number, &tuple.rd_administrator_subfield);
+        pointer += 8;
+
+        tuple.type = bgp::PREFIX_UNICAST_V4; 
+        tuple.isIPv4 = true;
+
+
+        uint8_t prefix_bit_len = len - 24 - 64;
+
+        uint8_t prefix_len = ceil((float)prefix_bit_len / 8);
+
+        u_char prefix[16];
+        bzero(prefix, 16);
+        char ip_char[40];
+        memcpy(&prefix, pointer, prefix_len);
+        inet_ntop(AF_INET, prefix, ip_char, sizeof(ip_char));
+
+        tuple.prefix = std::string(ip_char);
+        tuple.len = prefix_bit_len;
+        pointer += prefix_len;
+        
+        vpn_list.push_back(tuple);
     }
 }
 
