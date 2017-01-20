@@ -211,6 +211,18 @@ private:
     std::string decodeType_common(const extcomm_hdr &ec_hdr, bool isGlobal4Bytes = false, bool isGlobalIPv4 = false);
 
     /**
+     * Decode EVPN subtypes
+     *
+     * \details
+     *      Converts to human readable form.
+     *
+     * \param [in]   ec_hdr          Reference to the extended community header
+     *
+     * \return  Decoded string value
+     */
+    std::string decodeType_EVPN(const extcomm_hdr &ec_hdr);
+
+    /**
      * Decode Opaque subtypes
      *
      * \details

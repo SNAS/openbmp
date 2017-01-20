@@ -139,6 +139,10 @@ public:
         parsed_ls_attrs_map           ls_attrs;           ///< BGP-LS specific attributes
         parsed_data_ls                ls;                 ///< REACH: Link state parsed data
         parsed_data_ls                ls_withdrawn;       ///< UNREACH: Parsed Withdrawn data
+        std::list<bgp::vpn_tuple>     vpn;                ///< List of vpn prefixes advertised
+        std::list<bgp::vpn_tuple>     vpn_withdrawn;      ///< List of vpn prefixes withdrawn
+        std::list<bgp::evpn_tuple>    evpn;               ///< List of evpn nlris advertised
+        std::list<bgp::evpn_tuple>    evpn_withdrawn;     ///< List of evpn nlris withdrawn
     };
 
 

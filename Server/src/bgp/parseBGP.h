@@ -213,6 +213,26 @@ private:
     void UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefixes);
 
     /**
+     * Update the Database advertised l3vpn 
+     *
+     * \details This method will update the database for the supplied advertised prefixes
+     *
+     * \param [in] remove       True if the records should be deleted, false if they are to be added/updated
+     * \param [in] adv_vpn      Reference to the list<vpn_tuple> of advertised vpns
+     * \param [in] attrs        Reference to the parsed attributes map
+     */ 
+    void UpdateDBL3Vpn(bool remove, std::list<bgp::vpn_tuple> &adv_vpn, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
+
+    /**
+     * Updates for either advertised or withdrawn Evpn NLRI's
+     *
+     * \param [in] remove          True if the records should be deleted, false if they are to be added/updated
+     * \param [in] nlris           Reference to the list<evpn_tuple>
+     * \param [in] attrs           Reference to the parsed attributes map
+     */
+    void UpdateDBeVPN(bool remove, std::list<bgp::evpn_tuple> &nlris, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
+
+    /**
      * Update the Database for bgp-ls
      *
      * \details This method will update the database for the BGP-LS information

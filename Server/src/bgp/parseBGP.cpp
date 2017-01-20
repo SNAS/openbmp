@@ -366,6 +366,12 @@ void parseBGP::UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
      */
     UpdateDBAdvPrefixes(parsed_data.advertised, parsed_data.attrs);
 
+    UpdateDBL3Vpn(false,parsed_data.vpn, parsed_data.attrs);
+    UpdateDBL3Vpn(true,parsed_data.vpn_withdrawn, parsed_data.attrs);
+
+    UpdateDBeVPN(false, parsed_data.evpn, parsed_data.attrs);
+    UpdateDBeVPN(true, parsed_data.evpn_withdrawn, parsed_data.attrs);
+
     /*
      * Update withdraws (both ipv4 and ipv6)
      */
@@ -439,6 +445,7 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
         // Skip adding path attributes if next hop is missing
         SELF_DEBUG("%s: no next-hop, must be unreach; not sending attributes to message bus", p_entry->peer_addr);
         bzero(base_attr.next_hop, sizeof(base_attr.next_hop));
+        bzero(path_hash_id, sizeof(path_hash_id));
         return;
     }
 
@@ -450,6 +457,169 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     // Update the class instance variable path_hash_id
     memcpy(path_hash_id, base_attr.hash_id, sizeof(path_hash_id));
 }
+
+/**
+ * Update the Database advertised l3vpn 
+ *
+ * \details This method will update the database for the supplied advertised prefixes
+ *
+ * \param [in] remove          True if the records should be deleted, false if they are to be added/updated
+ * \param [in] prefixes        Reference to the list<vpn_tuple> of advertised vpns
+ * \param [in] attrs           Reference to the parsed attributes map
+ */
+void parseBGP::UpdateDBL3Vpn(bool remove, std::list<bgp::vpn_tuple> &prefixes,
+                             bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
+    vector<MsgBusInterface::obj_vpn> rib_list;
+    MsgBusInterface::obj_vpn         rib_entry;
+    uint32_t                         value_32bit;
+    uint64_t                         value_64bit;
+
+    /*
+     * Loop through all vpn and add/update them in the DB
+     */
+    for (std::list<bgp::vpn_tuple>::iterator it = prefixes.begin();
+                                                it != prefixes.end();
+                                                it++) {
+        bgp::vpn_tuple &tuple = (*it);
+
+        memcpy(rib_entry.path_attr_hash_id, path_hash_id, sizeof(rib_entry.path_attr_hash_id));
+        memcpy(rib_entry.peer_hash_id, p_entry->hash_id, sizeof(rib_entry.peer_hash_id));
+
+        rib_entry.rd_type = tuple.rd_type;
+        rib_entry.rd_assigned_number = tuple.rd_assigned_number;
+        rib_entry.rd_administrator_subfield = tuple.rd_administrator_subfield;
+
+        strncpy(rib_entry.prefix, tuple.prefix.c_str(), sizeof(rib_entry.prefix));
+        
+        rib_entry.prefix_len = tuple.len;
+
+        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
+        
+        rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
+
+        memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
+
+        // Add the ending IP for the prefix based on bits
+        if (rib_entry.isIPv4) {
+            if (tuple.len < 32) {
+                memcpy(&value_32bit, tuple.prefix_bin, 4);
+                bgp::SWAP_BYTES(&value_32bit);
+
+                value_32bit |= 0xFFFFFFFF >> tuple.len;
+                bgp::SWAP_BYTES(&value_32bit);
+                memcpy(rib_entry.prefix_bcast_bin, &value_32bit, 4);
+
+            } else
+                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
+
+        } else {
+            if (tuple.len < 128) {
+                if (tuple.len >= 64) {
+                    // High order bytes are left alone
+                    memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, 8);
+
+                    // Low order bytes are updated
+                    memcpy(&value_64bit, &tuple.prefix_bin[8], 8);
+                    bgp::SWAP_BYTES(&value_64bit);
+
+                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> (tuple.len - 64);
+                    bgp::SWAP_BYTES(&value_64bit);
+                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
+
+                } else {
+                    // Low order types are all ones
+                    value_64bit = 0xFFFFFFFFFFFFFFFF;
+                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
+
+                    // High order bypes are updated
+                    memcpy(&value_64bit, tuple.prefix_bin, 8);
+                    bgp::SWAP_BYTES(&value_64bit);
+
+                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> tuple.len;
+                    bgp::SWAP_BYTES(&value_64bit);
+                    memcpy(rib_entry.prefix_bcast_bin, &value_64bit, 8);
+                }
+            } else
+                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
+        }
+
+        rib_entry.path_id = tuple.path_id;
+        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
+
+        SELF_DEBUG("%s: %s vpn=%s len=%d", p_entry->peer_addr, remove ? "removing" : "adding",
+                   rib_entry.prefix, rib_entry.prefix_len);
+
+        // Add entry to the list
+        rib_list.insert(rib_list.end(), rib_entry);
+    }
+
+    if (rib_list.size() > 0) {
+        mbus_ptr->update_L3Vpn(*p_entry, rib_list, &base_attr,
+                             remove ? mbus_ptr->VPN_ACTION_DEL : mbus_ptr->VPN_ACTION_ADD);
+    }
+
+    rib_list.clear();
+    prefixes.clear();
+}
+
+/**
+ * Updates for either advertised or withdrawn Evpn NLRI's
+ *
+ * \param [in] remove          True if the records should be deleted, false if they are to be added/updated
+ * \param [in] nlris           Reference to the list<evpn_tuple>
+ * \param [in] attrs           Reference to the parsed attributes map
+ */
+void parseBGP::UpdateDBeVPN(bool remove, std::list<bgp::evpn_tuple> &nlris,
+                           bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
+
+    vector<MsgBusInterface::obj_evpn> rib_list;
+    MsgBusInterface::obj_evpn         rib_entry;
+
+    /*
+     * Loop through all vpn and add/update them in the DB
+     */
+    for (std::list<bgp::evpn_tuple>::iterator it = nlris.begin();
+         it != nlris.end();
+         it++) {
+        bgp::evpn_tuple &tuple = (*it);
+
+        memcpy(rib_entry.path_attr_hash_id, path_hash_id, sizeof(rib_entry.path_attr_hash_id));
+        memcpy(rib_entry.peer_hash_id, p_entry->hash_id, sizeof(rib_entry.peer_hash_id));
+
+        rib_entry.rd_type = tuple.rd_type;
+        rib_entry.rd_assigned_number = tuple.rd_assigned_number;
+        rib_entry.rd_administrator_subfield = tuple.rd_administrator_subfield;
+
+        strcpy(rib_entry.ethernet_tag_id_hex, tuple.ethernet_tag_id_hex.c_str());
+        rib_entry.mpls_label_1 = tuple.mpls_label_1;
+        rib_entry.mac_len = tuple.mac_len;
+        strcpy(rib_entry.mac, tuple.mac.c_str());
+        rib_entry.ip_len = tuple.ip_len;
+        strcpy(rib_entry.ip, tuple.ip.c_str());
+        rib_entry.mpls_label_2 = tuple.mpls_label_2;
+        rib_entry.originating_router_ip_len = tuple.originating_router_ip_len;
+        strcpy(rib_entry.originating_router_ip, tuple.originating_router_ip.c_str());
+        strcpy(rib_entry.ethernet_segment_identifier, tuple.ethernet_segment_identifier.c_str());
+
+
+        rib_entry.path_id = tuple.path_id;
+
+        SELF_DEBUG("%s: %s evpn mac=%s ip=%s", p_entry->peer_addr,
+                   remove ? "removing" : "adding", rib_entry.mac, rib_entry.ip);
+
+        // Add entry to the list
+        rib_list.insert(rib_list.end(), rib_entry);
+    }
+
+    // Update the DB
+    if (rib_list.size() > 0)
+        mbus_ptr->update_eVPN(*p_entry, rib_list, &base_attr,
+                              remove ? mbus_ptr->VPN_ACTION_DEL : mbus_ptr->VPN_ACTION_ADD);
+
+    rib_list.clear();
+    nlris.clear();
+}
+
 
 /**
  * Update the Database advertised prefixes

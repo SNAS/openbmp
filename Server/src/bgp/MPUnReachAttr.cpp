@@ -9,6 +9,8 @@
 
 #include "MPUnReachAttr.h"
 #include "MPLinkState.h"
+#include "EVPN.h"
+
 
 #include <arpa/inet.h>
 
@@ -55,7 +57,7 @@ void MPUnReachAttr::parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::Up
     memcpy(&nlri.afi, data, 2); data += 2; attr_len -= 2;
     bgp::SWAP_BYTES(&nlri.afi);                     // change to host order
 
-    nlri.safi = *data++; attr_len--;                // Set the SAFI - 1 octe
+    nlri.safi = *data++; attr_len--;                // Set the SAFI - 1 octet
     nlri.nlri_data = data;                          // Set pointer position for nlri data
     nlri.nlri_len = attr_len;                       // Remaining attribute length is for NLRI data
 
@@ -109,6 +111,24 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_dat
             break;
         }
 
+        case bgp::BGP_AFI_L2VPN :
+        {
+            // parse by safi
+            switch (nlri.safi) {
+                case bgp::BGP_SAFI_EVPN : // https://tools.ietf.org/html/rfc7432
+                {
+                    EVPN evpn(logger, peer_addr, true, &parsed_data, debug);
+                    evpn.parseNlriData(nlri.nlri_data, nlri.nlri_len);
+                    break;
+                }
+
+                default :
+                    LOG_INFO("%s: EVPN::parse SAFI=%d is not implemented yet, skipping",
+                             peer_addr.c_str(), nlri.safi);
+            }
+
+            break;
+        }
 
         default : // Unknown
             LOG_INFO("%s: MP_UNREACH AFI=%d is not implemented yet, skipping", peer_addr.c_str(), nlri.afi);
@@ -141,6 +161,12 @@ void MPUnReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_unreach_nlri &nlri, Update
         case bgp::BGP_SAFI_NLRI_LABEL: // Labeled unicast
             MPReachAttr::parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info,
                                                      parsed_data.withdrawn);
+            break;
+
+        case bgp::BGP_SAFI_MPLS: // MPLS (vpnv4/vpnv6)
+            MPReachAttr::parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info,
+                                                     parsed_data.vpn_withdrawn);
+
             break;
 
         default :

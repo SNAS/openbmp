@@ -99,16 +99,24 @@ size_t OpenMsg::parseOpenMsg(u_char *data, size_t size, bool openMessageIsSent, 
     }
 
     else if (open_hdr.param_len > (size - read_size)) {
-        LOG_WARN("%s: Could not read capabilities in open message due to buffer not containing the full param length", peer_addr.c_str());
-        return 0;
+        LOG_WARN("%s: Capabilities in open message are truncated, attempting parse what's there; param_len %d > bgp msg bytes remaining of %d",
+                 peer_addr.c_str(), open_hdr.param_len, (size - read_size));
+
+        // Parse as many capabilities as possible
+        parseCapabilities(bufPtr, (size - read_size), openMessageIsSent, asn, capabilities);
+
+        read_size += (size - read_size);
+
+    } else {
+
+        if (!parseCapabilities(bufPtr, open_hdr.param_len, openMessageIsSent, asn, capabilities)) {
+            LOG_WARN("%s: Could not read capabilities correctly in buffer, message is invalid.", peer_addr.c_str());
+            return 0;
+        }
+
+        read_size += open_hdr.param_len;
     }
 
-    if (!parseCapabilities(bufPtr, open_hdr.param_len, openMessageIsSent, asn, capabilities)) {
-        LOG_WARN("%s: Could not read capabilities correctly in buffer, message is invalid.", peer_addr.c_str());
-        return 0;
-    }
-
-    read_size += open_hdr.param_len;
 
     return read_size;
 }
@@ -154,7 +162,7 @@ size_t OpenMsg::parseCapabilities(u_char *data, size_t size, bool openMessageIsS
         /*
          * Process the capabilities if present
          */
-        else if (param->len >= 2) {
+        else if (param->len >= 2 and (read_size + 2 + param->len) <= size) {
             u_char *cap_ptr = bufPtr + 2;
 
             for (int c=0; c < param->len; ) {
