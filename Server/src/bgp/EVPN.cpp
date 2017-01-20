@@ -158,6 +158,7 @@ namespace bgp_msg {
      */
     void EVPN::parseRouteDistinguisher(u_char *data_pointer, uint8_t *rd_type, std::string *rd_assigned_number,
                                        std::string *rd_administrator_subfield) {
+        std::stringstream   val_ss;
 
         data_pointer++;
         *rd_type = *data_pointer;
@@ -178,8 +179,13 @@ namespace bgp_msg {
                 bgp::SWAP_BYTES(&administration_subfield);
                 bgp::SWAP_BYTES(&assigned_number_subfield);
 
-                *rd_assigned_number = std::to_string(assigned_number_subfield);
-                *rd_administrator_subfield = std::to_string(administration_subfield);
+                val_ss << assigned_number_subfield;
+
+                *rd_assigned_number = val_ss.str();
+
+                val_ss.clear();
+                val_ss << administration_subfield;
+                *rd_administrator_subfield = val_ss.str();
 
                 break;
             };
@@ -200,8 +206,10 @@ namespace bgp_msg {
                 char administration_subfield_chars[INET_ADDRSTRLEN];
                 inet_ntop(AF_INET, administration_subfield, administration_subfield_chars, INET_ADDRSTRLEN);
 
-                *rd_assigned_number = std::to_string(assigned_number_subfield);
-                *rd_administrator_subfield = std::string(administration_subfield_chars);
+                val_ss << assigned_number_subfield;
+                *rd_assigned_number = val_ss.str();
+
+                *rd_administrator_subfield = administration_subfield_chars;
 
                 break;
             };
@@ -220,8 +228,12 @@ namespace bgp_msg {
                 bgp::SWAP_BYTES(&administration_subfield);
                 bgp::SWAP_BYTES(&assigned_number_subfield);
 
-                *rd_assigned_number = std::to_string(assigned_number_subfield);
-                *rd_administrator_subfield = std::to_string(administration_subfield);
+                val_ss << assigned_number_subfield;
+                *rd_assigned_number = val_ss.str();
+
+                val_ss.clear();
+                val_ss << administration_subfield;
+                *rd_administrator_subfield = val_ss.str();
 
                 break;
             };
