@@ -237,7 +237,7 @@ public:
     
     /// Rib extended with vpn specific fields
     struct obj_vpn: obj_rib, obj_route_distinguisher {
-        uint32_t        vpn_label; 
+        // inherit
     };
 
     /// Rib extended with evpn specific fields
@@ -495,7 +495,7 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr,
+    virtual void update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr,
                             vpn_action_code code) = 0;
 
     /*****************************************************************//**

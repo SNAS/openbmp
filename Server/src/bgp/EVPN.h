@@ -30,10 +30,11 @@ namespace bgp_msg {
          *
          * \param [in]     logPtr       Pointer to existing Logger for app logging
          * \param [in]     peerAddr     Printed form of peer address used for logging
+         * \param [in]     isUnreach    True if MP UNREACH, false if MP REACH
          * \param [out]    parsed_data  Reference to parsed_update_data; will be updated with all parsed data
          * \param [in]     enable_debug Debug true to enable, false to disable
          */
-        EVPN(Logger *logPtr, std::string peerAddr,
+        EVPN(Logger *logPtr, std::string peerAddr, bool isUnreach,
                    UpdateMsg::parsed_update_data *parsed_data, bool enable_debug);
         virtual ~EVPN();
 
@@ -64,23 +65,27 @@ namespace bgp_msg {
         static void parseRouteDistinguisher(u_char *data_pointer, uint8_t *rd_type, std::string *rd_assigned_number,
                                        std::string *rd_administrator_subfield);
 
-        void parse(MPReachAttr::mp_reach_nlri &nlri);
-
         /**
-         * Parse EVPN nlri
-         * \details
-         *      Parsing based on https://tools.ietf.org/html/rfc7432
+         * Parse all EVPN nlri's
          *
-         * @param [in] nlri           Reference to parsed NLRI struct
+         * \details
+         *      Parsing based on https://tools.ietf.org/html/rfc7432.  Will process all NLRI's in data.
+         *
+         * \param [in]   data                   Pointer to the start of the prefixes to be parsed
+         * \param [in]   data_len               Length of the data in bytes to be read
+         *
          */
-        void parse_nlri(MPReachAttr::mp_reach_nlri &nlri);
+        void parseNlriData(u_char *data, uint16_t data_len);
 
 
     private:
         bool             debug;                           ///< debug flag to indicate debugging
         Logger           *logger;                         ///< Logging class pointer
         std::string      peer_addr;                       ///< Printed form of the peer address for logging
+        bool             isUnreach;                       ///< True if MP UNREACH, false if MP REACH
+
         UpdateMsg::parsed_update_data *parsed_data;       ///< Parsed data structure
+
 
     };
 

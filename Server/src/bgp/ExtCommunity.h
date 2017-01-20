@@ -38,7 +38,7 @@ public:
         // Either Transitive or non-Transitive high order byte Types
         EXT_TYPE_2OCTET_AS = 0,                      ///< Transitive Two-Octet AS-Specific (RFC7153)
         EXT_TYPE_IPV4,                               ///< Transitive IPv4-Address-Specific (RFC7153)
-        EXT_TYPE_4OCTET_AS,                          ///< Transitive Four-Octet AS-Specific (я)
+        EXT_TYPE_4OCTET_AS,                          ///< Transitive Four-Octet AS-Specific (RFC7153)
 
         EXT_TYPE_OPAQUE,                             ///< Transitive Opaque (RFC7153)
         EXT_TYPE_QOS_MARK,                           ///< QoS Marking (Thomas_Martin_Knoll)

@@ -86,20 +86,36 @@ public:
                                        std::list<bgp::prefix_tuple> &prefixes);
 
     /**
-     * Parses VPN data in nlri (IPv4)
+     * Parses mp_reach_nlri and mp_unreach_nlri (IPv4/IPv6)
      *
      * \details
-     *      Will parse the VPN as defined in https://tools.ietf.org/html/rfc4364
+     *      Will parse the NLRI encoding as defined in RFC3107 Section 3 (Carrying Label Mapping information).
      *
-     * \param [in]   isIPv4                     True false to indicate if IPv4 or IPv6
-     * \param [in]   nlri                   Reference to MP Reach Nlri object
-     * \param [out]  vpn_list               Reference to a list<vpn_tuple> to be updated with entries
+     * \param [in]   isIPv4                 True false to indicate if IPv4 or IPv6
+     * \param [in]   data                   Pointer to the start of the label + prefixes to be parsed
+     * \param [in]   len                    Length of the data in bytes to be read
+     * \param [in]   peer_info              Persistent Peer info pointer
+     * \param [out]  prefixes               Reference to a list<label, prefix_tuple> to be updated with entries
      */
-    static void parseNLRIData_VPN(bool isIPv4, mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpns);
-
+    template <typename PREFIX_TUPLE>
     static void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
                                             BMPReader::peer_info *peer_info,
-                                            std::list<bgp::prefix_tuple> &prefixes);
+                                            std::list<PREFIX_TUPLE> &prefixes);
+
+    /**
+     * Decode label from NLRI data
+     *
+     * \details
+     *      Decodes the labels from the NLRI data into labels string
+     *
+     * \param [in]   data                   Pointer to the start of the label + prefixes to be parsed
+     * \param [in]   len                    Length of the data in bytes to be read
+     * \param [out]  labels                 Reference to string that will be updated with labels delimited by comma
+     *
+     * \returns number of bytes read to decode the label(s) and updates string labels
+     *
+     */
+    static inline uint16_t decodeLabel(u_char *data, uint16_t len, std::string &labels);
 
 private:
     bool                    debug;                  ///< debug flag to indicate debugging

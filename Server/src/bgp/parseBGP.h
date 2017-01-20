@@ -217,20 +217,20 @@ private:
      *
      * \details This method will update the database for the supplied advertised prefixes
      *
-     * \param  adv_vpn         Reference to the list<vpn_tuple> of advertised vpns
-     * \param  attrs           Reference to the parsed attributes map
+     * \param [in] remove       True if the records should be deleted, false if they are to be added/updated
+     * \param [in] adv_vpn      Reference to the list<vpn_tuple> of advertised vpns
+     * \param [in] attrs        Reference to the parsed attributes map
      */ 
-    void UpdateDBVPN(std::list<bgp::vpn_tuple> &adv_vpn, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
+    void UpdateDBL3Vpn(bool remove, std::list<bgp::vpn_tuple> &adv_vpn, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
 
     /**
-     * Update the Database advertised evpn
+     * Updates for either advertised or withdrawn Evpn NLRI's
      *
-     * \details This method will update the database for the supplied advertised prefixes
-     *
-     * \param  adv_evpn        Reference to the list<evpn_tuple> of advertised evpns
-     * \param  attrs           Reference to the parsed attributes map
+     * \param [in] remove          True if the records should be deleted, false if they are to be added/updated
+     * \param [in] nlris           Reference to the list<evpn_tuple>
+     * \param [in] attrs           Reference to the parsed attributes map
      */
-    void UpdateDBeVPN(std::list<bgp::evpn_tuple> &adv_evpn, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
+    void UpdateDBeVPN(bool remove, std::list<bgp::evpn_tuple> &nlris, bgp_msg::UpdateMsg::parsed_attrs_map &attrs);
 
     /**
      * Update the Database for bgp-ls

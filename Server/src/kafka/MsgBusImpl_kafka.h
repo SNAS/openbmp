@@ -37,7 +37,7 @@
 class msgBus_kafka: public MsgBusInterface {
 public:
     #define MSGBUS_WORKING_BUF_SIZE         1800000
-    #define MSGBUS_API_VERSION              "1.4"
+    #define MSGBUS_API_VERSION              "1.5"
 
     /******************************************************************//**
      * \brief This function will initialize and connect to Kafka.
@@ -69,7 +69,7 @@ public:
     void update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
                       ls_action_code code);
     
-    void update_VPN(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr, vpn_action_code code);
+    void update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr, vpn_action_code code);
 
     void update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn, obj_path_attr *attr, vpn_action_code code);
 
@@ -96,7 +96,8 @@ private:
     uint64_t        ls_node_seq;                ///< LS node sequence
     uint64_t        ls_link_seq;                ///< LS link sequence
     uint64_t        ls_prefix_seq;              ///< LS prefix sequence
-    uint64_t        vpn_seq;                    ///< LS prefix sequence
+    uint64_t        l3vpn_seq;                  ///< l3vpn sequence
+    uint64_t        evpn_seq;                   ///< evpn sequence
 
     Config          *cfg;                       ///< Pointer to config instance
 

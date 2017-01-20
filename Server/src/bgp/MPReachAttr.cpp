@@ -11,8 +11,8 @@
 #include "MPLinkState.h"
 #include "BMPReader.h"
 #include "EVPN.h"
+#include <typeinfo>
 
-#include <math.h>
 #include <arpa/inet.h>
 
 namespace bgp_msg {
@@ -110,10 +110,36 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, UpdateMsg::parsed_update_data &p
             break;
         }
 
-        case bgp::BGP_AFI_L2VPN : // EVPN (rfc7432)
+        case bgp::BGP_AFI_L2VPN :
         {
-            EVPN evpn(logger, peer_addr, &parsed_data, debug);
-            evpn.parse(nlri);
+            u_char      ip_raw[16];
+            char        ip_char[40];
+
+            bzero(ip_raw, sizeof(ip_raw));
+
+            // Next-hop is an IP address - Change/set the next-hop attribute in parsed data to use this next-hop
+            if (nlri.nh_len > 16)
+                memcpy(ip_raw, nlri.next_hop, 16);
+            else
+                memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
+
+            inet_ntop(nlri.nh_len == 4 ? AF_INET : AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+
+            parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
+
+            // parse by safi
+            switch (nlri.safi) {
+                case bgp::BGP_SAFI_EVPN : // https://tools.ietf.org/html/rfc7432
+                {
+                    EVPN evpn(logger, peer_addr, false, &parsed_data, debug);
+                    evpn.parseNlriData(nlri.nlri_data, nlri.nlri_len);
+                    break;
+                }
+
+                default :
+                    LOG_INFO("%s: EVPN::parse SAFI=%d is not implemented yet, skipping",
+                             peer_addr.c_str(), nlri.safi);
+            }
 
             break;
         }
@@ -151,10 +177,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             else
                 memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
 
-            if (not isIPv4)
-                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
-            else
-                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+            inet_ntop(isIPv4 ? AF_INET : AF_INET6, ip_raw, ip_char, sizeof(ip_char));
 
             parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
 
@@ -169,10 +192,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             else
                 memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
 
-            if (not isIPv4)
-                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
-            else
-                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+            inet_ntop(isIPv4 ? AF_INET : AF_INET6, ip_raw, ip_char, sizeof(ip_char));
 
             parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
 
@@ -181,6 +201,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             break;
 
         case bgp::BGP_SAFI_MPLS: {
+
             if (isIPv4) {
                 //Next hop encoded in 12 bytes, last 4 bytes = IPv4
                 nlri.next_hop += 8;
@@ -193,14 +214,11 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             else
                 memcpy(ip_raw, nlri.next_hop, nlri.nh_len);
 
-            if (not isIPv4)
-                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
-            else
-                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
+            inet_ntop(isIPv4 ? AF_INET : AF_INET6, ip_raw, ip_char, sizeof(ip_char));
 
             parsed_data.attrs[ATTR_TYPE_NEXT_HOP] = std::string(ip_char);
 
-            parseNLRIData_VPN(isIPv4, &nlri, parsed_data.vpn);
+            parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, peer_info, parsed_data.vpn);
 
             break;
         }
@@ -209,59 +227,6 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, UpdateMsg:
             LOG_INFO("%s: MP_REACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now",
                      peer_addr.c_str(), isIPv4, nlri.safi);
             return;
-    }
-}
-
-/**
- * Parses VPN data in nlri (IPv4)
- *
- * \details
- *      Will parse the VPN as defined in https://tools.ietf.org/html/rfc4364
- *
- * \param [in]   isIPv4                     True false to indicate if IPv4 or IPv6
- * \param [in]   nlri                   Reference to MP Reach Nlri object
- * \param [out]  vpn_list               Reference to a list<vpn_tuple> to be updated with entries
- */
-void MPReachAttr::parseNLRIData_VPN(bool isIPv4, mp_reach_nlri *nlri, std::list<bgp::vpn_tuple> &vpn_list) {
-
-    u_char *pointer = nlri->nlri_data;
-        
-    while(pointer < nlri->nlri_data + nlri->nlri_len) {
-        bgp::vpn_tuple tuple;
-              
-        uint8_t len = 0;
-        len = *pointer;
-        pointer += 1;
-        
-        uint32_t label = 0;
-        memcpy(&label, pointer, 3);
-        pointer += 3;
-        label = label >> 4;
-
-        tuple.vpn_label = label;
-
-        EVPN::parseRouteDistinguisher(pointer, &tuple.rd_type, &tuple.rd_assigned_number, &tuple.rd_administrator_subfield);
-        pointer += 8;
-
-        tuple.type = bgp::PREFIX_UNICAST_V4; 
-        tuple.isIPv4 = true;
-
-
-        uint8_t prefix_bit_len = len - 24 - 64;
-
-        uint8_t prefix_len = ceil((float)prefix_bit_len / 8);
-
-        u_char prefix[16];
-        bzero(prefix, 16);
-        char ip_char[40];
-        memcpy(&prefix, pointer, prefix_len);
-        inet_ntop(AF_INET, prefix, ip_char, sizeof(ip_char));
-
-        tuple.prefix = std::string(ip_char);
-        tuple.len = prefix_bit_len;
-        pointer += prefix_len;
-        
-        vpn_list.push_back(tuple);
     }
 }
 
@@ -292,6 +257,9 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
     tuple.type = isIPv4 ? bgp::PREFIX_UNICAST_V4 : bgp::PREFIX_UNICAST_V6;
     tuple.isIPv4 = isIPv4;
 
+    bool add_path_enabled = peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6,
+                                                                            bgp::BGP_SAFI_NLRI_LABEL);
+
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
         tuple.path_id = 0;
@@ -299,8 +267,7 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         bzero(ip_raw, sizeof(ip_raw));
 
         // Parse add-paths if enabled
-        if (peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6, bgp::BGP_SAFI_UNICAST)
-                and (len - read_size) >= 4) {
+        if (add_path_enabled and (len - read_size) >= 4) {
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
             data += 4; read_size += 4;
@@ -320,10 +287,7 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         read_size += addr_bytes;
 
         // Convert the IP to string printed format
-        if (isIPv4)
-            inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
-        else
-            inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+        inet_ntop(isIPv4 ? AF_INET : AF_INET6, ip_raw, ip_char, sizeof(ip_char));
 
         tuple.prefix.assign(ip_char);
 
@@ -347,56 +311,42 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
  * \param [in]   peer_info              Persistent Peer info pointer
  * \param [out]  prefixes               Reference to a list<label, prefix_tuple> to be updated with entries
  */
+template <typename PREFIX_TUPLE>
 void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
                                               BMPReader::peer_info * peer_info,
-                                              std::list<bgp::prefix_tuple> &prefixes) {
+                                              std::list<PREFIX_TUPLE> &prefixes) {
     u_char            ip_raw[16];
     char              ip_char[40];
     int               addr_bytes;
-    bgp::prefix_tuple tuple;
-
-    typedef union {
-        struct { 
-            uint8_t   ttl     : 8;          // TTL - not present since only 3 octets are used
-            uint8_t   bos     : 1;          // Bottom of stack
-            uint8_t   exp     : 3;          // EXP - not really used
-            uint32_t  value   : 20;         // Label value
-        } decode;
-        uint32_t  data;                 // Raw label - 3 octets only per RFC3107
-    } mpls_label;
-  
-    mpls_label label;
+    PREFIX_TUPLE      tuple;
 
     if (len <= 0 or data == NULL)
         return;
 
-    tuple.type = isIPv4 ? bgp::PREFIX_LABEL_UNICAST_V4 :
-			  bgp::PREFIX_LABEL_UNICAST_V6;
+    tuple.type = isIPv4 ? bgp::PREFIX_LABEL_UNICAST_V4 : bgp::PREFIX_LABEL_UNICAST_V6;
     tuple.isIPv4 = isIPv4;
-    int parsed_bytes = 0;
+
+    bool add_path_enabled = peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6,
+                                                                            bgp::BGP_SAFI_NLRI_LABEL);
+
+    bool isVPN = typeid(bgp::vpn_tuple) == typeid(tuple);
+    uint16_t label_bytes;
 
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
 
-        // Parse add-paths if enabled
-        if (peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6, bgp::BGP_SAFI_NLRI_LABEL)
-                and (len - read_size) >= 4) {
-
+        // Only check for add-paths if not mpls/vpn
+        if (not isVPN and add_path_enabled and (len - read_size) >= 4) {
             memcpy(&tuple.path_id, data, 4);
             bgp::SWAP_BYTES(&tuple.path_id);
-            data += 4; read_size += 4;
+            data += 4;
+            read_size += 4;
+
         } else
             tuple.path_id = 0;
 
-
-        if (parsed_bytes == len) {
-            break;
-        }
-
-        bzero(&label, sizeof(label));
         bzero(ip_raw, sizeof(ip_raw));
 
-        tuple.labels = "";
         // set the address in bits length
         tuple.len = *data++;
 
@@ -405,51 +355,103 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         if (tuple.len % 8)
            ++addr_bytes;
 
-        // the label is 3 octets long
-        while (addr_bytes >= 3) 
-        {
-            memcpy(&label.data, data, 3);
-            bgp::SWAP_BYTES(&label.data);     // change to host order
+        label_bytes = decodeLabel(data, addr_bytes, tuple.labels);
 
-            data += 3;
-            addr_bytes -= 3;
-            read_size += 3;
-            tuple.len -= 24;        // Update prefix len to not include the label just parsed
+        tuple.len -= (8 * label_bytes);      // Update prefix len to not include the label(s)
+        data += label_bytes;               // move data pointer past labels
+        addr_bytes -= label_bytes;
+        read_size += label_bytes;
 
-            ostringstream convert;
-            convert << label.decode.value;
-            tuple.labels.append(convert.str());
-
-            if (label.decode.bos == 1 or label.data == 0x80000000 /* withdrawn label as 32bits instead of 24 */) {
-               break;               // Reached EoS
-
-            } else {
-               tuple.labels.append(",");
-            }
+        // Parse RD if VPN
+        if (isVPN and addr_bytes >= 8) {
+            bgp::vpn_tuple *vtuple = (bgp::vpn_tuple *)&tuple;
+            EVPN::parseRouteDistinguisher(data, &vtuple->rd_type, &vtuple->rd_assigned_number,
+                                          &vtuple->rd_administrator_subfield);
+            data += 8;
+            addr_bytes -= 8;
+            read_size += 8;
+            tuple.len -= 64;
         }
 
-        // if the route isn't a default route
+        // Parse the prefix if it isn't a default route
         if (addr_bytes > 0) {
             memcpy(ip_raw, data, addr_bytes);
             data += addr_bytes;
             read_size += addr_bytes;
 
             // Convert the IP to string printed format
-            if (isIPv4)
-                inet_ntop(AF_INET, ip_raw, ip_char, sizeof(ip_char));
-            else
-                inet_ntop(AF_INET6, ip_raw, ip_char, sizeof(ip_char));
+            inet_ntop(isIPv4 ? AF_INET : AF_INET6, ip_raw, ip_char, sizeof(ip_char));
 
             tuple.prefix.assign(ip_char);
 
             // set the raw/binary address
             memcpy(tuple.prefix_bin, ip_raw, sizeof(ip_raw));
 
-            // Add tuple to prefix list
-            prefixes.push_back(tuple);
-//            printf("Parsed Label: %s, prefix: %s len=%d\n", tuple.labels.c_str(), tuple.prefix.c_str(), tuple.len);
+        } else {
+            tuple.prefix.assign(isIPv4 ? "0.0.0.0" : "::");
+        }
+
+        prefixes.push_back(tuple);
+    }
+}
+
+/**
+ * Decode label from NLRI data
+ *
+ * \details
+ *      Decodes the labels from the NLRI data into labels string
+ *
+ * \param [in]   data                   Pointer to the start of the label + prefixes to be parsed
+ * \param [in]   len                    Length of the data in bytes to be read
+ * \param [out]  labels                 Reference to string that will be updated with labels delimited by comma
+ *
+ * \returns number of bytes read to decode the label(s) and updates string labels
+ *
+ */
+inline uint16_t MPReachAttr::decodeLabel(u_char *data, uint16_t len, std::string &labels) {
+    int read_size = 0;
+    typedef union {
+        struct {
+            uint8_t   ttl     : 8;          // TTL - not present since only 3 octets are used
+            uint8_t   bos     : 1;          // Bottom of stack
+            uint8_t   exp     : 3;          // EXP - not really used
+            uint32_t  value   : 20;         // Label value
+        } decode;
+        uint32_t  data;                 // Raw label - 3 octets only per RFC3107
+    } mpls_label;
+
+    mpls_label label;
+
+    labels.clear();
+
+    u_char *data_ptr = data;
+
+    // the label is 3 octets long
+    while (read_size <= len)
+    {
+        bzero(&label, sizeof(label));
+
+        memcpy(&label.data, data_ptr, 3);
+        bgp::SWAP_BYTES(&label.data);     // change to host order
+
+        data_ptr += 3;
+        read_size += 3;
+
+        ostringstream convert;
+        convert << label.decode.value;
+        labels.append(convert.str());
+
+        printf("label data = %x\n", label.data);
+        if (label.decode.bos == 1 or label.data == 0x80000000 /* withdrawn label as 32bits instead of 24 */
+                or label.data == 0 /* l3vpn seems to use zero instead of rfc3107 suggested value */) {
+            break;               // Reached EoS
+
+        } else {
+            labels.append(",");
         }
     }
+
+    return read_size;
 }
 
 } /* namespace bgp_msg */

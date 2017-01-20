@@ -140,7 +140,7 @@ namespace bgp {
     * struct is used for l3vpn
     */
     struct vpn_tuple: prefix_tuple, rd_tuple {
-        uint32_t       vpn_label;
+        // inherits
     };
 
     /**
