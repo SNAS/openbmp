@@ -16,9 +16,6 @@
 #include <cinttypes>
 #include <sys/types.h>
 
-#include "Logger.h"
-
-
 namespace parse_bgp_lib {
     /**
  * Node Attribute types

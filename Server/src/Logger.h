@@ -129,8 +129,6 @@ public:
      ***********************************************************************/
     void DebugPrint(const char *filename, int line_num, const char *func_name, const char *msg, ...);
 
-
-private:
     bool    logFile_REALFILE;           ///< Indicates if the log file is using a real file or not
     bool    debugFile_REALFILE;         ///< Indicates if the debug log file is using a real file or not
     FILE    *debugFile;                 ///< Debug log file
@@ -141,7 +139,7 @@ private:
     u_char  width_function;             ///< Defines the width of the function field when printed
     u_char  width_filename;             ///< Defines the width of the filename field when printed
 
-
+private:
     /**
      * Prints the message using a variable arg list
      *

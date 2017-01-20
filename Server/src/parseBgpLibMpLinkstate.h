@@ -19,7 +19,6 @@
 
 #include "parseBgpLibMpReach.h"
 #include "parseBgpLibMpUnReach.h"
-#include "Logger.h"
 
 namespace parse_bgp_lib {
 

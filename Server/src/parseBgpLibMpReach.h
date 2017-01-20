@@ -12,7 +12,6 @@
 #define PARSE_BGP_LIB_MPREACH_H_
 
 #include "parseBgpLib.h"
-#include "Logger.h"
 #include <list>
 #include <string>
 

@@ -16,8 +16,6 @@
 #include <array>
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/exception/all.hpp>
-
-//TODO:Remove
 #include "Logger.h"
 
 namespace parse_bgp_lib {
@@ -286,7 +284,7 @@ namespace parse_bgp_lib {
             "linkstateIpv6InterfaceAddr",
             "linkstateIpv4NeighborAddr",
             "linkstateIpv6NeighborAddr",
-            "linkstateMtId"
+            "linkstateMtId",
 
             "linkstateOspfRouteType",
             "linkstateIpReachPrefix",

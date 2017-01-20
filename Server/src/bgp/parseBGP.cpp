@@ -104,7 +104,8 @@ bool parseBGP::handleUpdate(u_char *data, size_t size) {
             return true;
         }
 
-        //TODO: Remove
+//        parse_bgp_lib::Logger parse_logger(this->logger->logFile, this->logger->debugFile);
+
         parse_bgp_lib::parseBgpLib::parsed_update update;
         parse_bgp_lib::parseBgpLib parser(logger, debug);
         parser.parseBgpUpdate(data, data_bytes_remaining, update);

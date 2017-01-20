@@ -837,14 +837,14 @@ namespace parse_bgp_lib {
                 switch (alg) {
                     case 0: // Shortest Path First (SPF) algorithm based on link metric
                         val_ss << "SPF ";
+                        update->attrs[LIB_ATTR_LS_PREFIX_SID].value.push_back(val_ss.str());
                         break;
 
                     case 1: // Strict Shortest Path First (SPF) algorithm based on link metric
                         val_ss << "strict-SPF ";
+                        update->attrs[LIB_ATTR_LS_PREFIX_SID].value.push_back(val_ss.str());
                         break;
                 }
-
-                update->attrs[LIB_ATTR_LS_PREFIX_SID].value.push_back(val_ss.str());
 
                 // 2 bytes reserved
                 data += 2;

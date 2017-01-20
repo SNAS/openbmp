@@ -11,7 +11,6 @@
 
 #include "parseBgpLibMpLinkstate.h"
 #include "md5.h"
-#include "Logger.h"
 #include "parseBgpLibMpLinkstateAttr.h"
 #include "netdb.h"
 
@@ -297,11 +296,11 @@ namespace parse_bgp_lib {
                 if (local) {
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_LOCAL].official_type = NODE_DESCR_AS;
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_LOCAL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ASN_LOCAL];
-                    parsed_nlri.nlri[LIB_NLRI_LS_ASN_LOCAL].value.front() = val_ss.str();
+                    parsed_nlri.nlri[LIB_NLRI_LS_ASN_LOCAL].value.push_back(val_ss.str());
                 } else {
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_REMOTE].official_type = NODE_DESCR_AS;
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_REMOTE].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ASN_REMOTE];
-                    parsed_nlri.nlri[LIB_NLRI_LS_ASN_REMOTE].value.front() = val_ss.str();
+                    parsed_nlri.nlri[LIB_NLRI_LS_ASN_REMOTE].value.push_back(val_ss.str());
                 }
 
                 data_read += 4;
@@ -327,11 +326,11 @@ namespace parse_bgp_lib {
                 if (local) {
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].official_type = NODE_DESCR_BGP_LS_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_BGP_LS_ID_LOCAL];
-                    parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].value.front() = val_ss.str();
+                    parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].value.push_back(val_ss.str());
                 } else {
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].official_type = NODE_DESCR_BGP_LS_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_BGP_LS_ID_REMOTE];
-                    parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].value.front() = val_ss.str();
+                    parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].value.push_back(val_ss.str());
                 }
 
                 data_read += 4;
@@ -488,10 +487,10 @@ namespace parse_bgp_lib {
 
         parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ROUTING_ID];
         val_ss << id;
-        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.front() = val_ss.str();
+        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.push_back(val_ss.str());
 
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PROTOCOL];
-        parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front() = decodeNlriProtocolId(proto_id);
+        parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.push_back(decodeNlriProtocolId(proto_id));
 
         SELF_DEBUG("bgp-ls: ID = %x Protocol = %s", id, parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str());
 
@@ -765,10 +764,10 @@ namespace parse_bgp_lib {
         }
         parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ROUTING_ID];
         val_ss << id;
-        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.front() = val_ss.str();
+        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.push_back(val_ss.str());
 
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PROTOCOL];
-        parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front() = decodeNlriProtocolId(proto_id);
+        parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.push_back(decodeNlriProtocolId(proto_id));
 
         SELF_DEBUG("bgp-ls: ID = %x Protocol = %s", id, parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str());
 
@@ -858,10 +857,10 @@ namespace parse_bgp_lib {
 
         parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ROUTING_ID];
         val_ss << id;
-        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.front() = val_ss.str();
+        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.push_back(val_ss.str());
 
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PROTOCOL];
-        parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front() = decodeNlriProtocolId(proto_id);
+        parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.push_back(decodeNlriProtocolId(proto_id));
 
         SELF_DEBUG("bgp-ls: ID = %x Protocol = %s", id, parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str());
 
@@ -1055,7 +1054,7 @@ namespace parse_bgp_lib {
                 }
 
                 parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX].official_type = PREFIX_DESCR_IP_REACH_INFO;
-                parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_IP_REACH_PREFIX_LENGTH];
+                parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_IP_REACH_PREFIX];
                 parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX].value.push_back(ip_char);
 
                 parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX_BCAST].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_IP_REACH_PREFIX_BCAST];
@@ -1082,7 +1081,7 @@ namespace parse_bgp_lib {
                 mt_id >>= 16;          // MT ID is 16 bits
                 val_ss.str();
                 val_ss << mt_id;
-                parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].official_type = LINK_DESCR_MT_ID;
+                parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].official_type = PREFIX_DESCR_MT_ID;
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_MT_ID];
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value.push_back(val_ss.str());
 

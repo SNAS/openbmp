@@ -13,7 +13,6 @@
 #include <sstream>
 #include <arpa/inet.h>
 //TODO:Remove
-#include "Logger.h"
 #include "parseBgpLibExtCommunity.h"
 #include "parseBgpLibMpReach.h"
 #include "parseBgpLibMpUnReach.h"
