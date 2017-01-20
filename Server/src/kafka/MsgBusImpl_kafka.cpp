@@ -19,7 +19,6 @@
 #include <thread>
 #include <arpa/inet.h>
 
-#include "logger.h"
 #include "MsgBusImpl_kafka.h"
 #include "KafkaEventCallback.h"
 #include "KafkaDeliveryReportCallback.h"
