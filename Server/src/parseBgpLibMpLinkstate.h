@@ -172,6 +172,7 @@ private:
     Logger           *logger;                         ///< Logging class pointer
 
     parse_bgp_lib::parseBgpLib::parsed_update *update;       ///< Parsed data structure
+    std::list<parseBgpLib::parse_bgp_lib_nlri> *nlri_list;
 
     /**********************************************************************************//*
      * Parses Link State NLRI data

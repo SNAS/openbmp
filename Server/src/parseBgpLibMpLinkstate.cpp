@@ -42,6 +42,7 @@ namespace parse_bgp_lib {
      */
     void MPLinkState::parseReachLinkState(MPReachAttr::mp_reach_nlri &nlri) {
 
+        nlri_list = &update->nlri_list;
         // Process the next hop
         // Next-hop is an IPv6 address - Change/set the next-hop attribute in parsed data to use this next-hop
         u_char ip_raw[16];
@@ -83,6 +84,7 @@ namespace parse_bgp_lib {
      * \param [in]   nlri           Reference to parsed NLRI struct
      */
     void MPLinkState::parseUnReachLinkState(MPUnReachAttr::mp_unreach_nlri &nlri) {
+        nlri_list = &update->withdrawn_nlri_list;
 
         /*
          * Decode based on SAFI
@@ -542,7 +544,7 @@ namespace parse_bgp_lib {
          */
 
         // Save the parsed data
-        update->nlri_list.push_back(parsed_nlri);
+        nlri_list->push_back(parsed_nlri);
     }
 
     /**********************************************************************************//*
@@ -828,7 +830,7 @@ namespace parse_bgp_lib {
         memcpy(link_tbl.nei_addr, info.nei_addr, sizeof(link_tbl.nei_addr));
          */
 
-        update->nlri_list.push_back(parsed_nlri);
+        nlri_list->push_back(parsed_nlri);
     }
 
     /**********************************************************************************//*
@@ -927,7 +929,7 @@ namespace parse_bgp_lib {
         memcpy(prefix_tbl.ospf_route_type, info.ospf_route_type, sizeof(prefix_tbl.ospf_route_type));
          */
 
-        update->nlri_list.push_back(parsed_nlri);
+        nlri_list->push_back(parsed_nlri);
     }
 
     /**********************************************************************************//*

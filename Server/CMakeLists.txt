@@ -117,7 +117,7 @@ set (SRC_FILES
     src/parseBgpLibMpReach.cpp
     src/parseBgpLibMpUnReach.cpp
     src/parseBgpLibMpLinkstate.cpp
-    src/parseBgpLibMpLinkstateAttr.cpp)
+    src/parseBgpLibMpLinkstateAttr.cpp src/parseBgpLibMpEvpn.h src/parseBgpLibMpEvpn.cpp)
 
 # Disable warnings
 add_definitions ("-Wno-unused-result")

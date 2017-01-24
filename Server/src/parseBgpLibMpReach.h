@@ -84,7 +84,7 @@ public:
 
     static void parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_t len,
                                             std::list<parseBgpLib::parse_bgp_lib_nlri> &nlri_list,
-                                            parseBgpLib *parser, bool debug, Logger *logger);
+                                            parseBgpLib *parser, bool debug, Logger *logger, int safi);
 
 private:
     bool                    debug;                  ///< debug flag to indicate debugging

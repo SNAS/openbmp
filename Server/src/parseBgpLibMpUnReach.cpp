@@ -10,6 +10,7 @@
 #include "parseBgpLibMpUNReach.h"
 #include "parseBgpLib.h"
 #include "parseBgpLibMpLinkstate.h"
+#include "parseBgpLibMpEvpn.h"
 
 #include <arpa/inet.h>
 
@@ -105,6 +106,23 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, parse_bgp_lib::parseBgpLib::
             break;
         }
 
+        case parse_bgp_lib::BGP_AFI_L2VPN :
+        {
+            // parse by safi
+            switch (nlri.safi) {
+                case parse_bgp_lib::BGP_SAFI_EVPN : // https://tools.ietf.org/html/rfc7432
+                {
+                    EVPN evpn(logger, true, &update.withdrawn_nlri_list, debug);
+                    evpn.parseNlriData(nlri.nlri_data, nlri.nlri_len);
+                    break;
+                }
+
+                default :
+                    LOG_INFO("EVPN::parse SAFI=%d is not implemented yet, skipping", nlri.safi);
+            }
+
+            break;
+        }
 
         default : // Unknown
             LOG_INFO("MP_UNREACH AFI=%d is not implemented yet, skipping", nlri.afi);
@@ -134,7 +152,12 @@ void MPUnReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_unreach_nlri &nlri, parse_
             break;
 
         case parse_bgp_lib::BGP_SAFI_NLRI_LABEL: // Labeled unicast
-            MPReachAttr::parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, update.withdrawn_nlri_list, caller, debug, logger);
+            MPReachAttr::parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, update.withdrawn_nlri_list, caller, debug, logger, nlri.safi);
+            break;
+
+        case parse_bgp_lib::BGP_SAFI_MPLS: // MPLS (vpnv4/vpnv6)
+            MPReachAttr::parseNlriData_LabelIPv4IPv6(isIPv4, nlri.nlri_data, nlri.nlri_len, update.withdrawn_nlri_list, caller, debug, logger, nlri.safi);
+
             break;
 
         default :

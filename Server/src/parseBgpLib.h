@@ -82,6 +82,7 @@ namespace parse_bgp_lib {
     enum BGP_AFI {
         BGP_AFI_IPV4 = 1,
         BGP_AFI_IPV6 = 2,
+        BGP_AFI_L2VPN=25,
         BGP_AFI_BGPLS = 16388
     };
 
@@ -256,6 +257,21 @@ namespace parse_bgp_lib {
         LIB_NLRI_LS_IP_REACH_PREFIX_LENGTH,
         LIB_NLRI_LS_IP_REACH_PREFIX_BCAST,
 
+        LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD,
+        LIB_NLRI_VPN_RD_ASSIGNED_NUMBER,
+        LIB_NLRI_VPN_RD_TYPE,
+
+        LIB_NLRI_EVPN_ETHERNET_SEGMENT_ID,
+        LIB_NLRI_EVPN_ETHERNET_TAG_ID_HEX,
+        LIB_NLRI_EVPN_MAC_LEN,
+        LIB_NLRI_EVPN_MAC,
+        LIB_NLRI_EVPN_IP_LEN,
+        LIB_NLRI_EVPN_IP,
+        LIB_NLRI_EVPN_MPLS_LABEL1,
+        LIB_NLRI_EVPN_MPLS_LABEL2,
+        LIB_NLRI_ORIGINATING_ROUTER_IP_LEN,
+        LIB_NLRI_ORIGINATING_ROUTER_IP,
+
         LIB_NLRI_MAX
     };
 
@@ -291,6 +307,20 @@ namespace parse_bgp_lib {
             "linkstateIpReachPrefixLength",
             "linkstateIpReachPrefixBcast",
 
+            "vpnRdAdministratorSubfield",
+            "vpnRdAssignedNumber",
+            "vpnRdType",
+
+            "evpnEthernetSegmentId",
+            "evpnEthernetTagIdHex",
+            "evpnMacLen",
+            "evpnMac",
+            "evpnIpLen",
+            "evpnIp",
+            "evpnMplsLabel1",
+            "evpnMplsLabel2",
+            "evpnOriginatingRouterIpLen",
+            "evpnOriginatingRouterIp"
     };
 
     /**
@@ -302,6 +332,29 @@ namespace parse_bgp_lib {
         LIB_NLRI_TYPE_LS_LINK,
         LIB_NLRI_TYPE_LS_PREFIX,
     };
+
+    /*********************************************************************//**
+     * Simple function to swap bytes around from network to host or
+     *  host to networking.  This method will convert any size byte variable,
+     *  unlike ntohs and ntohl.
+     *
+     * @param [in/out] var   Variable containing data to update
+     * @param [in]     size  Size of var - Default is size of var
+     *********************************************************************/
+    inline std::string parse_mac(u_char *data_pointer) {
+        u_char *pointer = data_pointer;
+
+        std::ostringstream mac_stringstream;
+
+        for (int i = 0; i < 6; ++i) {
+            if (i != 0) mac_stringstream << ':';
+            mac_stringstream.width(2);
+            mac_stringstream.fill('0');
+            mac_stringstream << std::hex << (int)(pointer[i]);
+        }
+
+        return mac_stringstream.str();
+    }
 
     /*********************************************************************//**
      * Simple function to swap bytes around from network to host or
