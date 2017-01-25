@@ -258,7 +258,7 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
     tuple.isIPv4 = isIPv4;
 
     bool add_path_enabled = peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6,
-                                                                            bgp::BGP_SAFI_NLRI_LABEL);
+                                                                            bgp::BGP_SAFI_UNICAST);
 
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
@@ -326,11 +326,11 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
     tuple.type = isIPv4 ? bgp::PREFIX_LABEL_UNICAST_V4 : bgp::PREFIX_LABEL_UNICAST_V6;
     tuple.isIPv4 = isIPv4;
 
-    bool add_path_enabled = peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6,
-                                                                            bgp::BGP_SAFI_NLRI_LABEL);
-
     bool isVPN = typeid(bgp::vpn_tuple) == typeid(tuple);
     uint16_t label_bytes;
+
+    bool add_path_enabled = peer_info->add_path_capability.isAddPathEnabled(isIPv4 ? bgp::BGP_AFI_IPV4 : bgp::BGP_AFI_IPV6,
+                                                                            isVPN ? bgp::BGP_SAFI_MPLS : bgp::BGP_SAFI_NLRI_LABEL);
 
     // Loop through all prefixes
     for (size_t read_size=0; read_size < len; read_size++) {
