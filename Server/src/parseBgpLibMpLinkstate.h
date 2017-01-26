@@ -293,7 +293,7 @@ private:
      * \param [in/out]  info           Node descriptor information returned/updated
      * \param [out]  hash_bin       Node descriptor information returned/updated
      */
-//    void genNodeHashId(node_descriptor &info);
+    void genNodeHashId(parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool local);
 
 };
 

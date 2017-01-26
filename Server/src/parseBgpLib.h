@@ -249,17 +249,21 @@ namespace parse_bgp_lib {
         LIB_NLRI_LS_IGP_ROUTER_ID_REMOTE,
         LIB_NLRI_LS_BGP_ROUTER_ID_REMOTE,
 
-        LIB_NLRI_LS_LINK_ID,
-        LIB_NLRI_LS_IPV4_INTF_ADDR,
-        LIB_NLRI_LS_IPV6_INTF_ADDR,
-        LIB_NLRI_LS_IPV4_NEIGHBOR_ADDR,
-        LIB_NLRI_LS_IPV6_NEIGHBOR_ADDR,
+        LIB_NLRI_LS_LINK_LOCAL_ID,
+        LIB_NLRI_LS_LINK_REMOTE_ID,
+        LIB_NLRI_LS_INTF_ADDR,
+        LIB_NLRI_LS_NEIGHBOR_ADDR,
         LIB_NLRI_LS_MT_ID,
 
         LIB_NLRI_LS_OSPF_ROUTE_TYPE,
         LIB_NLRI_LS_IP_REACH_PREFIX,
         LIB_NLRI_LS_IP_REACH_PREFIX_LENGTH,
         LIB_NLRI_LS_IP_REACH_PREFIX_BCAST,
+
+        LIB_NLRI_LS_LOCAL_NODE_HASH,
+        LIB_NLRI_LS_REMOTE_NODE_HASH,
+        LIB_NLRI_LS_LINK_HASH,
+        LIB_NLRI_LS_PREFIX_HASH,
 
         LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD,
         LIB_NLRI_VPN_RD_ASSIGNED_NUMBER,
@@ -301,16 +305,19 @@ namespace parse_bgp_lib {
             "linkstateBgpRouterIdRemote",
 
             "linkstateLinkId",
-            "linkstateIpv4InterfaceAddr",
-            "linkstateIpv6InterfaceAddr",
-            "linkstateIpv4NeighborAddr",
-            "linkstateIpv6NeighborAddr",
+            "linkstateInterfaceAddr",
+            "linkstateNeighborAddr",
             "linkstateMtId",
 
             "linkstateOspfRouteType",
             "linkstateIpReachPrefix",
             "linkstateIpReachPrefixLength",
             "linkstateIpReachPrefixBcast",
+
+            "linkstateLocalNodeHash",
+            "linkstateRemoteNodeHash",
+            "linkstateLinkHash",
+            "linkstatePrefixHash",
 
             "vpnRdAdministratorSubfield",
             "vpnRdAssignedNumber",
