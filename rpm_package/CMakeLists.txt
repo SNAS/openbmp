@@ -42,7 +42,8 @@ EXECUTE_PROCESS(COMMAND "${ARCH_CMD}"
 #
 # Define the depends
 #
-SET (CPACK_RPM_PACKAGE_REQUIRES "mysql-connector-c++ >= 1.1.4")
+SET (CPACK_RPM_PACKAGE_REQUIRES "openssl >= 1")
+SET (CPACK_RPM_PACKAGE_REQUIRES "cyrus-sasl-lib >= 2")
 set (CPACK_RPM_PACKAGE_SUGGESTS ON)
 
 
