@@ -431,7 +431,10 @@ void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update
         return;
     }
 
-    /*
+        // Generate the hash
+        MD5 hash;
+
+     /*
      * Iterate through all attributes and parse them
      */
     for (int read_size = 0; read_size < len; read_size += 2) {
@@ -459,7 +462,7 @@ void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update
             /*
              * Parse data based on attribute type
              */
-            parseAttrData(attr_type, attr_len, data, update);
+            parseAttrData(attr_type, attr_len, data, update, hash);
             data += attr_len;
             read_size += attr_len;
 
@@ -470,7 +473,16 @@ void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update
             return;
         }
     }
-}
+        //Now save the generate hash
+        hash.finalize();
+
+        // Save the hash
+        unsigned char *hash_raw = hash.raw_digest();
+        update.attrs[LIB_ATTR_BASE_ATTR_HASH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_BASE_ATTR_HASH];
+        update.attrs[LIB_ATTR_BASE_ATTR_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
+        delete[] hash_raw;
+
+    }
 
 
 /**
@@ -485,15 +497,16 @@ void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update
 * \param [in]   data           Pointer to the attribute data
 * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
 */
-void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_update &update) {
+void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_update &update, MD5 &hash) {
     u_char ipv4_raw[4];
     char ipv4_char[16];
     uint32_t value32bit;
     uint16_t value16bit;
 
-    /*
-     * Parse based on attribute type
-     */
+
+        /*
+         * Parse based on attribute type
+         */
     switch (attr_type) {
 
         case ATTR_TYPE_ORIGIN : // Origin
@@ -510,11 +523,13 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
                     update.attrs[LIB_ATTR_ORIGIN].value.push_back(std::string("incomplete"));
                     break;
             }
+            update_hash(&update.attrs[LIB_ATTR_ORIGIN].value, &hash);
 
             break;
 
         case ATTR_TYPE_AS_PATH : // AS_PATH
             parseAttrDataAsPath(attr_len, data, update);
+            update_hash(&update.attrs[LIB_ATTR_AS_PATH].value, &hash);
             break;
 
         case ATTR_TYPE_NEXT_HOP : // Next hop v4
@@ -523,6 +538,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
             update.attrs[LIB_ATTR_NEXT_HOP].official_type = ATTR_TYPE_NEXT_HOP;
             update.attrs[LIB_ATTR_NEXT_HOP].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_NEXT_HOP];
             update.attrs[LIB_ATTR_NEXT_HOP].value.push_back(std::string(ipv4_char));
+            update_hash(&update.attrs[LIB_ATTR_NEXT_HOP].value, &hash);
+
             break;
 
         case ATTR_TYPE_MED : // MED value
@@ -534,6 +551,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
             update.attrs[LIB_ATTR_MED].official_type = ATTR_TYPE_MED;
             update.attrs[LIB_ATTR_MED].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_MED];
             update.attrs[LIB_ATTR_MED].value.push_back(numString.str());
+            update_hash(&update.attrs[LIB_ATTR_MED].value, &hash);
+
             break;
         }
         case ATTR_TYPE_LOCAL_PREF : // local pref value
@@ -545,6 +564,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
             update.attrs[LIB_ATTR_LOCAL_PREF].official_type = ATTR_TYPE_LOCAL_PREF;
             update.attrs[LIB_ATTR_LOCAL_PREF].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LOCAL_PREF];
             update.attrs[LIB_ATTR_LOCAL_PREF].value.push_back(numString.str());
+            update_hash(&update.attrs[LIB_ATTR_LOCAL_PREF].value, &hash);
+
             break;
         }
         case ATTR_TYPE_ATOMIC_AGGREGATE : // Atomic aggregate
@@ -555,6 +576,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
 
         case ATTR_TYPE_AGGREGATOR : // Aggregator
             parseAttrDataAggregator(attr_len, data, update);
+            update_hash(&update.attrs[LIB_ATTR_AGGREGATOR].value, &hash);
+
             break;
 
         case ATTR_TYPE_ORIGINATOR_ID : // Originator ID
@@ -596,6 +619,7 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
                 numString << value16bit;
                 update.attrs[LIB_ATTR_COMMUNITIES].value.push_back(numString.str());
             }
+            update_hash(&update.attrs[LIB_ATTR_COMMUNITIES].value, &hash);
 
             break;
         }
@@ -605,6 +629,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
             update.attrs[LIB_ATTR_EXT_COMMUNITY].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_EXT_COMMUNITY];
             parse_bgp_lib::ExtCommunity ec(logger, debug);
             ec.parseExtCommunities(attr_len, data, update);
+            update_hash(&update.attrs[LIB_ATTR_EXT_COMMUNITY].value, &hash);
+
             break;
         }
 

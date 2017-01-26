@@ -297,9 +297,12 @@ namespace parse_bgp_lib {
             parsed_nlri.afi =parse_bgp_lib::BGP_AFI_L2VPN;
             parsed_nlri.safi = parse_bgp_lib::BGP_SAFI_UNICAST;
             parsed_nlri.type = parse_bgp_lib::LIB_NLRI_TYPE_NONE;
-
+            // Generate the hash
+            MD5 hash;
 
             // TODO: Keep an eye on this, as we might need to support add-paths for evpn
+            parsed_nlri.nlri[LIB_NLRI_PATH_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PATH_ID];
+            parsed_nlri.nlri[LIB_NLRI_PATH_ID].value.push_back(std::string("0"));
 
             uint8_t route_type = *data_pointer;
             data_pointer++;
@@ -308,6 +311,8 @@ namespace parse_bgp_lib {
             data_pointer++;
 
             parseRouteDistinguisher(data_pointer, parsed_nlri);
+            update_hash(&parsed_nlri.nlri[LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD].value, &hash);
+            update_hash(&parsed_nlri.nlri[LIB_NLRI_VPN_RD_ASSIGNED_NUMBER].value, &hash);
             data_pointer += 8;
 
             data_read += 10;
@@ -320,6 +325,7 @@ namespace parse_bgp_lib {
 
                         // Ethernet Segment Identifier (10 bytes)
                         parseEthernetSegmentIdentifier(data_pointer, parsed_nlri);
+                        update_hash(&parsed_nlri.nlri[LIB_NLRI_EVPN_ETHERNET_SEGMENT_ID].value, &hash);
                         data_pointer += 10;
 
                         //Ethernet Tag Id (4 bytes), printing in hex.
@@ -360,6 +366,7 @@ namespace parse_bgp_lib {
 
                         // Ethernet Segment Identifier (10 bytes)
                         parseEthernetSegmentIdentifier(data_pointer, parsed_nlri);
+                        update_hash(&parsed_nlri.nlri[LIB_NLRI_EVPN_ETHERNET_SEGMENT_ID].value, &hash);
                         data_pointer += 10;
 
                         // Ethernet Tag ID (4 bytes)
@@ -394,6 +401,7 @@ namespace parse_bgp_lib {
                         parsed_nlri.nlri[LIB_NLRI_EVPN_MAC].official_type = route_type;
                         parsed_nlri.nlri[LIB_NLRI_EVPN_MAC].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_EVPN_MAC];
                         parsed_nlri.nlri[LIB_NLRI_EVPN_MAC].value.push_back(parse_bgp_lib::parse_mac(data_pointer));
+                        update_hash(&parsed_nlri.nlri[LIB_NLRI_EVPN_MAC].value, &hash);
                         data_pointer += 6;
 
                         // IP Address Length (1 byte)
@@ -403,6 +411,7 @@ namespace parse_bgp_lib {
                         parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].official_type = route_type;
                         parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_EVPN_IP_LEN];
                         parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].value.push_back(val_ss.str());
+                        update_hash(&parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].value, &hash);
 
                         data_pointer++;
 
@@ -421,6 +430,7 @@ namespace parse_bgp_lib {
                             parsed_nlri.nlri[LIB_NLRI_EVPN_IP].official_type = route_type;
                             parsed_nlri.nlri[LIB_NLRI_EVPN_IP].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_EVPN_IP];
                             parsed_nlri.nlri[LIB_NLRI_EVPN_IP].value.push_back(ip_char);
+                            update_hash(&parsed_nlri.nlri[LIB_NLRI_EVPN_IP].value, &hash);
 
                             data_pointer += addr_bytes;
                             data_read += addr_bytes;
@@ -527,6 +537,7 @@ namespace parse_bgp_lib {
 
                         // Ethernet Segment Identifier (10 bytes)
                         parseEthernetSegmentIdentifier(data_pointer, parsed_nlri);
+                        update_hash(&parsed_nlri.nlri[LIB_NLRI_EVPN_ETHERNET_SEGMENT_ID].value, &hash);
                         data_pointer += 10;
 
                         // IP Address Length (1 bytes)
@@ -568,6 +579,14 @@ namespace parse_bgp_lib {
                     break;
                 }
             }
+
+            hash.finalize();
+
+            // Save the hash
+            unsigned char *hash_raw = hash.raw_digest();
+            parsed_nlri.nlri[LIB_NLRI_HASH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_NLRI_HASH];
+            parsed_nlri.nlri[LIB_NLRI_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
+            delete[] hash_raw;
 
             nlri_list->push_back(parsed_nlri);
 

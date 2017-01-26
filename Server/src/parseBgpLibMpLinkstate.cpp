@@ -10,7 +10,6 @@
 #include <arpa/inet.h>
 
 #include "parseBgpLibMpLinkstate.h"
-#include "md5.h"
 #include "parseBgpLibMpLinkstateAttr.h"
 #include "netdb.h"
 

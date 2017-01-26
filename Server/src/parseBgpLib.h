@@ -17,6 +17,7 @@
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/exception/all.hpp>
 #include "Logger.h"
+#include "md5.h"
 
 namespace parse_bgp_lib {
 
@@ -126,6 +127,7 @@ namespace parse_bgp_lib {
         LIB_ATTR_CLUSTER_LIST,
         LIB_ATTR_EXT_COMMUNITY,
         LIB_ATTR_IPV6_EXT_COMMUNITY,
+        LIB_ATTR_BASE_ATTR_HASH,
 
         //Linkstate Node attributes
         LIB_ATTR_LS_MT_ID,
@@ -182,6 +184,7 @@ namespace parse_bgp_lib {
             "clusterList",
             "extendedCommunities",
             "ipv6ExtendedCommunities",
+            "baseAttributeHash"
 
             //Linkstate Node attributes
             "linkstateMtId",
@@ -231,6 +234,7 @@ namespace parse_bgp_lib {
         LIB_NLRI_PREFIX_LENGTH,
         LIB_NLRI_PATH_ID,
         LIB_NLRI_LABELS,
+        LIB_NLRI_HASH,
 
         LIB_NLRI_LS_PROTOCOL,
         LIB_NLRI_LS_ROUTING_ID, //Identified in Linkstate NLRI header
@@ -281,6 +285,7 @@ namespace parse_bgp_lib {
             "prefixLength",
             "pathId",
             "labels",
+            "nlriHash"
 
             "linkstateProtocol",
             "linkstateRoutingId",
@@ -354,6 +359,52 @@ namespace parse_bgp_lib {
         }
 
         return mac_stringstream.str();
+    }
+
+
+    /**
+     * \brief       binary hash to printed string format
+     *
+     * \details     Converts a hash unsigned char bytes to HEX string for
+     *              printing or storing in the DB.
+     *
+     * \param[in]   hash_bin      16 byte binary/unsigned value
+     * \param[out]  hash_str      Reference to storage of string value
+     *
+     */
+    static std::string hash_toStr(const u_char *hash_bin) {
+
+        int i;
+        char s[33];
+
+        for (i=0; i<16; i++)
+            sprintf(s+i*2, "%02x", hash_bin[i]);
+
+        s[32]='\0';
+
+        return string(s);
+    }
+
+    /*********************************************************************//**
+     * Simple function to update the hash. This function will take a list of
+     * strings, concat them and update the hash
+     *
+     * @param [in] var   Variable containing data to hash
+     * @param [in/out]   hash  The hash to update
+     *********************************************************************/
+    static void update_hash(std::list<std::string> *value, MD5 *hash) {
+        string hash_string;
+        std::list<std::string>::iterator last_value = value->end();
+        last_value--;
+
+        for (std::list<std::string>::iterator it = value->begin(); it != value->end(); it++) {
+            hash_string += *it;
+            if (it != last_value) {
+                hash_string += std::string(" ");
+            }
+        }
+        std::cout << "Hashing string: " << hash_string << std::endl;
+        hash->update((unsigned char *) hash_string.c_str(), hash_string.length());
     }
 
     /*********************************************************************//**
@@ -595,7 +646,7 @@ namespace parse_bgp_lib {
          * \param [in]   data           Pointer to the attribute data
          * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
          */
-        void parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_update &update);
+        void parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data, parsed_update &update, MD5 &hash);
 
         /**
          * Parse attribute AGGREGATOR data
