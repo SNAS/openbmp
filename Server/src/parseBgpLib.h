@@ -184,7 +184,7 @@ namespace parse_bgp_lib {
             "clusterList",
             "extendedCommunities",
             "ipv6ExtendedCommunities",
-            "baseAttributeHash"
+            "baseAttributeHash",
 
             //Linkstate Node attributes
             "linkstateMtId",
@@ -289,7 +289,7 @@ namespace parse_bgp_lib {
             "prefixLength",
             "pathId",
             "labels",
-            "nlriHash"
+            "nlriHash",
 
             "linkstateProtocol",
             "linkstateRoutingId",
@@ -304,7 +304,8 @@ namespace parse_bgp_lib {
             "linkstateIgpRouterIdRemote",
             "linkstateBgpRouterIdRemote",
 
-            "linkstateLinkId",
+            "linkstateLinkLocalId",
+            "linkstateLinkRemoteId",
             "linkstateInterfaceAddr",
             "linkstateNeighborAddr",
             "linkstateMtId",
@@ -410,7 +411,6 @@ namespace parse_bgp_lib {
                 hash_string += std::string(" ");
             }
         }
-        std::cout << "Hashing string: " << hash_string << std::endl;
         hash->update((unsigned char *) hash_string.c_str(), hash_string.length());
     }
 

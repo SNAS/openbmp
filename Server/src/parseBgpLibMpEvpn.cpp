@@ -584,7 +584,7 @@ namespace parse_bgp_lib {
 
             // Save the hash
             unsigned char *hash_raw = hash.raw_digest();
-            parsed_nlri.nlri[LIB_NLRI_HASH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_NLRI_HASH];
+            parsed_nlri.nlri[LIB_NLRI_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_HASH];
             parsed_nlri.nlri[LIB_NLRI_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
             delete[] hash_raw;
 

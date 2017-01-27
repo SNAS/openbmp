@@ -338,7 +338,7 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
 
         // Save the hash
         unsigned char *hash_raw = hash.raw_digest();
-        nlri.nlri[LIB_NLRI_HASH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_NLRI_HASH];
+        nlri.nlri[LIB_NLRI_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_HASH];
         nlri.nlri[LIB_NLRI_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
         delete[] hash_raw;
 
@@ -505,7 +505,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
 
         // Save the hash
         unsigned char *hash_raw = hash.raw_digest();
-        nlri.nlri[LIB_NLRI_HASH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_NLRI_HASH];
+        nlri.nlri[LIB_NLRI_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_HASH];
         nlri.nlri[LIB_NLRI_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
         delete[] hash_raw;
         // Add tuple to prefix list

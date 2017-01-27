@@ -232,7 +232,8 @@ private:
      *
      * \returns number of bytes read
      */
-    int parseDescrLocalRemoteNode(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool local);
+    int parseDescrLocalRemoteNode(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri,
+                                  bool local, MD5 &hash);
 
     /**********************************************************************************//*
      * Parse Link Descriptor sub-tlvs
@@ -245,7 +246,7 @@ private:
      *
      * \returns number of bytes read
      */
-    int parseDescrLink(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri);
+    int parseDescrLink(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, MD5 &hash);
 
     /**********************************************************************************//*
      * Parse Prefix Descriptor sub-tlvs
@@ -259,7 +260,7 @@ private:
      *
      * \returns number of bytes read
      */
-    int parseDescrPrefix(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool isIPv4);
+    int parseDescrPrefix(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool isIPv4, MD5 &hash);
 
     /**********************************************************************************//*
      * Decode Protocol ID
@@ -283,17 +284,6 @@ private:
     *  \returns true if error, false if no error
     */
     bool resolveIp(std::string name, std::string &hostname);
-
-
-    /**********************************************************************************//*
-     * Hash node descriptor info
-     *
-     * \details will produce a hash for the node descriptor.  Info hash_bin will be updated.
-     *
-     * \param [in/out]  info           Node descriptor information returned/updated
-     * \param [out]  hash_bin       Node descriptor information returned/updated
-     */
-    void genNodeHashId(parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool local);
 
 };
 

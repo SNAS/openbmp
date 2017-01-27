@@ -244,7 +244,8 @@ namespace parse_bgp_lib {
      *
      * \returns number of bytes read
      */
-    int MPLinkState::parseDescrLocalRemoteNode(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool local) {
+    int MPLinkState::parseDescrLocalRemoteNode(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri,
+                                               bool local, MD5 &hash) {
         uint16_t        type;
         uint16_t        len;
         int             data_read = 0;
@@ -258,7 +259,6 @@ namespace parse_bgp_lib {
         uint32_t    bgp_router_id;                 ///< BGP router ID (draft-ietf-idr-bgpls-segment-routing-epe)
 
         std::stringstream   val_ss;
-
 
         if (data_len < 4) {
             LOG_NOTICE("bgp-ls: failed to parse node descriptor; too short");
@@ -279,7 +279,6 @@ namespace parse_bgp_lib {
         }
 
         data += 4; data_read += 4;
-
         switch (type) {
             case NODE_DESCR_AS:
             {
@@ -298,10 +297,12 @@ namespace parse_bgp_lib {
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_LOCAL].official_type = NODE_DESCR_AS;
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_LOCAL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ASN_LOCAL];
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_LOCAL].value.push_back(val_ss.str());
+                    update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_ASN_LOCAL].value, &hash);
                 } else {
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_REMOTE].official_type = NODE_DESCR_AS;
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_REMOTE].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ASN_REMOTE];
                     parsed_nlri.nlri[LIB_NLRI_LS_ASN_REMOTE].value.push_back(val_ss.str());
+                    update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_ASN_REMOTE].value, &hash);
                 }
 
                 data_read += 4;
@@ -328,10 +329,12 @@ namespace parse_bgp_lib {
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].official_type = NODE_DESCR_BGP_LS_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_BGP_LS_ID_LOCAL];
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].value.push_back(val_ss.str());
+                    update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].value, &hash);
                 } else {
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].official_type = NODE_DESCR_BGP_LS_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_BGP_LS_ID_REMOTE];
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].value.push_back(val_ss.str());
+                    update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].value, &hash);
                 }
 
                 data_read += 4;
@@ -355,10 +358,12 @@ namespace parse_bgp_lib {
                     parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_LOCAL].official_type = NODE_DESCR_OSPF_AREA_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_LOCAL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_OSPF_AREA_ID_LOCAL];
                     parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_LOCAL].value.push_back(ipv4_char);
+                    update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_LOCAL].value, &hash);
                 } else {
                     parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_REMOTE].official_type = NODE_DESCR_OSPF_AREA_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_REMOTE].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_OSPF_AREA_ID_REMOTE];
                     parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_REMOTE].value.push_back(ipv4_char);
+                    update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_REMOTE].value, &hash);
                 }
 
                 data_read += 4;
@@ -410,10 +415,12 @@ namespace parse_bgp_lib {
                     parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL].official_type = NODE_DESCR_IGP_ROUTER_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL];
                     parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL].value.push_back(igp_router_id_buf);
+                    update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL].value, &hash);
                 } else {
                     parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_REMOTE].official_type = NODE_DESCR_IGP_ROUTER_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_REMOTE].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_IGP_ROUTER_ID_REMOTE];
                     parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_REMOTE].value.push_back(igp_router_id_buf);
+                    update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_REMOTE].value, &hash);
                 }
 
                 data_read += len;
@@ -517,20 +524,25 @@ namespace parse_bgp_lib {
             LOG_WARN("bgp-ls: failed to parse node descriptor; Type (%d) is not local descriptor", type);
             return;
         }
+        MD5 hash;
 
         // Parse the local descriptor sub-tlv's
         int data_read;
         while (len > 0) {
-            data_read = parseDescrLocalRemoteNode(data, len, parsed_nlri, true);
+            data_read = parseDescrLocalRemoteNode(data, len, parsed_nlri, true, hash);
             len -= data_read;
 
             // Update the nlri data pointer and remaining length after processing the local descriptor sub-tlv
             data += data_read;
             data_len -= data_read;
         }
+        hash.finalize();
 
-
-        genNodeHashId(parsed_nlri, true);
+        // Save the hash
+        unsigned char *hash_raw = hash.raw_digest();
+        parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_LOCAL_NODE_HASH];
+        parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
+        delete[] hash_raw;
 /*
 
         // Update node table entry and add to parsed data list
@@ -557,7 +569,7 @@ namespace parse_bgp_lib {
      *
      * \returns number of bytes read
      */
-    int MPLinkState::parseDescrLink(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri) {
+    int MPLinkState::parseDescrLink(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, MD5 &hash) {
         uint16_t        type;
         uint16_t        len;
         int             data_read = 0;
@@ -614,6 +626,10 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_LINK_REMOTE_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_LINK_REMOTE_ID];
                 parsed_nlri.nlri[LIB_NLRI_LS_LINK_REMOTE_ID].value.push_back(val_ss.str());
 
+                //Update the hash
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_LINK_LOCAL_ID].value, &hash);
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_LINK_REMOTE_ID].value, &hash);
+
                 data_read += 8;
 
                 SELF_DEBUG("bgp-ls: Link descriptor ID local = %08x remote = %08x", local_id, remote_id);
@@ -643,6 +659,7 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].official_type = LINK_DESCR_MT_ID;
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_MT_ID];
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value.push_back(val_ss.str());
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value, &hash);
 
                 data_read += len;
 
@@ -667,6 +684,7 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_INTF_ADDR].official_type = LINK_DESCR_IPV4_INTF_ADDR;
                 parsed_nlri.nlri[LIB_NLRI_LS_INTF_ADDR].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_INTF_ADDR];
                 parsed_nlri.nlri[LIB_NLRI_LS_INTF_ADDR].value.push_back(ip_char);
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_INTF_ADDR].value, &hash);
 
                 data_read += 4;
 
@@ -688,6 +706,7 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_INTF_ADDR].official_type = LINK_DESCR_IPV6_INTF_ADDR;
                 parsed_nlri.nlri[LIB_NLRI_LS_INTF_ADDR].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_INTF_ADDR];
                 parsed_nlri.nlri[LIB_NLRI_LS_INTF_ADDR].value.push_back(ip_char);
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_INTF_ADDR].value, &hash);
 
                 data_read += 16;
 
@@ -709,6 +728,7 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_NEIGHBOR_ADDR].official_type = LINK_DESCR_IPV4_NEI_ADDR;
                 parsed_nlri.nlri[LIB_NLRI_LS_NEIGHBOR_ADDR].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_NEIGHBOR_ADDR];
                 parsed_nlri.nlri[LIB_NLRI_LS_NEIGHBOR_ADDR].value.push_back(ip_char);
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_NEIGHBOR_ADDR].value, &hash);
 
                 data_read += 4;
 
@@ -730,6 +750,7 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_NEIGHBOR_ADDR].official_type = LINK_DESCR_IPV6_NEI_ADDR;
                 parsed_nlri.nlri[LIB_NLRI_LS_NEIGHBOR_ADDR].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_NEIGHBOR_ADDR];
                 parsed_nlri.nlri[LIB_NLRI_LS_NEIGHBOR_ADDR].value.push_back(ip_char);
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_NEIGHBOR_ADDR].value, &hash);
 
                 data_read += 16;
 
@@ -800,46 +821,49 @@ namespace parse_bgp_lib {
 
             // Parse the local descriptor sub-tlv's
             int data_read;
+            MD5 hash;
             while (len > 0) {
-                data_read = parseDescrLocalRemoteNode(data, len, parsed_nlri, (type == NODE_DESCR_LOCAL_DESCR));
+                data_read = parseDescrLocalRemoteNode(data, len, parsed_nlri, (type == NODE_DESCR_LOCAL_DESCR), hash);
                 len -= data_read;
 
                 // Update the nlri data pointer and remaining length after processing the local descriptor sub-tlv
                 data += data_read;
                 data_len -= data_read;
             }
+            hash.finalize();
 
-            genNodeHashId(parsed_nlri, (type == NODE_DESCR_LOCAL_DESCR));
-
+            // Save the hash
+            unsigned char *hash_raw = hash.raw_digest();
+            if (type == NODE_DESCR_LOCAL_DESCR) {
+                parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_LOCAL_NODE_HASH];
+                parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
+            } else {
+                parsed_nlri.nlri[LIB_NLRI_LS_REMOTE_NODE_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_REMOTE_NODE_HASH];
+                parsed_nlri.nlri[LIB_NLRI_LS_REMOTE_NODE_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
+            }
+            delete[] hash_raw;
         }
 
+        MD5 hash;
         /*
          * Remaining data is the link descriptor sub-tlv's
          */
         int data_read;
         while (data_len > 0) {
-            data_read = parseDescrLink(data, data_len, parsed_nlri);
+            data_read = parseDescrLink(data, data_len, parsed_nlri, hash);
 
             // Update the nlri data pointer and remaining length after processing the local descriptor sub-tlv
             data += data_read;
             data_len -= data_read;
         }
-
-        MD5 hash;
-
-        update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_INTF_ADDR].value, &hash);
-        update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_NEIGHBOR_ADDR].value, &hash);
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value, &hash);
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].value, &hash);
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_REMOTE_NODE_HASH].value, &hash);
-        update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_LINK_LOCAL_ID].value, &hash);
-        update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_LINK_REMOTE_ID].value, &hash);
-        update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value, &hash);
 
         hash.finalize();
 
         unsigned char *hash_raw = hash.raw_digest();
-        parsed_nlri.nlri[LIB_NLRI_LS_LINK_HASH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_NLRI_LS_LINK_HASH];
+        parsed_nlri.nlri[LIB_NLRI_LS_LINK_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_LINK_HASH];
         parsed_nlri.nlri[LIB_NLRI_LS_LINK_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
         delete[] hash_raw;
 
@@ -915,28 +939,36 @@ namespace parse_bgp_lib {
 
         // Parse the local descriptor sub-tlv's
         int data_read;
+        MD5 node_hash;
         while (len > 0) {
-            data_read = parseDescrLocalRemoteNode(data, len, parsed_nlri, true);
+            data_read = parseDescrLocalRemoteNode(data, len, parsed_nlri, true, node_hash);
             len -= data_read;
 
             // Update the nlri data pointer and remaining length after processing the local descriptor sub-tlv
             data += data_read;
             data_len -= data_read;
         }
+        node_hash.finalize();
 
+        // Save the hash
+        unsigned char *node_hash_raw = node_hash.raw_digest();
+        parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_LOCAL_NODE_HASH];
+        parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].value.push_back(parse_bgp_lib::hash_toStr(node_hash_raw));
+        delete[] node_hash_raw;
+
+        MD5 hash;
         /*
          * Remaining data is the link descriptor sub-tlv's
          */
         while (data_len > 0) {
-            data_read = parseDescrPrefix(data, data_len, parsed_nlri, isIPv4);
+            data_read = parseDescrPrefix(data, data_len, parsed_nlri, isIPv4, hash);
 
             // Update the nlri data pointer and remaining length after processing the local descriptor sub-tlv
             data += data_read;
             data_len -= data_read;
         }
 
-        // Update the node hash
-         genNodeHashId(parsed_nlri, true);
+
         /*
         // Save prefix to parsed data
 
@@ -953,19 +985,13 @@ namespace parse_bgp_lib {
         memcpy(prefix_tbl.ospf_route_type, info.ospf_route_type, sizeof(prefix_tbl.ospf_route_type));
          */
 
-        MD5 hash;
-
-        update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX].value, &hash);
-        update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX_LENGTH].value, &hash);
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value, &hash);
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].value, &hash);
-        update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_OSPF_ROUTE_TYPE].value, &hash);
-        update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value, &hash);
 
         hash.finalize();
 
         unsigned char *hash_raw = hash.raw_digest();
-        parsed_nlri.nlri[LIB_NLRI_LS_PREFIX_HASH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_NLRI_LS_PREFIX_HASH];
+        parsed_nlri.nlri[LIB_NLRI_LS_PREFIX_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PREFIX_HASH];
         parsed_nlri.nlri[LIB_NLRI_LS_PREFIX_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
         delete[] hash_raw;
 
@@ -983,7 +1009,8 @@ namespace parse_bgp_lib {
      * \param [in]   isIPv4         Bool value to indicate IPv4(true) or IPv6(false)
      * \returns number of bytes read
      */
-    int MPLinkState::parseDescrPrefix(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool isIPv4) {
+    int MPLinkState::parseDescrPrefix(u_char *data, int data_len, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri,
+                                      bool isIPv4, MD5 &hash) {
         uint16_t type;
         uint16_t len;
         int data_read = 0;
@@ -1102,6 +1129,10 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX_BCAST].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_IP_REACH_PREFIX_BCAST];
                 parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX_BCAST].value.push_back(ip_char_bcast);
 
+                //Update hash
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX].value, &hash);
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX_LENGTH].value, &hash);
+
                 SELF_DEBUG("bgp-ls: prefix ip_reach_info: prefix = %s/%d", ip_char, prefix_len);
                 break;
             }
@@ -1126,6 +1157,7 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].official_type = PREFIX_DESCR_MT_ID;
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_MT_ID];
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value.push_back(val_ss.str());
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value, &hash);
 
                 data_read += len;
 
@@ -1168,6 +1200,7 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_OSPF_ROUTE_TYPE].official_type = PREFIX_DESCR_OSPF_ROUTE_TYPE;
                 parsed_nlri.nlri[LIB_NLRI_LS_OSPF_ROUTE_TYPE].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_OSPF_ROUTE_TYPE];
                 parsed_nlri.nlri[LIB_NLRI_LS_OSPF_ROUTE_TYPE].value.push_back(val_ss.str());
+                update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_OSPF_ROUTE_TYPE].value, &hash);
 
                 SELF_DEBUG("bgp-ls: prefix ospf route type is %s", ospf_route_type);
                 break;
@@ -1182,44 +1215,6 @@ namespace parse_bgp_lib {
 
         return data_read;
     }
-
-
-    /**********************************************************************************//*
-     * Hash node descriptor info
-     *
-     * \details will produce a hash for the node descriptor.  Info hash_bin will be updated.
-     *
-     * \param [in/out]  info           Node descriptor information returned/updated
-     * \param [out]  hash_bin       Node descriptor information returned/updated
-     */
-    void MPLinkState::genNodeHashId(parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri, bool local) {
-        MD5 hash;
-
-        if (local) {
-            update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL].value, &hash);
-            update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].value, &hash);
-            update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_ASN_LOCAL].value, &hash);
-            update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_LOCAL].value, &hash);
-        } else {
-            update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IGP_ROUTER_ID_REMOTE].value, &hash);
-            update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].value, &hash);
-            update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_ASN_REMOTE].value, &hash);
-            update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_OSPF_AREA_ID_REMOTE].value, &hash);
-        }
-        hash.finalize();
-
-        // Save the hash
-        unsigned char *hash_raw = hash.raw_digest();
-        if (local) {
-            parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_NLRI_LS_LOCAL_NODE_HASH];
-            parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
-        } else {
-            parsed_nlri.nlri[LIB_NLRI_LS_REMOTE_NODE_HASH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_NLRI_LS_REMOTE_NODE_HASH];
-            parsed_nlri.nlri[LIB_NLRI_LS_REMOTE_NODE_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
-        }
-        delete[] hash_raw;
-    }
-
 
 /**
 * \brief Method to resolve the IP address to a hostname

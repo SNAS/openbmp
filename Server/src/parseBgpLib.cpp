@@ -350,6 +350,9 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
         nlri.safi = parse_bgp_lib::BGP_SAFI_UNICAST;
         nlri.type = parse_bgp_lib::LIB_NLRI_TYPE_NONE;
 
+        // Generate the hash
+        MD5 hash;
+
         bzero(ipv4_raw, sizeof(ipv4_raw));
 
         // Parse add-paths if enabled
@@ -366,12 +369,16 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
         nlri.nlri[LIB_NLRI_PATH_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PATH_ID];
         nlri.nlri[LIB_NLRI_PATH_ID].value.push_back(numString.str());
 
+        if (path_id > 0)
+            update_hash(&nlri.nlri[LIB_NLRI_PATH_ID].value, &hash);
+
         // set the address in bits length
         prefix_len = *data++;
         numString.str(std::string());
         numString << static_cast<unsigned>(prefix_len);
         nlri.nlri[LIB_NLRI_PREFIX_LENGTH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_LENGTH];
         nlri.nlri[LIB_NLRI_PREFIX_LENGTH].value.push_back(numString.str());
+        update_hash(&nlri.nlri[LIB_NLRI_PREFIX_LENGTH].value, &hash);
 
         // Figure out how many bytes the bits requires
         addr_bytes = prefix_len / 8;
@@ -389,15 +396,23 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
             inet_ntop(AF_INET, ipv4_raw, ipv4_char, sizeof(ipv4_char));
             nlri.nlri[LIB_NLRI_PREFIX].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX];
             nlri.nlri[LIB_NLRI_PREFIX].value.push_back(ipv4_char);
+            update_hash(&nlri.nlri[LIB_NLRI_PREFIX].value, &hash);
             SELF_DEBUG("Adding prefix %s len %d", ipv4_char, prefix_len);
 
             // set the raw/binary address
             nlri.nlri[LIB_NLRI_PREFIX_BIN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_BIN];
             nlri.nlri[LIB_NLRI_PREFIX_BIN].value.push_back(std::string(ipv4_raw, ipv4_raw + 4));
 
+            hash.finalize();
+
+            // Save the hash
+            unsigned char *hash_raw = hash.raw_digest();
+            nlri.nlri[LIB_NLRI_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_HASH];
+            nlri.nlri[LIB_NLRI_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
+            delete[] hash_raw;
+
             // Add tuple to prefix list
             nlri_list.push_back(nlri);
-
         } else if (addr_bytes > 4) {
             LOG_NOTICE("NRLI v4 address is larger than 4 bytes bytes=%d len=%d", addr_bytes, prefix_len);
         }
