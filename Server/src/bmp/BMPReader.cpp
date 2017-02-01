@@ -273,14 +273,16 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                 pBMP->handleInitMsg(read_fd, r_object);
 		
 //NAT-PAT feature.
-                if(r_object.hash_type==3)		//if bgpid is present
-                        hashRouter(client, r_object.bgp_id);
-                else if(r_object.hash_type==2)		//if routername is present
-                        hashRouter(client,(char *)(r_object.name));
-		else{					//Default: hashing with router's IP
-			r_object.hash_type=1;
-			hashRouter(client,client->c_ip);
+		char *hash_val=client->c_ip;
+		if(cfg->pat_enabled)
+		{
+		    if(r_object.hash_type==3)
+		    	hash_val=r_object.bgp_id;
+		    else if(r_object.hash_type==2)
+			hash_val=(char *)r_object.name;
 		}
+		
+		hashRouter(client, hash_val);
                 memcpy(router_hash_id, client->hash_id, sizeof(router_hash_id));
                 memcpy(r_object.hash_id, router_hash_id, sizeof(r_object.hash_id));
 
