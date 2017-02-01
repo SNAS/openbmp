@@ -73,14 +73,14 @@ public:
      */
     bool wait_and_accept_connection(ClientInfo &c, int timeout);
 
-    /**
+/**
      * Generate BMP router HASH
      *
      * \param [in,out] client   Refernce to client info used to generate the hash.
      *
      * \return client.hash_id will be updated with the generated hash
      */
-    void hashRouter(ClientInfo &client);
+////    void hashRouter(ClientInfo &client, char *hash_val);
 
     // Debug methods
     void enableDebug();

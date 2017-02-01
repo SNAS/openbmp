@@ -270,10 +270,8 @@ void BMPListener::accept_connection(ClientInfo &c, bool isIPv4) {
     if (setsockopt(c.c_sock, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0) {
         LOG_NOTICE("%s: sock=%d: Unable to enable tcp keepalives", c.c_ip, c.c_sock);
     }
-
-    hashRouter(c);
+//    hashRouter(c,c.c_ip);
 }
-
 
 /**
  * Generate BMP router HASH
@@ -281,13 +279,13 @@ void BMPListener::accept_connection(ClientInfo &c, bool isIPv4) {
  * \param [in,out] client   Reference to client info used to generate the hash.
  *
  * \return client.hash_id will be updated with the generated hash
- */
-void BMPListener::hashRouter(ClientInfo &client) {
+ *
+void BMPListener::hashRouter(ClientInfo &client, char *hash_val) {
     string c_hash_str;
     MsgBusInterface::hash_toStr(cfg->c_hash_id, c_hash_str);
 
     MD5 hash;
-    hash.update((unsigned char *)client.c_ip, strlen(client.c_ip));
+    hash.update((unsigned char *)hash_val, strlen(hash_val));
     hash.update((unsigned char *)c_hash_str.c_str(), c_hash_str.length());
     hash.finalize();
 
@@ -296,7 +294,7 @@ void BMPListener::hashRouter(ClientInfo &client) {
     memcpy(client.hash_id, hash_bin, 16);
     delete[] hash_bin;
 }
-
+*/
 /*
  * Enable/Disable debug
  */

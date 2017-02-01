@@ -91,7 +91,14 @@ public:
      *
      */
     void disconnect(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, int reason_code, char const *reason_text);
-
+/**
+     * Generate BMP router HASH
+     *
+     * \param [in,out] client   Refernce to client info used to generate the hash.
+     *
+     * \return client.hash_id will be updated with the generated hash
+     */
+    void hashRouter(BMPListener::ClientInfo *client, char *hash_val);
     // Debug methods
     void enableDebug();
     void disableDebug();
