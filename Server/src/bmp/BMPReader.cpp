@@ -280,8 +280,12 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
 		    	hash_val=r_object.bgp_id;
 		    else if(r_object.hash_type==2)
 			hash_val=(char *)r_object.name;
+		    else 
+			r_object.hash_type=1;
 		}
-		
+		else
+			r_object.hash_type=1;
+
 		hashRouter(client, hash_val);
                 memcpy(router_hash_id, client->hash_id, sizeof(router_hash_id));
                 memcpy(r_object.hash_id, router_hash_id, sizeof(r_object.hash_id));

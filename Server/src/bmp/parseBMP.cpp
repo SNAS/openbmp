@@ -732,7 +732,8 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
     init_msg_v3 initMsg;
     char infoBuf[sizeof(r_entry.initiate_data)];
     int infoLen;
-    // Buffer the init message for parsing
+    r_entry.hash_type=0;    
+// Buffer the init message for parsing
     bufferBMPMessage(sock);
 
     u_char *bufPtr = bmp_data;
