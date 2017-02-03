@@ -60,11 +60,11 @@ void MPUnReachAttr::parseUnReachNlriAttr(int attr_len, u_char *data, parse_bgp_l
      * Make sure the parsing doesn't exceed buffer
      */
     if (attr_len < 0) {
-        LOG_NOTICE("MP_UNREACH NLRI data length is larger than attribute data length, skipping parse");
+        LOG_NOTICE("%sMP_UNREACH NLRI data length is larger than attribute data length, skipping parse", caller->debug_prepend_string.c_str());
         return;
     }
 
-    SELF_DEBUG("afi=%d safi=%d", nlri.afi, nlri.safi);
+    SELF_DEBUG("%safi=%d safi=%d", caller->debug_prepend_string.c_str(), nlri.afi, nlri.safi);
 
     if (nlri.nlri_len == 0) {
         LOG_INFO("End-Of-RIB marker (mp_unreach len=0)");
@@ -101,7 +101,7 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, parse_bgp_lib::parseBgpLib::
 
         case parse_bgp_lib::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
         {
-            MPLinkState ls(logger, &update, debug);
+            MPLinkState ls(caller, logger, &update, debug);
             ls.parseUnReachLinkState(nlri);
             break;
         }
@@ -112,20 +112,20 @@ void MPUnReachAttr::parseAfi(mp_unreach_nlri &nlri, parse_bgp_lib::parseBgpLib::
             switch (nlri.safi) {
                 case parse_bgp_lib::BGP_SAFI_EVPN : // https://tools.ietf.org/html/rfc7432
                 {
-                    EVPN evpn(logger, true, &update.withdrawn_nlri_list, debug);
+                    EVPN evpn(caller, logger, true, &update.withdrawn_nlri_list, debug);
                     evpn.parseNlriData(nlri.nlri_data, nlri.nlri_len);
                     break;
                 }
 
                 default :
-                    LOG_INFO("EVPN::parse SAFI=%d is not implemented yet, skipping", nlri.safi);
+                    LOG_INFO("%sEVPN::parse SAFI=%d is not implemented yet, skipping", caller->debug_prepend_string.c_str(), nlri.safi);
             }
 
             break;
         }
 
         default : // Unknown
-            LOG_INFO("MP_UNREACH AFI=%d is not implemented yet, skipping", nlri.afi);
+            LOG_INFO("%sMP_UNREACH AFI=%d is not implemented yet, skipping", caller->debug_prepend_string.c_str(), nlri.afi);
             return;
     }
 }
@@ -161,7 +161,7 @@ void MPUnReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_unreach_nlri &nlri, parse_
             break;
 
         default :
-            LOG_INFO("MP_UNREACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now", isIPv4, nlri.safi);
+            LOG_INFO("%sMP_UNREACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now", caller->debug_prepend_string.c_str(), isIPv4, nlri.safi);
             return;
     }
 }

@@ -25,9 +25,10 @@ namespace parse_bgp_lib {
      * \param [in]     logPtr       Pointer to existing Logger for app logging
      * \param [in]     enable_debug Debug true to enable, false to disable
      */
-    ExtCommunity::ExtCommunity(Logger *logPtr, bool enable_debug) {
+    ExtCommunity::ExtCommunity(parseBgpLib *parse_lib, Logger *logPtr, bool enable_debug) {
         logger = logPtr;
         debug = enable_debug;
+        caller = parse_lib;
     }
 
     ExtCommunity::~ExtCommunity() {
@@ -52,7 +53,7 @@ namespace parse_bgp_lib {
         extcomm_hdr ec_hdr;
 
         if ( (attr_len % 8) ) {
-            LOG_NOTICE("Parsing extended community len=%d is invalid, expecting divisible by 8", attr_len);
+            LOG_NOTICE("%sParsing extended community len=%d is invalid, expecting divisible by 8", caller->debug_prepend_string.c_str(), attr_len);
             return;
         }
 
@@ -102,7 +103,7 @@ namespace parse_bgp_lib {
                 case EXT_TYPE_FLOW_SPEC : // TODO: Implement
                 case EXT_TYPE_COS_CAP   : // TODO: Implement
                 default:
-                    LOG_INFO("Extended community type %d,%d is not yet supported",
+                    LOG_INFO("%sExtended community type %d,%d is not yet supported", caller->debug_prepend_string.c_str(),
                              ec_hdr.high_type, ec_hdr.low_type);
             }
 
@@ -273,7 +274,7 @@ namespace parse_bgp_lib {
                 break;
 
             default :
-                LOG_INFO("%s: Extended community common type %d subtype = %d is not yet supported", peer_addr.c_str(),
+                LOG_INFO("%sExtended community common type %d subtype = %d is not yet supported", caller->debug_prepend_string.c_str(),
                          ec_hdr.high_type, ec_hdr.low_type);
                 break;
         }
@@ -430,7 +431,7 @@ namespace parse_bgp_lib {
             case EXT_GENERIC_OSPF_ROUTE_TYPE :  // deprecated
             case EXT_GENERIC_OSPF_ROUTER_ID :   // deprecated
             case EXT_GENERIC_OSPF_DOM_ID :      // deprecated
-                LOG_INFO("Ignoring deprecated extended community %d/%d",
+                LOG_INFO("%sIgnoring deprecated extended community %d/%d", caller->debug_prepend_string.c_str(),
                          ec_hdr.high_type, ec_hdr.low_type);
                 break;
 
@@ -515,10 +516,11 @@ namespace parse_bgp_lib {
         std::string decodeStr = "";
         extcomm_hdr ec_hdr;
 
-        LOG_INFO("Parsing IPv6 extended community len=%d", attr_len);
+        LOG_INFO("%sParsing IPv6 extended community len=%d", caller->debug_prepend_string.c_str(), attr_len);
 
         if ( (attr_len % 20) ) {
-            LOG_NOTICE("Parsing IPv6 extended community len=%d is invalid, expecting divisible by 20", attr_len);
+            LOG_NOTICE("%sParsing IPv6 extended community len=%d is invalid, expecting divisible by 20", caller->debug_prepend_string.c_str(),
+                       attr_len);
             return;
         }
 
@@ -540,7 +542,7 @@ namespace parse_bgp_lib {
                     break;
 
                 default :
-                    LOG_NOTICE("Unexpected type for IPv6 %d,%d",
+                    LOG_NOTICE("%sUnexpected type for IPv6 %d,%d", caller->debug_prepend_string.c_str(),
                                ec_hdr.high_type, ec_hdr.low_type);
                     break;
             }
@@ -598,7 +600,7 @@ namespace parse_bgp_lib {
                 break;
 
             default :
-                LOG_INFO("Extended community ipv6 specific type %d subtype = %d is not yet supported",
+                LOG_INFO("%sExtended community ipv6 specific type %d subtype = %d is not yet supported", caller->debug_prepend_string.c_str(),
                          ec_hdr.high_type, ec_hdr.low_type);
                 break;
         }

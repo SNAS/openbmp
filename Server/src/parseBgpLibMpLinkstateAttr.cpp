@@ -101,10 +101,11 @@ namespace parse_bgp_lib {
      * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      * \param [in]     enable_debug Debug true to enable, false to disable
      */
-    MPLinkStateAttr::MPLinkStateAttr(Logger *logPtr, parse_bgp_lib::parseBgpLib::parsed_update *update, bool enable_debug) {
+    MPLinkStateAttr::MPLinkStateAttr(parseBgpLib *parse_lib, Logger *logPtr, parse_bgp_lib::parseBgpLib::parsed_update *update, bool enable_debug) {
         logger = logPtr;
         debug = enable_debug;
         this->update = update;
+        caller = parse_lib;
     }
 
     MPLinkStateAttr::~MPLinkStateAttr() {
@@ -244,7 +245,7 @@ namespace parse_bgp_lib {
             val_ss << value_32bit;
 
         } else {
-            LOG_WARN("bgp-ls: SID/Label has unexpected length of %d", len);
+            LOG_WARN("%sbgp-ls: SID/Label has unexpected length of %d", caller->debug_prepend_string.c_str(), len);
             return "";
         }
 
@@ -276,7 +277,7 @@ namespace parse_bgp_lib {
         int     i;
 
         if (attr_len < 4) {
-            LOG_NOTICE("bgp-ls: failed to parse attribute; too short");
+            LOG_NOTICE("%sbgp-ls: failed to parse attribute; too short", caller->debug_prepend_string.c_str());
             return attr_len;
         }
 
@@ -291,20 +292,21 @@ namespace parse_bgp_lib {
         switch (type) {
             case ATTR_NODE_FLAG: {
                 if (len != 1) {
-                    LOG_INFO("bgp-ls: node flag attribute length is too long %d should be 1", len);
+                    LOG_INFO("%sbgp-ls: node flag attribute length is too long %d should be 1", caller->debug_prepend_string.c_str(), len);
                 }
 
                 update->attrs[LIB_ATTR_LS_FLAGS].official_type = ATTR_NODE_FLAG;
                 update->attrs[LIB_ATTR_LS_FLAGS].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_FLAGS];
                 update->attrs[LIB_ATTR_LS_FLAGS].value.push_back(this->parse_flags_to_string(*data, LS_FLAGS_NODE_NLRI, sizeof(LS_FLAGS_NODE_NLRI)));
-                SELF_DEBUG("bgp-ls: parsed node flags %s %x (len=%d)", update->attrs[LIB_ATTR_LS_FLAGS].value.front().c_str(), *data, len);
+                SELF_DEBUG("%sbgp-ls: parsed node flags %s %x (len=%d)", caller->debug_prepend_string.c_str(),
+                           update->attrs[LIB_ATTR_LS_FLAGS].value.front().c_str(), *data, len);
 
             }
                 break;
 
             case ATTR_NODE_IPV4_ROUTER_ID_LOCAL:  // Includes ATTR_LINK_IPV4_ROUTER_ID_LOCAL
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse attribute local router id IPv4 sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse attribute local router id IPv4 sub-tlv; too short", caller->debug_prepend_string.c_str());
                     break;
                 }
 
@@ -315,12 +317,12 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4];
                 update->attrs[LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4].value.push_back(ip_char);
 
-                SELF_DEBUG("bgp-ls: parsed local IPv4 router id attribute: addr = %s", ip_char);
+                SELF_DEBUG("%sbgp-ls: parsed local IPv4 router id attribute: addr = %s", caller->debug_prepend_string.c_str(), ip_char);
                 break;
 
             case ATTR_NODE_IPV6_ROUTER_ID_LOCAL:  // Includes ATTR_LINK_IPV6_ROUTER_ID_LOCAL
                 if (len != 16) {
-                    LOG_NOTICE("bgp-ls: failed to parse attribute local router id IPv6 sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse attribute local router id IPv6 sub-tlv; too short", caller->debug_prepend_string.c_str());
                     break;
                 }
 
@@ -332,7 +334,7 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6].value.push_back(ip_char);
 
 
-                SELF_DEBUG("bgp-ls: parsed local IPv6 router id attribute: addr = %s", ip_char);
+                SELF_DEBUG("%sbgp-ls: parsed local IPv6 router id attribute: addr = %s", caller->debug_prepend_string.c_str(), ip_char);
                 break;
 
             case ATTR_NODE_ISIS_AREA_ID:
@@ -348,11 +350,12 @@ namespace parse_bgp_lib {
                     }
                 update->attrs[LIB_ATTR_LS_ISIS_AREA_ID].value.push_back(isis_area_id);
 
-                SELF_DEBUG("bgp-ls: parsed node ISIS area id %x (len=%d)", update->attrs[LIB_ATTR_LS_ISIS_AREA_ID].value.front().c_str(), len);
+                SELF_DEBUG("%sbgp-ls: parsed node ISIS area id %x (len=%d)",
+                           caller->debug_prepend_string.c_str(), update->attrs[LIB_ATTR_LS_ISIS_AREA_ID].value.front().c_str(), len);
                 break;
 
             case ATTR_NODE_MT_ID:
-                SELF_DEBUG("bgp-ls: parsing node MT ID attribute (len=%d)", len);
+                SELF_DEBUG("%sbgp-ls: parsing node MT ID attribute (len=%d)", caller->debug_prepend_string.c_str(), len);
 
                 update->attrs[LIB_ATTR_LS_MT_ID].official_type = ATTR_NODE_MT_ID;
                 update->attrs[LIB_ATTR_LS_MT_ID].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_MT_ID];
@@ -374,11 +377,12 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_NODE_NAME].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_NODE_NAME];
                 update->attrs[LIB_ATTR_LS_NODE_NAME].value.push_back(std::string((char *)data, (char *)(data + len)));
 
-                SELF_DEBUG("bgp-ls: parsed node name attribute: name = %s", update->attrs[LIB_ATTR_LS_NODE_NAME].value.front().c_str());
+                SELF_DEBUG("%sbgp-ls: parsed node name attribute: name = %s",
+                           caller->debug_prepend_string.c_str(), update->attrs[LIB_ATTR_LS_NODE_NAME].value.front().c_str());
                 break;
 
             case ATTR_NODE_OPAQUE:
-                LOG_INFO("bgp-ls: opaque node attribute (len=%d), not yet implemented", len);
+                LOG_INFO("%sbgp-ls: opaque node attribute (len=%d), not yet implemented", caller->debug_prepend_string.c_str(), len);
                 break;
 
             case ATTR_NODE_SR_CAPABILITIES: {
@@ -453,16 +457,16 @@ namespace parse_bgp_lib {
                             val_ss << " " << value_32bit;
 
                         } else {
-                            LOG_NOTICE("bgp-ls: parsed node sr capabilities, sid label size is unexpected");
+                            LOG_NOTICE("%sbgp-ls: parsed node sr capabilities, sid label size is unexpected", caller->debug_prepend_string.c_str());
                             break;
                         }
                     } else {
-                        LOG_NOTICE("bgp-ls: parsed node sr capabilities, SUB TLV type %d is unexpected", type);
+                        LOG_NOTICE("%sbgp-ls: parsed node sr capabilities, SUB TLV type %d is unexpected", caller->debug_prepend_string.c_str(), type);
                         break;
                     }
                     update->attrs[LIB_ATTR_LS_SR_CAPABILITIES_TLV].value.push_back(val_ss.str());
                 }
-                SELF_DEBUG("bgp-ls: parsed node sr capabilities (len=%d) %s", len);
+                SELF_DEBUG("%sbgp-ls: parsed node sr capabilities (len=%d)", caller->debug_prepend_string.c_str(), len);
                 std::cout << "Parsed SR capability: ";
                 std::list<std::string>::iterator last_value = update->attrs[LIB_ATTR_LS_SR_CAPABILITIES_TLV].value.end();
                 last_value--;
@@ -483,7 +487,7 @@ namespace parse_bgp_lib {
                 val_ss.str(std::string());
 
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse attribute link admin group sub-tlv, size not 4");
+                    LOG_NOTICE("%sbgp-ls: failed to parse attribute link admin group sub-tlv, size not 4", caller->debug_prepend_string.c_str());
                     break;
                 } else {
                     value_32bit = 0;
@@ -493,8 +497,8 @@ namespace parse_bgp_lib {
                     update->attrs[LIB_ATTR_LS_ADMIN_GROUP].official_type = ATTR_LINK_ADMIN_GROUP;
                     update->attrs[LIB_ATTR_LS_ADMIN_GROUP].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_ADMIN_GROUP];
                     update->attrs[LIB_ATTR_LS_ADMIN_GROUP].value.push_back(val_ss.str());
-                    SELF_DEBUG("bgp-ls: parsed linked admin group attribute: "
-                                       " 0x%x, len = %d", value_32bit, len);
+                    SELF_DEBUG("%sbgp-ls: parsed linked admin group attribute: "
+                                       " 0x%x, len = %d", caller->debug_prepend_string.c_str(), value_32bit, len);
                 }
                 break;
 
@@ -514,12 +518,12 @@ namespace parse_bgp_lib {
                 val_ss << value_32bit;
                 update->attrs[LIB_ATTR_LS_IGP_METRIC].value.push_back(val_ss.str());
 
-                SELF_DEBUG("bgp-ls: parsed link IGP metric attribute: metric = %u", value_32bit);
+                SELF_DEBUG("%sbgp-ls: parsed link IGP metric attribute: metric = %u", caller->debug_prepend_string.c_str(), value_32bit);
                 break;
 
             case ATTR_LINK_IPV4_ROUTER_ID_REMOTE:
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse attribute remote IPv4 sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse attribute remote IPv4 sub-tlv; too short", caller->debug_prepend_string.c_str());
                     break;
                 }
 
@@ -530,12 +534,12 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV4].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV4];
                 update->attrs[LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV4].value.push_back(ip_char);
 
-                SELF_DEBUG("bgp-ls: parsed remote IPv4 router id attribute: addr = %s", ip_char);
+                SELF_DEBUG("%sbgp-ls: parsed remote IPv4 router id attribute: addr = %s", caller->debug_prepend_string.c_str(), ip_char);
                 break;
 
             case ATTR_LINK_IPV6_ROUTER_ID_REMOTE:
                 if (len != 16) {
-                    LOG_NOTICE("bgp-ls: failed to parse attribute remote router id IPv6 sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse attribute remote router id IPv6 sub-tlv; too short", caller->debug_prepend_string.c_str());
                     break;
                 }
                 memcpy(ip_raw, data, 16);
@@ -545,12 +549,12 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6];
                 update->attrs[LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6].value.push_back(ip_char);
 
-                SELF_DEBUG("bgp-ls: parsed remote IPv6 router id attribute: addr = %s", ip_char);
+                SELF_DEBUG("%sbgp-ls: parsed remote IPv6 router id attribute: addr = %s", caller->debug_prepend_string.c_str(), ip_char);
                 break;
 
             case ATTR_LINK_MAX_LINK_BW:
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse attribute maximum link bandwidth sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse attribute maximum link bandwidth sub-tlv; too short", caller->debug_prepend_string.c_str());
                     break;
                 }
                 update->attrs[LIB_ATTR_LS_MAX_LINK_BW].official_type = ATTR_LINK_MAX_LINK_BW;
@@ -567,12 +571,13 @@ namespace parse_bgp_lib {
 
                 memcpy(&value_32bit, data, 4);
                 parse_bgp_lib::SWAP_BYTES(&value_32bit);
-                SELF_DEBUG("bgp-ls: parsed attribute maximum link bandwidth (raw=%x) %u Kbits (len=%d)", value_32bit, *(int32_t *)&float_val, len);
+                SELF_DEBUG("%sbgp-ls: parsed attribute maximum link bandwidth (raw=%x) %u Kbits (len=%d)",
+                           caller->debug_prepend_string.c_str(), value_32bit, *(int32_t *)&float_val, len);
                 break;
 
             case ATTR_LINK_MAX_RESV_BW:
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse attribute remote IPv4 sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse attribute remote IPv4 sub-tlv; too short", caller->debug_prepend_string.c_str());
                     break;
                 }
 
@@ -589,17 +594,18 @@ namespace parse_bgp_lib {
                 val_ss << float_val;
                 update->attrs[LIB_ATTR_LS_MAX_RESV_BW].value.push_back(val_ss.str());
 
-                SELF_DEBUG("bgp-ls: parsed attribute maximum reserved bandwidth %u Kbits (len=%d)", *(uint32_t *)&float_val, len);
+                SELF_DEBUG("%sbgp-ls: parsed attribute maximum reserved bandwidth %u Kbits (len=%d)", caller->debug_prepend_string.c_str(),
+                           *(uint32_t *)&float_val, len);
                 break;
 
             case ATTR_LINK_MPLS_PROTO_MASK:
                 // SELF_DEBUG("%s: bgp-ls: parsing link MPLS Protocol mask attribute", peer_ad dr.c_str());
-                LOG_INFO("bgp-ls: link MPLS Protocol mask attribute, not yet implemented");
+                LOG_INFO("%sbgp-ls: link MPLS Protocol mask attribute, not yet implemented", caller->debug_prepend_string.c_str());
                 break;
 
             case ATTR_LINK_PROTECTION_TYPE:
                 // SELF_DEBUG("%s: bgp-ls: parsing link protection type attribute", peer_addr.c_str());
-                LOG_INFO("bgp-ls: link protection type attribute, not yet implemented");
+                LOG_INFO("%sbgp-ls: link protection type attribute, not yet implemented", caller->debug_prepend_string.c_str());
                 break;
 
             case ATTR_LINK_NAME: {
@@ -608,7 +614,8 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_LINK_NAME].value.push_back(std::string((char *)data, (char *)(data + len)));
 
 
-                SELF_DEBUG("bgp-ls: parsing link name attribute: name = %s", update->attrs[LIB_ATTR_LS_LINK_NAME].value.front().c_str());
+                SELF_DEBUG("%sbgp-ls: parsing link name attribute: name = %s",
+                           caller->debug_prepend_string.c_str(), update->attrs[LIB_ATTR_LS_LINK_NAME].value.front().c_str());
                 break;
             }
 
@@ -647,13 +654,13 @@ namespace parse_bgp_lib {
                 val_ss << " " << parse_sid_value(data, len - 4);
                 update->attrs[LIB_ATTR_LS_ADJACENCY_SID].value.push_back(val_ss.str());
 
-                SELF_DEBUG("bgp-ls: parsed sr link adjacency segment identifier %s", val_ss.str().c_str());
+                SELF_DEBUG("%sbgp-ls: parsed sr link adjacency segment identifier %s", caller->debug_prepend_string.c_str(), val_ss.str().c_str());
                 break;
             }
 
             case ATTR_LINK_SRLG:
                 // SELF_DEBUG("%s: bgp-ls: parsing link SRLG attribute", peer_addr.c_str());
-                LOG_INFO("bgp-ls: link SRLG attribute, not yet implemented");
+                LOG_INFO("%Sbgp-ls: link SRLG attribute, not yet implemented", caller->debug_prepend_string.c_str());
                 break;
 
             case ATTR_LINK_TE_DEF_METRIC:
@@ -668,7 +675,7 @@ namespace parse_bgp_lib {
                     update->attrs[LIB_ATTR_LS_TE_DEF_METRIC].value.push_back(val_ss.str());
                     break;
                 } else if (len > 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse attribute TE default metric sub-tlv; too long %d", len);
+                    LOG_NOTICE("%sbgp-ls: failed to parse attribute TE default metric sub-tlv; too long %d", caller->debug_prepend_string.c_str(), len);
                     break;
                 } else {
                     memcpy(&value_32bit, data, len);
@@ -677,7 +684,7 @@ namespace parse_bgp_lib {
                     update->attrs[LIB_ATTR_LS_TE_DEF_METRIC].official_type = ATTR_LINK_TE_DEF_METRIC;
                     update->attrs[LIB_ATTR_LS_TE_DEF_METRIC].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_TE_DEF_METRIC];
                     update->attrs[LIB_ATTR_LS_TE_DEF_METRIC].value.push_back(val_ss.str());
-                    SELF_DEBUG("bgp-ls: parsed attribute te default metric 0x%X (len=%d)", value_32bit, len);
+                    SELF_DEBUG("%sbgp-ls: parsed attribute te default metric 0x%X (len=%d)", caller->debug_prepend_string.c_str(), value_32bit, len);
                 }
 
                 break;
@@ -685,10 +692,10 @@ namespace parse_bgp_lib {
             case ATTR_LINK_UNRESV_BW: {
                 std::stringstream   val_ss;
 
-                SELF_DEBUG("bgp-ls: parsing link unreserve bw attribute (len=%d)", len);
+                SELF_DEBUG("%sbgp-ls: parsing link unreserve bw attribute (len=%d)", caller->debug_prepend_string.c_str(), len);
 
                 if (len != 32) {
-                    LOG_INFO("bgp-ls: link unreserve bw attribute is invalid, length is %d but should be 32", len);
+                    LOG_INFO("%sbgp-ls: link unreserve bw attribute is invalid, length is %d but should be 32", caller->debug_prepend_string.c_str(), len);
                     break;
                 }
 
@@ -714,7 +721,7 @@ namespace parse_bgp_lib {
             }
 
             case ATTR_LINK_OPAQUE:
-                LOG_INFO("bgp-ls: opaque link attribute (len=%d), not yet implemented", len);
+                LOG_INFO("%sbgp-ls: opaque link attribute (len=%d), not yet implemented", caller->debug_prepend_string.c_str(), len);
                 break;
 
             case ATTR_LINK_PEER_EPE_NODE_SID:
@@ -742,26 +749,26 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_PEER_EPE_NODE_SID].value.push_back(val_ss.str());
 
 
-                SELF_DEBUG("bgp-ls: parsed link peer node SID: %s (len=%d) %x", val_ss.str().c_str(), len, (data+4));
+                SELF_DEBUG("%sbgp-ls: parsed link peer node SID: %s (len=%d) %x", caller->debug_prepend_string.c_str(), val_ss.str().c_str(), len, (data+4));
 
                 break;
 
             case ATTR_LINK_PEER_EPE_SET_SID:
-                LOG_INFO("bgp-ls: peer epe set SID link attribute (len=%d), not yet implemented", len);
+                LOG_INFO("%sbgp-ls: peer epe set SID link attribute (len=%d), not yet implemented", caller->debug_prepend_string.c_str(), len);
                 break;
 
             case ATTR_LINK_PEER_EPE_ADJ_SID:
-                LOG_INFO("bgp-ls: peer epe adjacency SID link attribute (len=%d), not yet implemented", len);
+                LOG_INFO("%sbgp-ls: peer epe adjacency SID link attribute (len=%d), not yet implemented", caller->debug_prepend_string.c_str(), len);
                 break;
 
             case ATTR_PREFIX_EXTEND_TAG:
                 // SELF_DEBUG("%s: bgp-ls: parsing prefix extended tag attribute", peer_addr.c_str());
-                LOG_INFO("bgp-ls: prefix extended tag attribute (len=%d), not yet implemented", len);
+                LOG_INFO("%sbgp-ls: prefix extended tag attribute (len=%d), not yet implemented", caller->debug_prepend_string.c_str(), len);
                 break;
 
             case ATTR_PREFIX_IGP_FLAGS:
                 // SELF_DEBUG("%s: bgp-ls: parsing prefix IGP flags attribute", peer_addr.c_str());
-                LOG_INFO("bgp-ls: prefix IGP flags attribute, not yet implemented");
+                LOG_INFO("%sbgp-ls: prefix IGP flags attribute, not yet implemented", caller->debug_prepend_string.c_str());
                 break;
 
             case ATTR_PREFIX_PREFIX_METRIC:
@@ -775,12 +782,12 @@ namespace parse_bgp_lib {
                 update->attrs[LIB_ATTR_LS_PREFIX_METRIC].official_type = ATTR_PREFIX_PREFIX_METRIC;
                 update->attrs[LIB_ATTR_LS_PREFIX_METRIC].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_PREFIX_METRIC];
                 update->attrs[LIB_ATTR_LS_PREFIX_METRIC].value.push_back(val_ss.str());
-                SELF_DEBUG("bgp-ls: parsing prefix metric attribute: metric = %u", value_32bit);
+                SELF_DEBUG("%sbgp-ls: parsing prefix metric attribute: metric = %u", caller->debug_prepend_string.c_str(), value_32bit);
                 break;
 
             case ATTR_PREFIX_ROUTE_TAG:
             {
-                SELF_DEBUG("bgp-ls: parsing prefix route tag attribute (len=%d)", len);
+                SELF_DEBUG("%sbgp-ls: parsing prefix route tag attribute (len=%d)", caller->debug_prepend_string.c_str(), len);
 
                 // TODO(undefined): Per RFC7752 section 3.3.3, prefix tag can be multiples, but for now we only decode the first one.
                 value_32bit = 0;
@@ -801,11 +808,11 @@ namespace parse_bgp_lib {
             }
             case ATTR_PREFIX_OSPF_FWD_ADDR:
                 // SELF_DEBUG("%s: bgp-ls: parsing prefix OSPF forwarding address attribute", peer_addr.c_str());
-                LOG_INFO("bgp-ls: prefix OSPF forwarding address attribute, not yet implemented");
+                LOG_INFO("%sbgp-ls: prefix OSPF forwarding address attribute, not yet implemented", caller->debug_prepend_string.c_str());
                 break;
 
             case ATTR_PREFIX_OPAQUE_PREFIX:
-                LOG_INFO("bgp-ls: opaque prefix attribute (len=%d), not yet implemented", len);
+                LOG_INFO("%sbgp-ls: opaque prefix attribute (len=%d), not yet implemented", caller->debug_prepend_string.c_str(), len);
                 break;
 
             case ATTR_PREFIX_SID: {
@@ -854,13 +861,14 @@ namespace parse_bgp_lib {
                 val_ss << parse_sid_value(data, len - 4);
                 update->attrs[LIB_ATTR_LS_PREFIX_SID].value.push_back(val_ss.str());
 
-                SELF_DEBUG("bgp-ls: parsed sr prefix segment identifier  flags = %x len=%d : %s", *(data - 4), len, val_ss.str().c_str());
+                SELF_DEBUG("%sbgp-ls: parsed sr prefix segment identifier  flags = %x len=%d : %s", caller->debug_prepend_string.c_str(),
+                           *(data - 4), len, val_ss.str().c_str());
 
                 break;
             }
 
             default:
-                LOG_INFO("bgp-ls: Attribute type=%d len=%d not yet implemented, skipping", type, len);
+                LOG_INFO("%sbgp-ls: Attribute type=%d len=%d not yet implemented, skipping", caller->debug_prepend_string.c_str(), type, len);
                 break;
         }
 

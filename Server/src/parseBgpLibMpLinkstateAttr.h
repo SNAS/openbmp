@@ -112,7 +112,7 @@ namespace parse_bgp_lib {
          * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
          * \param [in]     enable_debug Debug true to enable, false to disable
          */
-        MPLinkStateAttr(Logger *logPtr, parse_bgp_lib::parseBgpLib::parsed_update *update, bool enable_debug);
+        MPLinkStateAttr(parseBgpLib *parse_lib, Logger *logPtr, parse_bgp_lib::parseBgpLib::parsed_update *update, bool enable_debug);
         virtual ~MPLinkStateAttr();
 
 
@@ -133,6 +133,7 @@ namespace parse_bgp_lib {
         Logger           *logger;                         ///< Logging class pointer
 
         parse_bgp_lib::parseBgpLib::parsed_update *update;       ///< Parsed data structure
+        parseBgpLib *caller;
 
 #define IEEE_INFINITY         0x7F800000
 #define MINUS_INFINITY        (int32_t)0x80000000L

@@ -23,10 +23,11 @@ namespace parse_bgp_lib {
 * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
  * \param [in]     enable_debug Debug true to enable, false to disable
  */
-    MPLinkState::MPLinkState(Logger *logPtr, parse_bgp_lib::parseBgpLib::parsed_update *update, bool enable_debug) {
+    MPLinkState::MPLinkState(parseBgpLib *parse_lib, Logger *logPtr, parse_bgp_lib::parseBgpLib::parsed_update *update, bool enable_debug) {
         logger = logPtr;
         debug = enable_debug;
         this->update = update;
+        caller = parse_lib;
     }
 
     MPLinkState::~MPLinkState() {
@@ -64,12 +65,13 @@ namespace parse_bgp_lib {
          */
         switch (nlri.safi) {
             case parse_bgp_lib::BGP_SAFI_BGPLS: // Unicast BGP-LS
-                SELF_DEBUG("REACH: bgp-ls: len=%d", nlri.nlri_len);
+                SELF_DEBUG("%sREACH: bgp-ls: len=%d", caller->debug_prepend_string.c_str(), nlri.nlri_len);
                 parseLinkStateNlriData(nlri.nlri_data, nlri.nlri_len);
                 break;
 
             default :
-                LOG_INFO("MP_UNREACH AFI=bgp-ls SAFI=%d is not implemented yet, skipping for now", nlri.afi, nlri.safi);
+                LOG_INFO("%sMP_UNREACH AFI=bgp-ls SAFI=%d is not implemented yet, skipping for now",
+                         caller->debug_prepend_string.c_str(), nlri.afi, nlri.safi);
                 return;
         }
     }
@@ -90,12 +92,13 @@ namespace parse_bgp_lib {
          */
         switch (nlri.safi) {
             case parse_bgp_lib::BGP_SAFI_BGPLS: // Unicast BGP-LS
-                SELF_DEBUG("UNREACH: bgp-ls: len=%d", nlri.nlri_len);
+                SELF_DEBUG("%sUNREACH: bgp-ls: len=%d", caller->debug_prepend_string.c_str(), nlri.nlri_len);
                 parseLinkStateNlriData(nlri.nlri_data, nlri.nlri_len);
                 break;
 
             default :
-                LOG_INFO("MP_UNREACH AFI=bgp-ls SAFI=%d is not implemented yet, skipping for now", nlri.afi, nlri.safi);
+                LOG_INFO("%sMP_UNREACH AFI=bgp-ls SAFI=%d is not implemented yet, skipping for now",
+                         caller->debug_prepend_string.c_str(), nlri.afi, nlri.safi);
                 return;
         }
     }
@@ -116,7 +119,7 @@ namespace parse_bgp_lib {
         // Process the NLRI data
         while (nlri_len_read < len) {
 
-            SELF_DEBUG("NLRI read=%d total = %d", nlri_len_read, len);
+            SELF_DEBUG("%sNLRI read=%d total = %d", caller->debug_prepend_string.c_str(), nlri_len_read, len);
 
             /*
              * Parse the NLRI TLV
@@ -132,7 +135,8 @@ namespace parse_bgp_lib {
             nlri_len_read += 4;
 
             if (nlri_len > len) {
-                LOG_NOTICE("bgp-ls: failed to parse link state NLRI; length is larger than available data");
+                LOG_NOTICE("%sbgp-ls: failed to parse link state NLRI; length is larger than available data",
+                           caller->debug_prepend_string.c_str());
                 return;
             }
 
@@ -154,27 +158,28 @@ namespace parse_bgp_lib {
              */
             switch (nlri_type) {
                 case NLRI_TYPE_NODE:
-                    SELF_DEBUG("bgp-ls: parsing NODE NLRI len=%d", nlri_len);
+                    SELF_DEBUG("%sbgp-ls: parsing NODE NLRI len=%d", caller->debug_prepend_string.c_str(), nlri_len);
                     parseNlriNode(data, nlri_len, id, proto_id);
                     break;
 
                 case NLRI_TYPE_LINK:
-                    SELF_DEBUG("bgp-ls: parsing LINK NLRI");
+                    SELF_DEBUG("%sbgp-ls: parsing LINK NLRI", caller->debug_prepend_string.c_str());
                     parseNlriLink(data, nlri_len, id, proto_id);
                     break;
 
                 case NLRI_TYPE_IPV4_PREFIX:
-                    SELF_DEBUG("bgp-ls: parsing IPv4 PREFIX NLRI");
+                    SELF_DEBUG("%sbgp-ls: parsing IPv4 PREFIX NLRI", caller->debug_prepend_string.c_str());
                     parseNlriPrefix(data, nlri_len, id, proto_id, true);
                     break;
 
                 case NLRI_TYPE_IPV6_PREFIX:
-                    SELF_DEBUG("bgp-ls: parsing IPv6 PREFIX NLRI");
+                    SELF_DEBUG("%sbgp-ls: parsing IPv6 PREFIX NLRI", caller->debug_prepend_string.c_str());
                     parseNlriPrefix(data, nlri_len, id, proto_id, false);
                     break;
 
                 default :
-                    LOG_INFO("bgp-ls NLRI Type %d is not implemented yet, skipping for now", nlri_type);
+                    LOG_INFO("%sbgp-ls NLRI Type %d is not implemented yet, skipping for now",
+                             caller->debug_prepend_string.c_str(), nlri_type);
                     return;
             }
 
@@ -261,7 +266,7 @@ namespace parse_bgp_lib {
         std::stringstream   val_ss;
 
         if (data_len < 4) {
-            LOG_NOTICE("bgp-ls: failed to parse node descriptor; too short");
+            LOG_NOTICE("%sbgp-ls: failed to parse node descriptor; too short", caller->debug_prepend_string.c_str());
             return data_len;
         }
 
@@ -274,7 +279,8 @@ namespace parse_bgp_lib {
         //SELF_DEBUG("%s: bgp-ls: Parsing node descriptor type %d len %d", peer_addr.c_str(), type, len);
 
         if (len > data_len - 4) {
-            LOG_NOTICE("bgp-ls: failed to parse node descriptor; type length is larger than available data %d>=%d", len, data_len);
+            LOG_NOTICE("%sbgp-ls: failed to parse node descriptor; type length is larger than available data %d>=%d",
+                       caller->debug_prepend_string.c_str(), len, data_len);
             return data_len;
         }
 
@@ -283,7 +289,8 @@ namespace parse_bgp_lib {
             case NODE_DESCR_AS:
             {
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse node descriptor AS sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse node descriptor AS sub-tlv; too short",
+                    caller->debug_prepend_string.c_str());
                     data_read += len;
                     break;
                 }
@@ -307,7 +314,7 @@ namespace parse_bgp_lib {
 
                 data_read += 4;
 
-                SELF_DEBUG("bgp-ls: Node descriptor AS = %u", asn);
+                SELF_DEBUG("%sbgp-ls: Node descriptor AS = %u", caller->debug_prepend_string.c_str(), asn);
 
                 break;
             }
@@ -315,7 +322,8 @@ namespace parse_bgp_lib {
             case NODE_DESCR_BGP_LS_ID:
             {
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse node descriptor BGP-LS ID sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse node descriptor BGP-LS ID sub-tlv; too short",
+                    caller->debug_prepend_string.c_str());
                     data_read += len;
                     break;
                 }
@@ -339,14 +347,14 @@ namespace parse_bgp_lib {
 
                 data_read += 4;
 
-                SELF_DEBUG("bgp-ls: Node descriptor BGP-LS ID = %08X", bgp_ls_id);
+                SELF_DEBUG("%sbgp-ls: Node descriptor BGP-LS ID = %08X", caller->debug_prepend_string.c_str(), bgp_ls_id);
                 break;
             }
 
             case NODE_DESCR_OSPF_AREA_ID:
             {
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse node descriptor OSPF Area ID sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse node descriptor OSPF Area ID sub-tlv; too short", caller->debug_prepend_string.c_str());
                     data_read += len <= data_len ? len : data_len;
                     break;
                 }
@@ -368,14 +376,15 @@ namespace parse_bgp_lib {
 
                 data_read += 4;
 
-                SELF_DEBUG("bgp-ls: Node descriptor OSPF Area ID = %s", ipv4_char);
+                SELF_DEBUG("%sbgp-ls: Node descriptor OSPF Area ID = %s", caller->debug_prepend_string.c_str(), ipv4_char);
                 break;
             }
 
             case NODE_DESCR_IGP_ROUTER_ID:
             {
                 if (len > data_len or len > 8) {
-                    LOG_NOTICE("bgp-ls: failed to parse node descriptor IGP Router ID sub-tlv; len (%d) is invalid", len);
+                    LOG_NOTICE("%sbgp-ls: failed to parse node descriptor IGP Router ID sub-tlv; len (%d) is invalid",
+                               caller->debug_prepend_string.c_str(), len);
                     data_read += len;
                     break;
                 }
@@ -401,7 +410,7 @@ namespace parse_bgp_lib {
                         strncat(igp_router_id_buf, "[", 1);
                         strncat(igp_router_id_buf, dr, sizeof(dr));
                         strncat(igp_router_id_buf, "]", 1);
-                        LOG_INFO("igp router id includes DR: %s %s", igp_router_id_buf, dr);
+                        LOG_INFO("%sigp router id includes DR: %s %s", caller->debug_prepend_string.c_str(), igp_router_id_buf, dr);
                     }
                 } else {
                     snprintf(igp_router_id_buf, sizeof(igp_router_id_buf),
@@ -425,7 +434,8 @@ namespace parse_bgp_lib {
 
                 data_read += len;
 
-                SELF_DEBUG("bgp-ls: Node descriptor IGP Router ID %d = %d.%d.%d.%d (%02x%02x.%02x%02x.%02x%02x.%02x %02x)", data_read,
+                SELF_DEBUG("%sbgp-ls: Node descriptor IGP Router ID %d = %d.%d.%d.%d (%02x%02x.%02x%02x.%02x%02x.%02x %02x)",
+                           caller->debug_prepend_string.c_str(), data_read,
                            igp_router_id[0], igp_router_id[1], igp_router_id[2], igp_router_id[3],
                            igp_router_id[0], igp_router_id[1], igp_router_id[2], igp_router_id[3],
                            igp_router_id[4], igp_router_id[5], igp_router_id[6], igp_router_id[7]);
@@ -435,7 +445,7 @@ namespace parse_bgp_lib {
             case NODE_DESCR_BGP_ROUTER_ID:
             {
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse node descriptor BGP Router ID sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse node descriptor BGP Router ID sub-tlv; too short", caller->debug_prepend_string.c_str());
                     data_read += len <= data_len ? len : data_len;
                     break;
                 }
@@ -456,12 +466,12 @@ namespace parse_bgp_lib {
 
                 data_read += 4;
 
-                SELF_DEBUG("bgp-ls: Node descriptor BGP Router-ID = %s", ipv4_char);
+                SELF_DEBUG("%sbgp-ls: Node descriptor BGP Router-ID = %s", caller->debug_prepend_string.c_str(), ipv4_char);
                 break;
             }
 
             default:
-                LOG_NOTICE("bgp-ls: node descriptor sub-tlv %d not yet implemented, skipping.", type);
+                LOG_NOTICE("%sbgp-ls: node descriptor sub-tlv %d not yet implemented, skipping.", caller->debug_prepend_string.c_str(), type);
                 data_read += len;
                 break;
         }
@@ -489,7 +499,7 @@ namespace parse_bgp_lib {
         std::stringstream   val_ss;
 
         if (data_len < 4) {
-            LOG_WARN("bgp-ls: Unable to parse node NLRI since it's too short (invalid)");
+            LOG_WARN("%sbgp-ls: Unable to parse node NLRI since it's too short (invalid)", caller->debug_prepend_string.c_str());
             return;
         }
 
@@ -500,7 +510,8 @@ namespace parse_bgp_lib {
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PROTOCOL];
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.push_back(decodeNlriProtocolId(proto_id));
 
-        SELF_DEBUG("bgp-ls: ID = %x Protocol = %s", id, parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str());
+        SELF_DEBUG("%sbgp-ls: ID = %x Protocol = %s", caller->debug_prepend_string.c_str(),
+                   id, parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str());
 
         /*
          * Parse the local node descriptor sub-tlv
@@ -516,12 +527,14 @@ namespace parse_bgp_lib {
         data += 4;
 
         if (len > data_len) {
-            LOG_WARN("bgp-ls: failed to parse node descriptor; type length is larger than available data %d>=%d", len, data_len);
+            LOG_WARN("%sbgp-ls: failed to parse node descriptor; type length is larger than available data %d>=%d",
+                     caller->debug_prepend_string.c_str(), len, data_len);
             return;
         }
 
         if (type != NODE_DESCR_LOCAL_DESCR) {
-            LOG_WARN("bgp-ls: failed to parse node descriptor; Type (%d) is not local descriptor", type);
+            LOG_WARN("%sbgp-ls: failed to parse node descriptor; Type (%d) is not local descriptor",
+                     caller->debug_prepend_string.c_str(), type);
             return;
         }
         MD5 hash;
@@ -536,6 +549,11 @@ namespace parse_bgp_lib {
             data += data_read;
             data_len -= data_read;
         }
+
+        //Update hash with peer hash if it exists
+        if (caller->p_info)
+            hash.update((unsigned char *) caller->p_info->peer_hash_str.c_str(), caller->p_info->peer_hash_str.length());
+
         hash.finalize();
 
         // Save the hash
@@ -583,7 +601,7 @@ namespace parse_bgp_lib {
         std::stringstream   val_ss;
 
         if (data_len < 4) {
-            LOG_NOTICE("bgp-ls: failed to parse link descriptor; too short");
+            LOG_NOTICE("%sbgp-ls: failed to parse link descriptor; too short", caller->debug_prepend_string.c_str());
             return data_len;
         }
 
@@ -594,7 +612,8 @@ namespace parse_bgp_lib {
         parse_bgp_lib::SWAP_BYTES(&len);
 
         if (len > data_len - 4) {
-            LOG_NOTICE("bgp-ls: failed to parse link descriptor; type length is larger than available data %d>=%d", len, data_len);
+            LOG_NOTICE("%sbgp-ls: failed to parse link descriptor; type length is larger than available data %d>=%d",
+                       caller->debug_prepend_string.c_str(), len, data_len);
             return data_len;
         }
 
@@ -604,7 +623,7 @@ namespace parse_bgp_lib {
             case LINK_DESCR_ID:
             {
                 if (len != 8) {
-                    LOG_NOTICE("bgp-ls: failed to parse link ID descriptor sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse link ID descriptor sub-tlv; too short", caller->debug_prepend_string.c_str());
                     data_read += len;
                     break;
                 }
@@ -632,7 +651,8 @@ namespace parse_bgp_lib {
 
                 data_read += 8;
 
-                SELF_DEBUG("bgp-ls: Link descriptor ID local = %08x remote = %08x", local_id, remote_id);
+                SELF_DEBUG("%sbgp-ls: Link descriptor ID local = %08x remote = %08x", caller->debug_prepend_string.c_str(),
+                           local_id, remote_id);
 
                 break;
             }
@@ -640,13 +660,14 @@ namespace parse_bgp_lib {
             case LINK_DESCR_MT_ID:
             {
                 if (len < 2) {
-                    LOG_NOTICE("bgp-ls: failed to parse link MT-ID descriptor sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse link MT-ID descriptor sub-tlv; too short", caller->debug_prepend_string.c_str());
                     data_read += len;
                     break;
                 }
 
                 if (len > 4) {
-                    SELF_DEBUG("bgp-ls: failed to parse link MT-ID descriptor sub-tlv; too long %d", len);
+                    SELF_DEBUG("%sbgp-ls: failed to parse link MT-ID descriptor sub-tlv; too long %d", caller->debug_prepend_string.c_str(),
+                               len);
                     mt_id = 0;
                     data_read += len;
                     break;
@@ -663,7 +684,7 @@ namespace parse_bgp_lib {
 
                 data_read += len;
 
-                SELF_DEBUG("bgp-ls: Link descriptor MT-ID = %08x ", mt_id);
+                SELF_DEBUG("%sbgp-ls: Link descriptor MT-ID = %08x ", caller->debug_prepend_string.c_str(), mt_id);
 
                 break;
             }
@@ -672,7 +693,7 @@ namespace parse_bgp_lib {
             case LINK_DESCR_IPV4_INTF_ADDR:
             {
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse link descriptor interface IPv4 sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse link descriptor interface IPv4 sub-tlv; too short", caller->debug_prepend_string.c_str());
                     data_read += len <= data_len ? len : data_len;
                     break;
                 }
@@ -688,14 +709,14 @@ namespace parse_bgp_lib {
 
                 data_read += 4;
 
-                SELF_DEBUG("bgp-ls: Link descriptor Interface Address = %s", ip_char);
+                SELF_DEBUG("%sbgp-ls: Link descriptor Interface Address = %s", caller->debug_prepend_string.c_str(), ip_char);
                 break;
             }
 
             case LINK_DESCR_IPV6_INTF_ADDR:
             {
                 if (len != 16) {
-                    LOG_NOTICE("bgp-ls: failed to parse link descriptor interface IPv6 sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse link descriptor interface IPv6 sub-tlv; too short", caller->debug_prepend_string.c_str());
                     data_read += len <= data_len ? len : data_len;
                     break;
                 }
@@ -710,14 +731,14 @@ namespace parse_bgp_lib {
 
                 data_read += 16;
 
-                SELF_DEBUG("bgp-ls: Link descriptor interface address = %s", ip_char);
+                SELF_DEBUG("%sbgp-ls: Link descriptor interface address = %s", caller->debug_prepend_string.c_str(), ip_char);
                 break;
             }
 
             case LINK_DESCR_IPV4_NEI_ADDR:
             {
                 if (len != 4) {
-                    LOG_NOTICE("bgp-ls: failed to parse link descriptor neighbor IPv4 sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse link descriptor neighbor IPv4 sub-tlv; too short", caller->debug_prepend_string.c_str());
                     data_read += len <= data_len ? len : data_len;
                     break;
                 }
@@ -732,14 +753,14 @@ namespace parse_bgp_lib {
 
                 data_read += 4;
 
-                SELF_DEBUG("bgp-ls: Link descriptor neighbor address = %s", ip_char);
+                SELF_DEBUG("%sbgp-ls: Link descriptor neighbor address = %s", caller->debug_prepend_string.c_str(), ip_char);
                 break;
             }
 
             case LINK_DESCR_IPV6_NEI_ADDR:
             {
                 if (len != 16) {
-                    LOG_NOTICE("bgp-ls: failed to parse link descriptor neighbor IPv6 sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse link descriptor neighbor IPv6 sub-tlv; too short", caller->debug_prepend_string.c_str());
                     data_read += len <= data_len ? len : data_len;
                     break;
                 }
@@ -754,13 +775,13 @@ namespace parse_bgp_lib {
 
                 data_read += 16;
 
-                SELF_DEBUG("bgp-ls: Link descriptor neighbor address = %s", ip_char);
+                SELF_DEBUG("%sbgp-ls: Link descriptor neighbor address = %s", caller->debug_prepend_string.c_str(), ip_char);
                 break;
             }
 
 
             default:
-                LOG_NOTICE("bgp-ls: link descriptor sub-tlv %d not yet implemented, skipping", type);
+                LOG_NOTICE("%sbgp-ls: link descriptor sub-tlv %d not yet implemented, skipping", caller->debug_prepend_string.c_str(), type);
                 data_read += len;
                 break;
         }
@@ -788,7 +809,7 @@ namespace parse_bgp_lib {
         std::stringstream   val_ss;
 
         if (data_len < 4) {
-            LOG_WARN("bgp-ls: Unable to parse link NLRI since it's too short (invalid)");
+            LOG_WARN("%sbgp-ls: Unable to parse link NLRI since it's too short (invalid)", caller->debug_prepend_string.c_str());
             return;
         }
         parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ROUTING_ID];
@@ -798,7 +819,8 @@ namespace parse_bgp_lib {
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PROTOCOL];
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.push_back(decodeNlriProtocolId(proto_id));
 
-        SELF_DEBUG("bgp-ls: ID = %x Protocol = %s", id, parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str());
+        SELF_DEBUG("%sbgp-ls: ID = %x Protocol = %s", caller->debug_prepend_string.c_str(),
+                   id, parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str());
 
         /*
          * Parse local and remote node descriptors (expect both)
@@ -815,7 +837,8 @@ namespace parse_bgp_lib {
             data += 4;
 
             if (len > data_len) {
-                LOG_WARN("bgp-ls: failed to parse node descriptor; type length is larger than available data %d>=%d", len, data_len);
+                LOG_WARN("%sbgp-ls: failed to parse node descriptor; type length is larger than available data %d>=%d",
+                         caller->debug_prepend_string.c_str(), len, data_len);
                 return;
             }
 
@@ -860,6 +883,10 @@ namespace parse_bgp_lib {
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].value, &hash);
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_REMOTE_NODE_HASH].value, &hash);
 
+        //Update hash with peer hash if it exists
+        if (caller->p_info)
+            hash.update((unsigned char *) caller->p_info->peer_hash_str.c_str(), caller->p_info->peer_hash_str.length());
+
         hash.finalize();
 
         unsigned char *hash_raw = hash.raw_digest();
@@ -901,7 +928,7 @@ namespace parse_bgp_lib {
         std::stringstream   val_ss;
 
         if (data_len < 4) {
-            LOG_WARN("bgp-ls: Unable to parse prefix NLRI since it's too short (invalid)");
+            LOG_WARN("%sbgp-ls: Unable to parse prefix NLRI since it's too short (invalid)", caller->debug_prepend_string.c_str());
             return;
         }
 
@@ -912,7 +939,8 @@ namespace parse_bgp_lib {
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PROTOCOL];
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.push_back(decodeNlriProtocolId(proto_id));
 
-        SELF_DEBUG("bgp-ls: ID = %x Protocol = %s", id, parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str());
+        SELF_DEBUG("%sbgp-ls: ID = %x Protocol = %s", caller->debug_prepend_string.c_str(),
+                   id, parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str());
 
         /*
          * Parse the local node descriptor sub-tlv
@@ -928,12 +956,14 @@ namespace parse_bgp_lib {
         data += 4;
 
         if (len > data_len) {
-            LOG_WARN("bgp-ls: failed to parse node descriptor; type length is larger than available data %d>=%d", len, data_len);
+            LOG_WARN("%sbgp-ls: failed to parse node descriptor; type length is larger than available data %d>=%d",
+                     caller->debug_prepend_string.c_str(), len, data_len);
             return;
         }
 
         if (type != NODE_DESCR_LOCAL_DESCR) {
-            LOG_WARN("bgp-ls: failed to parse node descriptor; Type (%d) is not local descriptor", type);
+            LOG_WARN("%sbgp-ls: failed to parse node descriptor; Type (%d) is not local descriptor",
+                     caller->debug_prepend_string.c_str(), type);
             return;
         }
 
@@ -988,6 +1018,10 @@ namespace parse_bgp_lib {
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value, &hash);
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].value, &hash);
 
+        //Update hash with peer hash if it exists
+        if (caller->p_info)
+            hash.update((unsigned char *) caller->p_info->peer_hash_str.c_str(), caller->p_info->peer_hash_str.length());
+
         hash.finalize();
 
         unsigned char *hash_raw = hash.raw_digest();
@@ -1024,7 +1058,7 @@ namespace parse_bgp_lib {
         std::stringstream   val_ss;
 
         if (data_len < 4) {
-            LOG_NOTICE("bgp-ls: failed to parse link descriptor; too short");
+            LOG_NOTICE("%sbgp-ls: failed to parse link descriptor; too short", caller->debug_prepend_string.c_str());
             return data_len;
         }
 
@@ -1035,7 +1069,8 @@ namespace parse_bgp_lib {
         parse_bgp_lib::SWAP_BYTES(&len);
 
         if (len > data_len - 4) {
-            LOG_NOTICE("bgp-ls: failed to parse prefix descriptor; type length is larger than available data %d>=%d", len, data_len);
+            LOG_NOTICE("%sbgp-ls: failed to parse prefix descriptor; type length is larger than available data %d>=%d",
+                       caller->debug_prepend_string.c_str(), len, data_len);
             return data_len;
         }
 
@@ -1047,7 +1082,8 @@ namespace parse_bgp_lib {
                 uint32_t    value_32bit;
 
                 if (len < 1) {
-                    LOG_INFO("bgp-ls: Not parsing prefix ip_reach_info sub-tlv; too short at len=%d", len);
+                    LOG_INFO("%sbgp-ls: Not parsing prefix ip_reach_info sub-tlv; too short at len=%d",
+                             caller->debug_prepend_string.c_str(), len);
                     data_read += len;
                     break;
                 }
@@ -1133,18 +1169,18 @@ namespace parse_bgp_lib {
                 update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX].value, &hash);
                 update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_IP_REACH_PREFIX_LENGTH].value, &hash);
 
-                SELF_DEBUG("bgp-ls: prefix ip_reach_info: prefix = %s/%d", ip_char, prefix_len);
+                SELF_DEBUG("%sbgp-ls: prefix ip_reach_info: prefix = %s/%d", caller->debug_prepend_string.c_str(), ip_char, prefix_len);
                 break;
             }
             case PREFIX_DESCR_MT_ID:
                 if (len < 2) {
-                    LOG_NOTICE("bgp-ls: failed to parse prefix MT-ID descriptor sub-tlv; too short");
+                    LOG_NOTICE("%sbgp-ls: failed to parse prefix MT-ID descriptor sub-tlv; too short", caller->debug_prepend_string.c_str());
                     data_read += len;
                     break;
                 }
 
                 if (len > 4) {
-                    SELF_DEBUG("bgp-ls: failed to parse link MT-ID descriptor sub-tlv; too long %d", len);
+                    SELF_DEBUG("%sbgp-ls: failed to parse link MT-ID descriptor sub-tlv; too long %d", caller->debug_prepend_string.c_str(), len);
                     mt_id = 0;
                     data_read += len;
                     break;
@@ -1161,7 +1197,7 @@ namespace parse_bgp_lib {
 
                 data_read += len;
 
-                SELF_DEBUG("bgp-ls: Link descriptor MT-ID = %08x ", mt_id);
+                SELF_DEBUG("%sbgp-ls: Link descriptor MT-ID = %08x ", caller->debug_prepend_string.c_str(), mt_id);
 
                 break;
 
@@ -1202,12 +1238,12 @@ namespace parse_bgp_lib {
                 parsed_nlri.nlri[LIB_NLRI_LS_OSPF_ROUTE_TYPE].value.push_back(val_ss.str());
                 update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_OSPF_ROUTE_TYPE].value, &hash);
 
-                SELF_DEBUG("bgp-ls: prefix ospf route type is %s", ospf_route_type);
+                SELF_DEBUG("%sbgp-ls: prefix ospf route type is %s", caller->debug_prepend_string.c_str(), ospf_route_type);
                 break;
             }
 
             default:
-                LOG_NOTICE("bgp-ls: Prefix descriptor sub-tlv %d not yet implemented, skipping.", type);
+                LOG_NOTICE("%sbgp-ls: Prefix descriptor sub-tlv %d not yet implemented, skipping.", caller->debug_prepend_string.c_str(), type);
                 data_read += len;
                 break;
         }
@@ -1232,7 +1268,8 @@ namespace parse_bgp_lib {
 
             if (!getnameinfo(ai->ai_addr,ai->ai_addrlen, host, sizeof(host), NULL, 0, NI_NAMEREQD)) {
                 hostname.assign(host);
-                LOG_INFO("resolve: %s to %s", name.c_str(), hostname.c_str());
+                LOG_INFO("%sresolve: %s to %s", caller->debug_prepend_string.c_str(),
+                         name.c_str(), hostname.c_str());
             }
 
             freeaddrinfo(ai);

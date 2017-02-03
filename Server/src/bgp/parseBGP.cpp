@@ -106,8 +106,13 @@ bool parseBGP::handleUpdate(u_char *data, size_t size) {
 
 //        parse_bgp_lib::Logger parse_logger(this->logger->logFile, this->logger->debugFile);
 
+        //Fill p_info fields to be passed to the parser
+        p_info->peer_hash_str= parse_bgp_lib::hash_toStr(p_entry->hash_id);
+        p_info->routerAddr = this->router_addr;
+        p_info->peerAddr = p_entry->peer_addr;
+
         parse_bgp_lib::parseBgpLib::parsed_update update;
-        parse_bgp_lib::parseBgpLib parser(logger, debug);
+        parse_bgp_lib::parseBgpLib parser(logger, debug, p_info);
         parser.parseBgpUpdate(data, data_bytes_remaining, update);
 
         data_bytes_remaining -= read_size;

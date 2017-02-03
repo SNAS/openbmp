@@ -158,7 +158,7 @@ namespace parse_bgp_lib {
          * \param [in]     logPtr       Pointer to existing Logger for app logging
          * \param [in]     enable_debug Debug true to enable, false to disable
          */
-        ExtCommunity(Logger *logPtr, bool enable_debug=false);
+        ExtCommunity(parseBgpLib *parse_lib, Logger *logPtr, bool enable_debug=false);
         virtual ~ExtCommunity();
 
         /**
@@ -192,7 +192,7 @@ namespace parse_bgp_lib {
     private:
         bool             debug;                           ///< debug flag to indicate debugging
         Logger           *logger;                         ///< Logging class pointer
-        std::string      peer_addr;                       ///< Printed form of the peer address for logging
+        parseBgpLib      *caller;
 
         /**
          * Decode common Type/Subtypes

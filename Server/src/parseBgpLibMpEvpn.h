@@ -41,7 +41,7 @@ namespace parse_bgp_lib {
          * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
          * \param [in]     enable_debug Debug true to enable, false to disable
          */
-        EVPN(Logger *logPtr, bool isUnreach, std::list<parseBgpLib::parse_bgp_lib_nlri> *nlri_list, bool enable_debug);
+        EVPN(parseBgpLib *parse_lib, Logger *logPtr, bool isUnreach, std::list<parseBgpLib::parse_bgp_lib_nlri> *nlri_list, bool enable_debug);
         virtual ~EVPN();
 
         /**
@@ -84,6 +84,7 @@ namespace parse_bgp_lib {
         Logger           *logger;                         ///< Logging class pointer
 
         std::list<parseBgpLib::parse_bgp_lib_nlri> *nlri_list;
+        parseBgpLib             *caller;                /// BGP Update class pointer
 
     };
 

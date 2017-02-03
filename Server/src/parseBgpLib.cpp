@@ -26,10 +26,18 @@ namespace parse_bgp_lib {
  * \details Handles bgp update messages
  *
  */
-parseBgpLib::parseBgpLib(Logger *logPtr, bool enable_debug)
+parseBgpLib::parseBgpLib(Logger *logPtr, bool enable_debug, BMPReader::peer_info *peer_info)
         : logger(logPtr),
           debug(enable_debug),
-          asn_octet_size(4) {
+          p_info(peer_info) {
+        four_octet_asn = peer_info->recv_four_octet_asn and peer_info->sent_four_octet_asn;
+        debug_prepend_string = peer_info->peerAddr + ", rtr= " + peer_info->routerAddr + ": ";
+    }
+
+parseBgpLib::parseBgpLib(Logger *logPtr, bool enable_debug)
+        : logger(logPtr),
+          debug(enable_debug) {
+    debug_prepend_string = "";
 }
 
 parseBgpLib::~parseBgpLib() {
@@ -192,10 +200,10 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
     update.withdrawn_nlri_list.clear();
     update.attrs.clear();
 
-    SELF_DEBUG("Parsing update message of size %d", size);
+    SELF_DEBUG("%sParsing update message of size %d", debug_prepend_string.c_str(), size);
 
     if (size < 2) {
-        LOG_WARN("Update message is too short to parse header");
+        LOG_WARN("%sUpdate message is too short to parse header", debug_prepend_string.c_str());
         return 0;
     }
 
@@ -207,7 +215,7 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
 
     // Set the withdrawn data pointer
     if ((size - read_size) < withdrawn_len) {
-        LOG_WARN("Update message is too short to parse withdrawn data");
+        LOG_WARN("%sUpdate message is too short to parse withdrawn data", debug_prepend_string.c_str());
         return 0;
     }
 
@@ -215,18 +223,18 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
     bufPtr += withdrawn_len;
     read_size += withdrawn_len;
 
-    SELF_DEBUG("Withdrawn len = %hu", withdrawn_len);
+    SELF_DEBUG("%sWithdrawn len = %hu", debug_prepend_string.c_str(), withdrawn_len);
 
     // Get the attributes length
     memcpy(&attr_len, bufPtr, sizeof(attr_len));
     bufPtr += sizeof(attr_len);
     read_size += sizeof(attr_len);
     parse_bgp_lib::SWAP_BYTES(&attr_len);
-    SELF_DEBUG("Attribute len = %hu", attr_len);
+    SELF_DEBUG("%sAttribute len = %hu", debug_prepend_string.c_str(), attr_len);
 
     // Set the attributes data pointer
     if ((size - read_size) < attr_len) {
-        LOG_WARN("Update message is too short to parse attr data");
+        LOG_WARN("%sUpdate message is too short to parse attr data", debug_prepend_string.c_str());
         return 0;
     }
     attrPtr = bufPtr;
@@ -240,12 +248,12 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
      * Check if End-Of-RIB
      */
     if (not withdrawn_len and (size - read_size) <= 0 and not attr_len) {
-        LOG_INFO("End-Of-RIB marker");
+        LOG_INFO("%sEnd-Of-RIB marker", debug_prepend_string.c_str());
     } else {
         /* ---------------------------------------------------------
          * Parse the withdrawn prefixes
          */
-        SELF_DEBUG("Getting the IPv4 withdrawn data");
+        SELF_DEBUG("%sGetting the IPv4 withdrawn data", debug_prepend_string.c_str());
         if (withdrawn_len > 0)
             parseBgpNlri_v4(withdrawnPtr, withdrawn_len, update.withdrawn_nlri_list);
 
@@ -260,7 +268,7 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
         /* ---------------------------------------------------------
          * Parse the NLRI data
          */
-        SELF_DEBUG("Getting the IPv4 NLRI data, size = %d", (size - read_size));
+        SELF_DEBUG("%sGetting the IPv4 NLRI data, size = %d", debug_prepend_string.c_str(), (size - read_size));
         if ((size - read_size) > 0) {
             parseBgpNlri_v4(nlriPtr, (size - read_size), update.nlri_list);
             read_size = size;
@@ -356,7 +364,9 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
         bzero(ipv4_raw, sizeof(ipv4_raw));
 
         // Parse add-paths if enabled
-        if (addPathCap[BGP_AFI_IPV4_INTERNAL][BGP_SAFI_UNICAST_INTERNAL]
+        bool peer_info_addpath = p_info and p_info->add_path_capability.isAddPathEnabled(bgp::BGP_AFI_IPV4, bgp::BGP_SAFI_UNICAST);
+
+        if ((peer_info_addpath or addPathCap[BGP_AFI_IPV4_INTERNAL][BGP_SAFI_UNICAST_INTERNAL])
             and (len - read_size) >= 4) {
             memcpy(&path_id, data, 4);
             parse_bgp_lib::SWAP_BYTES(&path_id);
@@ -385,7 +395,7 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
         if (prefix_len % 8)
             ++addr_bytes;
 
-        SELF_DEBUG("Reading NLRI data prefix bits=%d bytes=%d", prefix_len, addr_bytes);
+        SELF_DEBUG("%sReading NLRI data prefix bits=%d bytes=%d", debug_prepend_string.c_str(), prefix_len, addr_bytes);
 
         if (addr_bytes <= 4) {
             memcpy(ipv4_raw, data, addr_bytes);
@@ -397,11 +407,15 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
             nlri.nlri[LIB_NLRI_PREFIX].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX];
             nlri.nlri[LIB_NLRI_PREFIX].value.push_back(ipv4_char);
             update_hash(&nlri.nlri[LIB_NLRI_PREFIX].value, &hash);
-            SELF_DEBUG("Adding prefix %s len %d", ipv4_char, prefix_len);
+            SELF_DEBUG("%sAdding prefix %s len %d", debug_prepend_string.c_str(), ipv4_char, prefix_len);
 
             // set the raw/binary address
             nlri.nlri[LIB_NLRI_PREFIX_BIN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_BIN];
             nlri.nlri[LIB_NLRI_PREFIX_BIN].value.push_back(std::string(ipv4_raw, ipv4_raw + 4));
+
+            //Update hash to include peer hash id
+            if (p_info)
+                hash.update((unsigned char *) p_info->peer_hash_str.c_str(), p_info->peer_hash_str.length());
 
             hash.finalize();
 
@@ -414,7 +428,7 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
             // Add tuple to prefix list
             nlri_list.push_back(nlri);
         } else if (addr_bytes > 4) {
-            LOG_NOTICE("NRLI v4 address is larger than 4 bytes bytes=%d len=%d", addr_bytes, prefix_len);
+            LOG_NOTICE("%sNRLI v4 address is larger than 4 bytes bytes=%d len=%d", debug_prepend_string.c_str(), addr_bytes, prefix_len);
         }
     }
 }
@@ -441,8 +455,8 @@ void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update
         return;
 
     else if (len < 3) {
-        LOG_WARN("Cannot parse the attributes due to the data being too short, error in update message. len=%d",
-                 len);
+        LOG_WARN("%sCannot parse the attributes due to the data being too short, error in update message. len=%d",
+                 debug_prepend_string.c_str(), len);
         return;
     }
 
@@ -458,7 +472,7 @@ void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update
 
         // Check if the length field is 1 or two bytes
         if (ATTR_FLAG_EXTENDED(attr_flags)) {
-            SELF_DEBUG("Extended length path attribute bit set for an entry");
+            SELF_DEBUG("%sExtended length path attribute bit set for an entry", debug_prepend_string.c_str());
             memcpy(&attr_len, data, 2);
             data += 2;
             read_size += 2;
@@ -481,10 +495,10 @@ void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update
             data += attr_len;
             read_size += attr_len;
 
-            SELF_DEBUG("Parsed attr Type=%d, size=%hu", attr_type, attr_len);
+            SELF_DEBUG("%sParsed attr Type=%d, size=%hu", debug_prepend_string.c_str(), attr_type, attr_len);
         } else if (attr_len) {
-            LOG_NOTICE("%Attribute data len of %hu is larger than available data in update message of %hu",
-                       attr_len, (len - read_size));
+            LOG_NOTICE("%sAttribute data len of %hu is larger than available data in update message of %hu",
+                       debug_prepend_string.c_str(), attr_len, (len - read_size));
             return;
         }
     }
@@ -518,6 +532,8 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
     uint32_t value32bit;
     uint16_t value16bit;
 
+    if (p_info)
+        hash.update((unsigned char *) p_info->peer_hash_str.c_str(), p_info->peer_hash_str.length());
 
         /*
          * Parse based on attribute type
@@ -642,7 +658,7 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
         {
             update.attrs[LIB_ATTR_EXT_COMMUNITY].official_type = ATTR_TYPE_EXT_COMMUNITY;
             update.attrs[LIB_ATTR_EXT_COMMUNITY].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_EXT_COMMUNITY];
-            parse_bgp_lib::ExtCommunity ec(logger, debug);
+            parse_bgp_lib::ExtCommunity ec(this, logger, debug);
             ec.parseExtCommunities(attr_len, data, update);
             update_hash(&update.attrs[LIB_ATTR_EXT_COMMUNITY].value, &hash);
 
@@ -653,7 +669,7 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
         {
             update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].official_type = ATTR_TYPE_IPV6_EXT_COMMUNITY;
             update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_IPV6_EXT_COMMUNITY];
-            parse_bgp_lib::ExtCommunity ec6(logger, debug);
+            parse_bgp_lib::ExtCommunity ec6(this, logger, debug);
             ec6.parsev6ExtCommunities(attr_len, data, update);
             break;
         }
@@ -678,24 +694,24 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
         }
 
         case ATTR_TYPE_BGP_LS: {
-            MPLinkStateAttr ls(logger, &update, debug);
+            MPLinkStateAttr ls(this, logger, &update, debug);
             ls.parseAttrLinkState(attr_len, data);
             break;
         }
 
         case ATTR_TYPE_AS4_PATH: {
-            SELF_DEBUG("Attribute type AS4_PATH is not yet implemented, skipping for now.");
+            SELF_DEBUG("%sAttribute type AS4_PATH is not yet implemented, skipping for now.", debug_prepend_string.c_str());
             break;
         }
 
         case ATTR_TYPE_AS4_AGGREGATOR: {
-            SELF_DEBUG("Attribute type AS4_AGGREGATOR is not yet implemented, skipping for now.");
+            SELF_DEBUG("%sAttribute type AS4_AGGREGATOR is not yet implemented, skipping for now.", debug_prepend_string.c_str());
             break;
         }
 
         default:
-            LOG_INFO("Attribute type %d is not yet implemented or intentionally ignored, skipping for now.",
-                     attr_type);
+            LOG_INFO("%sAttribute type %d is not yet implemented or intentionally ignored, skipping for now.",
+                     debug_prepend_string.c_str(), attr_type);
             break;
 
     } // END OF SWITCH ATTR TYPE
@@ -731,7 +747,7 @@ void parseBgpLib::parseAttrDataAggregator(uint16_t attr_len, u_char *data, parse
         decodeStr.assign(numString.str());
 
     } else {
-        LOG_ERR("Path attribute is not the correct size of 6 or 8 octets.");
+        LOG_ERR("%sPath attribute is not the correct size of 6 or 8 octets.", debug_prepend_string.c_str());
         return;
     }
 
@@ -764,9 +780,52 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
 
     update.attrs[LIB_ATTR_AS_PATH].official_type = ATTR_TYPE_AS_PATH;
     update.attrs[LIB_ATTR_AS_PATH].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_AS_PATH];
+
     /*
-     * Loop through each path segment
-     */
+* Per draft-ietf-grow-bmp, UPDATES must be sent as 4-octet, but this requires the
+*    UPDATE to be modified. In draft 14 a new peer header flag indicates size, but
+*    not all implementations support this draft yet.
+*
+*    IOS XE/XR does not modify the UPDATE and therefore a peers
+*    that is using 2-octet ASN's will not be parsed correctly.  Global instance var
+*    four_octet_asn is used to check if the OPEN cap sent/recv 4-octet or not. A compliant
+*    BMP implementation will still use 4-octet even if the peer is 2-octet, so a check is
+*    needed to see if the as path is encoded using 4 or 2 octet. This check is only done
+*    once.
+*
+*    This is temporary and can be removed after all implementations are complete with bmp draft 14 or greater.
+*/
+    if (p_info and not p_info->checked_asn_octet_length and not four_octet_asn)
+    {
+        /*
+         * Loop through each path segment
+         */
+        u_char *d_ptr = data;
+        while (path_len > 0) {
+            d_ptr++; // seg_type
+            seg_len = *d_ptr++;
+
+            path_len -= 2 + (seg_len * 4);
+
+            if (path_len >= 0)
+                d_ptr += seg_len * 4;
+        }
+
+        if (path_len != 0) {
+            LOG_INFO("%sUsing 2-octet ASN path parsing", debug_prepend_string.c_str());
+            p_info->using_2_octet_asn = true;
+        }
+        p_info->checked_asn_octet_length = true;         // No more checking needed
+        path_len = attr_len;                                // Put the path length back to starting value
+    }
+
+    // Define the octet size by known/detected size
+    if (p_info)
+        asn_octet_size = (p_info->using_2_octet_asn and not four_octet_asn) ? 2 : 4;
+
+    /*
+         * Loop through each path segment
+         */
     while (path_len > 0) {
 
         seg_type = *data++;
@@ -778,14 +837,14 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
             decoded_path.append(" {");
         }
 
-        SELF_DEBUG("as_path seg_len = %d seg_type = %d, path_len = %d total_len = %d as_octet_size = %d",
+        SELF_DEBUG("%sas_path seg_len = %d seg_type = %d, path_len = %d total_len = %d as_octet_size = %d", debug_prepend_string.c_str(),
                    seg_len, seg_type, path_len, attr_len, asn_octet_size);
 
         if ((seg_len * asn_octet_size) > path_len){
 
-            LOG_NOTICE("Could not parse the AS PATH due to update message buffer being too short when using ASN octet size %d",
-                       asn_octet_size);
-            LOG_NOTICE("Switching encoding size to 2-octet due to parsing failure");
+            LOG_NOTICE("%sCould not parse the AS PATH due to update message buffer being too short when using ASN octet size %d",
+                       debug_prepend_string.c_str(), asn_octet_size);
+            LOG_NOTICE("%sSwitching encoding size to 2-octet due to parsing failure", debug_prepend_string.c_str());
 
             asn_octet_size = 2;
         }
@@ -823,7 +882,7 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
     else
         std::cout << "NULL" <<std::endl;
 
-    SELF_DEBUG("Parsed AS_PATH count %d, origin as: %s", update.attrs[LIB_ATTR_AS_PATH].value.size(),
+    SELF_DEBUG("%sParsed AS_PATH count %d, origin as: %s", debug_prepend_string.c_str(), update.attrs[LIB_ATTR_AS_PATH].value.size(),
                update.attrs[LIB_ATTR_AS_PATH].value.size() > 0 ? update.attrs[LIB_ATTR_AS_PATH].value.front().c_str() : "NULL");
 }
 

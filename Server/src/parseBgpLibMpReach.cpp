@@ -64,11 +64,11 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, parse_bgp_lib::
      * Make sure the parsing doesn't exceed buffer
      */
     if (attr_len < 0) {
-        LOG_NOTICE("MP_REACH NLRI data length is larger than attribute data length, skipping parse");
+        LOG_NOTICE("%sMP_REACH NLRI data length is larger than attribute data length, skipping parse", caller->debug_prepend_string.c_str());
         return;
     }
 
-    SELF_DEBUG("afi=%d safi=%d nh_len=%d reserved=%d",
+    SELF_DEBUG("%safi=%d safi=%d nh_len=%d reserved=%d", caller->debug_prepend_string.c_str(),
                nlri.afi, nlri.safi, nlri.nh_len, nlri.reserved);
 
     /*
@@ -103,7 +103,7 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, parse_bgp_lib::parseBgpLib::pars
 
         case parse_bgp_lib::BGP_AFI_BGPLS : // BGP-LS (draft-ietf-idr-ls-distribution-10)
         {
-                MPLinkState ls(logger, &update, debug);
+                MPLinkState ls(caller, logger, &update, debug);
                 ls.parseReachLinkState(nlri);
 
             break;
@@ -132,13 +132,13 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, parse_bgp_lib::parseBgpLib::pars
             switch (nlri.safi) {
                 case parse_bgp_lib::BGP_SAFI_EVPN : // https://tools.ietf.org/html/rfc7432
                 {
-                    EVPN evpn(logger, false, &update.nlri_list, debug);
+                    EVPN evpn(caller, logger, false, &update.nlri_list, debug);
                     evpn.parseNlriData(nlri.nlri_data, nlri.nlri_len);
                     break;
                 }
 
                 default :
-                    LOG_INFO("EVPN::parse SAFI=%d is not implemented yet, skipping", nlri.safi);
+                    LOG_INFO("%sEVPN::parse SAFI=%d is not implemented yet, skipping", caller->debug_prepend_string.c_str(), nlri.safi);
             }
 
             break;
@@ -147,7 +147,7 @@ void MPReachAttr::parseAfi(mp_reach_nlri &nlri, parse_bgp_lib::parseBgpLib::pars
 
 
         default : // Unknown
-            LOG_INFO("MP_REACH AFI=%d is not implemented yet, skipping", nlri.afi);
+            LOG_INFO("%sMP_REACH AFI=%d is not implemented yet, skipping", caller->debug_prepend_string.c_str(), nlri.afi);
             return;
     }
 }
@@ -238,7 +238,7 @@ void MPReachAttr::parseAfi_IPv4IPv6(bool isIPv4, mp_reach_nlri &nlri, parse_bgp_
 
 
         default :
-            LOG_INFO("MP_REACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now",
+            LOG_INFO("%sMP_REACH AFI=ipv4/ipv6 (%d) SAFI=%d is not implemented yet, skipping for now", caller->debug_prepend_string.c_str(),
                      isIPv4, nlri.safi);
             return;
     }
@@ -283,7 +283,9 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         bzero(ip_raw, sizeof(ip_raw));
 
         // Parse add-paths if enabled
-        if (parser->getAddpathCapability(nlri.afi, nlri.safi)
+        bool peer_info_addpath =parser->p_info and parser->p_info->add_path_capability.isAddPathEnabled(nlri.afi, nlri.safi);
+
+        if ((peer_info_addpath or parser->getAddpathCapability(nlri.afi, nlri.safi))
             and (len - read_size) >= 4) {
             memcpy(&path_id, data, 4);
             parse_bgp_lib::SWAP_BYTES(&path_id);
@@ -313,7 +315,7 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         if (prefix_len % 8)
             ++addr_bytes;
 
-        SELF_DEBUG("Reading NLRI data prefix bits=%d bytes=%d", prefix_len, addr_bytes);
+        SELF_DEBUG("%sReading NLRI data prefix bits=%d bytes=%d", parser->debug_prepend_string.c_str(), prefix_len, addr_bytes);
 
         memcpy(ip_raw, data, addr_bytes);
         data += addr_bytes;
@@ -328,11 +330,15 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         nlri.nlri[LIB_NLRI_PREFIX].value.push_back(ip_char);
         update_hash(&nlri.nlri[LIB_NLRI_PREFIX].value, &hash);
 
-        SELF_DEBUG("Adding prefix %s len %d", ip_char, prefix_len);
+        SELF_DEBUG("%sAdding prefix %s len %d", parser->debug_prepend_string.c_str(), ip_char, prefix_len);
 
         // set the raw/binary address
         nlri.nlri[LIB_NLRI_PREFIX_BIN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_BIN];
         nlri.nlri[LIB_NLRI_PREFIX_BIN].value.push_back(std::string(ip_raw, ip_raw + 4));
+
+        //Update hash to include peer hash id
+        if (parser->p_info)
+            hash.update((unsigned char *) parser->p_info->peer_hash_str.c_str(), parser->p_info->peer_hash_str.length());
 
         hash.finalize();
 
@@ -398,8 +404,11 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         MD5 hash;
 
         // Parse add-paths if enabled
-        if ((safi != parse_bgp_lib::BGP_SAFI_MPLS) and parser->getAddpathCapability(nlri.afi, nlri.safi)
-            and (len - read_size) >= 4) {
+        // Parse add-paths if enabled
+        bool peer_info_addpath =parser->p_info and parser->p_info->add_path_capability.isAddPathEnabled(nlri.afi, nlri.safi);
+
+        if ((safi != parse_bgp_lib::BGP_SAFI_MPLS) and (peer_info_addpath or parser->getAddpathCapability(nlri.afi, nlri.safi))
+             and (len - read_size) >= 4) {
             memcpy(&path_id, data, 4);
             parse_bgp_lib::SWAP_BYTES(&path_id);
             data += 4;
@@ -429,7 +438,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         if (prefix_len % 8)
             ++addr_bytes;
 
-        SELF_DEBUG("Reading NLRI data prefix bits=%d bytes=%d", prefix_len, addr_bytes);
+        SELF_DEBUG("%sReading NLRI data prefix bits=%d bytes=%d", parser->debug_prepend_string.c_str(), prefix_len, addr_bytes);
 
         nlri.nlri[LIB_NLRI_LABELS].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LABELS];
         // the label is 3 octets long
@@ -464,7 +473,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
 
         // Parse RD if VPN
         if ((safi == parse_bgp_lib::BGP_SAFI_MPLS) and addr_bytes >= 8) {
-            EVPN evpn(logger, false, &nlri_list, debug);
+            EVPN evpn(parser, logger, false, &nlri_list, debug);
             evpn.parseRouteDistinguisher(data, nlri);
             data += 8;
             addr_bytes -= 8;
@@ -494,11 +503,15 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         nlri.nlri[LIB_NLRI_PREFIX].value.push_back(ip_char);
         update_hash(&nlri.nlri[LIB_NLRI_PREFIX].value, &hash);
 
-        SELF_DEBUG("Adding prefix %s len %d", ip_char, prefix_len);
+        SELF_DEBUG("%sAdding prefix %s len %d", parser->debug_prepend_string.c_str(), ip_char, prefix_len);
 
         // set the raw/binary address
         nlri.nlri[LIB_NLRI_PREFIX_BIN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_BIN];
         nlri.nlri[LIB_NLRI_PREFIX_BIN].value.push_back(std::string(ip_raw, ip_raw + 4));
+
+        //Update hash to include peer hash id
+        if (parser->p_info)
+            hash.update((unsigned char *) parser->p_info->peer_hash_str.c_str(), parser->p_info->peer_hash_str.length());
 
         //Now save the generate hash
         hash.finalize();

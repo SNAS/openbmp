@@ -41,6 +41,9 @@ public:
         bool checked_asn_octet_length;                          ///< Indicates if the ASN octet length has been checked or not
         AddPathDataContainer add_path_capability;               ///< Stores data about Add Path capability
         string peer_group;                                      ///< Peer group name of defined
+        string peerAddr;                                        ///< Peer Address in string format
+        string routerAddr;                                      ///< BMP Router address
+        string peer_hash_str;                                   ///< peer hash string used in BGP update hashes
     };
 
 

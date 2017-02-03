@@ -145,7 +145,7 @@ public:
      * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      * \param [in]     enable_debug Debug true to enable, false to disable
      */
-    MPLinkState(Logger *logPtr, parse_bgp_lib::parseBgpLib::parsed_update *update, bool enable_debug);
+    MPLinkState(parseBgpLib *caller, Logger *logPtr, parse_bgp_lib::parseBgpLib::parsed_update *update, bool enable_debug);
     virtual ~MPLinkState();
 
     /**
@@ -173,8 +173,10 @@ private:
 
     parse_bgp_lib::parseBgpLib::parsed_update *update;       ///< Parsed data structure
     std::list<parseBgpLib::parse_bgp_lib_nlri> *nlri_list;
+    parseBgpLib             *caller;                /// BGP Update class pointer
 
-    /**********************************************************************************//*
+
+        /**********************************************************************************//*
      * Parses Link State NLRI data
      *
      * \details Will parse the link state NLRI's from MP_REACH or MP_UNREACH.

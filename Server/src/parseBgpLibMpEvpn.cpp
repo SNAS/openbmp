@@ -23,10 +23,11 @@ namespace parse_bgp_lib {
      * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      * \param [in]     enable_debug Debug true to enable, false to disable
      */
-    EVPN::EVPN(Logger *logPtr, bool isUnreach, std::list<parseBgpLib::parse_bgp_lib_nlri> *nlri_list, bool enable_debug) {
+    EVPN::EVPN(parseBgpLib *parse_lib, Logger *logPtr, bool isUnreach, std::list<parseBgpLib::parse_bgp_lib_nlri> *nlri_list, bool enable_debug) {
         logger = logPtr;
         debug = enable_debug;
         this->nlri_list = nlri_list;
+        caller = parse_lib;
     }
 
     EVPN::~EVPN() {
@@ -144,7 +145,7 @@ namespace parse_bgp_lib {
                 break;
             }
             default:
-                LOG_WARN("%s: MP_REACH Cannot parse ethernet segment identifyer type: %d", type);
+                LOG_WARN("%sMP_REACH Cannot parse ethernet segment identifyer type: %d", caller->debug_prepend_string.c_str(), type);
                 break;
         }
 
@@ -456,7 +457,7 @@ namespace parse_bgp_lib {
 
                         // Parse second label if present
                         if (len == 3) {
-                            SELF_DEBUG("parsing second evpn label\n");
+                            SELF_DEBUG("%sparsing second evpn label\n", caller->debug_prepend_string.c_str());
 
                             memcpy(&mpls_label_2, data_pointer, 3);
                             parse_bgp_lib::SWAP_BYTES(&mpls_label_2);
@@ -575,10 +576,14 @@ namespace parse_bgp_lib {
                     break;
                 }
                 default: {
-                    LOG_INFO("EVPN ROUTE TYPE %d is not implemented yet, skipping", route_type);
+                    LOG_INFO("%sEVPN ROUTE TYPE %d is not implemented yet, skipping", caller->debug_prepend_string.c_str(), route_type);
                     break;
                 }
             }
+
+            //Update hash to include peer hash id
+            if (caller->p_info)
+                hash.update((unsigned char *) caller->p_info->peer_hash_str.c_str(), caller->p_info->peer_hash_str.length());
 
             hash.finalize();
 
@@ -591,7 +596,7 @@ namespace parse_bgp_lib {
             nlri_list->push_back(parsed_nlri);
 
 
-            SELF_DEBUG("Processed evpn NLRI read %d of %d, nlri len %d",
+            SELF_DEBUG("%sProcessed evpn NLRI read %d of %d, nlri len %d", caller->debug_prepend_string.c_str(),
                        data_read, data_len, len);
         }
     }

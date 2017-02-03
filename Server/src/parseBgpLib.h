@@ -18,6 +18,7 @@
 #include <boost/exception/all.hpp>
 #include "Logger.h"
 #include "md5.h"
+#include "BMPReader.h"
 
 namespace parse_bgp_lib {
 
@@ -451,8 +452,9 @@ namespace parse_bgp_lib {
     class parseBgpLib {
     public:
         /*********************************************************************//**
-     * Constructor for class
+     * Constructors for class
      ***********************************************************************/
+        parseBgpLib(Logger *logPtr, bool enable_debug, BMPReader::peer_info *p_info);
         parseBgpLib(Logger *logPtr, bool enable_debug);
 
         virtual ~parseBgpLib();
@@ -552,11 +554,15 @@ namespace parse_bgp_lib {
          */
         void disableFourOctetCapability();
 
+        BMPReader::peer_info             *p_info;   ///< Persistent Peer information
+        string                            debug_prepend_string; ///< debug print string added to all log messages
+
     private:
         //TODO: Remove
-        bool debug;                           ///< debug flag to indicate debugging
+        bool debug;                             ///< debug flag to indicate debugging
         Logger *logger;                         ///< Logging class pointer
-        char    asn_octet_size;
+        bool                    four_octet_asn; ///< Indicates true if 4 octets or false if 2
+        char                    asn_octet_size;
 
         /**
          * Defines the BGP address-families (AFI) internal numbering
