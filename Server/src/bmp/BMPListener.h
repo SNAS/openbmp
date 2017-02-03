@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <ctime>
 
 #include "Logger.h"
 #include "Config.h"
@@ -80,7 +81,7 @@ public:
      *
      * \return client.hash_id will be updated with the generated hash
      */
-////    void hashRouter(ClientInfo &client, char *hash_val);
+    void hashRouter(ClientInfo &client);
 
     // Debug methods
     void enableDebug();

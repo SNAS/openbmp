@@ -778,8 +778,8 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
                 infoLen = sizeof(r_entry.name) < (initMsg.len - 1) ? (sizeof(r_entry.name) - 1) : initMsg.len;
                 strncpy((char *)r_entry.name, initMsg.info, infoLen);
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.name);
-     		if(r_entry.hash_type<INIT_TYPE_SYSNAME)	//Here we will check if bgp_id is not received, then we will update the hash_type
-			r_entry.hash_type=INIT_TYPE_SYSNAME;
+		if(r_entry.hash_type<2)	//Here we will check if bgp_id is not received, then we will update the hash_type
+			r_entry.hash_type=1;
 	           break;
 
             case INIT_TYPE_SYSDESCR :
@@ -795,7 +795,7 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
                 }
                 inet_ntop(AF_INET, initMsg.info, r_entry.bgp_id, sizeof(r_entry.bgp_id));
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.bgp_id);
-                r_entry.hash_type=3;  //This value stores the hash_type if BGPid is present 
+                r_entry.hash_type=2;  //This value stores the hash_type if BGPid is present 
 		break;
 
             default:
