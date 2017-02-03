@@ -292,7 +292,7 @@ void BMPListener::hashRouter(ClientInfo &client) {
 
     // Save the hash
     unsigned char *hash_bin = hash.raw_digest();
-    memcpy(client.ip_hash, hash_bin, 16);
+    memcpy(client.hash_id, hash_bin, 16);
     delete[] hash_bin;
 }
 
