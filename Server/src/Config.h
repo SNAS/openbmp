@@ -105,6 +105,12 @@ public:
     std::map<std::string, std::string> topic_names_map;
     typedef std::map<std::string, std::string>::iterator topic_names_map_iter;
 
+    /**
+     * map for router baseline times
+     */
+    std::map<std::string, float> router_baseline_time;
+    typedef std::map<std::string, float>::iterator router_baseline_time_iter;
+
     /*********************************************************************//**
      * Constructor for class
      ***********************************************************************/

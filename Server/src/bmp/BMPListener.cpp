@@ -193,6 +193,8 @@ bool BMPListener::wait_and_accept_connection(ClientInfo &c, int timeout) {
 
             else // IPv6
                 accept_connection(c, false);
+		
+	    gettimeofday(&c.startTime, NULL);	// Stores the start time for client	
 
             return true;
         }
@@ -215,7 +217,7 @@ bool BMPListener::wait_and_accept_connection(ClientInfo &c, int timeout) {
 void BMPListener::accept_connection(ClientInfo &c, bool isIPv4) {
     socklen_t c_addr_len = sizeof(c.c_addr);         // the client info length
     socklen_t s_addr_len = sizeof(c.s_addr);         // the client info length
-
+    c.initRec=false;				     // To indicate INIT message not received
     int sock = isIPv4 ? this->sock : this->sockv6;
 
     sockaddr_in *v4_addr = (sockaddr_in *) &c.c_addr;

@@ -253,6 +253,20 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                     pBGP->enableDebug();
 
                 pBGP->handleUpdate(pBMP->bmp_data, pBMP->bmp_data_len);
+		
+		string str(reinterpret_cast<char*>(client->hash_id), 16);  //storing the client hash in a string 
+		if(client->initRec && cfg->router_baseline_time.find(str)==cfg->router_baseline_time.end())	//chekcing if client has received init message and hashID is not present in the map(Baseline time is not already calculated)
+		{
+		    peer_info_map_iter it = peer_info_map.begin();
+		    while (it != peer_info_map.end() && it->second.endOfRIB)
+		        ++it;
+
+		    if (it == peer_info_map.end()) {  //End-Of-RIBs are received for all peers.
+		        timeval now;
+		        gettimeofday(&now, NULL);
+		        cfg->router_baseline_time[str] = 1.2 * (now.tv_sec - client->startTime.tv_sec);  //20% buffer for baseline time 
+		    }		
+		}
 
                 delete pBGP;
 
@@ -269,7 +283,8 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             }
 
             case parseBMP::TYPE_INIT_MSG : { // Initiation Message
-                LOG_INFO("%s: Init message received with length of %u", client->c_ip, pBMP->getBMPLength());
+                client->initRec = true; 		//indicating that init message is received for the router/client.
+		LOG_INFO("%s: Init message received with length of %u", client->c_ip, pBMP->getBMPLength());
                 pBMP->handleInitMsg(read_fd, r_object);
 		
                 if(cfg->pat_enabled && r_object.hash_type)

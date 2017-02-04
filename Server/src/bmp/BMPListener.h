@@ -39,6 +39,7 @@ public:
     class ClientInfo {
     public:
         u_char      hash_id[16];            ///< Hash ID for router (is the unique ID)
+	bool	    initRec;		    ///< This bool is true if the init message is received
         sockaddr_storage c_addr;            ///< client address info
         sockaddr_storage s_addr;            ///< Server/collector address info
         int         c_sock;                 ///< Active client socket connection
@@ -47,6 +48,7 @@ public:
         char        c_ip[46];               ///< Client IP source address
         char        s_port[6];              ///< Server/collector port
         char        s_ip[46];               ///< Server/collector IP - printed form
+	struct timeval startTime;	    ///< Stores the time the client gets connected to the collector
     };
 
     /**

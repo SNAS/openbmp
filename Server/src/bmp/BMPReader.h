@@ -41,6 +41,7 @@ public:
         bool checked_asn_octet_length;                          ///< Indicates if the ASN octet length has been checked or not
         AddPathDataContainer add_path_capability;               ///< Stores data about Add Path capability
         string peer_group;                                      ///< Peer group name of defined
+	bool endOfRIB;						///< Indicates if End-Of-RIB marker is received
     };
 
 

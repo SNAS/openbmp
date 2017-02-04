@@ -52,7 +52,7 @@ Config::Config() {
     max_concurrent_routers = 2;
     initial_router_time = 60;
     calculate_baseline  = true;
-    pat_enabled		= true;
+    pat_enabled		= false;
     bzero(admin_id, sizeof(admin_id));
 
     /*
