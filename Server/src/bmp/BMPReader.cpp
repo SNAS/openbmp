@@ -272,11 +272,12 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                 LOG_INFO("%s: Init message received with length of %u", client->c_ip, pBMP->getBMPLength());
                 pBMP->handleInitMsg(read_fd, r_object);
 		
-		// Update the router entry with the details
-		mbus_ptr->update_Router(r_object, mbus_ptr->ROUTER_ACTION_INIT);
                 if(cfg->pat_enabled && r_object.hash_type)
 			hashRouter(client, r_object);
                 LOG_INFO("Router ID hashed with hash_type: %d", r_object.hash_type);
+		// Update the router entry with the details
+                mbus_ptr->update_Router(r_object, mbus_ptr->ROUTER_ACTION_INIT);
+
 		break;
             }
 
@@ -351,10 +352,10 @@ void BMPReader::disconnect(BMPListener::ClientInfo *client, MsgBusInterface *mbu
 
 void BMPReader::hashRouter(BMPListener::ClientInfo *client,MsgBusInterface::obj_router &r_object ) {
     char *hash_val;
-        if(r_object.hash_type==2)
-                hash_val=r_object.bgp_id;
-        else if(r_object.hash_type==1)
-                hash_val=(char *)r_object.name;
+    if(r_object.hash_type==2)
+          hash_val=r_object.bgp_id;
+    else if(r_object.hash_type==1)
+          hash_val=(char *)r_object.name;
 
     string c_hash_str;
     MsgBusInterface::hash_toStr(cfg->c_hash_id, c_hash_str);
@@ -367,11 +368,10 @@ void BMPReader::hashRouter(BMPListener::ClientInfo *client,MsgBusInterface::obj_
     // Save the hash
     unsigned char *hash_bin = hash.raw_digest();
     memcpy(client->hash_id, hash_bin, 16);
-delete[] hash_bin;
-	memcpy(router_hash_id, client->hash_id, sizeof(router_hash_id));
-        memcpy(r_object.hash_id, router_hash_id, sizeof(r_object.hash_id));
-        LOG_INFO("Router ID hashed with hash_type: %d", r_object.hash_type);
-
+    delete[] hash_bin;
+    memcpy(router_hash_id, client->hash_id, sizeof(router_hash_id));
+    memcpy(r_object.hash_id, router_hash_id, sizeof(r_object.hash_id));
+    LOG_INFO("Router ID hashed with hash_type: %d", r_object.hash_type);
 }
 
 
