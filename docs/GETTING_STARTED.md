@@ -33,7 +33,7 @@ Follow directions in this directory.
 
 Go to OpenBMP github repository: **https://github.com/OpenBMP**
 
-Click on openbmp-mr22bmp directory: **https://github.com/OpenBMP/openbmp-mrt2bmp**
+Click on openbmp-mrt2bmp directory: **https://github.com/OpenBMP/openbmp-mrt2bmp**
 
 mrt2bmp application allows you to download BGP data from RouteViews and send it to openbmp collector. The application downloads data from RouteViews every 15 minutes (the frequency in which RouteViews make the data available for download). 
 
