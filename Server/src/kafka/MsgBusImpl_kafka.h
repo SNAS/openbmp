@@ -58,20 +58,23 @@ public:
     void update_Collector(struct obj_collector &c_obj, collector_action_code action_code);
     void update_Router(struct obj_router &r_entry, router_action_code code);
     void update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_peer_down_event *down, peer_action_code code);
-    void update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr, base_attr_action_code code);
-    void update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib, obj_path_attr *attr, unicast_prefix_action_code code);
+    void update_baseAttribute(obj_bgp_peer &peer, parse_bgp_lib::parseBgpLib::attr_map &attrs, base_attr_action_code code);
+    void update_unicastPrefix(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                              parse_bgp_lib::parseBgpLib::attr_map &attrs, unicast_prefix_action_code code);
     void add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats);
 
-    void update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_node> &nodes,
-                     ls_action_code code);
-    void update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_link> &links,
-                     ls_action_code code);
-    void update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
-                      ls_action_code code);
+    void update_LsNode(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
+                       parse_bgp_lib::parseBgpLib::attr_map &attrs, ls_action_code code);
+    void update_LsLink(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
+                       parse_bgp_lib::parseBgpLib::attr_map &attrs, ls_action_code code);
+    void update_LsPrefix(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
+                         parse_bgp_lib::parseBgpLib::attr_map &attrs, ls_action_code code);
     
-    void update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr, vpn_action_code code);
+    void update_L3Vpn(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3vpn_list,
+                      parse_bgp_lib::parseBgpLib::attr_map &attrs, vpn_action_code code);
 
-    void update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn, obj_path_attr *attr, vpn_action_code code);
+    void update_eVPN(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &evpn_list,
+                     parse_bgp_lib::parseBgpLib::attr_map &attrs, vpn_action_code code);
 
     void send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data, size_t data_len);
 

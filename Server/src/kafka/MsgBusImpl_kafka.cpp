@@ -674,58 +674,46 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
-void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr, base_attr_action_code code) {
+void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, parse_bgp_lib::parseBgpLib::attr_map &attrs, base_attr_action_code code) {
 
     prep_buf[0] = 0;
     size_t  buf_len;                    // size of the message in buf
 
-    string path_hash_str;
     string p_hash_str;
     string r_hash_str;
     hash_toStr(peer.hash_id, p_hash_str);
     hash_toStr(peer.router_hash_id, r_hash_str);
 
-
-    // Generate the hash
-    MD5 hash;
-
-    //hash.update(path_object.peer_hash_id, HASH_SIZE);
-    hash.update((unsigned char *) attr.as_path.c_str(), attr.as_path.length());
-    hash.update((unsigned char *) attr.next_hop,
-                strlen(attr.next_hop));
-    hash.update((unsigned char *) attr.aggregator,
-                strlen(attr.aggregator));
-    hash.update((unsigned char *) attr.origin,
-                strlen(attr.origin));
-    hash.update((unsigned char *) &attr.med, sizeof(attr.med));
-    hash.update((unsigned char *) &attr.local_pref,
-                sizeof(attr.local_pref));
-
-    hash.update((unsigned char *) attr.community_list.c_str(), attr.community_list.length());
-    hash.update((unsigned char *) attr.ext_community_list.c_str(), attr.ext_community_list.length());
-    hash.update((unsigned char *) p_hash_str.c_str(), p_hash_str.length());
-
-    hash.finalize();
-
-    // Save the hash
-    unsigned char *hash_raw = hash.raw_digest();
-    memcpy(attr.hash_id, hash_raw, 16);
-    delete[] hash_raw;
-
-    hash_toStr(attr.hash_id, path_hash_str);
-
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
+    bool nexthop_isIPv4 = (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
+    bool atomic_agg;
+    if (attrs.count(parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE)) {
+        atomic_agg     = attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value.front().compare("1") == 0 ? true : false;
+    }
     buf_len =
             snprintf(prep_buf, MSGBUS_WORKING_BUF_SIZE,
-                     "add\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIu16 "\t%" PRIu32
-                             "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
-                     base_attr_seq, path_hash_str.c_str(), r_hash_str.c_str(), router_ip.c_str(), p_hash_str.c_str(),
+                     "add\t%d\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIu16 "\t%s"
+                             "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
+                     base_attr_seq, map_string(attrs[parse_bgp_lib::LIB_ATTR_BASE_ATTR_HASH].value).c_str(),
+            r_hash_str.c_str(), router_ip.c_str(), p_hash_str.c_str(),
                      peer.peer_addr,peer.peer_as, ts.c_str(),
-                     attr.origin, attr.as_path.c_str(), attr.as_path_count, attr.origin_as, attr.next_hop, attr.med,
-                     attr.local_pref, attr.aggregator, attr.community_list.c_str(), attr.ext_community_list.c_str(), attr.cluster_list.c_str(),
-                     attr.atomic_agg, attr.nexthop_isIPv4, attr.originator_id);
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGIN].value).c_str(),
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value).c_str(),
+                     attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size(),
+                     attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_AS_ORIGIN].value.front().c_str() : string("0").c_str(),
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value).c_str(),
+                     attrs[parse_bgp_lib::LIB_ATTR_MED].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_MED].value.front().c_str() : string("0").c_str(),
+                     attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.front().c_str() : string("0").c_str(),
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_AGGREGATOR].value).c_str(),
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_COMMUNITIES].value).c_str(),
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_EXT_COMMUNITY].value).c_str(),
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_CLUSTER_LIST].value).c_str(),
+                     atomic_agg,
+                     nexthop_isIPv4,
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGINATOR_ID].value).c_str());
+
 
     produce(MSGBUS_TOPIC_VAR_BASE_ATTRIBUTE, prep_buf, buf_len, 1, p_hash_str, &peer_list[p_hash_str], peer.peer_as);
 
@@ -735,103 +723,95 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
-void msgBus_kafka::update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
-                                obj_path_attr *attr, vpn_action_code code) {
+void msgBus_kafka::update_L3Vpn(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3vpn_list,
+                                parse_bgp_lib::parseBgpLib::attr_map &attrs, vpn_action_code code) {
 
     prep_buf[0] = 0;
 
     char    buf2[80000];                         // Second working buffer
     size_t  buf_len = 0;                         // query buffer length
-
-    string vpn_hash_str;
-    string path_hash_str;
     string p_hash_str;
     string r_hash_str;
 
     hash_toStr(peer.router_hash_id, r_hash_str);
 
-    if (attr != NULL)
-        hash_toStr(attr->hash_id, path_hash_str);
-
-    hash_toStr(peer.hash_id, p_hash_str);
+  hash_toStr(peer.hash_id, p_hash_str);
 
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
-    // Loop through the vector array of vpn entries
-    for (size_t i = 0; i < vpn.size(); i++) {
+    bool nexthop_isIPv4 = (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
+    bool atomic_agg;
+    if (attrs.count(parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE)) {
+        atomic_agg     = attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value.front().compare("1") == 0 ? true : false;
+    }
 
-        // Generate the hash
-        MD5 hash;
-
-        hash.update((unsigned char *) vpn[i].prefix, strlen(vpn[i].prefix));
-        hash.update(&vpn[i].prefix_len, sizeof(vpn[i].prefix_len));
-        hash.update((unsigned char *) vpn[i].rd_administrator_subfield.c_str(),
-                    vpn[i].rd_administrator_subfield.length());
-        hash.update((unsigned char *) vpn[i].rd_assigned_number.c_str(),
-                    vpn[i].rd_assigned_number.length());
-
-        hash.update((unsigned char *) p_hash_str.c_str(), p_hash_str.length());
-
-        // Add path ID to hash only if exists
-        if (vpn[i].path_id > 0)
-            hash.update((unsigned char *)&vpn[i].path_id, sizeof(vpn[i].path_id));
-
-        /*
-         * Add constant "1" to hash if labels are present
-         *      Withdrawn and updated NLRI's do not carry the original label, therefore we cannot
-         *      hash on the label string.  Instead, we has on a constant value of 1.
-         */
-        if (vpn[i].labels[0] != 0) {
-            buf2[0] = 1;
-            hash.update((unsigned char *) buf2, 1);
-            buf2[0] = 0;
-        }
-
-        hash.finalize();
-
-        // Save the hash
-        unsigned char *hash_raw = hash.raw_digest();
-        memcpy(vpn[i].hash_id, hash_raw, 16);
-        delete[] hash_raw;
-
-        // Build the query
-        hash_toStr(vpn[i].hash_id, vpn_hash_str);
+    // Loop through the vector array of rib entries
+    for (size_t i = 0; i < l3vpn_list.size(); i++) {
 
         switch (code) {
 
             case VPN_ACTION_ADD:
+                /*
                 if (attr == NULL)
                     return;
+                    */
 
                 buf_len += snprintf(buf2, sizeof(buf2),
-                                    "add\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
-                                            "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
-                                            "\t%s\t%d\t%d\t%s:%s\t%d\n",
-                                    l3vpn_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
-                                    router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
-                                    peer.peer_addr, peer.peer_as, ts.c_str(), vpn[i].prefix, vpn[i].prefix_len,
-                                    vpn[i].isIPv4, attr->origin,
-                                    attr->as_path.c_str(), attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
-                                    attr->aggregator,
-                                    attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
-                                    attr->atomic_agg, attr->nexthop_isIPv4,
-                                    attr->originator_id, vpn[i].path_id, vpn[i].labels, peer.isPrePolicy, peer.isAdjIn,
-                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type);
+                                    "add\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%d\t%s\t%s\t%" PRIu16
+                                            "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%s"
+                                            "\t%s\t%d\t%d\t%s:%s\t%s\n",
+                                    l3vpn_seq,
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_HASH].value).c_str(),
+                                    r_hash_str.c_str(), router_ip.c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_BASE_ATTR_HASH].value).c_str(),
+                                    p_hash_str.c_str(),
+                                    peer.peer_addr, peer.peer_as, ts.c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PREFIX].value).c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PREFIX_LENGTH].value).c_str(),
+                                    (l3vpn_list[i].afi == parse_bgp_lib::BGP_AFI_IPV4),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGIN].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value).c_str(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_AS_ORIGIN].value.front().c_str() : string("0").c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value).c_str(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_MED].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_MED].value.front().c_str() : string("0").c_str(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.front().c_str() : string("0").c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_AGGREGATOR].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_COMMUNITIES].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_EXT_COMMUNITY].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_CLUSTER_LIST].value).c_str(),
+                                    atomic_agg,
+                                    nexthop_isIPv4,
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGINATOR_ID].value).c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PATH_ID].value).c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_LABELS].value).c_str(),
+                                    peer.isPrePolicy, peer.isAdjIn,
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD].value).c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_ASSIGNED_NUMBER].value).c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_TYPE].value).c_str());
 
                 break;
 
             case VPN_ACTION_DEL:
                 buf_len += snprintf(buf2, sizeof(buf2),
-                                    "del\t%" PRIu64 "\t%s\t%s\t%s\t\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t\t\t"
-                                            "\t\t\t\t\t\t\t\t\t\t\t\t%" PRIu32
-                                            "\t%s\t%d\t%d\t%s:%s\t%d\n",
-                                    l3vpn_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
+                                    "del\t%" PRIu64 "\t%s\t%s\t%s\t\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%d\t\t\t"
+                                            "\t\t\t\t\t\t\t\t\t\t\t\t%s"
+                                            "\t%s\t%d\t%d\t%s:%s\t%s\n",
+                                    l3vpn_seq,
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_HASH].value).c_str(),
+                                    r_hash_str.c_str(),
                                     router_ip.c_str(), p_hash_str.c_str(),
-                                    peer.peer_addr, peer.peer_as, ts.c_str(), vpn[i].prefix, vpn[i].prefix_len,
-                                    vpn[i].isIPv4, vpn[i].path_id, vpn[i].labels, peer.isPrePolicy, peer.isAdjIn,
-                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(),
-                                    vpn[i].rd_type);
+                                    peer.peer_addr, peer.peer_as, ts.c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PREFIX].value).c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PREFIX_LENGTH].value).c_str(),
+                                    (l3vpn_list[i].afi == parse_bgp_lib::BGP_AFI_IPV4),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PATH_ID].value).c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_LABELS].value).c_str(),
+                                    peer.isPrePolicy, peer.isAdjIn,
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD].value).c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_ASSIGNED_NUMBER].value).c_str(),
+                                    map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_TYPE].value).c_str());
                 break;
 
         }
@@ -843,7 +823,7 @@ void msgBus_kafka::update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
         ++l3vpn_seq;
     }
 
-    produce(MSGBUS_TOPIC_VAR_L3VPN, prep_buf, strlen(prep_buf), vpn.size(), p_hash_str,
+    produce(MSGBUS_TOPIC_VAR_L3VPN, prep_buf, strlen(prep_buf), l3vpn_list.size(), p_hash_str,
             &peer_list[p_hash_str], peer.peer_as);
 }
 
@@ -851,99 +831,109 @@ void msgBus_kafka::update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
-void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
-                              obj_path_attr *attr, vpn_action_code code) {
+void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &evpn_list,
+                               parse_bgp_lib::parseBgpLib::attr_map &attrs, vpn_action_code code) {
 
     prep_buf[0] = 0;
 
     char    buf2[80000];                         // Second working buffer
     size_t  buf_len = 0;                         // query buffer length
 
-    string vpn_hash_str;
-    string path_hash_str;
     string p_hash_str;
     string r_hash_str;
 
     hash_toStr(peer.router_hash_id, r_hash_str);
-
-    if (attr != NULL)
-        hash_toStr(attr->hash_id, path_hash_str);
-
     hash_toStr(peer.hash_id, p_hash_str);
 
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
-    // Loop through the vector array of vpn entries
-    for (size_t i = 0; i < vpn.size(); i++) {
+    bool nexthop_isIPv4 = (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
+    bool atomic_agg;
+    if (attrs.count(parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE)) {
+        atomic_agg     = attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value.front().compare("1") == 0 ? true : false;
+    }
 
-        // Generate the hash
-        MD5 hash;
-
-        hash.update((unsigned char *) p_hash_str.c_str(), p_hash_str.length());
-
-        hash.update((unsigned char *) vpn[i].mac, strlen(vpn[i].mac));
-        hash.update((unsigned char *) vpn[i].ip, strlen(vpn[i].ip));
-        hash.update(&vpn[i].ip_len, sizeof(vpn[i].ip_len));
-        hash.update((unsigned char *) vpn[i].ethernet_segment_identifier, strlen(vpn[i].ethernet_segment_identifier));
-        hash.update((unsigned char *) vpn[i].rd_administrator_subfield.c_str(),
-                    vpn[i].rd_administrator_subfield.length());
-        hash.update((unsigned char *) vpn[i].rd_assigned_number.c_str(),
-                    vpn[i].rd_assigned_number.length());
-
-        // Add path ID to hash only if exists
-        if (vpn[i].path_id > 0)
-            hash.update((unsigned char *)&vpn[i].path_id, sizeof(vpn[i].path_id));
-
-        hash.finalize();
-
-        // Save the hash
-        unsigned char *hash_raw = hash.raw_digest();
-        memcpy(vpn[i].hash_id, hash_raw, 16);
-        delete[] hash_raw;
-
-        // Build the query
-        hash_toStr(vpn[i].hash_id, vpn_hash_str);
+    // Loop through the vector array of rib entries
+    for (size_t i = 0; i < evpn_list.size(); i++) {
 
         switch (code) {
 
             case VPN_ACTION_ADD:
+                /*
                 if (attr == NULL)
                     return;
+                    */
 
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "add\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIu16
-                                        "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
-                                        "\t%d\t%d\t%s:%s\t%d\t%d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%" PRIu32 "\t%" PRIu32 "\n",
-                                    evpn_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
-                                    router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
+                                        "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%s"
+                                        "\t%d\t%d\t%s:%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+                                    evpn_seq,
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_HASH].value).c_str(),
+                                    r_hash_str.c_str(),
+                                    router_ip.c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_BASE_ATTR_HASH].value).c_str(),
+                                    p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(),
-                                    attr->origin,
-                                    attr->as_path.c_str(), attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
-                                    attr->aggregator,
-                                    attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
-                                    attr->atomic_agg, attr->nexthop_isIPv4,
-                                    attr->originator_id, vpn[i].path_id, peer.isPrePolicy, peer.isAdjIn,
-                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type,
-                                    vpn[i].originating_router_ip_len, vpn[i].originating_router_ip, vpn[i].ethernet_tag_id_hex,
-                                    vpn[i].ethernet_segment_identifier, vpn[i].mac_len,
-                                    vpn[i].mac, vpn[i].ip_len, vpn[i].ip, vpn[i].mpls_label_1, vpn[i].mpls_label_2);
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGIN].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value).c_str(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_AS_ORIGIN].value.front().c_str() : string("0").c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value).c_str(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_MED].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_MED].value.front().c_str() : string("0").c_str(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.front().c_str() : string("0").c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_AGGREGATOR].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_COMMUNITIES].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_EXT_COMMUNITY].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_CLUSTER_LIST].value).c_str(),
+                                    atomic_agg,
+                                    nexthop_isIPv4,
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGINATOR_ID].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PATH_ID].value).c_str(),
+                                    peer.isPrePolicy, peer.isAdjIn,
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_ASSIGNED_NUMBER].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_TYPE].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_ORIGINATING_ROUTER_IP_LEN].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_ORIGINATING_ROUTER_IP].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_ETHERNET_TAG_ID_HEX].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_ETHERNET_SEGMENT_ID].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC_LEN].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP_LEN].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_MPLS_LABEL1].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_MPLS_LABEL2].value).c_str());
 
                 break;
 
             case VPN_ACTION_DEL:
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "del\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t\t\t"
-                                            "\t\t\t\t\t\t\t\t\t\t\t\t%" PRIu32
-                                            "\t%d\t%d\t%s:%s\t%d\t%d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%" PRIu32 "\t%" PRIu32 "\n",
-                                    evpn_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
-                                    router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
+                                            "\t\t\t\t\t\t\t\t\t\t\t\t%s"
+                                            "\t%d\t%d\t%s:%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+                                    evpn_seq,
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_HASH].value).c_str(),
+                                    r_hash_str.c_str(), router_ip.c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_BASE_ATTR_HASH].value).c_str(),
+                                    p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(),
-                                    vpn[i].path_id, peer.isPrePolicy, peer.isAdjIn,
-                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type,
-                                    vpn[i].originating_router_ip_len, vpn[i].originating_router_ip, vpn[i].ethernet_tag_id_hex,
-                                    vpn[i].ethernet_segment_identifier, vpn[i].mac_len,
-                                    vpn[i].mac, vpn[i].ip_len, vpn[i].ip, vpn[i].mpls_label_1, vpn[i].mpls_label_2);
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PATH_ID].value).c_str(),
+                                    peer.isPrePolicy, peer.isAdjIn,
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_ASSIGNED_NUMBER].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_VPN_RD_TYPE].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_ORIGINATING_ROUTER_IP_LEN].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_ORIGINATING_ROUTER_IP].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_ETHERNET_TAG_ID_HEX].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_ETHERNET_SEGMENT_ID].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC_LEN].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP_LEN].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_MPLS_LABEL1].value).c_str(),
+                                    map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_EVPN_MPLS_LABEL2].value).c_str());
 
                 break;
 
@@ -956,7 +946,7 @@ void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
         ++evpn_seq;
     }
 
-    produce(MSGBUS_TOPIC_VAR_EVPN, prep_buf, strlen(prep_buf), vpn.size(), p_hash_str,
+    produce(MSGBUS_TOPIC_VAR_EVPN, prep_buf, strlen(prep_buf), evpn_list.size(), p_hash_str,
             &peer_list[p_hash_str], peer.peer_as);
 }
 
@@ -964,23 +954,18 @@ void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn,
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
-void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib,
-                                        obj_path_attr *attr, unicast_prefix_action_code code) {
+void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                        parse_bgp_lib::parseBgpLib::attr_map &attrs, unicast_prefix_action_code code) {
     //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
     prep_buf[0] = 0;
 
     char    buf2[80000];                         // Second working buffer
     size_t  buf_len = 0;                         // query buffer length
 
-    string rib_hash_str;
-    string path_hash_str;
     string p_hash_str;
     string r_hash_str;
 
     hash_toStr(peer.router_hash_id, r_hash_str);
-
-    if (attr != NULL)
-        hash_toStr(attr->hash_id, path_hash_str);
 
     hash_toStr(peer.hash_id, p_hash_str);
 
@@ -994,73 +979,70 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
             break;
     }
 
+    bool nexthop_isIPv4 =  (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
+    bool atomic_agg = false;
+    if (attrs.count(parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE)) {
+        atomic_agg     = attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value.front().compare("1") == 0 ? true : false;
+    }
+
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
     // Loop through the vector array of rib entries
-    for (size_t i = 0; i < rib.size(); i++) {
-
-        // Generate the hash
-        MD5 hash;
-
-        hash.update((unsigned char *) rib[i].prefix, strlen(rib[i].prefix));
-        hash.update(&rib[i].prefix_len, sizeof(rib[i].prefix_len));
-        hash.update((unsigned char *) p_hash_str.c_str(), p_hash_str.length());
-
-        // Add path ID to hash only if exists
-        if (rib[i].path_id > 0)
-            hash.update((unsigned char *)&rib[i].path_id, sizeof(rib[i].path_id));
-
-        /*
-         * Add constant "1" to hash if labels are present
-         *      Withdrawn and updated NLRI's do not carry the original label, therefore we cannot
-         *      hash on the label string.  Instead, we has on a constant value of 1.
-         */
-        if (rib[i].labels[0] != 0) {
-            buf2[0] = 1;
-            hash.update((unsigned char *) buf2, 1);
-            buf2[0] = 0;
-        }
-
-        hash.finalize();
-
-        // Save the hash
-        unsigned char *hash_raw = hash.raw_digest();
-        memcpy(rib[i].hash_id, hash_raw, 16);
-        delete[] hash_raw;
-
-        // Build the query
-        hash_toStr(rib[i].hash_id, rib_hash_str);
-
+    for (size_t i = 0; i < rib_list.size(); i++) {
         switch (code) {
-
             case UNICAST_PREFIX_ACTION_ADD:
-                if (attr == NULL)
+                //TODO: Move this check out of kafka
+                /*
+                if (attrs == NULL)
                     return;
+                */
 
                 buf_len += snprintf(buf2, sizeof(buf2),
-                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
-                                            "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
-                                            "\t%s\t%d\t%d\n",
-                                    action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
-                                    router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
-                                    peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
-                                    rib[i].isIPv4, attr->origin,
-                                    attr->as_path.c_str(), attr->as_path_count, attr->origin_as, attr->next_hop, attr->med, attr->local_pref,
-                                    attr->aggregator,
-                                    attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
-                                    attr->atomic_agg, attr->nexthop_isIPv4,
-                                    attr->originator_id, rib[i].path_id, rib[i].labels, peer.isPrePolicy, peer.isAdjIn);
+                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%d\t%s\t%s\t%" PRIu16
+                                            "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\t%s\t%d\t%d\n",
+                                    action.c_str(), unicast_prefix_seq,
+                                    map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_HASH].value).c_str(),
+                                    r_hash_str.c_str(),
+                                    router_ip.c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_BASE_ATTR_HASH].value).c_str(),
+                                    p_hash_str.c_str(),
+                                    peer.peer_addr, peer.peer_as, ts.c_str(),
+                                    map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_PREFIX].value).c_str(),
+                                    map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_PREFIX_LENGTH].value).c_str(),
+                                    (rib_list[i].afi == parse_bgp_lib::BGP_AFI_IPV4),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGIN].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value).c_str(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_AS_ORIGIN].value.front().c_str() : string("0").c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value).c_str(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_MED].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_MED].value.front().c_str() : string("0").c_str(),
+                                    attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.front().c_str() : string("0").c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_AGGREGATOR].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_COMMUNITIES].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_EXT_COMMUNITY].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_CLUSTER_LIST].value).c_str(),
+                                    atomic_agg,
+                                    nexthop_isIPv4,
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGINATOR_ID].value).c_str(),
+                                    map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_PATH_ID].value).c_str(),
+                                    map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_LABELS].value).c_str(),
+                                    peer.isPrePolicy, peer.isAdjIn);
                 break;
 
             case UNICAST_PREFIX_ACTION_DEL:
                 buf_len += snprintf(buf2, sizeof(buf2),
-                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t%" PRIu32
-                                            "\t%s\t%d\t%d\n",
-                                    action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
+                                    "%s\t%" PRIu64 "\t%s\t%s\t%s\t\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%d\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t%s\t%s\t%d\t%d\n",
+                                    action.c_str(), unicast_prefix_seq, map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_HASH].value).c_str(),
+                                    r_hash_str.c_str(),
                                     router_ip.c_str(), p_hash_str.c_str(),
-                                    peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
-                                    rib[i].isIPv4, rib[i].path_id, rib[i].labels, peer.isPrePolicy, peer.isAdjIn);
+                                    peer.peer_addr, peer.peer_as, ts.c_str(),
+                                    map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_PREFIX].value).c_str(),
+                                    map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_PREFIX_LENGTH].value).c_str(),
+                                    (rib_list[i].afi == parse_bgp_lib::BGP_AFI_IPV4),
+                                    map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_PATH_ID].value).c_str(),
+                                    map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_LABELS].value).c_str(),
+                                    peer.isPrePolicy, peer.isAdjIn);
                 break;
         }
 
@@ -1072,7 +1054,7 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
     }
 
 
-    produce(MSGBUS_TOPIC_VAR_UNICAST_PREFIX, prep_buf, strlen(prep_buf), rib.size(), p_hash_str,
+    produce(MSGBUS_TOPIC_VAR_UNICAST_PREFIX, prep_buf, strlen(prep_buf), rib_list.size(), p_hash_str,
             &peer_list[p_hash_str], peer.peer_as);
 }
 
@@ -1107,21 +1089,18 @@ void msgBus_kafka::add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats) {
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
-void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_node> &nodes,
-                                  ls_action_code code) {
+void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
+                                 parse_bgp_lib::parseBgpLib::attr_map &attrs, ls_action_code code) {
     bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
 
     char    buf2[8192];                          // Second working buffer
     int     buf_len = 0;                         // query buffer length
     int     i;
 
-    string hash_str;
     string r_hash_str;
-    string path_hash_str;
     string peer_hash_str;
 
     hash_toStr(peer.router_hash_id, r_hash_str);
-    hash_toStr(attr.hash_id, path_hash_str);
     hash_toStr(peer.hash_id, peer_hash_str);
 
     string action = "add";
@@ -1137,74 +1116,33 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
-    char igp_router_id[46];
-    char router_id[46];
-    char ospf_area_id[16] = {0};
-    char isis_area_id[32] = {0};
-    char dr[16];
-
-    // Loop through the vector array of entries
-    int rows = 0;
-    for (std::list<MsgBusInterface::obj_ls_node>::iterator it = nodes.begin();
-            it != nodes.end(); it++) {
-        ++rows;
-        MsgBusInterface::obj_ls_node &node = (*it);
-
-        hash_toStr(node.hash_id, hash_str);
-
-        if (node.isIPv4) {
-            inet_ntop(PF_INET, node.router_id, router_id, sizeof(router_id));
-        } else {
-            inet_ntop(PF_INET6, node.router_id, router_id, sizeof(router_id));
-        }
-
-        if (!strcmp(node.protocol, "OSPFv3") or !strcmp(node.protocol, "OSPFv2") ) {
-            bzero(isis_area_id, sizeof(isis_area_id));
-            bzero(igp_router_id, sizeof(igp_router_id));
-
-            // The first 4 octets are the router ID and the second 4 are the DR or ZERO if no DR
-            inet_ntop(PF_INET, node.igp_router_id, igp_router_id, sizeof(igp_router_id));
-
-            string hostname;
-            resolveIp(igp_router_id, hostname);
-            strncpy(node.name, hostname.c_str(), sizeof(node.name));
-
-            if ((uint32_t) *(node.igp_router_id+4) != 0) {
-                inet_ntop(PF_INET, node.igp_router_id+4, dr, sizeof(dr));
-                strncat(igp_router_id, "[", 1);
-                strncat(igp_router_id, dr, sizeof(dr));
-                strncat(igp_router_id, "]", 1);
-                LOG_INFO("igp router id includes DR: %s %s", igp_router_id, dr);
-            }
-
-            inet_ntop(PF_INET, node.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
-
-        } else {
-            bzero(ospf_area_id, sizeof(ospf_area_id));
-
-            snprintf(igp_router_id, sizeof(igp_router_id),
-                     "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
-                     node.igp_router_id[0], node.igp_router_id[1], node.igp_router_id[2], node.igp_router_id[3],
-                     node.igp_router_id[4], node.igp_router_id[5], node.igp_router_id[6], node.igp_router_id[7]);
-
-            if (node.isis_area_id[8] <= sizeof(node.isis_area_id))
-                for (i=0; i < node.isis_area_id[8]; i++) {
-                    snprintf(buf2, sizeof(buf2), "%02hhX", node.isis_area_id[i]);
-                    strcat(isis_area_id, buf2);
-
-                    if (i == 0)
-                        strcat(isis_area_id, ".");
-                }
-        }
+    // Loop through the vector array of rib entries
+    for (size_t i = 0; i < ls_node_list.size(); i++) {
 
         buf_len += snprintf(buf2, sizeof(buf2),
-                        "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32 "\t%s"
-                                "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\n",
-                        action.c_str(),ls_node_seq, hash_str.c_str(),path_hash_str.c_str(), r_hash_str.c_str(),
+                        "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%s\t%s"
+                                "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
+                        action.c_str(),ls_node_seq, map_string(ls_node_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_LOCAL_NODE_HASH].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_BASE_ATTR_HASH].value).c_str(),
+                            r_hash_str.c_str(),
                         router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
-                        igp_router_id, router_id, node.id, node.bgp_ls_id,node.mt_id, ospf_area_id, isis_area_id,
-                        node.protocol, node.flags, attr.as_path.c_str(), attr.local_pref, attr.med, attr.next_hop, node.name,
-                        peer.isPrePolicy, peer.isAdjIn, node.sr_capabilities_tlv);
+                            map_string(ls_node_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL].value).c_str(),
+                            (attrs.find(parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6) != attrs.end()) ?
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6].value).c_str() : map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4].value).c_str(),
+                            map_string(ls_node_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_ROUTING_ID].value).c_str(),
+                            map_string(ls_node_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_BGP_LS_ID_LOCAL].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_MT_ID].value).c_str(),
+                            map_string(ls_node_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_OSPF_AREA_ID_LOCAL].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_ISIS_AREA_ID].value).c_str(),
+                            map_string(ls_node_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_PROTOCOL].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_FLAGS].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value).c_str(),
+                            attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.front().c_str() : string("0").c_str(),
+                            attrs[parse_bgp_lib::LIB_ATTR_MED].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_MED].value.front().c_str() : string("0").c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_NODE_NAME].value).c_str(),
+                            peer.isPrePolicy, peer.isAdjIn,
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_SR_CAPABILITIES_TLV].value).c_str());
 
         // Cat the entry to the query buff
         if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
@@ -1213,14 +1151,14 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
         ++ls_node_seq;
     }
 
-
-    produce(MSGBUS_TOPIC_VAR_LS_NODE, prep_buf, buf_len, rows, peer_hash_str, &peer_list[peer_hash_str], peer.peer_as);
+    produce(MSGBUS_TOPIC_VAR_LS_NODE, prep_buf, buf_len, ls_node_list.size(), peer_hash_str, &peer_list[peer_hash_str], peer.peer_as);
 }
 
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
-void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_link> &links,
+void msgBus_kafka::update_LsLink(obj_bgp_peer &peer,  std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
+                                 parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                  ls_action_code code) {
     bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
 
@@ -1228,13 +1166,10 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     int     buf_len = 0;                         // query buffer length
     int     i;
 
-    string hash_str;
     string r_hash_str;
-    string path_hash_str;
     string peer_hash_str;
 
     hash_toStr(peer.router_hash_id, r_hash_str);
-    hash_toStr(attr.hash_id, path_hash_str);
     hash_toStr(peer.hash_id, peer_hash_str);
 
     string action = "add";
@@ -1250,120 +1185,54 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
-    string local_node_hash_id;
-    string remote_node_hash_id;
-
-    char intf_ip[46];
-    char nei_ip[46];
-    char igp_router_id[46];
-    char remote_igp_router_id[46];
-    char router_id[46];
-    char remote_router_id[46];
-    char ospf_area_id[17] = {0};
-    char isis_area_id[33] = {0};
-    char dr[16];
-
-    // Loop through the vector array of entries
-    int rows = 0;
-    for (std::list<MsgBusInterface::obj_ls_link>::iterator it = links.begin();
-         it != links.end(); it++) {
-
-        ++rows;
-        MsgBusInterface::obj_ls_link &link = (*it);
-
-        MD5 hash;
-
-        hash.update(link.intf_addr, sizeof(link.intf_addr));
-        hash.update(link.nei_addr, sizeof(link.nei_addr));
-        hash.update((unsigned char *)&link.id, sizeof(link.id));
-        hash.update(link.local_node_hash_id, sizeof(link.local_node_hash_id));
-        hash.update(link.remote_node_hash_id, sizeof(link.remote_node_hash_id));
-        hash.update((unsigned char *)&link.local_link_id, sizeof(link.local_link_id));
-        hash.update((unsigned char *)&link.remote_link_id, sizeof(link.remote_link_id));
-        hash.update((unsigned char *)peer_hash_str.c_str(), peer_hash_str.length());
-        hash.update((unsigned char *)&link.mt_id, sizeof(link.mt_id));
-        hash.finalize();
-
-        // Save the hash
-        unsigned char *hash_bin = hash.raw_digest();
-        memcpy(link.hash_id, hash_bin, 16);
-        delete[] hash_bin;
-
-        hash_toStr(link.hash_id, hash_str);
-        hash_toStr(link.local_node_hash_id, local_node_hash_id);
-        hash_toStr(link.remote_node_hash_id, remote_node_hash_id);
-
-        int afi = link.isIPv4 ? PF_INET : PF_INET6;
-
-        inet_ntop(afi, link.intf_addr, intf_ip, sizeof(intf_ip));
-        inet_ntop(afi, link.nei_addr, nei_ip, sizeof(nei_ip));
-        inet_ntop(afi, link.router_id, router_id, sizeof(router_id));
-        inet_ntop(afi, link.remote_router_id, remote_router_id, sizeof(remote_router_id));
-
-        if (!strcmp(link.protocol, "OSPFv3") or !strcmp(link.protocol, "OSPFv2") ) {
-            bzero(isis_area_id, sizeof(isis_area_id));
-
-            inet_ntop(PF_INET, link.igp_router_id, igp_router_id, sizeof(igp_router_id));
-
-            if ((uint32_t) *(link.igp_router_id+4) != 0) {
-                inet_ntop(PF_INET, link.igp_router_id+4, dr, sizeof(dr));
-                strncat(igp_router_id, "[", 1);
-                strncat(igp_router_id, dr, sizeof(dr));
-                strncat(igp_router_id, "]", 1);
-            }
-
-            inet_ntop(PF_INET, link.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
-
-        } else if (!strcmp(link.protocol, "IS-IS_L1") or !strcmp(link.protocol, "IS-IS_L2")) {
-            bzero(ospf_area_id, sizeof(ospf_area_id));
-
-            snprintf(igp_router_id, sizeof(igp_router_id),
-                     "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
-                     link.igp_router_id[0], link.igp_router_id[1], link.igp_router_id[2], link.igp_router_id[3],
-                     link.igp_router_id[4], link.igp_router_id[5], link.igp_router_id[6], link.igp_router_id[7]);
-
-            if (link.isis_area_id[8] <= sizeof(link.isis_area_id)) {
-                for (i = 0; i < link.isis_area_id[8]; i++) {
-                    snprintf(buf2, sizeof(buf2), "%02hhX", link.isis_area_id[i]);
-                    strcat(isis_area_id, buf2);
-
-                    if (i == 0)
-                        strcat(isis_area_id, ".");
-                }
-            }
-
-            snprintf(remote_igp_router_id, sizeof(remote_igp_router_id),
-                     "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
-                     link.remote_igp_router_id[0], link.remote_igp_router_id[1], link.remote_igp_router_id[2], link.remote_igp_router_id[3],
-                     link.remote_igp_router_id[4], link.remote_igp_router_id[5], link.remote_igp_router_id[6], link.remote_igp_router_id[7]);
-
-
-        } else /* static, direct, epe, ... */ {
-            ospf_area_id[0]         = 0;
-            isis_area_id[0]         = 0;
-            igp_router_id[0]        = 0;
-            remote_igp_router_id[0] = 0;
-
-            inet_ntop(PF_INET, &link.local_bgp_router_id, router_id, sizeof(router_id));
-            inet_ntop(PF_INET, &link.remote_bgp_router_id, remote_router_id, sizeof(remote_router_id));
-        }
-
+    // Loop through the vector array of rib entries
+    for (size_t i = 0; i < ls_link_list.size(); i++) {
 
         buf_len += snprintf(buf2, sizeof(buf2),
-                "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32 "\t%s\t%s\t%s\t%s\t%"
-                        PRIu32 "\t%" PRIu32 "\t%s\t%" PRIx32 "\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%" PRIu32 "\t%" PRIu32
-                        "\t%" PRIu32 "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 ""
-                        "\t%" PRIu32 "\t%s\t%d\t%d\t%s\n",
-                            action.c_str(), ls_link_seq, hash_str.c_str(), path_hash_str.c_str(),r_hash_str.c_str(),
+                "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%"
+                        "s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s"
+                        "\t%s\t%s\t%d\t%d\t%s\n",
+                            action.c_str(), ls_link_seq, map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_LINK_HASH].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_BASE_ATTR_HASH].value).c_str(),
+                            r_hash_str.c_str(),
                             router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
-                            igp_router_id, router_id, link.id, link.bgp_ls_id, ospf_area_id,
-                            isis_area_id, link.protocol, attr.as_path.c_str(), attr.local_pref, attr.med, attr.next_hop,
-                            link.mt_id, link.local_link_id, link.remote_link_id, intf_ip, nei_ip, link.igp_metric,
-                            link.admin_group, link.max_link_bw, link.max_resv_bw, link.unreserved_bw, link.te_def_metric,
-                            link.protection_type, link.mpls_proto_mask, link.srlg, link.name, remote_node_hash_id.c_str(),
-                            local_node_hash_id.c_str(),remote_igp_router_id, remote_router_id,
-                            link.local_node_asn,link.remote_node_asn, link.peer_node_sid, peer.isPrePolicy, peer.isAdjIn,
-                            link.peer_adj_sid);
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL].value).c_str(),
+                            (attrs.find(parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6) != attrs.end()) ?
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6].value).c_str() : map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_ROUTING_ID].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_BGP_LS_ID_LOCAL].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_OSPF_AREA_ID_LOCAL].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_ISIS_AREA_ID].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_PROTOCOL].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value).c_str(),
+                            attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.front().c_str() : string("0").c_str(),
+                            attrs[parse_bgp_lib::LIB_ATTR_MED].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_MED].value.front().c_str() : string("0").c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_MT_ID].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_LINK_LOCAL_ID].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_LINK_REMOTE_ID].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_INTF_ADDR].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_NEIGHBOR_ADDR].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_IGP_METRIC].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_ADMIN_GROUP].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_MAX_LINK_BW].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_MAX_RESV_BW].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_UNRESV_BW].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_TE_DEF_METRIC].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_PROTECTION_TYPE].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_MPLS_PROTO_MASK].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_SRLG].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LINK_NAME].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_REMOTE_NODE_HASH].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_LOCAL_NODE_HASH].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_IGP_ROUTER_ID_REMOTE].value).c_str(),
+                            (attrs.find(parse_bgp_lib::LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6) != attrs.end()) ?
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6].value).c_str() : map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV4].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_ASN_LOCAL].value).c_str(),
+                            map_string(ls_link_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_ASN_REMOTE].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_PEER_EPE_NODE_SID].value).c_str(),
+                            peer.isPrePolicy, peer.isAdjIn,
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_ADJACENCY_SID].value).c_str());
 
         // Cat the entry to the query buff
         if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
@@ -1372,28 +1241,25 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
         ++ls_link_seq;
     }
 
-    produce(MSGBUS_TOPIC_VAR_LS_LINK, prep_buf, strlen(prep_buf), rows, peer_hash_str,
+    produce(MSGBUS_TOPIC_VAR_LS_LINK, prep_buf, strlen(prep_buf), ls_link_list.size(), peer_hash_str,
             &peer_list[peer_hash_str], peer.peer_as);
 }
 
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
-void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
-                                   ls_action_code code) {
+void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
+                                   parse_bgp_lib::parseBgpLib::attr_map &attrs, ls_action_code code) {
     bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
 
     char    buf2[8192];                          // Second working buffer
     int     buf_len = 0;                         // query buffer length
     int     i;
 
-    string hash_str;
     string r_hash_str;
-    string path_hash_str;
     string peer_hash_str;
 
     hash_toStr(peer.router_hash_id, r_hash_str);
-    hash_toStr(attr.hash_id, path_hash_str);
     hash_toStr(peer.hash_id, peer_hash_str);
 
     string action = "add";
@@ -1409,103 +1275,41 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
-    string local_node_hash_id;
-
-    char intf_ip[46];
-    char nei_ip[46];
-    char igp_router_id[46];
-    char router_id[46];
-    char ospf_fwd_addr[46];
-    char prefix_ip[46];
-    char ospf_area_id[16] = {0};
-    char isis_area_id[32] = {0};
-    char dr[16];
-
-    // Loop through the vector array of entries
-    int rows = 0;
-    for (std::list<MsgBusInterface::obj_ls_prefix>::iterator it = prefixes.begin();
-         it != prefixes.end(); it++) {
-
-        ++rows;
-        MsgBusInterface::obj_ls_prefix &prefix = (*it);
-
-        MD5 hash;
-
-        hash.update(prefix.prefix_bin, sizeof(prefix.prefix_bin));
-        hash.update(&prefix.prefix_len, 1);
-        hash.update((unsigned char *)&prefix.id, sizeof(prefix.id));
-        hash.update(prefix.local_node_hash_id, sizeof(prefix.local_node_hash_id));
-        hash.update((unsigned char *)prefix.ospf_route_type, sizeof(prefix.ospf_route_type));
-        hash.update((unsigned char *)&prefix.mt_id, sizeof(prefix.mt_id));
-        hash.finalize();
-
-        // Save the hash
-        unsigned char *hash_bin = hash.raw_digest();
-        memcpy(prefix.hash_id, hash_bin, 16);
-        delete[] hash_bin;
-
-        // Build the query
-        hash_toStr(prefix.hash_id, hash_str);
-        hash_toStr(prefix.local_node_hash_id, local_node_hash_id);
-
-        if (prefix.isIPv4) {
-            inet_ntop(PF_INET, prefix.intf_addr, intf_ip, sizeof(intf_ip));
-            inet_ntop(PF_INET, prefix.nei_addr, nei_ip, sizeof(nei_ip));
-            inet_ntop(PF_INET, prefix.ospf_fwd_addr, ospf_fwd_addr, sizeof(ospf_fwd_addr));
-            inet_ntop(PF_INET, prefix.prefix_bin, prefix_ip, sizeof(prefix_ip));
-            inet_ntop(PF_INET, prefix.router_id, router_id, sizeof(router_id));
-        } else {
-            inet_ntop(PF_INET6, prefix.intf_addr, intf_ip, sizeof(intf_ip));
-            inet_ntop(PF_INET6, prefix.nei_addr, nei_ip, sizeof(nei_ip));
-            inet_ntop(PF_INET6, prefix.router_id, router_id, sizeof(router_id));
-            inet_ntop(PF_INET6, prefix.ospf_fwd_addr, ospf_fwd_addr, sizeof(ospf_fwd_addr));
-            inet_ntop(PF_INET6, prefix.prefix_bin, prefix_ip, sizeof(prefix_ip));
-        }
-
-        if (!strcmp(prefix.protocol, "OSPFv3") or !strcmp(prefix.protocol, "OSPFv2") ) {
-            bzero(isis_area_id, sizeof(isis_area_id));
-
-            inet_ntop(PF_INET, prefix.igp_router_id, igp_router_id, sizeof(igp_router_id));
-
-            if ((uint32_t) *(prefix.igp_router_id+4) != 0) {
-                inet_ntop(PF_INET, prefix.igp_router_id+4, dr, sizeof(dr));
-                strncat(igp_router_id, "[", 1);
-                strncat(igp_router_id, dr, sizeof(dr));
-                strncat(igp_router_id, "]", 1);
-            }
-
-
-            inet_ntop(PF_INET, prefix.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
-        } else {
-            bzero(ospf_area_id, sizeof(ospf_area_id));
-
-            snprintf(igp_router_id, sizeof(igp_router_id),
-                     "%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX.%02hhX%02hhX",
-                     prefix.igp_router_id[0], prefix.igp_router_id[1], prefix.igp_router_id[2], prefix.igp_router_id[3],
-                     prefix.igp_router_id[4], prefix.igp_router_id[5], prefix.igp_router_id[6], prefix.igp_router_id[7]);
-
-            if (prefix.isis_area_id[8] <= sizeof(prefix.isis_area_id))
-                for (i=0; i < prefix.isis_area_id[8]; i++) {
-                    snprintf(buf2, sizeof(buf2), "%02hhX", prefix.isis_area_id[i]);
-                    strcat(isis_area_id, buf2);
-
-                    if (i == 0)
-                        strcat(isis_area_id, ".");
-                }
-        }
-
+    // Loop through the vector array of rib entries
+    for (size_t i = 0; i < ls_prefix_list.size(); i++) {
 
         buf_len += snprintf(buf2, sizeof(buf2),
-                "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIx64 "\t%" PRIx32
-                        "\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%" PRIx32 "\t%s\t%s\t%" PRIu32 "\t%" PRIx64
-                            "\t%s\t%" PRIu32 "\t%s\t%d\t%d\t%d\t%s\n",
-                            action.c_str(), ls_prefix_seq, hash_str.c_str(), path_hash_str.c_str(), r_hash_str.c_str(),
+                "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%s"
+                        "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s"
+                            "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
+                            action.c_str(), ls_prefix_seq, map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_PREFIX_HASH].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_BASE_ATTR_HASH].value).c_str(),
+                            r_hash_str.c_str(),
                             router_ip.c_str(), peer_hash_str.c_str(), peer.peer_addr, peer.peer_as, ts.c_str(),
-                            igp_router_id, router_id, prefix.id, prefix.bgp_ls_id, ospf_area_id, isis_area_id,
-                            prefix.protocol, attr.as_path.c_str(), attr.local_pref, attr.med, attr.next_hop, local_node_hash_id.c_str(),
-                            prefix.mt_id, prefix.ospf_route_type, prefix.igp_flags, prefix.route_tag, prefix.ext_route_tag,
-                            ospf_fwd_addr, prefix.metric, prefix_ip, prefix.prefix_len, peer.isPrePolicy, peer.isAdjIn,
-                            prefix.sid_tlv);
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_IGP_ROUTER_ID_LOCAL].value).c_str(),
+                            (attrs.find(parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6) != attrs.end()) ?
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6].value).c_str() : map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4].value).c_str(),
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_ROUTING_ID].value).c_str(),
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_BGP_LS_ID_LOCAL].value).c_str(),
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_OSPF_AREA_ID_LOCAL].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_ISIS_AREA_ID].value).c_str(),
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_PROTOCOL].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value).c_str(),
+                            attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_LOCAL_PREF].value.front().c_str() : string("0").c_str(),
+                            attrs[parse_bgp_lib::LIB_ATTR_MED].value.size() ? attrs[parse_bgp_lib::LIB_ATTR_MED].value.front().c_str() : string("0").c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value).c_str(),
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_LOCAL_NODE_HASH].value).c_str(),
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_MT_ID].value).c_str(),
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_OSPF_ROUTE_TYPE].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_PREFIX_IGP_FLAGS].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_ROUTE_TAG].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_EXTENDED_TAG].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_OSPF_FWD_ADDR].value).c_str(),
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_PREFIX_METRIC].value).c_str(),
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_IP_REACH_PREFIX].value).c_str(),
+                            map_string(ls_prefix_list[i].nlri[parse_bgp_lib::LIB_NLRI_LS_IP_REACH_PREFIX_LENGTH].value).c_str(),
+                            peer.isPrePolicy, peer.isAdjIn,
+                            map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_PREFIX_SID].value).c_str());
 
         // Cat the entry to the query buff
         if (buf_len < MSGBUS_WORKING_BUF_SIZE /* size of buf */)
@@ -1514,7 +1318,7 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
         ++ls_prefix_seq;
     }
 
-    produce(MSGBUS_TOPIC_VAR_LS_PREFIX, prep_buf, strlen(prep_buf), rows, peer_hash_str,
+    produce(MSGBUS_TOPIC_VAR_LS_PREFIX, prep_buf, strlen(prep_buf), ls_prefix_list.size(), peer_hash_str,
             &peer_list[peer_hash_str], peer.peer_as);
 }
 

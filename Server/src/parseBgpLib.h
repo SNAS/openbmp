@@ -16,9 +16,9 @@
 #include <array>
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/exception/all.hpp>
+#include <bmp/BMPReader.h>
 #include "Logger.h"
 #include "md5.h"
-#include "BMPReader.h"
 
 namespace parse_bgp_lib {
 
@@ -28,7 +28,7 @@ namespace parse_bgp_lib {
      *  \see http://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml
      */
     enum UPDATE_ATTR_TYPES {
-        ATTR_TYPE_ORIGIN=1,
+        ATTR_TYPE_ORIGIN = 1,
         ATTR_TYPE_AS_PATH,
         ATTR_TYPE_NEXT_HOP,
         ATTR_TYPE_MED,
@@ -41,26 +41,26 @@ namespace parse_bgp_lib {
         ATTR_TYPE_DPA,
         ATTR_TYPE_ADVERTISER,
         ATTR_TYPE_RCID_PATH,
-        ATTR_TYPE_MP_REACH_NLRI=14,
+        ATTR_TYPE_MP_REACH_NLRI = 14,
         ATTR_TYPE_MP_UNREACH_NLRI,
-        ATTR_TYPE_EXT_COMMUNITY=16,
-        ATTR_TYPE_AS4_PATH=17,
-        ATTR_TYPE_AS4_AGGREGATOR=18,
+        ATTR_TYPE_EXT_COMMUNITY = 16,
+        ATTR_TYPE_AS4_PATH = 17,
+        ATTR_TYPE_AS4_AGGREGATOR = 18,
 
-        ATTR_TYPE_AS_PATHLIMIT=21,              // Deprecated - draft-ietf-idr-as-pathlimit, JunOS will send this
+        ATTR_TYPE_AS_PATHLIMIT = 21,              // Deprecated - draft-ietf-idr-as-pathlimit, JunOS will send this
 
-        ATTR_TYPE_IPV6_EXT_COMMUNITY=25,
+        ATTR_TYPE_IPV6_EXT_COMMUNITY = 25,
         ATTR_TYPE_AIGP,                         ///< RFC7311 - Accumulated IGP metric
 
-        ATTR_TYPE_BGP_LS=29,                    // BGP LS attribute draft-ietf-idr-ls-distribution
+        ATTR_TYPE_BGP_LS = 29,                    // BGP LS attribute draft-ietf-idr-ls-distribution
 
-        ATTR_TYPE_BGP_LINK_STATE_OLD=99,        // BGP link state Older
-        ATTR_TYPE_BGP_ATTRIBUTE_SET=128,
+        ATTR_TYPE_BGP_LINK_STATE_OLD = 99,        // BGP link state Older
+        ATTR_TYPE_BGP_ATTRIBUTE_SET = 128,
 
         /*
          * Below attribute types are for internal use only... These are derived/added based on other attributes
          */
-        ATTR_TYPE_INTERNAL_AS_COUNT=9000,        // AS path count - number of AS's
+                ATTR_TYPE_INTERNAL_AS_COUNT = 9000,        // AS path count - number of AS's
         ATTR_TYPE_INTERNAL_AS_ORIGIN             // The AS that originated the entry
     };
 
@@ -79,12 +79,12 @@ namespace parse_bgp_lib {
      *         to 1, the third and fourth octets of the path attribute contain
      *         the length of the attribute data in octets.
      */
-    #define ATTR_FLAG_EXTENDED(flags)   ( flags & 0x10 )
+#define ATTR_FLAG_EXTENDED(flags)   ( flags & 0x10 )
 
     enum BGP_AFI {
         BGP_AFI_IPV4 = 1,
         BGP_AFI_IPV6 = 2,
-        BGP_AFI_L2VPN=25,
+        BGP_AFI_L2VPN = 25,
         BGP_AFI_BGPLS = 16388
     };
 
@@ -116,8 +116,9 @@ namespace parse_bgp_lib {
  */
     enum BGP_LIB_ATTRS {
         //Common attributes
-        LIB_ATTR_ORIGIN,
+                LIB_ATTR_ORIGIN,
         LIB_ATTR_AS_PATH,
+        LIB_ATTR_AS_ORIGIN,
         LIB_ATTR_NEXT_HOP,
         LIB_ATTR_MED,
         LIB_ATTR_LOCAL_PREF,
@@ -131,7 +132,7 @@ namespace parse_bgp_lib {
         LIB_ATTR_BASE_ATTR_HASH,
 
         //Linkstate Node attributes
-        LIB_ATTR_LS_MT_ID,
+                LIB_ATTR_LS_MT_ID,
         LIB_ATTR_LS_FLAGS,
         LIB_ATTR_LS_NODE_NAME,
         LIB_ATTR_LS_ISIS_AREA_ID,
@@ -140,7 +141,7 @@ namespace parse_bgp_lib {
         LIB_ATTR_LS_SR_CAPABILITIES_TLV,
 
         //Linkstate Link attributes
-        LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV4,
+                LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV4,
         LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6,
         LIB_ATTR_LS_ADMIN_GROUP,
         LIB_ATTR_LS_MAX_LINK_BW,
@@ -159,7 +160,7 @@ namespace parse_bgp_lib {
         LIB_ATTR_LS_PEER_EPE_SET_SID,
 
         //Linkstate Prefix attributes
-        LIB_ATTR_LS_PREFIX_IGP_FLAGS,
+                LIB_ATTR_LS_PREFIX_IGP_FLAGS,
         LIB_ATTR_LS_ROUTE_TAG,
         LIB_ATTR_LS_EXTENDED_TAG,
         LIB_ATTR_LS_PREFIX_METRIC,
@@ -175,6 +176,7 @@ namespace parse_bgp_lib {
             //Common attributes
             std::string("origin"),
             "asPath",
+            "asOrigin",
             "nextHop",
             "med",
             "localPref",
@@ -364,7 +366,7 @@ namespace parse_bgp_lib {
             if (i != 0) mac_stringstream << ':';
             mac_stringstream.width(2);
             mac_stringstream.fill('0');
-            mac_stringstream << std::hex << (int)(pointer[i]);
+            mac_stringstream << std::hex << (int) (pointer[i]);
         }
 
         return mac_stringstream.str();
@@ -378,18 +380,17 @@ namespace parse_bgp_lib {
      *              printing or storing in the DB.
      *
      * \param[in]   hash_bin      16 byte binary/unsigned value
-     * \param[out]  hash_str      Reference to storage of string value
-     *
      */
+
     static std::string hash_toStr(const u_char *hash_bin) {
 
         int i;
         char s[33];
 
-        for (i=0; i<16; i++)
-            sprintf(s+i*2, "%02x", hash_bin[i]);
+        for (i = 0; i < 16; i++)
+            sprintf(s + i * 2, "%02x", hash_bin[i]);
 
-        s[32]='\0';
+        s[32] = '\0';
 
         return string(s);
     }
@@ -415,7 +416,8 @@ namespace parse_bgp_lib {
         hash->update((unsigned char *) hash_string.c_str(), hash_string.length());
     }
 
-    /*********************************************************************//**
+
+    /****************************************************************//**
      * Simple function to swap bytes around from network to host or
      *  host to networking.  This method will convert any size byte variable,
      *  unlike ntohs and ntohl.
@@ -455,6 +457,7 @@ namespace parse_bgp_lib {
      * Constructors for class
      ***********************************************************************/
         parseBgpLib(Logger *logPtr, bool enable_debug, BMPReader::peer_info *p_info);
+
         parseBgpLib(Logger *logPtr, bool enable_debug);
 
         virtual ~parseBgpLib();
@@ -465,7 +468,7 @@ namespace parse_bgp_lib {
          * eg., BGP-LS TLV types carried over from IGP
          */
         struct parse_bgp_lib_data {
-            uint32_t    official_type;
+            uint32_t official_type;
             std::string name;
             std::list<std::string> value;
         };
@@ -534,8 +537,6 @@ namespace parse_bgp_lib {
          */
         bool getAddpathCapability(parse_bgp_lib::BGP_AFI afi, parse_bgp_lib::BGP_SAFI safi);
 
-
-
         /**
          * 4-octet capability for a peer
          *
@@ -554,15 +555,15 @@ namespace parse_bgp_lib {
          */
         void disableFourOctetCapability();
 
-        BMPReader::peer_info             *p_info;   ///< Persistent Peer information
-        string                            debug_prepend_string; ///< debug print string added to all log messages
+        BMPReader::peer_info *p_info;   ///< Persistent Peer information
+        string debug_prepend_string; ///< debug print string added to all log messages
 
     private:
         //TODO: Remove
         bool debug;                             ///< debug flag to indicate debugging
         Logger *logger;                         ///< Logging class pointer
-        bool                    four_octet_asn; ///< Indicates true if 4 octets or false if 2
-        char                    asn_octet_size;
+        bool four_octet_asn; ///< Indicates true if 4 octets or false if 2
+        char asn_octet_size;
 
         /**
          * Defines the BGP address-families (AFI) internal numbering
@@ -678,8 +679,8 @@ namespace parse_bgp_lib {
          * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
          */
         void parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_update &update);
-    };
 
-} /* namespace parse_bgp_lib */
+    };
+}/* namespace parse_bgp_lib */
 
 #endif /* PARSE_BGP_LIB_H_ */

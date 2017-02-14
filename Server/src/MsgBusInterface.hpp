@@ -19,6 +19,8 @@
 #include <ctime>
 #include <sys/time.h>
 
+#include "parseBgpLib.h"
+
 /**
  * \class   MsgBusInterface
  *
@@ -458,7 +460,7 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr, base_attr_action_code code) = 0;
+    virtual void update_baseAttribute(obj_bgp_peer &peer, parse_bgp_lib::parseBgpLib::attr_map &attrs, base_attr_action_code code) = 0;
 
     /*****************************************************************//**
      * \brief       Add/Update RIB objects
@@ -476,7 +478,8 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib, obj_path_attr *attr,
+    virtual void update_unicastPrefix(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                       unicast_prefix_action_code code) = 0;
 
      /*****************************************************************//**
@@ -495,7 +498,8 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr,
+    virtual void update_L3Vpn(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3vpn_list,
+                              parse_bgp_lib::parseBgpLib::attr_map &attrs,
                             vpn_action_code code) = 0;
 
     /*****************************************************************//**
@@ -514,7 +518,8 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn, obj_path_attr *attr,
+    virtual void update_eVPN(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &evpn_list,
+                             parse_bgp_lib::parseBgpLib::attr_map &attrs,
                             vpn_action_code code) = 0;
 
     /*****************************************************************//**
@@ -532,12 +537,12 @@ public:
      * \details     Will generate a message to add/update BGP-LS nodes.
      *
      * \param[in]   peer       Peer object
-     * \param[in]   attr       Path attribute object
      * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr,
-                                std::list<MsgBusInterface::obj_ls_node> &nodes,
+    virtual void update_LsNode(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
+                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                 ls_action_code code) = 0;
 
     /*****************************************************************//**
@@ -546,15 +551,16 @@ public:
      * \details     Will generate a message to add/update BGP-LS links.
      *
      * \param[in]   peer       Peer object
-     * \param[in]   attr       Path attribute object
      * \param[in]   links      List of one or more link tables
+     *
+     * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *
      * \returns     The hash_id will be updated based on the
      *              supplied data for each object.
      *****************************************************************/
-    virtual void update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr,
-                             std::list<MsgBusInterface::obj_ls_link> &links,
+    virtual void update_LsLink(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
+                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
                              ls_action_code code) = 0;
 
     /*****************************************************************//**
@@ -563,15 +569,15 @@ public:
      * \details     Will generate a message to add/update BGP-LS prefixes.
      *
      * \param[in]      peer       Peer object
+      \param[in]       prefixes   List of one or more node tables
      * \param[in]      attr       Path attribute object
-     * \param[in/out]  prefixes   List of one or more node tables
      * \param[in]      code       Linkstate action code
      *
      * \returns     The hash_id will be updated based on the
      *              supplied data for each object.
      *****************************************************************/
-    virtual void update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr,
-                                std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
+    virtual void update_LsPrefix(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
+                                 parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                 ls_action_code code) = 0;
 
     /*****************************************************************//**
@@ -650,6 +656,35 @@ public:
         sprintf(buf, ".%06u", us);
         ts_str.append(buf);
     }
+
+    /**
+     * \brief       Simple concatanation function
+     *
+     * \details     Converts a string array to a concatanated string
+     *              printing or storing in the DB.
+     *
+     * \param[in]   lib_data      nlri or attr map value
+     */
+    static std::string map_string(std::list<std::string> &lib_data) {
+        string s = "";
+
+        if (lib_data.empty())
+            return s;
+
+        if (lib_data.size() <= 1)
+            return lib_data.front();
+        std::list<std::string>::iterator last_value = lib_data.end();
+        last_value--;
+
+        for (std::list<std::string>::iterator it = lib_data.begin(); it != lib_data.end(); it++) {
+            s += *it;
+            if (it != last_value) {
+                s += std::string(" ");
+            }
+        }
+        return s;
+    }
+
 
 protected:
 

@@ -13,10 +13,12 @@
 #include <vector>
 #include <list>
 #include <BMPReader.h>
+#include <parseBgpLib.h>
 #include "MsgBusInterface.hpp"
 #include "Logger.h"
 #include "bgp_common.h"
 #include "UpdateMsg.h"
+#include "parseBGP.h"
 
 
 using namespace std;
@@ -182,7 +184,7 @@ private:
      *
      * \param  parsed_data          Reference to the parsed update data
      */
-    void UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
+    void UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update);
 
     /**
      * Update the Database path attributes

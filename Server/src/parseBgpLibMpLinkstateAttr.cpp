@@ -622,6 +622,7 @@ namespace parse_bgp_lib {
             case ATTR_LINK_ADJACENCY_SID: {
                 update->attrs[LIB_ATTR_LS_ADJACENCY_SID].official_type = ATTR_LINK_ADJACENCY_SID;
                 update->attrs[LIB_ATTR_LS_ADJACENCY_SID].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LS_ADJACENCY_SID];
+                val_ss.str(std::string());
 
                 // https://tools.ietf.org/html/draft-gredler-idr-bgp-ls-segment-routing-ext-04#section-2.1.1
                 for (std::list<parseBgpLib::parse_bgp_lib_nlri>::iterator it = update->nlri_list.begin();
@@ -629,11 +630,11 @@ namespace parse_bgp_lib {
                      it++) {
                     if (it->afi == BGP_AFI_BGPLS) {
                         if (strcmp(it->nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str(), "IS-IS") >= 0) {
-                            update->attrs[LIB_ATTR_LS_ADJACENCY_SID].value.push_back(this->parse_flags_to_string(*data,
-                                                                                                                 LS_FLAGS_PEER_ADJ_SID_ISIS, sizeof(LS_FLAGS_PEER_ADJ_SID_ISIS)));
+                            val_ss << this->parse_flags_to_string(*data,
+                                                                  LS_FLAGS_PEER_ADJ_SID_ISIS, sizeof(LS_FLAGS_PEER_ADJ_SID_ISIS));
                         } else if (strcmp(it->nlri[LIB_NLRI_LS_PROTOCOL].value.front().c_str(), "OSPF") >= 0) {
-                            update->attrs[LIB_ATTR_LS_ADJACENCY_SID].value.push_back(this->parse_flags_to_string(*data,
-                                                                                                                 LS_FLAGS_PEER_ADJ_SID_OSPF, sizeof(LS_FLAGS_PEER_ADJ_SID_OSPF)));
+                            val_ss << this->parse_flags_to_string(*data,
+                                                                  LS_FLAGS_PEER_ADJ_SID_OSPF, sizeof(LS_FLAGS_PEER_ADJ_SID_OSPF));
                         }
                         break;
                     }
@@ -644,8 +645,7 @@ namespace parse_bgp_lib {
                 u_int8_t weight;
                 memcpy(&weight, data, 1);
 
-                val_ss.str(std::string());
-                val_ss << (int)weight;
+                val_ss << " " << (int)weight;
 
                 // 1 byte for Weight + 2 bytes for Reserved
                 data += 3;

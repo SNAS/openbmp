@@ -11,14 +11,14 @@
 #define BMPREADER_H_
 
 #include "BMPListener.h"
-#include "BMPReader.h"
 #include "AddPathDataContainer.h"
-#include "MsgBusInterface.hpp"
 #include "Logger.h"
 #include "Config.h"
 
 #include <map>
 #include <memory>
+
+class MsgBusInterface;
 
 /**
  * \class   BMPReader

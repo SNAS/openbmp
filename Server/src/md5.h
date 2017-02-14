@@ -38,6 +38,9 @@ These notices must be retained in any copies of any part of this
 documentation and/or software.
 
 */
+#ifndef MD5_H_
+#define MD5_H_
+
 
 #include <stdio.h>
 #include <iostream>
@@ -110,3 +113,5 @@ private:
 			    uint4 s, uint4 ac);
 
 };
+#endif /* MD5_H_ */
+

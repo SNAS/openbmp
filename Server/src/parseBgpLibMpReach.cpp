@@ -90,8 +90,6 @@ void MPReachAttr::parseReachNlriAttr(int attr_len, u_char *data, parse_bgp_lib::
 */
 void MPReachAttr::parseAfi(mp_reach_nlri &nlri, parse_bgp_lib::parseBgpLib::parsed_update &update) {
 
-        std::cout << "Manish parsing AFI/SAFI: " << nlri.afi << "/" << nlri.safi << std::endl;
-
     switch (nlri.afi) {
         case parse_bgp_lib::BGP_AFI_IPV6 :  // IPv6
             parseAfi_IPv4IPv6(false, nlri, update);

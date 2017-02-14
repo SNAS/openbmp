@@ -17,9 +17,9 @@
 #include "parseBgpLibMpReach.h"
 #include "parseBgpLibMpUnReach.h"
 #include "parseBgpLibMpLinkstateAttr.h"
+#include "md5.h"
 
 namespace parse_bgp_lib {
-
 /**
  * Constructor for class
  *
@@ -577,21 +577,23 @@ void parseBgpLib::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *dat
         {
             memcpy(&value32bit, data, 4);
             parse_bgp_lib::SWAP_BYTES(&value32bit);
+
             std::ostringstream numString;
             numString << value32bit;
             update.attrs[LIB_ATTR_MED].official_type = ATTR_TYPE_MED;
             update.attrs[LIB_ATTR_MED].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_MED];
             update.attrs[LIB_ATTR_MED].value.push_back(numString.str());
             update_hash(&update.attrs[LIB_ATTR_MED].value, &hash);
-
             break;
         }
         case ATTR_TYPE_LOCAL_PREF : // local pref value
         {
             memcpy(&value32bit, data, 4);
             parse_bgp_lib::SWAP_BYTES(&value32bit);
-            std::ostringstream numString;
+
+             std::ostringstream numString;
             numString << value32bit;
+            char numstring[100] = {0};
             update.attrs[LIB_ATTR_LOCAL_PREF].official_type = ATTR_TYPE_LOCAL_PREF;
             update.attrs[LIB_ATTR_LOCAL_PREF].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_LOCAL_PREF];
             update.attrs[LIB_ATTR_LOCAL_PREF].value.push_back(numString.str());
@@ -774,6 +776,7 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
     u_char      seg_type;
     u_char      seg_len;
     uint32_t    seg_asn;
+    uint32_t    origin_asn = -1;
 
     if (path_len < 4) // Nothing to parse if length doesn't include at least one asn
         return;
@@ -861,6 +864,7 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
             numString << seg_asn;
             if (seg_type == 2) {
                 update.attrs[LIB_ATTR_AS_PATH].value.push_back(numString.str());
+                origin_asn = seg_asn;
             } else if (seg_type == 1) {
                 decoded_path.append(" ");
                 decoded_path.append(numString.str());
@@ -875,12 +879,13 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
         }
     }
 
-    std::cout << "parsed as_path count " << update.attrs[LIB_ATTR_AS_PATH].value.size() <<
-              ", origin as: ";
-    if (update.attrs[LIB_ATTR_AS_PATH].value.size() > 0)
-        std::cout << update.attrs[LIB_ATTR_AS_PATH].value.front() << std::endl;
-    else
-        std::cout << "NULL" <<std::endl;
+    std::cout << "parsed as_path count " << update.attrs[LIB_ATTR_AS_PATH].value.size() << ", origin as: " << origin_asn << std::endl;
+        if (origin_asn >= 0) {
+            update.attrs[LIB_ATTR_AS_ORIGIN].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_AS_ORIGIN];
+            std::ostringstream numString;
+            numString << origin_asn;
+            update.attrs[LIB_ATTR_AS_ORIGIN].value.push_back(numString.str());
+        }
 
     SELF_DEBUG("%sParsed AS_PATH count %d, origin as: %s", debug_prepend_string.c_str(), update.attrs[LIB_ATTR_AS_PATH].value.size(),
                update.attrs[LIB_ATTR_AS_PATH].value.size() > 0 ? update.attrs[LIB_ATTR_AS_PATH].value.front().c_str() : "NULL");

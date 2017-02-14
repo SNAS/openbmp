@@ -144,7 +144,7 @@ namespace parse_bgp_lib {
              * Parse out the protocol and ID (present in each NLRI ypte
              */
             uint8_t          proto_id;
-            uint64_t         id;
+            uint64_t         id = 0;
 
             proto_id = *data;
             memcpy(&id, data + 1, sizeof(id));
@@ -330,18 +330,19 @@ namespace parse_bgp_lib {
 
                 memcpy(&bgp_ls_id, data, 4);
                 parse_bgp_lib::SWAP_BYTES(&bgp_ls_id);
-                val_ss.str(std::string());  // Clear
-                val_ss << bgp_ls_id;
+
+                char numstring[100] = {0};
+                snprintf(&numstring[0], sizeof(numstring), "%" PRIx32, bgp_ls_id);
 
                 if (local) {
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].official_type = NODE_DESCR_BGP_LS_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_BGP_LS_ID_LOCAL];
-                    parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].value.push_back(val_ss.str());
+                    parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].value.push_back(string(numstring));
                     update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_LOCAL].value, &hash);
                 } else {
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].official_type = NODE_DESCR_BGP_LS_ID;
                     parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_BGP_LS_ID_REMOTE];
-                    parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].value.push_back(val_ss.str());
+                    parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].value.push_back(string(numstring));
                     update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_BGP_LS_ID_REMOTE].value, &hash);
                 }
 
@@ -503,9 +504,11 @@ namespace parse_bgp_lib {
             return;
         }
 
+        char numstring[100] = {0};
+        snprintf(&numstring[0], sizeof(numstring), "%" PRIx64, id);
+
         parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ROUTING_ID];
-        val_ss << id;
-        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.push_back(val_ss.str());
+        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.push_back(string(numstring));
 
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PROTOCOL];
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.push_back(decodeNlriProtocolId(proto_id));
@@ -631,14 +634,14 @@ namespace parse_bgp_lib {
                 memcpy(&local_id, data, 4); parse_bgp_lib::SWAP_BYTES(&local_id);
                 memcpy(&remote_id, data+4, 4); parse_bgp_lib::SWAP_BYTES(&remote_id);
 
-                val_ss.str();
+                val_ss.str(std::string());  // Clear
                 val_ss << local_id;
 
                 parsed_nlri.nlri[LIB_NLRI_LS_LINK_LOCAL_ID].official_type = LINK_DESCR_ID;
                 parsed_nlri.nlri[LIB_NLRI_LS_LINK_LOCAL_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_LINK_LOCAL_ID];
                 parsed_nlri.nlri[LIB_NLRI_LS_LINK_LOCAL_ID].value.push_back(val_ss.str());
 
-                val_ss.str();
+                val_ss.str(std::string());  // Clear
                 val_ss << remote_id;
 
                 parsed_nlri.nlri[LIB_NLRI_LS_LINK_REMOTE_ID].official_type = LINK_DESCR_ID;
@@ -675,11 +678,11 @@ namespace parse_bgp_lib {
 
                 memcpy(&mt_id, data, len); parse_bgp_lib::SWAP_BYTES(&mt_id);
                 mt_id >>= 16;          // MT ID is 16 bits
-                val_ss.str();
-                val_ss << mt_id;
+                char numstring[100] = {0};
+                snprintf(&numstring[0], sizeof(numstring), "%" PRIx32, mt_id);
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].official_type = LINK_DESCR_MT_ID;
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_MT_ID];
-                parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value.push_back(val_ss.str());
+                parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value.push_back(string(numstring));
                 update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value, &hash);
 
                 data_read += len;
@@ -688,7 +691,6 @@ namespace parse_bgp_lib {
 
                 break;
             }
-
 
             case LINK_DESCR_IPV4_INTF_ADDR:
             {
@@ -812,9 +814,11 @@ namespace parse_bgp_lib {
             LOG_WARN("%sbgp-ls: Unable to parse link NLRI since it's too short (invalid)", caller->debug_prepend_string.c_str());
             return;
         }
+        char numstring[100] = {0};
+        snprintf(&numstring[0], sizeof(numstring), "%" PRIx64, id);
+
         parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ROUTING_ID];
-        val_ss << id;
-        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.push_back(val_ss.str());
+        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.push_back(string(numstring));
 
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PROTOCOL];
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.push_back(decodeNlriProtocolId(proto_id));
@@ -932,9 +936,11 @@ namespace parse_bgp_lib {
             return;
         }
 
+        char numstring[100] = {0};
+        snprintf(&numstring[0], sizeof(numstring), "%" PRIx64, id);
+
         parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_ROUTING_ID];
-        val_ss << id;
-        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.push_back(val_ss.str());
+        parsed_nlri.nlri[LIB_NLRI_LS_ROUTING_ID].value.push_back(string(numstring));
 
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_PROTOCOL];
         parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value.push_back(decodeNlriProtocolId(proto_id));
@@ -998,23 +1004,6 @@ namespace parse_bgp_lib {
             data_len -= data_read;
         }
 
-
-        /*
-        // Save prefix to parsed data
-
-        prefix_tbl.isIPv4       = isIPv4;
-        prefix_tbl.prefix_len   = info.prefix_len;
-        prefix_tbl.mt_id        = info.mt_id;
-
-        memcpy(prefix_tbl.ospf_area_Id, local_node.ospf_area_Id, sizeof(prefix_tbl.ospf_area_Id));
-        prefix_tbl.bgp_ls_id = local_node.bgp_ls_id;
-        memcpy(prefix_tbl.igp_router_id, local_node.igp_router_id, sizeof(prefix_tbl.igp_router_id));
-        memcpy(prefix_tbl.local_node_hash_id, local_node.hash_bin, sizeof(prefix_tbl.local_node_hash_id));
-        memcpy(prefix_tbl.prefix_bin, info.prefix, sizeof(prefix_tbl.prefix_bin));
-        memcpy(prefix_tbl.prefix_bcast_bin, info.prefix_bcast, sizeof(prefix_tbl.prefix_bcast_bin));
-        memcpy(prefix_tbl.ospf_route_type, info.ospf_route_type, sizeof(prefix_tbl.ospf_route_type));
-         */
-
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_PROTOCOL].value, &hash);
         update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_LOCAL_NODE_HASH].value, &hash);
 
@@ -1075,6 +1064,7 @@ namespace parse_bgp_lib {
         }
 
         data += 4; data_read += 4;
+        char numstring[100] = {0};
 
         switch (type) {
             case PREFIX_DESCR_IP_REACH_INFO: {
@@ -1188,11 +1178,11 @@ namespace parse_bgp_lib {
 
                 memcpy(&mt_id, data, len); parse_bgp_lib::SWAP_BYTES(&mt_id);
                 mt_id >>= 16;          // MT ID is 16 bits
-                val_ss.str();
-                val_ss << mt_id;
+                snprintf(&numstring[0], sizeof(numstring), "%" PRIx32, mt_id);
+
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].official_type = PREFIX_DESCR_MT_ID;
                 parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LS_MT_ID];
-                parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value.push_back(val_ss.str());
+                parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value.push_back(string(numstring));
                 update_hash(&parsed_nlri.nlri[LIB_NLRI_LS_MT_ID].value, &hash);
 
                 data_read += len;
