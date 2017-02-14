@@ -49,12 +49,26 @@ BMPListener::BMPListener(Logger *logPtr, Config *config) {
 
     svr_addr.sin_family      = PF_INET;
     svr_addr.sin_port        = htons(cfg->bmp_port);
-    svr_addr.sin_addr.s_addr = INADDR_ANY;
+
+    if(cfg->bind_ipv4.length()) {
+        struct sockaddr_in sa;
+        inet_pton(AF_INET, cfg->bind_ipv4.c_str(), &(sa.sin_addr.s_addr));
+        svr_addr.sin_addr.s_addr = sa.sin_addr.s_addr;
+    } else {
+        svr_addr.sin_addr.s_addr = INADDR_ANY;
+    }
 
     svr_addrv6.sin6_family   = AF_INET6;
     svr_addrv6.sin6_port     = htons(cfg->bmp_port);
     svr_addrv6.sin6_scope_id = 0;
-    svr_addrv6.sin6_addr     = in6addr_any;
+
+    if(cfg->bind_ipv6.length()) {
+        struct sockaddr_in6 sa;
+        inet_pton(AF_INET6, cfg->bind_ipv6.c_str(), &(sa.sin6_addr));
+        svr_addrv6.sin6_addr = sa.sin6_addr;
+    } else {
+        svr_addrv6.sin6_addr = in6addr_any;
+    }
 
     // Open listening sockets
     open_socket(cfg->svr_ipv4, cfg->svr_ipv6);
@@ -120,7 +134,6 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
 
         // Bind to the address/port
         if (::bind(sockv6, (struct sockaddr *) &svr_addrv6, sizeof(svr_addrv6)) < 0) {
-            perror("bind to ipv6");
             close(sockv6);
             throw "ERROR: Cannot bind to IPv6 address and port";
         }

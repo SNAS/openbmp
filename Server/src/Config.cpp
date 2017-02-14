@@ -38,6 +38,8 @@ Config::Config() {
     bmp_buffer_size     = 15 * 1024 * 1024; // 15MB
     svr_ipv6            = false;
     svr_ipv4            = true;
+    bind_ipv4           = "";
+    bind_ipv6           = "";
     heartbeat_interval  = 60 * 5;        // Default is 5 minutes
     kafka_brokers       = "localhost:9092";
     tx_max_bytes        = 1000000;
@@ -167,6 +169,19 @@ void Config::parseBase(const YAML::Node &node) {
         }
     }
 
+    if (node["listen_ipv4"]) {
+        bind_ipv4 = node["listen_ipv4"].as<std::string>();
+
+        if (debug_general)
+            std::cout << "   Config: listen_ipv4: " << bind_ipv4 << "\n";
+    }
+
+    if (node["listen_ipv6"]) {
+        bind_ipv6 = node["listen_ipv6"].as<std::string>();
+
+        if (debug_general)
+            std::cout << "   Config: listen_ipv6: " << bind_ipv6 << "\n";
+    }
 
     if (node["listen_mode"]) {
         try {
