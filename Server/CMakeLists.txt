@@ -104,14 +104,7 @@ set (SRC_FILES
 	src/bgp/parseBGP.cpp
 	src/bgp/NotificationMsg.cpp
 	src/bgp/OpenMsg.cpp
-	src/bgp/UpdateMsg.cpp
-	src/bgp/MPReachAttr.cpp
-	src/bgp/MPUnReachAttr.cpp
-    src/bgp/ExtCommunity.cpp
     src/bgp/AddPathDataContainer.cpp
-    src/bgp/EVPN.cpp
-    src/bgp/linkstate/MPLinkState.cpp
-    src/bgp/linkstate/MPLinkStateAttr.cpp
     src/parseBgpLib.cpp
     src/parseBgpLibExtCommunity.cpp
     src/parseBgpLibMpReach.cpp

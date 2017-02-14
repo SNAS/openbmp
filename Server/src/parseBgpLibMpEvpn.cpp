@@ -343,6 +343,7 @@ namespace parse_bgp_lib {
                         data_pointer += 4;
 
                         std::stringstream val_ss;
+                        std::stringstream val_ss2;
 
                         for (int i = 0; i < 4; i++) {
                             val_ss << std::hex << std::setfill('0') << std::setw(2) << (int) ethernet_id[i];
@@ -355,11 +356,11 @@ namespace parse_bgp_lib {
                         memcpy(&mpls_label_1, data_pointer, 3);
                         parse_bgp_lib::SWAP_BYTES(&mpls_label_1);
                         mpls_label_1 >>= 8;
-                        val_ss.str(std::string());
-                        val_ss << mpls_label_1;
+                        val_ss2.str(std::string());
+                        val_ss2 << mpls_label_1;
                         parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL1].official_type = route_type;
                         parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL1].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_EVPN_MPLS_LABEL1];
-                        parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL1].value.push_back(val_ss.str());
+                        parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL1].value.push_back(val_ss2.str());
 
                         data_pointer += 3;
                         data_read += 17;
@@ -384,6 +385,7 @@ namespace parse_bgp_lib {
                         data_pointer += 4;
 
                         std::stringstream val_ss;
+                        std::stringstream val_ss2;
 
                         for (int i = 0; i < 4; i++) {
                             val_ss << std::hex << std::setfill('0') << std::setw(2) << (int) ethernet_id[i];
@@ -396,13 +398,13 @@ namespace parse_bgp_lib {
                         // MAC Address Length (1 byte)
                         mac_address_length = *data_pointer;
 
-                        cout << "Manish: mac_address_len is : " << mac_address_length << endl;
+                        cout << "Manish: mac_address_len is : " << static_cast<int>(mac_address_length) << endl;
 
-                        val_ss.str(std::string());
-                        val_ss << static_cast<int>(mac_address_length);
+                        val_ss2.str(std::string());
+                        val_ss2 << static_cast<unsigned>(mac_address_length);
                         parsed_nlri.nlri[LIB_NLRI_EVPN_MAC_LEN].official_type = route_type;
                         parsed_nlri.nlri[LIB_NLRI_EVPN_MAC_LEN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_EVPN_MAC_LEN];
-                        parsed_nlri.nlri[LIB_NLRI_EVPN_MAC_LEN].value.push_back(val_ss.str());
+                        parsed_nlri.nlri[LIB_NLRI_EVPN_MAC_LEN].value.push_back(val_ss2.str());
 
                         data_pointer++;
 
@@ -415,13 +417,13 @@ namespace parse_bgp_lib {
 
                         // IP Address Length (1 byte)
                         ip_len = *data_pointer;
-                        cout << "Manish: ip_len is : " << ip_len << endl;
+                        cout << "Manish: ip_len is : " << static_cast<int>(ip_len) << endl;
 
-                        val_ss.str(std::string());
-                        val_ss << static_cast<int>(ip_len);
+                        val_ss2.str(std::string());
+                        val_ss2 << static_cast<unsigned>(ip_len);
                         parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].official_type = route_type;
                         parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_EVPN_IP_LEN];
-                        parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].value.push_back(val_ss.str());
+                        parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].value.push_back(val_ss2.str());
                         update_hash(&parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].value, &hash);
 
                         data_pointer++;
@@ -454,11 +456,11 @@ namespace parse_bgp_lib {
                             memcpy(&mpls_label_1, data_pointer, 3);
                             parse_bgp_lib::SWAP_BYTES(&mpls_label_1);
                             mpls_label_1 >>= 8;
-                            val_ss.str(std::string());
-                            val_ss << mpls_label_1;
+                            val_ss2.str(std::string());
+                            val_ss2 << mpls_label_1;
                             parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL1].official_type = route_type;
                             parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL1].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_EVPN_MPLS_LABEL1];
-                            parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL1].value.push_back(val_ss.str());
+                            parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL1].value.push_back(val_ss2.str());
 
                             data_pointer += 3;
                             data_read += 3;
@@ -472,11 +474,11 @@ namespace parse_bgp_lib {
                             memcpy(&mpls_label_2, data_pointer, 3);
                             parse_bgp_lib::SWAP_BYTES(&mpls_label_2);
                             mpls_label_2 >>= 8;
-                            val_ss.str(std::string());
-                            val_ss << mpls_label_2;
+                            val_ss2.str(std::string());
+                            val_ss2 << mpls_label_2;
                             parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL2].official_type = route_type;
                             parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL2].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_EVPN_MPLS_LABEL2];
-                            parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL2].value.push_back(val_ss.str());
+                            parsed_nlri.nlri[LIB_NLRI_EVPN_MPLS_LABEL2].value.push_back(val_ss2.str());
 
                             data_pointer += 3;
                             data_read += 3;
@@ -496,6 +498,8 @@ namespace parse_bgp_lib {
                         data_pointer += 4;
 
                         std::stringstream val_ss;
+                        std::stringstream val_ss2;
+
 
                         for (int i = 0; i < 4; i++) {
                             val_ss << std::hex << std::setfill('0') << std::setw(2) << (int) ethernet_id[i];
@@ -507,11 +511,11 @@ namespace parse_bgp_lib {
 
                         // IP Address Length (1 byte)
                         originating_router_ip_len = *data_pointer;
-                        val_ss.str(std::string());
-                        val_ss << static_cast<int>(originating_router_ip_len);
+                        val_ss2.str(std::string());
+                        val_ss2 << static_cast<int>(originating_router_ip_len);
                         parsed_nlri.nlri[LIB_NLRI_ORIGINATING_ROUTER_IP_LEN].official_type = route_type;
                         parsed_nlri.nlri[LIB_NLRI_ORIGINATING_ROUTER_IP_LEN].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_ORIGINATING_ROUTER_IP_LEN];
-                        parsed_nlri.nlri[LIB_NLRI_ORIGINATING_ROUTER_IP_LEN].value.push_back(val_ss.str());
+                        parsed_nlri.nlri[LIB_NLRI_ORIGINATING_ROUTER_IP_LEN].value.push_back(val_ss2.str());
 
                         data_pointer++;
 
