@@ -452,7 +452,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
             convert << label.decode.value;
             nlri.nlri[LIB_NLRI_LABELS].value.push_back(convert.str());
 
-            if (label.decode.bos == 1 or label.data == 0x80000000 /* withdrawn label as 32bits instead of 24 */) {
+            if (label.decode.bos == 1 or label.data == 0x80000000 or label.data == 0 /* withdrawn label as 32bits instead of 24 */) {
                 break;               // Reached EoS
 
             }
@@ -476,7 +476,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
             data += 8;
             addr_bytes -= 8;
             read_size += 8;
-            prefix_len -= 24;        // Update prefix len to not include the label just parsed
+            prefix_len -= 64;        // Update prefix len to not include the label just parsed
             update_hash(&nlri.nlri[LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD].value, &hash);
             update_hash(&nlri.nlri[LIB_NLRI_VPN_RD_ASSIGNED_NUMBER].value, &hash);
         }
