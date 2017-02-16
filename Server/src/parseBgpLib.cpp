@@ -866,7 +866,7 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
                 update.attrs[LIB_ATTR_AS_PATH].value.push_back(numString.str());
                 origin_asn = seg_asn;
             } else if (seg_type == 1) {
-                decoded_path.append(" ");
+                decoded_path.append(", ");
                 decoded_path.append(numString.str());
             } else {
                 std::cout << "Malformed AS path segment of type: " << static_cast<int>(seg_type) <<std::endl;

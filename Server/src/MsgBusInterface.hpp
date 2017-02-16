@@ -486,7 +486,7 @@ public:
         for (std::list<std::string>::iterator it = lib_data.begin(); it != lib_data.end(); it++) {
             s += *it;
             if (it != last_value) {
-                s += std::string(" ");
+                s += std::string(", ");
             }
         }
         return s;
