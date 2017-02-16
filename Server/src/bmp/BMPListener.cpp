@@ -51,9 +51,7 @@ BMPListener::BMPListener(Logger *logPtr, Config *config) {
     svr_addr.sin_port        = htons(cfg->bmp_port);
 
     if(cfg->bind_ipv4.length()) {
-        struct sockaddr_in sa;
-        inet_pton(AF_INET, cfg->bind_ipv4.c_str(), &(sa.sin_addr.s_addr));
-        svr_addr.sin_addr.s_addr = sa.sin_addr.s_addr;
+        inet_pton(AF_INET, cfg->bind_ipv4.c_str(), &(svr_addr.sin_addr.s_addr));
     } else {
         svr_addr.sin_addr.s_addr = INADDR_ANY;
     }
@@ -63,9 +61,7 @@ BMPListener::BMPListener(Logger *logPtr, Config *config) {
     svr_addrv6.sin6_scope_id = 0;
 
     if(cfg->bind_ipv6.length()) {
-        struct sockaddr_in6 sa;
-        inet_pton(AF_INET6, cfg->bind_ipv6.c_str(), &(sa.sin6_addr));
-        svr_addrv6.sin6_addr = sa.sin6_addr;
+        inet_pton(AF_INET6, cfg->bind_ipv6.c_str(), &(svr_addrv6.sin6_addr));
     } else {
         svr_addrv6.sin6_addr = in6addr_any;
     }
