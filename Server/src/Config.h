@@ -33,6 +33,8 @@ public:
 
     std::string kafka_brokers;            ///< metadata.broker.list
     uint16_t    bmp_port;                 ///< BMP listening port
+    std::string bind_ipv4;                ///< IP to listen on for IPv4
+    std::string bind_ipv6;                ///< IP to listen on for IPv6
 
     int         bmp_buffer_size;          ///< BMP buffer size in bytes (min is 2M max is 128M)
     bool        svr_ipv4;                 ///< Indicates if server should listen for IPv4 connections
