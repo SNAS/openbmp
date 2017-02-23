@@ -45,6 +45,9 @@ BMPReader::BMPReader(Logger *logPtr, Config *config) {
 
     if (cfg->debug_bmp)
         enableDebug();
+    
+    hasPrevRIBdumpTime = false;
+    maxRIBdumpRate = 0;
 }
 
 /**
@@ -253,21 +256,21 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                     pBGP->enableDebug();
 
                 pBGP->handleUpdate(pBMP->bmp_data, pBMP->bmp_data_len);
-		
+   		
 		string str(reinterpret_cast<char*>(client->hash_id), 16);  //storing the client hash in a string 
-		if(client->initRec && cfg->router_baseline_time.find(str)==cfg->router_baseline_time.end())	//chekcing if client has received init message and hashID is not present in the map(Baseline time is not already calculated)
+		if(client->initRec && cfg->router_baseline_time.find(str) == cfg->router_baseline_time.end())	
+                //check if client has received init message and Baseline time is not already calculated
 		{
 		    peer_info_map_iter it = peer_info_map.begin();
 		    while (it != peer_info_map.end() && it->second.endOfRIB)
 		        ++it;
 
-		    if (it == peer_info_map.end()) {  //End-Of-RIBs are received for all peers.
+		    if (it == peer_info_map.end() || checkRIBdumpRate(p_entry.timestamp_secs,mbus_ptr->ribSeq)) {  //End-Of-RIBs are received for all peers.
 		        timeval now;
 		        gettimeofday(&now, NULL);
 		        cfg->router_baseline_time[str] = 1.2 * (now.tv_sec - client->startTime.tv_sec);  //20% buffer for baseline time 
 		    }		
 		}
-
                 delete pBGP;
 
                 break;
@@ -319,7 +322,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
         delete pBMP;                    // Make sure to free the resource
         throw str;
     }
-
+    
     // Send BMP RAW packet data
     mbus_ptr->send_bmp_raw(router_hash_id, p_entry, pBMP->bmp_packet, pBMP->bmp_packet_len);
 
@@ -327,6 +330,34 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
     delete pBMP;
 
     return rval;
+}
+
+bool BMPReader::checkRIBdumpRate(uint32_t timeStamp, int ribSeq) {
+    int time, currRate;                                  
+
+    if(!hasPrevRIBdumpTime) {
+	prevRIBdumpTime = timeStamp;
+	hasPrevRIBdumpTime = true;
+    }
+
+    else {
+	time = timeStamp - prevRIBdumpTime;
+	if(time > 0) { 
+            currRate = ribSeq / time;
+	    maxRIBdumpRate = max(currRate, maxRIBdumpRate);
+	    if(currRate < maxRIBdumpRate * 0.15) {
+		if (!isBelowThresholdDumpRate)
+		    belowThresholdInitTime = timeStamp;
+		isBelowThresholdDumpRate = true;
+		if (timeStamp - belowThresholdInitTime >= 3)
+	    	    return true;
+	    }
+	    else
+		isBelowThresholdDumpRate = false;
+	}
+	prevRIBdumpTime = timeStamp;
+    }
+    return false;
 }
 
 /**

@@ -36,7 +36,7 @@ public:
      * Msg data schema
      * ---------------------------------------------------------------------------
      */
-
+    uint64_t        ribSeq;         ///< RIB Message Seq
 
     /**
      * OBJECT: collector

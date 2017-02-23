@@ -23,6 +23,7 @@
 #include "Config.h"
 #include "kafka/KafkaTopicSelector.h"
 
+#define MAX_THREADS 200
 
 /*********************************************************************//**
  * Constructor for class
@@ -236,7 +237,10 @@ void Config::parseBase(const YAML::Node &node) {
             try {
                 max_concurrent_routers = node["startup"]["max_concurrent_routers"].as<int>();
 
-                if (max_concurrent_routers < 1)
+		if (max_concurrent_routers == 0)
+		    max_concurrent_routers = MAX_THREADS;
+
+                else if (max_concurrent_routers < 0)
                     throw "invalid maximum concurrent routers not greater than 0)";
 
                 if (debug_general)
