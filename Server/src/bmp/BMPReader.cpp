@@ -25,7 +25,7 @@
 #include "parseBGP.h"
 #include "MsgBusInterface.hpp"
 #include "Logger.h"
-
+#include "md5.h"
 
 using namespace std;
 
@@ -45,6 +45,9 @@ BMPReader::BMPReader(Logger *logPtr, Config *config) {
 
     if (cfg->debug_bmp)
         enableDebug();
+    
+    hasPrevRIBdumpTime = false;
+    maxRIBdumpRate = 0;
 }
 
 /**
@@ -253,6 +256,21 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                     pBGP->enableDebug();
 
                 pBGP->handleUpdate(pBMP->bmp_data, pBMP->bmp_data_len);
+   		
+		string str(reinterpret_cast<char*>(client->hash_id), 16);  //storing the client hash in a string 
+		if(client->initRec && cfg->router_baseline_time.find(str) == cfg->router_baseline_time.end())	
+                //check if client has received init message and Baseline time is not already calculated
+		{
+		    peer_info_map_iter it = peer_info_map.begin();
+		    while (it != peer_info_map.end() && it->second.endOfRIB)
+		        ++it;
+
+		    if (it == peer_info_map.end() || checkRIBdumpRate(p_entry.timestamp_secs,mbus_ptr->ribSeq)) {  //End-Of-RIBs are received for all peers.
+		        timeval now;
+		        gettimeofday(&now, NULL);
+		        cfg->router_baseline_time[str] = 1.2 * (now.tv_sec - client->startTime.tv_sec);  //20% buffer for baseline time 
+		    }		
+		}
                 delete pBGP;
 
                 break;
@@ -268,12 +286,17 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             }
 
             case parseBMP::TYPE_INIT_MSG : { // Initiation Message
-                LOG_INFO("%s: Init message received with length of %u", client->c_ip, pBMP->getBMPLength());
+                client->initRec = true; 		//indicating that init message is received for the router/client.
+		LOG_INFO("%s: Init message received with length of %u", client->c_ip, pBMP->getBMPLength());
                 pBMP->handleInitMsg(read_fd, r_object);
-
-                // Update the router entry with the details
+		
+                if(cfg->pat_enabled && r_object.hash_type)
+			hashRouter(client, r_object);
+                LOG_INFO("Router ID hashed with hash_type: %d", r_object.hash_type);
+		// Update the router entry with the details
                 mbus_ptr->update_Router(r_object, mbus_ptr->ROUTER_ACTION_INIT);
-                break;
+
+		break;
             }
 
             case parseBMP::TYPE_TERM_MSG : { // Termination Message
@@ -291,7 +314,6 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             }
 
         }
-
     } catch (char const *str) {
         // Mark the router as disconnected and update the error to be a local disconnect (no term message received)
         LOG_INFO("%s: Caught: %s", client->c_ip, str);
@@ -300,7 +322,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
         delete pBMP;                    // Make sure to free the resource
         throw str;
     }
-
+    
     // Send BMP RAW packet data
     mbus_ptr->send_bmp_raw(router_hash_id, p_entry, pBMP->bmp_packet, pBMP->bmp_packet_len);
 
@@ -308,6 +330,34 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
     delete pBMP;
 
     return rval;
+}
+
+bool BMPReader::checkRIBdumpRate(uint32_t timeStamp, int ribSeq) {
+    int time, currRate;                                  
+
+    if(!hasPrevRIBdumpTime) {
+	prevRIBdumpTime = timeStamp;
+	hasPrevRIBdumpTime = true;
+    }
+
+    else {
+	time = timeStamp - prevRIBdumpTime;
+	if(time > 0) { 
+            currRate = ribSeq / time;
+	    maxRIBdumpRate = max(currRate, maxRIBdumpRate);
+	    if(currRate < maxRIBdumpRate * 0.15) {
+		if (!isBelowThresholdDumpRate)
+		    belowThresholdInitTime = timeStamp;
+		isBelowThresholdDumpRate = true;
+		if (timeStamp - belowThresholdInitTime >= 3)
+	    	    return true;
+	    }
+	    else
+		isBelowThresholdDumpRate = false;
+	}
+	prevRIBdumpTime = timeStamp;
+    }
+    return false;
 }
 
 /**
@@ -336,6 +386,41 @@ void BMPReader::disconnect(BMPListener::ClientInfo *client, MsgBusInterface *mbu
 
     close(client->c_sock);
 }
+
+
+/**
+ * Generate BMP router HASH
+ *
+ * \param [in,out] client   Pointer to client info and hash_val used to generate the hash.
+ *
+ * \return client.hash_id will be updated with the generated hash
+ */
+
+void BMPReader::hashRouter(BMPListener::ClientInfo *client,MsgBusInterface::obj_router &r_object ) {
+    char *hash_val;
+    if(r_object.hash_type==2)
+          hash_val=r_object.bgp_id;
+    else if(r_object.hash_type==1)
+          hash_val=(char *)r_object.name;
+
+    string c_hash_str;
+    MsgBusInterface::hash_toStr(cfg->c_hash_id, c_hash_str);
+
+    MD5 hash;
+    hash.update((unsigned char *)hash_val, strlen(hash_val));
+    hash.update((unsigned char *)c_hash_str.c_str(), c_hash_str.length());
+    hash.finalize();
+
+    // Save the hash
+    unsigned char *hash_bin = hash.raw_digest();
+    memcpy(client->hash_id, hash_bin, 16);
+    delete[] hash_bin;
+    memcpy(router_hash_id, client->hash_id, sizeof(router_hash_id));
+    memcpy(r_object.hash_id, router_hash_id, sizeof(r_object.hash_id));
+    LOG_INFO("Router ID hashed with hash_type: %d", r_object.hash_type);
+}
+
+
 
 /*
  * Enable/Disable debug

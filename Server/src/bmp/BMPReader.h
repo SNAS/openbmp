@@ -41,6 +41,7 @@ public:
         bool checked_asn_octet_length;                          ///< Indicates if the ASN octet length has been checked or not
         AddPathDataContainer add_path_capability;               ///< Stores data about Add Path capability
         string peer_group;                                      ///< Peer group name of defined
+	bool endOfRIB;						///< Indicates if End-Of-RIB marker is received
     };
 
 
@@ -65,6 +66,15 @@ public:
      * \return true if more to read, false if the connection is done/closed
      */
     bool ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr);
+
+    /**
+     * Checks if End-of-RIB is reached for all peers by checking the rate of RIB dumps
+     *
+     * \param [in]  timeStamp   stores the time the message was received  
+	\param [in]  ribSeq	unicast prefix sequence 
+     * \return true if RIB dump rate is below 85% of the initial rate for 3 seconds
+     */
+    bool checkRIBdumpRate(uint32_t timeStamp, int ribSeq);
 
     /**
      * Read messages from BMP stream in a loop
@@ -92,6 +102,16 @@ public:
      */
     void disconnect(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, int reason_code, char const *reason_text);
 
+/**
+     * Calling BMP router HASH
+     *
+     * \param [in,out] client   Refernce to client info used to generate the hash.
+     * \param [in,out] r_object To store the hashed ID in router object.
+     * \return r_object.hash_id and clienr.hash_id will be updated with the generated hash
+     */
+
+    void hashRouter(BMPListener::ClientInfo *client, MsgBusInterface::obj_router &r_entry);
+
     // Debug methods
     void enableDebug();
     void disableDebug();
@@ -105,7 +125,11 @@ private:
     bool        debug;                      ///< debug flag to indicate debugging
     u_char      router_hash_id[16];         ///< Router hash ID
 
-
+    bool 	hasPrevRIBdumpTime;	    ///< True if first RIB dump has been received
+    bool        isBelowThresholdDumpRate;   ///< True if RIB dump rate is below 15% of initial rate 
+    int32_t 	prevRIBdumpTime;            ///< Stores the time the previous message was received
+    int32_t 	maxRIBdumpRate;             ///< Stores the maximum RIB dump rate
+    int32_t     belowThresholdInitTime;     ///< Stores the time when the RIB dump rate has dropped below threshold
     /**
      * Persistent peer info map, Key is the peer_hash_id.
      */

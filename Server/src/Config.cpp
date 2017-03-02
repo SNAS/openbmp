@@ -23,6 +23,7 @@
 #include "Config.h"
 #include "kafka/KafkaTopicSelector.h"
 
+#define MAX_THREADS 200
 
 /*********************************************************************//**
  * Constructor for class
@@ -51,7 +52,10 @@ Config::Config() {
     msg_send_max_retry  = 2;
     retry_backoff_ms    = 100;
     compression         = "snappy";
-
+    max_concurrent_routers = 2;
+    initial_router_time = 60;
+    calculate_baseline  = true;
+    pat_enabled		= false;
     bzero(admin_id, sizeof(admin_id));
 
     /*
@@ -239,6 +243,65 @@ void Config::parseBase(const YAML::Node &node) {
 
             } catch (YAML::TypedBadConversion<int> err) {
                 printWarning("heartbeat.router is not of type int", node["heartbeat"]["interval"]);
+            }
+        }
+    }
+
+    if (node["startup"]) {
+        if (node["startup"]["max_concurrent_routers"]) {
+            try {
+                max_concurrent_routers = node["startup"]["max_concurrent_routers"].as<int>();
+
+		if (max_concurrent_routers == 0)
+		    max_concurrent_routers = MAX_THREADS;
+
+                else if (max_concurrent_routers < 0)
+                    throw "invalid maximum concurrent routers not greater than 0)";
+
+                if (debug_general)
+                    std::cout << "   Config: max concurrent routers: " << max_concurrent_routers << std::endl;
+
+            } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("max_concurrent_routers is not of type int", node["startup"]["max_concurrent_routers"]);
+            }
+        }
+
+        if (node["startup"]["initial_router_time"]) {
+            try {
+                initial_router_time = node["startup"]["initial_router_time"].as<int>();
+
+                if (initial_router_time < 5 || initial_router_time > 1800) 
+                    throw "invalid initial router time not within range of 5-1800 seconds)";
+
+                if (debug_general)
+                    std::cout << "   Config: Initial Router Time: " << initial_router_time << std::endl;
+
+            } catch (YAML::TypedBadConversion<int> err) {
+                printWarning("initial_router_time is not of type int", node["startup"]["initial_router_time"]);
+            }
+        }
+
+        if (node["startup"]["calculate_baseline"]) {
+            try {
+                calculate_baseline = node["startup"]["calculate_baseline"].as<bool>();
+
+                if (debug_general)
+                    std::cout << "   Config: calculate_baseline: " << calculate_baseline << std::endl;
+
+            } catch (YAML::TypedBadConversion<bool> err) {
+                printWarning("calculate_baseline is not of type bool", node["startup"]["calculate_baseline"]);
+            }
+        }
+
+        if (node["startup"]["pat_enabled"]) {
+            try {
+                pat_enabled = node["startup"]["pat_enabled"].as<bool>();
+
+                if (debug_general)
+                    std::cout << "   Config: pat_enabled: " << calculate_baseline << std::endl;
+
+            } catch (YAML::TypedBadConversion<bool> err) {
+                printWarning("pat_enabled is not of type bool", node["startup"]["pat_enabled"]);
             }
         }
     }

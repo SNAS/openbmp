@@ -1069,6 +1069,7 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
             strcat(prep_buf, buf2);
 
         ++unicast_prefix_seq;
+	++ribSeq;
     }
 
 
