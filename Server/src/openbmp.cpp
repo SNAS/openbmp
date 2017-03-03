@@ -28,6 +28,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include "md5.h"
+#include "template_cfg.h"
 
 using namespace std;
 
@@ -35,6 +36,7 @@ using namespace std;
  * Global parameters
  */
 const char *cfg_filename    = NULL;                 // Configuration file name to load/read
+const char *template_filename   = NULL;                 // template_cfg file name to load/read
 const char *log_filename    = NULL;                 // Output file to log messages to
 const char *debug_filename  = NULL;                 // Debug file to log messages to
 const char *pid_filename    = NULL;                 // PID file to record the daemon pid
@@ -56,6 +58,7 @@ void Usage(char *prog) {
     cout << "Usage: " << prog << " <options>" << endl;
     cout << endl << "  REQUIRED OPTIONS:" << endl;
     cout << "     -c <filename>     Config filename.  " <<  endl;
+    cout << "     -t <filename>     template_cfg filename.  " <<  endl;
     cout << "          OR " << endl;
     cout << "     -a <string>       Admin ID for collector, this must be unique for this collector.  hostname or IP is good to use" << endl;
     cout << endl;
@@ -316,6 +319,17 @@ bool ReadCmdArgs(int argc, char **argv, Config &cfg) {
             // Set the new filename
             cfg_filename = argv[++i];
         }
+            // template_cfg filename
+        else if (!strcmp(argv[i], "-t")) {
+            // We expect the next arg to be the filename
+            if (i + 1 >= argc) {
+                cout << "INVALID ARG: -t expects the filename to be specified" << endl;
+                return true;
+            }
+
+            // Set the new filename
+            template_filename = argv[++i];
+        }
 
         // Log filename
         else if (!strcmp(argv[i], "-l")) {
@@ -527,6 +541,7 @@ void runServer(Config &cfg) {
  */
 int main(int argc, char **argv) {
     Config cfg;
+    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg> template_map;
 
     // Process the command line args
     if (ReadCmdArgs(argc, argv, cfg)) {
@@ -549,6 +564,7 @@ int main(int argc, char **argv) {
         return true;
     }
 
+
     try {
         // Initialize logging
         logger = new Logger(log_filename, debug_filename);
@@ -570,6 +586,18 @@ int main(int argc, char **argv) {
         */
         daemonize();
     }
+
+    if (template_filename != NULL) {
+        try {
+            template_cfg::Template_cfg tmp_template_cfg(logger, cfg.debug_general);
+            tmp_template_cfg.load(template_filename, template_map);
+
+        } catch (char const *str) {
+            cout << "ERROR: Failed to load the template file: " << str << endl;
+            return 2;
+        }
+    }
+
 
     /*
      * Setup the signal handlers
