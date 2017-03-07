@@ -10,21 +10,20 @@
 #include <cstring>
 #include "template_cfg.h"
 
-namespace template_cfg {
 /**
  * Constructor for class
  *
  * \details Handles bgp update messages
  *
  */
-    Template_cfg::Template_cfg(Logger *logPtr, bool enable_debug)
+    Template_map::Template_map(Logger *logPtr, bool enable_debug)
             : logger(logPtr),
               debug(enable_debug){}
 
-    Template_cfg::~Template_cfg(){
+    Template_map::~Template_map(){
     }
 
-    void Template_cfg::load(const char *template_filename, std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg> &template_map) {
+    bool Template_map::load(const char *template_filename) {
         /*
          * Read the top level template file and populate top level template map
          */
@@ -41,6 +40,7 @@ namespace template_cfg {
         std::string prepend_string;
         size_t remaining_length = strlen(bpos);
         size_t read = 0;
+        template_cfg::TEMPLATE_TOPICS topic;
 
         /*
          * Append to a prepend string
@@ -49,11 +49,11 @@ namespace template_cfg {
             epos = strstr(bpos, "{{");
             if (!epos) {
                 cout << "Done loading" << endl;
-                return;
+                return(true);
             }
 
             prepend_string.append(bpos, epos - bpos);
-            std::cout << "Prepend string is now " << prepend_string << std::endl;
+            std::cout << "load Prepend string is now " << prepend_string << std::endl;
 
             remaining_length -= epos - bpos + 2;
             bpos += epos - bpos + 2; epos = bpos;
@@ -72,39 +72,63 @@ namespace template_cfg {
                 bpos += 1; epos = bpos;
                 if (strncmp(bpos, "loop", strlen("loop")) == 0) {
                     std::cout << "Error: Found a loop type at top level" << std::endl;
-                    return;
+                    return(false);
                 } else if (strncmp(bpos, "if_", strlen("if_")) == 0) {
                     std::cout << "Error: Found a if type at top level" << std::endl;
-                    return;
+                    return(false);
                 } else {
                     std::cout << "Found container type" << std::endl;
                     template_cfg::Template_cfg template_cfg(logger, debug);
                     if (strncmp(bpos, "unicast_prefix", strlen("unicast_prefix")) == 0) {
-                        epos = strstr(bpos, "}}");
-                        remaining_length -= epos - bpos + 2;
-                        bpos += epos - bpos + 2;
-                        epos = bpos;
-
-                        read = template_cfg.create_container_loop(CONTAINER, UNICAST_PREFIX, bpos, prepend_string);
-                        /*
-                         * Clear the prepend string
-                         */
-                        prepend_string.clear();
-                        if (!read) {
-                            std::cout << "Error creating container" << std::endl;
-                            return;
-                        }
-
-                        remaining_length -= read;
-                        bpos += read; epos = bpos;
-                        template_map.insert(std::pair<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>(UNICAST_PREFIX,
-                                                                                                     template_cfg));
+                        topic = template_cfg::UNICAST_PREFIX;
+                    } else if (strncmp(bpos, "ls_nodes", strlen("ls_nodes")) == 0) {
+                        topic = template_cfg::LS_NODES;
+                    } else if (strncmp(bpos, "ls_links", strlen("ls_links")) == 0) {
+                        topic = template_cfg::LS_LINKS;
+                    } else if (strncmp(bpos, "ls_prefixes", strlen("ls_prefixes")) == 0) {
+                        topic = template_cfg::LS_PREFIXES;
+                    } else if (strncmp(bpos, "l3vpn", strlen("l3vpn")) == 0) {
+                        topic = template_cfg::L3_VPN;
+                    } else if (strncmp(bpos, "evpn", strlen("evpn")) == 0) {
+                        topic = template_cfg::EVPN;
+                    } else {
+                        std::cout << "Unknown template topic" << std::endl;
+                        return(false);
                     }
+                    epos = strstr(bpos, "}}");
+                    remaining_length -= epos - bpos + 2;
+                    bpos += epos - bpos + 2;
+                    epos = bpos;
+
+                    read = template_cfg.create_container_loop(template_cfg::CONTAINER, topic, bpos, prepend_string);
+                    /*
+                     * Clear the prepend string
+                     */
+                    prepend_string.clear();
+                    if (!read) {
+                        std::cout << "Error creating container" << std::endl;
+                        return(false);
+                    }
+
+                    remaining_length -= read;
+                    bpos += read; epos = bpos;
+                    this->template_map.insert(std::pair<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>(topic,
+                                                                                                 template_cfg));
                 }
             }
         }
+        return(true);
     }
 
+namespace template_cfg {
+
+
+    Template_cfg::Template_cfg(Logger *logPtr, bool enable_debug)
+            : logger(logPtr),
+              debug(enable_debug){}
+
+    Template_cfg::~Template_cfg(){
+    }
 
     size_t Template_cfg::create_container_loop(TEMPLATE_TYPES type, TEMPLATE_TOPICS topic, char *buf, std::string &in_prepend_string) {
         this->prepend_string.append(in_prepend_string);
@@ -124,7 +148,7 @@ namespace template_cfg {
             epos = strstr(bpos, "{{");
 
             prepend_string.append(bpos, epos - bpos);
-            std::cout << "Prepend string is now " << prepend_string << std::endl;
+            std::cout << "create_container Prepend string is now " << prepend_string << std::endl;
 
             std::cout << "container bpos: " << bpos << std::endl;
             std::cout << "container epos: " << epos << std::endl;
@@ -177,6 +201,11 @@ namespace template_cfg {
                     epos = strstr(bpos, "}}");
                     std::cout << "container bpos: " << bpos << std::endl;
                     std::cout << "container epos: " << epos << std::endl;
+                    template_cfg::Template_cfg template_cfg(logger, debug);
+                    template_cfg.type = template_cfg::END;
+                    template_cfg.prepend_string.append(prepend_string);
+
+                    this->template_children.push_back(template_cfg);
                     remaining_length -= epos - bpos + 2; total_read += epos - bpos + 2;
                     cout << "container/loop type" << type << " read is " << total_read << endl;
                     return(total_read);
@@ -236,13 +265,6 @@ namespace template_cfg {
                 template_cfg::Template_cfg::lookup_map.insert(
                         std::pair<std::string, int>(parse_bgp_lib::parse_bgp_lib_nlri_names[i], i));
             }
-
-            //TODO: Remove, test the map
-            for (std::map<std::string, int>::iterator it = template_cfg::Template_cfg::lookup_map.begin();
-                 it != template_cfg::Template_cfg::lookup_map.end();
-                 it++) {
-                std::cout << " lookup map string: " << it->first << ", value: " << it->second << std::endl;
-            }
         }
 
         std::cout << "Prepend string for replace is now " << this->prepend_string << std::endl;
@@ -274,7 +296,16 @@ namespace template_cfg {
             return(0);
         }
         std::string lookup_string(bpos, epos - bpos);
-        this->replacement_var = template_cfg::Template_cfg::lookup_map.find(lookup_string)->second;
+        std::map<std::string, int>::iterator it = template_cfg::Template_cfg::lookup_map.find(lookup_string);
+        if (it == template_cfg::Template_cfg::lookup_map.end()) {
+            /*
+             * Couldnt find
+             */
+            cout << "Error in replacement variable name" << endl;
+            return(0);
+        }
+
+        this->replacement_var = it->second;
         read += epos - bpos + 2;
         cout << "Created replacement var list type " << this->replacement_list_type << ", var is " << this->replacement_var << std::endl;
         cout << "replacement read is " << read << endl;

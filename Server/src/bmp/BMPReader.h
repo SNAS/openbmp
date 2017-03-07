@@ -19,6 +19,7 @@
 #include <memory>
 
 class MsgBusInterface;
+class Template_map;
 
 /**
  * \class   BMPReader
@@ -67,7 +68,7 @@ public:
      * \param [in]  mbus_ptr     The database pointer referencer - DB should be already initialized
      * \return true if more to read, false if the connection is done/closed
      */
-    bool ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr);
+    bool ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, Template_map *template_map);
 
     /**
      * Read messages from BMP stream in a loop
@@ -80,7 +81,7 @@ public:
      *
      * \throw (char const *str) message indicate error
      */
-    void readerThreadLoop(bool &run, BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr);
+    void readerThreadLoop(bool &run, BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, std::string &template_filename);
 
     /**
      * disconnect/close bmp stream
@@ -107,7 +108,6 @@ private:
     Config      *cfg;                       ///< Config pointer
     bool        debug;                      ///< debug flag to indicate debugging
     u_char      router_hash_id[16];         ///< Router hash ID
-
 
     /**
      * Persistent peer info map, Key is the peer_hash_id.

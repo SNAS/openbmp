@@ -19,6 +19,7 @@
 #include "bgp_common.h"
 #include "parseBGP.h"
 
+class Template_map;
 
 using namespace std;
 
@@ -96,7 +97,7 @@ public:
      *
      * \returns True if error, false if no error.
      */
-    bool handleUpdate(u_char *data, size_t size);
+    bool handleUpdate(u_char *data, size_t size, Template_map *template_map);
 
     /**
      * handle BGP notify event - updates the down event with parsed data
@@ -180,7 +181,7 @@ private:
      *
      * \param  parsed_data          Reference to the parsed update data
      */
-    void UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update);
+    void UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Template_map *template_map);
 
 };
 

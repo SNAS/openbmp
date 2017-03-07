@@ -474,6 +474,8 @@ void runServer(Config &cfg) {
                 ThreadMgmt *thr = new ThreadMgmt;
                 thr->cfg = &cfg;
                 thr->log = logger;
+                if (template_filename)
+                    thr->template_filename = std::string(template_filename);
 
                 // wait for a new connection and accept
                 if (bmp_svr->wait_and_accept_connection(thr->client, 500)) {
@@ -541,7 +543,6 @@ void runServer(Config &cfg) {
  */
 int main(int argc, char **argv) {
     Config cfg;
-    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg> template_map;
 
     // Process the command line args
     if (ReadCmdArgs(argc, argv, cfg)) {
@@ -586,18 +587,6 @@ int main(int argc, char **argv) {
         */
         daemonize();
     }
-
-    if (template_filename != NULL) {
-        try {
-            template_cfg::Template_cfg tmp_template_cfg(logger, cfg.debug_general);
-            tmp_template_cfg.load(template_filename, template_map);
-
-        } catch (char const *str) {
-            cout << "ERROR: Failed to load the template file: " << str << endl;
-            return 2;
-        }
-    }
-
 
     /*
      * Setup the signal handlers

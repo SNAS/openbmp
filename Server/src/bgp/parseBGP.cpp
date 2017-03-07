@@ -28,9 +28,11 @@
 #include "OpenMsg.h"
 #include "bgp_common.h"
 
+#include "template_cfg.h"
 #include "parseBgpLib.h"
 
 using namespace std;
+
 
 /**
  * Constructor for class -
@@ -84,7 +86,7 @@ parseBGP::~parseBGP() {
  *
  * \returns True if error, false if no error.
  */
-bool parseBGP::handleUpdate(u_char *data, size_t size) {
+bool parseBGP::handleUpdate(u_char *data, size_t size, Template_map *template_map) {
     int read_size = 0;
 
     if (parseBgpHeader(data, size) == BGP_MSG_UPDATE) {
@@ -108,7 +110,7 @@ bool parseBGP::handleUpdate(u_char *data, size_t size) {
         /*
          * Update the DB with the update data
          */
-        UpdateDB(update);
+        UpdateDB(update, template_map);
 
       }
 
@@ -342,7 +344,7 @@ u_char parseBGP::parseBgpHeader(u_char *data, size_t size) {
  *
  * \param  parsed_data          Reference to the parsed update data
  */
-void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update) {
+void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Template_map *template_map) {
     vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> rib_list;
     vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> ls_node_list;
     vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> ls_link_list;

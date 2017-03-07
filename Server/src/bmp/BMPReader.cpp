@@ -20,11 +20,12 @@
 #include <cerrno>
 
 #include "BMPListener.h"
-#include "parseBgpLib.h"
+#include "template_cfg.h"
 #include "MsgBusInterface.hpp"
 #include "BMPReader.h"
 #include "parseBMP.h"
 #include "parseBGP.h"
+#include "template_cfg.h"
 #include "Logger.h"
 
 
@@ -55,7 +56,6 @@ BMPReader::~BMPReader() {
 
 }
 
-
 /**
  * Read messages from BMP stream in a loop
  *
@@ -67,11 +67,35 @@ BMPReader::~BMPReader() {
  *
  * \throw (char const *str) message indicate error
  */
-void BMPReader::readerThreadLoop(bool &run, BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr) {
+void BMPReader::readerThreadLoop(bool &run, BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, std::string &template_filename) {
+
+    Template_map template_map(logger, debug);
+    /*
+     * Construct the template
+     */
+    if (!template_filename.empty()) {
+        cout << "BMP reader: template_filename is " << template_filename.c_str() << endl;
+        try {
+            if (!template_map.load(template_filename.c_str())) {
+                cout << "Error loading template" << endl;
+                template_map.template_map.clear();
+            }
+        } catch (char const *str) {
+            cout << "ERROR: Failed to load the template file: " << str << endl;
+        }
+
+        //TODO: Remove, after load, test the template_map
+        for (std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map.template_map.begin();
+             it != template_map.template_map.end(); it++) {
+            template_cfg::Template_cfg template_cfg_print = it->second;
+            print_template(template_cfg_print, 0);
+        }
+    }
+
     while (run) {
 
         try {
-            if (not ReadIncomingMsg(client, mbus_ptr))
+            if (not ReadIncomingMsg(client, mbus_ptr, &template_map))
                 break;
 
         } catch (char const *str) {
@@ -93,7 +117,7 @@ void BMPReader::readerThreadLoop(bool &run, BMPListener::ClientInfo *client, Msg
  *
  * \throw (char const *str) message indicate error
  */
-bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr) {
+bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, Template_map *template_map) {
     bool rval = true;
     string peer_info_key;
 
@@ -253,7 +277,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                 if (cfg->debug_bgp)
                     pBGP->enableDebug();
 
-                pBGP->handleUpdate(pBMP->bmp_data, pBMP->bmp_data_len);
+                pBGP->handleUpdate(pBMP->bmp_data, pBMP->bmp_data_len, template_map);
                 delete pBGP;
 
                 break;

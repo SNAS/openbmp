@@ -17,6 +17,7 @@
 #include "parseBgpLib.h"
 
 namespace template_cfg {
+
     /**
      * Defines the template topics
      *
@@ -24,6 +25,11 @@ namespace template_cfg {
      */
     enum TEMPLATE_TOPICS {
         UNICAST_PREFIX,
+        LS_NODES,
+        LS_LINKS,
+        LS_PREFIXES,
+        L3_VPN,
+        EVPN,
     };
 
 
@@ -31,6 +37,7 @@ namespace template_cfg {
         CONTAINER,
         LOOP,
         REPLACE,
+        END,
     };
 
     enum REPLACEMENT_LIST_TYPE {
@@ -62,8 +69,9 @@ namespace template_cfg {
          *
          * \param [in] template_filename     template filename
          ***********************************************************************/
-        void load(const char *template_filename, std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg> &template_map);
-        size_t create_container_loop(TEMPLATE_TYPES type, TEMPLATE_TOPICS topic, char *buf, std::string &prepend_string);
+        size_t
+        create_container_loop(TEMPLATE_TYPES type, TEMPLATE_TOPICS topic, char *buf, std::string &prepend_string);
+
         size_t create_replacement(char *buf, std::string &prepend_string);
 
         std::list<template_cfg::Template_cfg> template_children;
@@ -81,5 +89,98 @@ namespace template_cfg {
         std::string prepend_string;
     };
 }
+
+    class Template_map {
+    public:
+        /*********************************************************************//**
+         * Constructor for class
+         ***********************************************************************/
+        Template_map(Logger *logPtr, bool enable_debug);
+
+        virtual ~Template_map();
+
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg> template_map;
+
+        /*********************************************************************//**
+         * Load configuration from file
+         *
+         * \param [in] template_filename     template filename
+         ***********************************************************************/
+        bool load(const char *template_filename);
+
+    private:
+        bool debug;                             ///< debug flag to indicate debugging
+        Logger *logger;                         ///< Logging class pointer
+    };
+
+static void print_template (template_cfg::Template_cfg template_cfg_print, size_t iteration) {
+    std::string append_str(iteration, 32);
+    switch (template_cfg_print.type) {
+        case template_cfg::CONTAINER : {
+            cout << append_str << "Container: ";
+            switch (template_cfg_print.topic) {
+                case template_cfg::UNICAST_PREFIX : {
+                    cout << "unicast_prefix" << endl;
+                    break;
+                }
+                case template_cfg::LS_NODES : {
+                    cout << "ls_node" << endl;
+                    break;
+                }
+                case template_cfg::LS_LINKS: {
+                    cout << "ls_links" << endl;
+                    break;
+                }
+                case template_cfg::LS_PREFIXES : {
+                    cout << "ls_prefixes" << endl;
+                    break;
+                }
+                case template_cfg::L3_VPN : {
+                    cout << "l3vpn" << endl;
+                    break;
+                }
+                case template_cfg::EVPN : {
+                    cout << "evpn" << endl;
+                    break;
+                }
+                default:
+                    break;
+            }
+            for (std::list<template_cfg::Template_cfg>::iterator it = template_cfg_print.template_children.begin();
+                 it != template_cfg_print.template_children.end(); it++) {
+                print_template(*it, iteration + 4);
+            }
+            break;
+        }
+        case template_cfg::LOOP : {
+            cout << append_str.c_str() << "Loop: " << endl;
+            for (std::list<template_cfg::Template_cfg>::iterator it = template_cfg_print.template_children.begin();
+                 it != template_cfg_print.template_children.end(); it++) {
+                print_template(*it, iteration + 4);
+            }
+            break;
+        }
+        case template_cfg::END : {
+            cout << append_str.c_str() << "End " << endl;
+            break;
+        }
+        case template_cfg::REPLACE : {
+            cout << append_str.c_str() << "Replacement: List: ";
+            switch (template_cfg_print.replacement_list_type) {
+                case template_cfg::ATTR :
+                    cout << "ATTR, replacement variable: " << template_cfg_print.replacement_var << endl;
+                    break;
+                case template_cfg::NLRI :
+                    cout << "NLRI, replacement variable: " << template_cfg_print.replacement_var << endl;
+                    break;
+                default:
+                    break;
+            }
+        }
+        default:
+            break;
+    }
+}
+
 
 #endif /* TEMPLATE_CFG_H_ */
