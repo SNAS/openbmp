@@ -9,6 +9,7 @@
 #include <fstream>
 #include <cstring>
 #include "template_cfg.h"
+#include "MsgBusInterface.hpp"
 
 /**
  * Constructor for class
@@ -128,6 +129,166 @@ namespace template_cfg {
               debug(enable_debug){}
 
     Template_cfg::~Template_cfg(){
+    }
+
+    size_t Template_cfg::execute_replace(char *buf, size_t max_buf_length,
+                                           parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &nlri,
+                                           parse_bgp_lib::parseBgpLib::attr_map &attrs) {
+        cout << "Executing replace." << endl;
+
+        char buf2[80000] = {0}; // Second working buffer
+
+        size_t  remaining_len = max_buf_length, written = 0;
+        std::string replace_string;
+
+        strncpy(buf2, this->prepend_string.c_str(), this->prepend_string.length());
+        written = this->prepend_string.length();
+        if ((remaining_len - written) <= 0) {
+            return (max_buf_length - remaining_len);
+        }
+        strncpy(buf, buf2, written);
+        buf += written; remaining_len -= written;
+
+        switch (this->replacement_list_type) {
+            case template_cfg::ATTR : {
+                replace_string = map_string(attrs[static_cast<parse_bgp_lib::BGP_LIB_ATTRS>(this->replacement_var)].value);
+                break;
+            }
+            case template_cfg:: NLRI : {
+                replace_string = map_string(nlri.nlri[static_cast<parse_bgp_lib::BGP_LIB_NLRI>(this->replacement_var)].value);
+                break;
+            }
+            default:
+                break;
+        }
+
+        strncpy(buf2, replace_string.c_str(), replace_string.length());
+        written = replace_string.length();
+        if ((remaining_len - written) <= 0) {
+            return (max_buf_length - remaining_len);
+        }
+        strncpy(buf, buf2, written);
+        remaining_len -= written;
+
+        return (max_buf_length - remaining_len);
+    }
+
+    size_t Template_cfg::execute_loop(char *buf, size_t max_buf_length,
+                                           std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                           parse_bgp_lib::parseBgpLib::attr_map &attrs) {
+        cout << "Executing loop." << endl;
+
+        char buf2[80000] = {0}; // Second working buffer
+
+        size_t  remaining_len = max_buf_length, written = 0;
+
+        strncpy(buf2, this->prepend_string.c_str(), this->prepend_string.length());
+        written = this->prepend_string.length();
+        if ((remaining_len - written) <= 0) {
+            return (max_buf_length - remaining_len);
+        }
+        strncpy(buf, buf2, written);
+        buf += written; remaining_len -= written;
+
+        for (size_t i = 0; i < rib_list.size(); i++) {
+            if (i != 0) {
+                //TODO: change this to a {{#more, ', '}} type object
+                strncpy(buf2, ",", strlen(","));
+                written = strlen(",");
+                if ((remaining_len - written) <= 0) {
+                    return (max_buf_length - remaining_len);
+                }
+                strncpy(buf, buf2, written);
+                buf += written; remaining_len -= written;
+            }
+
+            for (std::list<template_cfg::Template_cfg>::iterator it = this->template_children.begin();
+                 it != this->template_children.end(); it++) {
+                switch (it->type) {
+                    case template_cfg::CONTAINER : {
+                        cout << "Error: container found inside loop" << endl;
+                        return (0);
+                    }
+                    case template_cfg::LOOP : {
+                        cout << "Error: loop found inside loop" << endl;
+                        return (0);
+                    }
+                    case template_cfg::REPLACE : {
+                        written = it->execute_replace(buf, remaining_len, rib_list[i], attrs);
+                        if ((remaining_len - written) <= 0) {
+                            return (max_buf_length - remaining_len);
+                        }
+                        buf += written; remaining_len -= written;
+                        break;
+                    }
+                    case template_cfg::END : {
+                        strncpy(buf2, it->prepend_string.c_str(), it->prepend_string.length());
+                        written = it->prepend_string.length();
+                        if ((remaining_len - written) <= 0) {
+                            return (max_buf_length - remaining_len);
+                        }
+                        strncpy(buf, buf2, written);
+                        buf+= written; remaining_len -= written;
+                    }
+                    default:
+                        break;
+                }
+            }
+      }
+
+        return (max_buf_length - remaining_len);
+    }
+
+    size_t Template_cfg::execute_container(char *buf, size_t max_buf_length,
+                                         std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                         parse_bgp_lib::parseBgpLib::attr_map &attrs) {
+        cout << "Executing container." << endl;
+
+        char buf2[80000] = {0}; // Second working buffer
+
+        size_t  remaining_len = max_buf_length, written = 0;
+
+        strncpy(buf2, this->prepend_string.c_str(), this->prepend_string.length());
+        written = this->prepend_string.length();
+        if ((remaining_len - written) <= 0) {
+            return (max_buf_length - remaining_len);
+        }
+        strncpy(buf, buf2, written);
+        buf += written; remaining_len -= written;
+
+        for (std::list<template_cfg::Template_cfg>::iterator it = this->template_children.begin();
+             it != this->template_children.end(); it++) {
+            switch (it->type) {
+                case template_cfg::CONTAINER : {
+                    cout << "Error: container found inside container" << endl;
+                    return (0);
+                }
+                case template_cfg:: LOOP : {
+                    written = it->execute_loop(buf, remaining_len, rib_list, attrs);
+                    if ((remaining_len - written) <= 0) {
+                        return (max_buf_length - remaining_len);
+                    }
+                    buf += written; remaining_len -= written;
+                    break;
+                }
+                case template_cfg:: REPLACE : {
+                    break;
+                }
+                case template_cfg:: END : {
+                    strncpy(buf2, it->prepend_string.c_str(), it->prepend_string.length());
+                    written = it->prepend_string.length();
+                    if ((remaining_len - written) <= 0) {
+                        return (max_buf_length - remaining_len);
+                    }
+                    strncpy(buf, buf2, written);
+                    buf+= written; remaining_len -= written;
+                }
+                default:
+                    break;
+            }
+        }
+
+       return (max_buf_length - remaining_len);
     }
 
     size_t Template_cfg::create_container_loop(TEMPLATE_TYPES type, TEMPLATE_TOPICS topic, char *buf, std::string &in_prepend_string) {

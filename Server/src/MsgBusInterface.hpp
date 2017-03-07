@@ -20,6 +20,7 @@
 #include <sys/time.h>
 
 #include "parseBgpLib.h"
+#include "template_cfg.h"
 
 /**
  * \class   MsgBusInterface
@@ -289,7 +290,29 @@ public:
                                       parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                       unicast_prefix_action_code code) = 0;
 
-     /*****************************************************************//**
+    /*****************************************************************//**
+     * \brief       Add/Update RIB objects templated
+     *
+     * \details     Will generate a message to add new RIB prefixes
+     *
+     * \param[in]       peer    Peer object
+     * \param[in,out]   rib     List of one or more RIB entries
+     * \param[in]       attr    Path attribute object (can be null if n/a)
+     * \param[in]       code    Unicast prefix action code
+     * \param[in]       template Template
+     *
+     * \returns     The rib.hash_id will be updated based on the
+     *              supplied data for each object.
+     *
+     * \note        Caller must free any allocated memory, which is
+     *              safe to do so when this method returns.
+     *****************************************************************/
+    virtual void update_unicastPrefixTemplated(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                      unicast_prefix_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+
+    /*****************************************************************//**
      * \brief       Add/Update vpn objects
      *
      * \details     Will generate a message to add new vpn objects
@@ -464,39 +487,39 @@ public:
         ts_str.append(buf);
     }
 
-    /**
-     * \brief       Simple concatanation function
-     *
-     * \details     Converts a string array to a concatanated string
-     *              printing or storing in the DB.
-     *
-     * \param[in]   lib_data      nlri or attr map value
-     */
-    static std::string map_string(std::list<std::string> &lib_data) {
-        string s = "";
-
-        if (lib_data.empty())
-            return s;
-
-        if (lib_data.size() <= 1)
-            return lib_data.front();
-        std::list<std::string>::iterator last_value = lib_data.end();
-        last_value--;
-
-        for (std::list<std::string>::iterator it = lib_data.begin(); it != lib_data.end(); it++) {
-            s += *it;
-            if (it != last_value) {
-                s += std::string(", ");
-            }
-        }
-        return s;
-    }
-
-
 protected:
 
 private:
 
 };
+
+/**
+ * \brief       Simple concatanation function
+ *
+ * \details     Converts a string array to a concatanated string
+ *              printing or storing in the DB.
+ *
+ * \param[in]   lib_data      nlri or attr map value
+ */
+static std::string map_string(std::list<std::string> &lib_data) {
+    string s = "";
+
+    if (lib_data.empty())
+        return s;
+
+    if (lib_data.size() <= 1)
+        return lib_data.front();
+    std::list<std::string>::iterator last_value = lib_data.end();
+    last_value--;
+
+    for (std::list<std::string>::iterator it = lib_data.begin(); it != lib_data.end(); it++) {
+        s += *it;
+        if (it != last_value) {
+            s += std::string(", ");
+        }
+    }
+    return s;
+}
+
 
 #endif

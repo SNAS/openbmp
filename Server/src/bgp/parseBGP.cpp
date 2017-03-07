@@ -425,6 +425,9 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
 
     if (rib_list.size() > 0) {
         mbus_ptr->update_unicastPrefix(*p_entry, rib_list, update.attrs, mbus_ptr->UNICAST_PREFIX_ACTION_ADD);
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::UNICAST_PREFIX);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_unicastPrefixTemplated(*p_entry, rib_list, update.attrs, mbus_ptr->UNICAST_PREFIX_ACTION_ADD, it->second);
         rib_list.clear();
     }
 

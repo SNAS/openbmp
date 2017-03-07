@@ -69,6 +69,8 @@ Config::Config() {
     topic_names_map[MSGBUS_TOPIC_VAR_LS_PREFIX]        = MSGBUS_TOPIC_LS_PREFIX;
     topic_names_map[MSGBUS_TOPIC_VAR_L3VPN]            = MSGBUS_TOPIC_L3VPN;
     topic_names_map[MSGBUS_TOPIC_VAR_EVPN]             = MSGBUS_TOPIC_EVPN;
+
+    topic_names_map[MSGBUS_TOPIC_VAR_UNICAST_PREFIX_TEMPLATED] = MSGBUS_TOPIC_UNICAST_PREFIX_TEMPLATED;
 }
 
 /*********************************************************************//**

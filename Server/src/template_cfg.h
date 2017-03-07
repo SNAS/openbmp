@@ -74,6 +74,18 @@ namespace template_cfg {
 
         size_t create_replacement(char *buf, std::string &prepend_string);
 
+        size_t execute_container(char *buf, size_t max_buf_length,
+                               std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                               parse_bgp_lib::parseBgpLib::attr_map &attrs);
+
+        size_t execute_loop(char *buf, size_t max_buf_length,
+                                 std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                 parse_bgp_lib::parseBgpLib::attr_map &attrs);
+
+        size_t execute_replace(char *buf, size_t max_buf_length,
+                            parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &nlri,
+                            parse_bgp_lib::parseBgpLib::attr_map &attrs);
+
         std::list<template_cfg::Template_cfg> template_children;
 
         TEMPLATE_TYPES type;

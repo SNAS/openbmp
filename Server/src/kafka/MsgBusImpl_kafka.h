@@ -78,6 +78,10 @@ public:
 
     void send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data, size_t data_len);
 
+    virtual void update_unicastPrefixTemplated(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                               unicast_prefix_action_code code, template_cfg::Template_cfg &template_container);
+
     // Debug methods
     void enableDebug();
     void disableDebug();
