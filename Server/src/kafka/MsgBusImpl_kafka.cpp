@@ -108,9 +108,7 @@ msgBus_kafka::~msgBus_kafka() {
         snprintf(r_object.term_reason_text, sizeof(r_object.term_reason_text),
                  "Connection closed");
 
-        printf("Sending term\n");
         update_Router(r_object, msgBus_kafka::ROUTER_ACTION_TERM);
-        printf("Done sending term\n");
     }
 
     sleep(2);

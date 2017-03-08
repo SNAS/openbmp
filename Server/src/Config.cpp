@@ -23,8 +23,6 @@
 #include "Config.h"
 #include "kafka/KafkaTopicSelector.h"
 
-#define MAX_THREADS 200
-
 /*********************************************************************//**
  * Constructor for class
  ***********************************************************************/

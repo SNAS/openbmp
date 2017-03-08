@@ -17,6 +17,8 @@
 #include <boost/xpressive/xpressive.hpp>
 #include <boost/exception/all.hpp>
 
+#define MAX_THREADS 200
+
 using namespace boost::xpressive;
 
 /**

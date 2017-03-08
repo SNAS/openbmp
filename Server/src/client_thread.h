@@ -24,7 +24,7 @@ struct ThreadMgmt {
     Config *cfg;
     Logger *log;
     bool running;                       // true if running, zero if not running
-    bool baselineTimeout;		// true if past the baseline time of the router
+    bool baselineTimeout;		        // true if past the baseline time of the router
 };
 
 struct ClientThreadInfo {

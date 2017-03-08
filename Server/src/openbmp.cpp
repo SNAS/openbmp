@@ -42,8 +42,6 @@ bool        run             = true;                 // Indicates if server shoul
 bool        run_foreground  = false;                // Indicates if server should run in forground
 
 
-#define MAX_THREADS 200
-
 // Global thread list
 vector<ThreadMgmt *> thr_list(0);
 
@@ -440,8 +438,8 @@ void runServer(Config &cfg) {
                     pthread_join(thr_list.at(i)->thr, NULL);
                     --active_connections;
 
-		    if (!thr_list.at(i)->baselineTimeout)
-			--concurrent_routers;
+                    if (!thr_list.at(i)->baselineTimeout)
+                        --concurrent_routers;
 
                     // free the vector entry
                     delete thr_list.at(i);
@@ -452,24 +450,24 @@ void runServer(Config &cfg) {
 
                 }
 
-		if(!thr_list.at(i)->baselineTimeout){
+		        else if (!thr_list.at(i)->baselineTimeout) {
 
-		    int initial_time = cfg.initial_router_time;
-		    string hash(reinterpret_cast<char*>(thr_list.at(i)->client.hash_id), 16);
+                    int initial_time = cfg.initial_router_time;
+                    string hash(reinterpret_cast<char*>(thr_list.at(i)->client.hash_id), 16);
 
-		    if (cfg.calculate_baseline && cfg.router_baseline_time.find(hash) != cfg.router_baseline_time.end())
-		        initial_time = cfg.router_baseline_time[hash];		//if calculate_baseline is true and the baseline time for the router is calculated, use the baseline time
+                    //if calculate_baseline is true and the baseline time for the router is calculated, use the baseline time
+                    if (cfg.calculate_baseline && cfg.router_baseline_time.find(hash) != cfg.router_baseline_time.end())
+                        initial_time = cfg.router_baseline_time[hash];
 
-		    timeval now;
-		    gettimeofday(&now, NULL);
+                    timeval now;
+                    gettimeofday(&now, NULL);
 
-		    //If past the baseline time, decrement concurrent router count
-		    if(now.tv_sec - thr_list.at(i)->client.startTime.tv_sec >= initial_time) {
-			--concurrent_routers;
-			thr_list.at(i)->baselineTimeout = true;		// Indicating that this router is not counted in the concurrent routers count
-		    }
-		}
-
+                    //If past the baseline time, decrement concurrent router count
+                    if(now.tv_sec - thr_list.at(i)->client.startTime.tv_sec >= initial_time) {
+                        --concurrent_routers;
+                    thr_list.at(i)->baselineTimeout = true;		// Indicating that this router is not counted in the concurrent routers count
+                    }
+		        }
 
                 //TODO: Add code to check for a socket that is open, but not really connected/half open
             }
@@ -488,8 +486,9 @@ void runServer(Config &cfg) {
                     if (bmp_svr->wait_and_accept_connection(thr->client, 500)) {
                         // Bump the current thread count
                         ++active_connections;
+
                         // Bump the concurrent router count
-        		++concurrent_routers;
+                        ++concurrent_routers;
                         LOG_INFO("Accepted new connection; active connections = %d", active_connections);
 
                         /*
@@ -503,7 +502,7 @@ void runServer(Config &cfg) {
                         //pthread_attr_setdetachstate(&thr.thr_attr, PTHREAD_CREATE_DETACHED);
                         pthread_attr_setdetachstate(&thr_attr, PTHREAD_CREATE_JOINABLE);
                         thr->running = 1;
-			thr->baselineTimeout = false;
+                        thr->baselineTimeout = false;
 
                         // Start the thread to handle the client connection
                         pthread_create(&thr->thr, &thr_attr,
