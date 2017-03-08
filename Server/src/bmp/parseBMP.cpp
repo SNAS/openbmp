@@ -732,8 +732,8 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
     init_msg_v3 initMsg;
     char infoBuf[sizeof(r_entry.initiate_data)];
     int infoLen;
-
-    // Buffer the init message for parsing
+    r_entry.hash_type=0;    
+// Buffer the init message for parsing
     bufferBMPMessage(sock);
 
     u_char *bufPtr = bmp_data;
@@ -778,7 +778,9 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
                 infoLen = sizeof(r_entry.name) < (initMsg.len - 1) ? (sizeof(r_entry.name) - 1) : initMsg.len;
                 strncpy((char *)r_entry.name, initMsg.info, infoLen);
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.name);
-                break;
+		if(r_entry.hash_type<2)	//Here we will check if bgp_id is not received, then we will update the hash_type
+			r_entry.hash_type=1;
+	           break;
 
             case INIT_TYPE_SYSDESCR :
                 infoLen = sizeof(r_entry.descr) < (initMsg.len - 1) ? (sizeof(r_entry.descr) - 1) : initMsg.len;
@@ -793,7 +795,8 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
                 }
                 inet_ntop(AF_INET, initMsg.info, r_entry.bgp_id, sizeof(r_entry.bgp_id));
                 LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.bgp_id);
-                break;
+                r_entry.hash_type=2;  //This value stores the hash_type if BGPid is present 
+		break;
 
             default:
                 LOG_NOTICE("Init message type %hu is unexpected per rfc7854", initMsg.type);

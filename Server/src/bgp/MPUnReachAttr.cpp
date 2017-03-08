@@ -72,6 +72,7 @@ void MPUnReachAttr::parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::Up
     SELF_DEBUG("%s: afi=%d safi=%d", peer_addr.c_str(), nlri.afi, nlri.safi);
 
     if (nlri.nlri_len == 0) {
+	peer_info->endOfRIB = true;		// Indicates End-Of-RIB Marker is received
         LOG_INFO("%s: End-Of-RIB marker (mp_unreach len=0)", peer_addr.c_str());
 
     } else {
