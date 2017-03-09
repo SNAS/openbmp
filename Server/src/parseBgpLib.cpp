@@ -275,57 +275,6 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
         }
     }
 
-    /*
-     * Print the list of NLRIs and all of the fields
-     */
-    for (std::list<parseBgpLib::parse_bgp_lib_nlri>::iterator it = update.nlri_list.begin();
-         it != update.nlri_list.end();
-         it++) {
-        parse_bgp_lib_nlri print_nlri = *it;
-        std::cout << __FILE__ << __LINE__ << " AFI/SAFI/TYPE: " << print_nlri.afi << "/" << print_nlri.safi << "/"
-                  << print_nlri.type;
-        for (std::map<parse_bgp_lib::BGP_LIB_NLRI, parse_bgp_lib_data>::iterator it2 = print_nlri.nlri.begin();
-             it2 != print_nlri.nlri.end();
-             it2++) {
-            parse_bgp_lib_data print_nlri_data = it2->second;
-            std::list<std::string>::iterator last_value = print_nlri_data.value.end();
-            last_value--;
-            std::cout << " NLRI lib type: " << it2->first << ", official type: "
-                      << print_nlri_data.official_type
-                      << " name: " << print_nlri_data.name << " value: ";
-            for (std::list<std::string>::iterator it3 = print_nlri_data.value.begin();
-                 it3 != print_nlri_data.value.end();
-                 it3++) {
-                std::cout << *it3;
-                if (it3 != last_value)
-                    std::cout << ", ";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-    }
-
-    /*
-     * Now print the list of all parsed attributes
-     */
-    for (std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib_data>::iterator it = update.attrs.begin();
-         it != update.attrs.end();
-         it++) {
-        parse_bgp_lib_data print_attr = it->second;
-        std::list<std::string>::iterator last_value = print_attr.value.end();
-        last_value--;
-        std::cout << __FILE__ << __LINE__ << " ATTR lib type: " << it->first << ", official type: " << print_attr.official_type
-                  <<  " name: " << print_attr.name << " value: ";
-        for (std::list<std::string>::iterator it = print_attr.value.begin();
-             it != print_attr.value.end();
-             it++) {
-            std::cout << *it;
-            if (it != last_value) {
-                std::cout << ", ";
-            }
-        }
-        std::cout << std::endl;
-    }
     return read_size;
 }
 
@@ -480,9 +429,6 @@ void parseBgpLib::parseBgpAttr(u_char *data, uint16_t len, parsed_update &update
         } else
             attr_len = *data++;
         read_size++;
-
-        std::cout << __FILE__ << __LINE__ << " Attribute type = " << static_cast<int>(attr_type) << " len_sz = " <<
-                  static_cast<int>(attr_len) << std::endl;
 
         // Get the attribute data, if we have any; making sure to not overrun buffer
         if (attr_len > 0 and (read_size + attr_len) <= len) {

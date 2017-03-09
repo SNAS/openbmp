@@ -31,7 +31,7 @@
         std::ifstream in(template_filename);
         std::string contents((std::istreambuf_iterator<char>(in)),
                              std::istreambuf_iterator<char>());
-        std::cout << "Input file is " << contents.c_str() << std::endl;
+//        std::cout << "Input file is " << contents.c_str() << std::endl;
 
         char tmp[contents.length() + 1];
         std::strcpy(tmp, contents.c_str());
@@ -58,17 +58,25 @@
 
             remaining_length -= epos - bpos + 2;
             bpos += epos - bpos + 2; epos = bpos;
-            std::cout << "load bpos: " << bpos << std::endl;
-            std::cout << "load epos: " << epos << std::endl;
+//            std::cout << "load bpos: " << bpos << std::endl;
+//            std::cout << "load epos: " << epos << std::endl;
 
 
             if (strncmp(bpos, "/*", strlen("/*")) == 0) {
                 std::cout << "Found a comment, skipping" << std::endl;
+
+                //Strip the newline
+                strip_last_newline(prepend_string);
+                std:: cout << "stripped load prepend string is now" << prepend_string.c_str() << std::endl;
+
                 epos = strstr(bpos, "}}");
                 remaining_length -= epos - bpos + 2;
                 bpos += epos - bpos + 2; epos = bpos;
             } else if (strncmp(bpos, "#", strlen("#")) == 0) {
                 std::cout << "Found a special type" << std::endl;
+                strip_last_newline(prepend_string);
+                std:: cout << "stripped load prepend string is now" << prepend_string.c_str() << std::endl;
+
                 remaining_length -= 1;
                 bpos += 1; epos = bpos;
                 if (strncmp(bpos, "loop", strlen("loop")) == 0) {
@@ -134,7 +142,6 @@ namespace template_cfg {
     size_t Template_cfg::execute_replace(char *buf, size_t max_buf_length,
                                            parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &nlri,
                                            parse_bgp_lib::parseBgpLib::attr_map &attrs) {
-        cout << "Executing replace." << endl;
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -176,7 +183,6 @@ namespace template_cfg {
     size_t Template_cfg::execute_loop(char *buf, size_t max_buf_length,
                                            std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
                                            parse_bgp_lib::parseBgpLib::attr_map &attrs) {
-        cout << "Executing loop." << endl;
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -242,7 +248,6 @@ namespace template_cfg {
     size_t Template_cfg::execute_container(char *buf, size_t max_buf_length,
                                          std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
                                          parse_bgp_lib::parseBgpLib::attr_map &attrs) {
-        cout << "Executing container." << endl;
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -311,21 +316,28 @@ namespace template_cfg {
             prepend_string.append(bpos, epos - bpos);
             std::cout << "create_container Prepend string is now " << prepend_string << std::endl;
 
-            std::cout << "container bpos: " << bpos << std::endl;
-            std::cout << "container epos: " << epos << std::endl;
+//            std::cout << "container bpos: " << bpos << std::endl;
+//            std::cout << "container epos: " << epos << std::endl;
 
             remaining_length -= epos - bpos + 2; total_read += epos - bpos + 2;
             bpos += epos - bpos + 2; epos = bpos;
 
             if (strncmp(bpos, "/*", strlen("/*")) == 0) {
                 std::cout << "Found a comment, skipping" << std::endl;
+
+                //Strip the newline
+                strip_last_newline(prepend_string);
+                std:: cout << "stripped container prepend string is now" << prepend_string.c_str() << std::endl;
                 epos = strstr(bpos, "}}");
-                std::cout << "container bpos: " << bpos << std::endl;
-                std::cout << "container epos: " << epos << std::endl;
+ //               std::cout << "container bpos: " << bpos << std::endl;
+//                std::cout << "container epos: " << epos << std::endl;
                 remaining_length -= epos - bpos + 2; total_read += epos - bpos + 2;
                 bpos += epos - bpos + 2; epos = bpos;
             } else if (strncmp(bpos, "#", strlen("#")) == 0) {
                 std::cout << "Found a special type" << std::endl;
+                strip_last_newline(prepend_string);
+                std:: cout << "stripped container prepend string is now" << prepend_string.c_str() << std::endl;
+
                 remaining_length -= 1; total_read += 1;
                 bpos += 1; epos = bpos;
                 if (strncmp(bpos, "loop", strlen("loop")) == 0) {
@@ -336,8 +348,8 @@ namespace template_cfg {
                         return (0);
                     }
                     epos = strstr(bpos, "}}");
-                    std::cout << "container bpos: " << bpos << std::endl;
-                    std::cout << "container epos: " << epos << std::endl;
+//                    std::cout << "container bpos: " << bpos << std::endl;
+//                    std::cout << "container epos: " << epos << std::endl;
                     remaining_length -= epos - bpos + 2; total_read += epos - bpos + 2;
                     bpos += epos - bpos + 2; epos = bpos;
 
@@ -359,16 +371,21 @@ namespace template_cfg {
                     std::cout << "Found a if type inside container" << std::endl;
                 } else if (strncmp(bpos, "end", strlen("end")) == 0) {
                     std::cout << "Found a end type inside container or loop" << std::endl;
+
+                    //Strip the newline
+                    strip_last_newline(prepend_string);
+                    std:: cout << "stripped container prepend string is now" << prepend_string.c_str() << std::endl;
+
                     epos = strstr(bpos, "}}");
-                    std::cout << "container bpos: " << bpos << std::endl;
-                    std::cout << "container epos: " << epos << std::endl;
+//                    std::cout << "container bpos: " << bpos << std::endl;
+//                    std::cout << "container epos: " << epos << std::endl;
                     template_cfg::Template_cfg template_cfg(logger, debug);
                     template_cfg.type = template_cfg::END;
                     template_cfg.prepend_string.append(prepend_string);
 
                     this->template_children.push_back(template_cfg);
                     remaining_length -= epos - bpos + 2; total_read += epos - bpos + 2;
-                    cout << "container/loop type" << type << " read is " << total_read << endl;
+//                    cout << "container/loop type" << type << " read is " << total_read << endl;
                     return(total_read);
                 } else {
                     std::cout << "Error: Found container type in container" << std::endl;
@@ -408,8 +425,8 @@ namespace template_cfg {
         char *epos = buf;
         size_t read = 0;
 
-        std::cout << "replacement bpos1: " << bpos << std::endl;
-        std::cout << "replacement epos1: " << epos << std::endl;
+//        std::cout << "replacement bpos1: " << bpos << std::endl;
+//        std::cout << "replacement epos1: " << epos << std::endl;
 
         if (template_cfg::Template_cfg::lookup_map.empty()) {
             /*
@@ -430,8 +447,8 @@ namespace template_cfg {
 
         std::cout << "Prepend string for replace is now " << this->prepend_string << std::endl;
         epos = strstr(bpos, ".");
-        std::cout << "replacement bpo2: " << bpos << std::endl;
-        std::cout << "replacement epos2: " << epos << std::endl;
+//        std::cout << "replacement bpo2: " << bpos << std::endl;
+//        std::cout << "replacement epos2: " << epos << std::endl;
         if (!epos) {
             std::cout << "Error replacement variable is empty" << std::endl;
             return(0);
@@ -450,8 +467,8 @@ namespace template_cfg {
         bpos += epos - bpos + 1; epos = bpos;
 
         epos = strstr(bpos, "}}");
-        std::cout << "replacement bpos3: " << bpos << std::endl;
-        std::cout << "replacement epos3: " << epos << std::endl;
+//        std::cout << "replacement bpos3: " << bpos << std::endl;
+//        std::cout << "replacement epos3: " << epos << std::endl;
         if (!epos) {
             std::cout << "Error replacement variable is not closed" << std::endl;
             return(0);

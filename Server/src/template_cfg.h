@@ -125,6 +125,19 @@ namespace template_cfg {
         Logger *logger;                         ///< Logging class pointer
     };
 
+static void strip_last_newline (std::string &s) {
+    size_t tmp = 0, begin;
+    while (tmp != std::string::npos) {
+        begin = tmp;
+        tmp = s.find_first_of('\n', tmp + 1);
+    }
+
+    size_t end = s.find_first_not_of(' ', begin + 1);
+    if ((end == std::string::npos) or (end == (s.length() - 1))) {
+         s.erase(begin, end);
+    }
+}
+
 static void print_template (template_cfg::Template_cfg template_cfg_print, size_t iteration) {
     std::string append_str(iteration, 32);
     switch (template_cfg_print.type) {

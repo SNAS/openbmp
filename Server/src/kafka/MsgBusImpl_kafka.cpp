@@ -1074,7 +1074,6 @@ void msgBus_kafka::update_unicastPrefixTemplated(obj_bgp_peer &peer, std::vector
     //TODO: Remove
     size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE, rib_list, attrs);
     if (written) {
-        cout << "Kafka Buffer is now: " << prep_buf << endl;
         produce(MSGBUS_TOPIC_VAR_UNICAST_PREFIX_TEMPLATED, prep_buf, written, rib_list.size(), p_hash_str,
                 &peer_list[p_hash_str], peer.peer_as);
     }
