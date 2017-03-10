@@ -138,7 +138,6 @@ static void strip_last_newline (std::string &s) {
     std::string str2;
     str2.push_back('\\');
     str2.push_back(s[s.length()]);
-    cout << "Length of string is: " << s.length() << "Last char is : " << str2.c_str() << endl;
 
     size_t tmp = 0, begin;
     while (tmp != std::string::npos) {
@@ -146,10 +145,7 @@ static void strip_last_newline (std::string &s) {
         tmp = s.find_first_of('\n', tmp + 1);
     }
 
-    cout << " Begin is: " << begin << endl;
-
     size_t end = s.find_first_not_of(' ', begin + 1);
-    cout << " End is: " << end << endl;
     if ((end == std::string::npos) or (end == (s.length() - 1))) {
          s.erase(begin, end);
     }

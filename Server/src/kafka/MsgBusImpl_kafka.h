@@ -81,6 +81,9 @@ public:
     virtual void update_unicastPrefixTemplated(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
                                                parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                                unicast_prefix_action_code code, template_cfg::Template_cfg &template_container);
+    void update_LsNodeTemplated(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
+                       parse_bgp_lib::parseBgpLib::attr_map &attrs, ls_action_code code, template_cfg::Template_cfg &template_container);
+
 
     // Debug methods
     void enableDebug();

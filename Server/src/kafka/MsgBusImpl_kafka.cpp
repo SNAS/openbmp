@@ -1082,6 +1082,28 @@ void msgBus_kafka::update_unicastPrefixTemplated(obj_bgp_peer &peer, std::vector
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
+void msgBus_kafka::update_LsNodeTemplated(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                                 parse_bgp_lib::parseBgpLib::attr_map &attrs, ls_action_code code,
+                                          template_cfg::Template_cfg &template_container) {
+    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+    prep_buf[0] = 0;
+    string p_hash_str;
+    string r_hash_str;
+
+    hash_toStr(peer.router_hash_id, r_hash_str);
+
+    hash_toStr(peer.hash_id, p_hash_str);
+    //TODO: Remove
+    size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE, rib_list, attrs);
+    if (written) {
+        produce(MSGBUS_TOPIC_VAR_LS_NODE_TEMPLATED, prep_buf, written, rib_list.size(), p_hash_str,
+                &peer_list[p_hash_str], peer.peer_as);
+    }
+}
+
+/**
+ * Abstract method Implementation - See MsgBusInterface.hpp for details
+ */
 void msgBus_kafka::add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats) {
     char buf[4096];                 // Misc working buffer
 

@@ -434,6 +434,9 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
     if (ls_node_list.size() > 0) {
         SELF_DEBUG("%s: Adding BGP-LS: Nodes %d", p_entry->peer_addr, ls_node_list.size());
         mbus_ptr->update_LsNode(*p_entry, ls_node_list, update.attrs, mbus_ptr->LS_ACTION_ADD);
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_NODES);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_LsNodeTemplated(*p_entry, ls_node_list, update.attrs,  mbus_ptr->LS_ACTION_ADD, it->second);
         ls_node_list.clear();
     }
 

@@ -131,12 +131,6 @@
 
         if (debug)
             std::cout << "---| Done Loading template file |------------------------- " << std::endl;
-        for (std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = this->template_map.begin();
-             it != this->template_map.end(); ++it) {
-
-            template_cfg::Template_cfg &template_cfg_print = it->second;
-            print_template(template_cfg_print, 0);
-        }
         return (true);
     }
 

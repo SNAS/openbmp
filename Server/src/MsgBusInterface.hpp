@@ -376,6 +376,21 @@ public:
                                 ls_action_code code) = 0;
 
     /*****************************************************************//**
+     * \brief       Add/Update BGP-LS nodes templated
+     *
+     * \details     Will generate a message to add/update BGP-LS nodes.
+     *
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
+     *****************************************************************/
+    virtual void update_LsNodeTemplated(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
+                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                               ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+
+    /*****************************************************************//**
      * \brief       Add/Update BGP-LS links
      *
      * \details     Will generate a message to add/update BGP-LS links.

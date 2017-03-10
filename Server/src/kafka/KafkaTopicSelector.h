@@ -33,8 +33,12 @@ public:
     #define MSGBUS_TOPIC_BMP_STAT               "openbmp.parsed.bmp_stat"
     #define MSGBUS_TOPIC_BMP_RAW                "openbmp.bmp_raw"
 
-    #define MSGBUS_TOPIC_UNICAST_PREFIX_TEMPLATED         "openbmp.parsed.unicast_prefix_templated"
-
+    #define MSGBUS_TOPIC_UNICAST_PREFIX_TEMPLATED   "openbmp.parsed.unicast_prefix_templated"
+    #define MSGBUS_TOPIC_LS_NODE_TEMPLATED          "openbmp.parsed.ls_node_templated"
+    #define MSGBUS_TOPIC_LS_LINK_TEMPLATED          "openbmp.parsed.ls_link_templated"
+    #define MSGBUS_TOPIC_LS_PREFIX_TEMPLATED          "openbmp.parsed.ls_prefix_templated"
+    #define MSGBUS_TOPIC_L3VPN_TEMPLATED          "openbmp.parsed.l3vpn_templated"
+    #define MSGBUS_TOPIC_EVPN_TEMPLATED          "openbmp.parsed.evpn_templated"
 
     /**
      * MSGBUS_TOPIC_VAR_* defines the topic var/key for the topic maps.
@@ -53,7 +57,12 @@ public:
     #define MSGBUS_TOPIC_VAR_BMP_STAT           "bmp_stat"
     #define MSGBUS_TOPIC_VAR_BMP_RAW            "bmp_raw"
 
-#define MSGBUS_TOPIC_VAR_UNICAST_PREFIX_TEMPLATED       "unicast_prefix_templated"
+    #define MSGBUS_TOPIC_VAR_UNICAST_PREFIX_TEMPLATED   "unicast_prefix_templated"
+    #define MSGBUS_TOPIC_VAR_LS_NODE_TEMPLATED          "ls_node_templated"
+    #define MSGBUS_TOPIC_VAR_LS_LINK_TEMPLATED          "ls_link_templated"
+    #define MSGBUS_TOPIC_VAR_LS_PREFIX_TEMPLATED        "ls_prefix_templated"
+    #define MSGBUS_TOPIC_VAR_L3VPN_TEMPLATED            "l3vpn_templated"
+    #define MSGBUS_TOPIC_VAR_EVPN_TEMPLATED             "evpn_templated"
 
 
     /*********************************************************************//**
