@@ -398,8 +398,6 @@ namespace parse_bgp_lib {
                         // MAC Address Length (1 byte)
                         mac_address_length = *data_pointer;
 
-                        cout << "Manish: mac_address_len is : " << static_cast<int>(mac_address_length) << endl;
-
                         val_ss2.str(std::string());
                         val_ss2 << static_cast<unsigned>(mac_address_length);
                         parsed_nlri.nlri[LIB_NLRI_EVPN_MAC_LEN].official_type = route_type;
@@ -417,8 +415,6 @@ namespace parse_bgp_lib {
 
                         // IP Address Length (1 byte)
                         ip_len = *data_pointer;
-                        cout << "Manish: ip_len is : " << static_cast<int>(ip_len) << endl;
-
                         val_ss2.str(std::string());
                         val_ss2 << static_cast<unsigned>(ip_len);
                         parsed_nlri.nlri[LIB_NLRI_EVPN_IP_LEN].official_type = route_type;

@@ -45,6 +45,12 @@ namespace template_cfg {
         NLRI
     };
 
+    enum TEMPLATE_FORMAT_TYPE {
+        TSV,
+        RAW
+    };
+
+
     /**
      * \class   Template_cfg
      *
@@ -118,7 +124,9 @@ namespace template_cfg {
          *
          * \param [in] template_filename     template filename
          ***********************************************************************/
+        bool load_custom(const char *template_filename);
         bool load(const char *template_filename);
+
 
     private:
         bool debug;                             ///< debug flag to indicate debugging
@@ -126,19 +134,28 @@ namespace template_cfg {
     };
 
 static void strip_last_newline (std::string &s) {
+
+    std::string str2;
+    str2.push_back('\\');
+    str2.push_back(s[s.length()]);
+    cout << "Length of string is: " << s.length() << "Last char is : " << str2.c_str() << endl;
+
     size_t tmp = 0, begin;
     while (tmp != std::string::npos) {
         begin = tmp;
         tmp = s.find_first_of('\n', tmp + 1);
     }
 
+    cout << " Begin is: " << begin << endl;
+
     size_t end = s.find_first_not_of(' ', begin + 1);
+    cout << " End is: " << end << endl;
     if ((end == std::string::npos) or (end == (s.length() - 1))) {
          s.erase(begin, end);
     }
 }
 
-static void print_template (template_cfg::Template_cfg template_cfg_print, size_t iteration) {
+static void print_template (template_cfg::Template_cfg &template_cfg_print, size_t iteration) {
     std::string append_str(iteration, 32);
     switch (template_cfg_print.type) {
         case template_cfg::CONTAINER : {
