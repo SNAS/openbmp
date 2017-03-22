@@ -363,7 +363,7 @@ void parseBMP::parsePeerHdr(int sock, void *parse_bgp_lib_peer_buf) {
     /*
      * Make a copy of the peer hdr for parsing lib
      */
-    memcpy(&p_hdr, parse_bgp_lib_peer_buf, sizeof(peer_hdr_v3));
+    memcpy(parse_bgp_lib_peer_buf, &p_hdr, sizeof(peer_hdr_v3));
 
     // Adjust the common header length to remove the peer header (as it's been read)
     bmp_len -= BMP_PEER_HDR_LEN;

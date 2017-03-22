@@ -286,7 +286,7 @@ namespace template_cfg {
                     break;
                 }
                 case template_cfg:: REPLACE : {
-                    if (this->replacement_list_type == NLRI) {
+                    if (it->replacement_list_type == NLRI) {
                         cout << "Error: Replacement type inside container cannot be NLRI" << endl;
                         return (0);
                     }
