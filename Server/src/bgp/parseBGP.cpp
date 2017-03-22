@@ -50,7 +50,7 @@ using namespace std;
  * \param [in,out] peer_info   Persistent peer information
  */
 parseBGP::parseBGP(Logger *logPtr, MsgBusInterface *mbus_ptr, MsgBusInterface::obj_bgp_peer *peer_entry, string routerAddr,
-                   BMPReader::peer_info *peer_info) {
+                   BMPReader::peer_info *peer_info, parse_bgp_lib::parseBgpLib *parseBgp) {
     debug = false;
 
     logger = logPtr;
@@ -68,6 +68,8 @@ parseBGP::parseBGP(Logger *logPtr, MsgBusInterface *mbus_ptr, MsgBusInterface::o
     p_info = peer_info;
 
     router_addr = routerAddr;
+
+    parser = parseBgp;
 }
 
 /**
@@ -86,7 +88,7 @@ parseBGP::~parseBGP() {
  *
  * \returns True if error, false if no error.
  */
-bool parseBGP::handleUpdate(u_char *data, size_t size, Template_map *template_map) {
+bool parseBGP::handleUpdate(u_char *data, size_t size, Template_map *template_map, parse_bgp_lib::parseBgpLib::parsed_update &update) {
     int read_size = 0;
 
     if (parseBgpHeader(data, size) == BGP_MSG_UPDATE) {
@@ -97,9 +99,7 @@ bool parseBGP::handleUpdate(u_char *data, size_t size, Template_map *template_ma
         p_info->routerAddr = this->router_addr;
         p_info->peerAddr = p_entry->peer_addr;
 
-        parse_bgp_lib::parseBgpLib::parsed_update update;
-        parse_bgp_lib::parseBgpLib parser(logger, debug, p_info);
-        if ((read_size=parser.parseBgpUpdate(data, data_bytes_remaining, update)) != (size - BGP_MSG_HDR_LEN)) {
+        if ((read_size=parser->parseBgpUpdate(data, data_bytes_remaining, update)) != (size - BGP_MSG_HDR_LEN)) {
             LOG_NOTICE("%s: rtr=%s: Failed to parse the update message, read %d expected %d", p_entry->peer_addr,
                        router_addr.c_str(), read_size, (size - read_size));
             return true;
@@ -427,7 +427,7 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
         mbus_ptr->update_unicastPrefix(*p_entry, rib_list, update.attrs, mbus_ptr->UNICAST_PREFIX_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::UNICAST_PREFIX);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_unicastPrefixTemplated(*p_entry, rib_list, update.attrs, mbus_ptr->UNICAST_PREFIX_ACTION_ADD, it->second);
+            mbus_ptr->update_unicastPrefixTemplated(rib_list, update.attrs, update.peer, mbus_ptr->UNICAST_PREFIX_ACTION_ADD, it->second);
         rib_list.clear();
     }
 
@@ -436,7 +436,7 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
         mbus_ptr->update_LsNode(*p_entry, ls_node_list, update.attrs, mbus_ptr->LS_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_NODES);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_LsNodeTemplated(*p_entry, ls_node_list, update.attrs,  mbus_ptr->LS_ACTION_ADD, it->second);
+            mbus_ptr->update_LsNodeTemplated(ls_node_list, update.attrs, update.peer, mbus_ptr->LS_ACTION_ADD, it->second);
         ls_node_list.clear();
     }
 
@@ -511,8 +511,10 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
                 switch (advertise_nlri.safi) {
                     case parse_bgp_lib::BGP_SAFI_EVPN : {
                         SELF_DEBUG("%s: Removing evpn mac=%s ip=%s", p_entry->peer_addr,
-                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC].value.front().c_str(),
-                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP].value.front().c_str());
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC].value.size() ?
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC].value.front().c_str() : string("0").c_str(),
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP].value.size() ?
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP].value.front().c_str() : string("0").c_str());
                         evpn_list.insert(evpn_list.end(), advertise_nlri);
                         break;
                     }
@@ -524,11 +526,17 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
 
     if (rib_list.size() > 0) {
         mbus_ptr->update_unicastPrefix(*p_entry, rib_list, update.attrs, mbus_ptr->UNICAST_PREFIX_ACTION_DEL);
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::UNICAST_PREFIX);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_unicastPrefixTemplated(rib_list, update.attrs, update.peer, mbus_ptr->UNICAST_PREFIX_ACTION_DEL, it->second);
     }
 
     if (ls_node_list.size() > 0) {
         SELF_DEBUG("%s: Removing BGP-LS: Nodes %d", p_entry->peer_addr, ls_node_list.size());
         mbus_ptr->update_LsNode(*p_entry, ls_node_list, update.attrs, mbus_ptr->LS_ACTION_DEL);
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_NODES);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_LsNodeTemplated(ls_node_list, update.attrs, update.peer, mbus_ptr->LS_ACTION_DEL, it->second);
     }
 
     if (ls_link_list.size() > 0) {

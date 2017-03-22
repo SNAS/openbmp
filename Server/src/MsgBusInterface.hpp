@@ -307,8 +307,8 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_unicastPrefixTemplated(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
+    virtual void update_unicastPrefixTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                      parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
                                       unicast_prefix_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
 
@@ -385,8 +385,8 @@ public:
      * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_LsNodeTemplated(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
-                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
+    virtual void update_LsNodeTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
+                               parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
                                ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
 

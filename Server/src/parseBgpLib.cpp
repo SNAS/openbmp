@@ -12,6 +12,7 @@
 #include <cstring>
 #include <sstream>
 #include <arpa/inet.h>
+#include <sys/time.h>
 //TODO:Remove
 #include "parseBgpLibExtCommunity.h"
 #include "parseBgpLibMpReach.h"
@@ -278,7 +279,173 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
     return read_size;
 }
 
-/**
+    /**
+     * Parses the BMP peer header message
+     *
+     * \details
+     * Parse BGP update message
+     * \param [in]   peer_hdr       Struct peer_hdr
+     * \param [in]  parsed_update   Reference to parsed_update; will be updated with all parsed data
+     *
+     * \return ZERO is error, otherwise a positive value indicating the number of bytes read from update message
+     */
+    size_t parseBgpLib::parseBmpPeer(int sock, parse_bgp_lib_peer_hdr &p_hdr, parsed_update &update) {
+        char peer_addr[40];                         ///< Printed format of the peer address (Ipv4 and Ipv6)
+        char peer_as[32];                           ///< Printed format of the peer ASN
+        char peer_rd[32];                           ///< Printed format of the peer RD
+        char peer_bgp_id[16];                       ///< Printed format of the peer bgp ID
+        std::ostringstream numString;
+
+        SELF_DEBUG("sock = %d, parsePeerHdr: Peer Type is %d", sock, p_hdr.peer_type);
+
+        if (p_hdr.peer_flags & 0x80) { // V flag of 1 means this is IPv6
+            update.peer[LIB_PEER_ISIPV4].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISIPV4];
+            update.peer[LIB_PEER_ISIPV4].value.push_back(std::string("0"));
+
+            inet_ntop(AF_INET6, p_hdr.peer_addr, peer_addr, sizeof(peer_addr));
+
+            SELF_DEBUG("sock = %d: Peer address is IPv6 %s", sock, peer_addr);
+
+        } else {
+            update.peer[LIB_PEER_ISIPV4].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISIPV4];
+            update.peer[LIB_PEER_ISIPV4].value.push_back(std::string("1"));
+
+            snprintf(peer_addr, sizeof(peer_addr), "%d.%d.%d.%d",
+                     p_hdr.peer_addr[12], p_hdr.peer_addr[13], p_hdr.peer_addr[14],
+                     p_hdr.peer_addr[15]);
+            SELF_DEBUG("sock = %d: Peer address is IPv4 %s", sock, peer_addr);
+        }
+
+        if (p_hdr.peer_flags & 0x10) { // O flag of 1 means this is Adj-Rib-Out
+            SELF_DEBUG("sock=%d : Msg is for Adj-RIB-Out", sock);
+            update.peer[LIB_PEER_ISPREPOLICY].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISPREPOLICY];
+            update.peer[LIB_PEER_ISPREPOLICY].value.push_back(std::string("0"));
+
+            update.peer[LIB_PEER_ISADJIN].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISADJIN];
+            update.peer[LIB_PEER_ISADJIN].value.push_back(std::string("0"));
+        } else if (p_hdr.peer_flags & 0x40) { // L flag of 1 means this is post-policy of Adj-RIB-In
+            SELF_DEBUG("sock=%d : Msg is for POST-POLICY Adj-RIB-In", sock);
+            update.peer[LIB_PEER_ISPREPOLICY].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISPREPOLICY];
+            update.peer[LIB_PEER_ISPREPOLICY].value.push_back(std::string("0"));
+
+            update.peer[LIB_PEER_ISADJIN].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISADJIN];
+            update.peer[LIB_PEER_ISADJIN].value.push_back(std::string("1"));
+        } else {
+            SELF_DEBUG("sock=%d : Msg is for PRE-POLICY Adj-RIB-In", sock);
+            update.peer[LIB_PEER_ISPREPOLICY].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISPREPOLICY];
+            update.peer[LIB_PEER_ISPREPOLICY].value.push_back(std::string("1"));
+
+            update.peer[LIB_PEER_ISADJIN].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISADJIN];
+            update.peer[LIB_PEER_ISADJIN].value.push_back(std::string("1"));
+        }
+
+        // convert the BMP byte messages to human readable strings
+        snprintf(peer_as, sizeof(peer_as), "0x%04x%04x",
+                 p_hdr.peer_as[0] << 8 | p_hdr.peer_as[1],
+                 p_hdr.peer_as[2] << 8 | p_hdr.peer_as[3]);
+
+        inet_ntop(AF_INET, p_hdr.peer_bgp_id, peer_bgp_id, sizeof(peer_bgp_id));
+        SELF_DEBUG("sock=%d : Peer BGP-ID %x.%x.%x.%x (%s)", sock, p_hdr.peer_bgp_id[0],
+                   p_hdr.peer_bgp_id[1], p_hdr.peer_bgp_id[2], p_hdr.peer_bgp_id[3], peer_bgp_id);
+
+        // Format based on the type of RD
+        SELF_DEBUG("sock=%d : Peer RD type = %d %d", sock, p_hdr.peer_dist_id[0], p_hdr.peer_dist_id[1]);
+        switch (p_hdr.peer_dist_id[1]) {
+            case 1: // admin = 4bytes (IP address), assign number = 2bytes
+                snprintf(peer_rd, sizeof(peer_rd), "%d.%d.%d.%d:%d",
+                         p_hdr.peer_dist_id[2], p_hdr.peer_dist_id[3],
+                         p_hdr.peer_dist_id[4], p_hdr.peer_dist_id[5],
+                         p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]);
+                break;
+
+            case 2: // admin = 4bytes (ASN), sub field 2bytes
+                snprintf(peer_rd, sizeof(peer_rd), "%lu:%d",
+                         (unsigned long) (p_hdr.peer_dist_id[2] << 24
+                                          | p_hdr.peer_dist_id[3] << 16
+                                          | p_hdr.peer_dist_id[4] << 8 | p_hdr.peer_dist_id[5]),
+                         p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]);
+                break;
+            default: // Type 0:  // admin = 2 bytes, sub field = 4 bytes
+                snprintf(peer_rd, sizeof(peer_rd), "%d:%lu",
+                         p_hdr.peer_dist_id[2] << 8 | p_hdr.peer_dist_id[3],
+                         (unsigned long) (p_hdr.peer_dist_id[4] << 24
+                                          | p_hdr.peer_dist_id[5] << 16
+                                          | p_hdr.peer_dist_id[6] << 8 | p_hdr.peer_dist_id[7]));
+                break;
+        }
+
+        // Update the DB peer entry struct
+        update.peer[LIB_PEER_ADDR].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ADDR];
+        update.peer[LIB_PEER_ADDR].value.push_back(peer_addr);
+
+        numString.str(std::string());
+        numString << strtoll(peer_as, NULL, 16);
+
+        update.peer[LIB_PEER_AS].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_AS];
+        update.peer[LIB_PEER_AS].value.push_back(numString.str());
+
+        update.peer[LIB_PEER_BGP_ID].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_BGP_ID];
+        update.peer[LIB_PEER_BGP_ID].value.push_back(peer_bgp_id);
+
+        update.peer[LIB_PEER_RD].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_RD];
+        update.peer[LIB_PEER_RD].value.push_back(peer_rd);
+
+        // Save the advertised timestamp
+        bgp::SWAP_BYTES(&p_hdr.ts_secs);
+        bgp::SWAP_BYTES(&p_hdr.ts_usecs);
+
+        if (p_hdr.ts_secs != 0) {
+            numString.str(std::string());
+            numString << p_hdr.ts_secs;
+
+            update.peer[LIB_PEER_TIMESTAMP_SECS].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_TIMESTAMP_SECS];
+            update.peer[LIB_PEER_TIMESTAMP_SECS].value.push_back(numString.str());
+
+            numString.str(std::string());
+            numString << p_hdr.ts_usecs;
+
+            update.peer[LIB_PEER_TIMESTAMP_USECS].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_TIMESTAMP_USECS];
+            update.peer[LIB_PEER_TIMESTAMP_USECS].value.push_back(numString.str());
+
+        } else {
+            timeval tv;
+
+            gettimeofday(&tv, NULL);
+
+            numString.str(std::string());
+            numString << tv.tv_sec;
+
+            update.peer[LIB_PEER_TIMESTAMP_SECS].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_TIMESTAMP_SECS];
+            update.peer[LIB_PEER_TIMESTAMP_SECS].value.push_back(numString.str());
+
+            numString.str(std::string());
+            numString << tv.tv_usec;
+
+            update.peer[LIB_PEER_TIMESTAMP_USECS].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_TIMESTAMP_USECS];
+            update.peer[LIB_PEER_TIMESTAMP_USECS].value.push_back(numString.str());
+        }
+
+
+        // Is peer type L3VPN peer or global instance
+        if (p_hdr.peer_type == 1) { // L3VPN
+            update.peer[LIB_PEER_ISL3VPN].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISL3VPN];
+            update.peer[LIB_PEER_ISL3VPN].value.push_back(std::string("1"));
+        } else {
+            // Global Instance
+            update.peer[LIB_PEER_ISL3VPN].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_ISL3VPN];
+            update.peer[LIB_PEER_ISL3VPN].value.push_back(std::string("0"));
+        }
+
+        SELF_DEBUG("sock=%d : Peer Address = %s", sock, peer_addr);
+        SELF_DEBUG("sock=%d : Peer AS = (%x-%x)%x:%x", sock,
+                   p_hdr.peer_as[0], p_hdr.peer_as[1], p_hdr.peer_as[2],
+                   p_hdr.peer_as[3]);
+        SELF_DEBUG("sock=%d : Peer RD = %s", sock, peer_rd);
+
+    }
+
+
+    /**
 * Parses the BGP prefixes (advertised and withdrawn) in the update
 *
 * \details

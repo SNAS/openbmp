@@ -339,6 +339,39 @@ namespace parse_bgp_lib {
             "evpnOriginatingRouterIp"
     };
 
+
+    enum BGP_LIB_PEER {
+        LIB_PEER_HASH_ID,
+        LIB_ROUTER_HASH_ID,
+        LIB_PEER_RD,
+        LIB_PEER_ADDR,
+        LIB_PEER_BGP_ID,
+        LIB_PEER_AS,
+        LIB_PEER_ISL3VPN,
+        LIB_PEER_ISPREPOLICY,
+        LIB_PEER_ISADJIN,
+        LIB_PEER_ISIPV4,
+        LIB_PEER_TIMESTAMP_SECS,
+        LIB_PEER_TIMESTAMP_USECS,
+        LIB_PEER_MAX
+    };
+
+    const std::array<std::string, parse_bgp_lib::LIB_PEER_MAX> parse_bgp_lib_peer_names = {
+            std::string("peerHashId"),
+            "routerHashId",
+            "peerRd",
+            "peerAddr",
+            "peerBgpId",
+            "peerAs",
+            "peerIsL3vpn",
+            "peerIsPrepolicy",
+            "peerIsAdjin",
+            "peerIsIpv4",
+            "peerTimestampSecs",
+            "peerTimestampMicrosecs",
+    };
+
+
     /**
      * ENUM to define the prefix type used for prefix nlri in case AFI/SAFI is not sufficient, eg, BGP-LS nodes/link/prefix
      */
@@ -453,6 +486,19 @@ namespace parse_bgp_lib {
      */
     class parseBgpLib {
     public:
+        struct parse_bgp_lib_peer_hdr {
+            unsigned char peer_type;           ///< 1 byte
+            unsigned char peer_flags;          ///< 1 byte
+
+            unsigned char peer_dist_id[8];     ///< 8 byte peer route distinguisher
+            unsigned char peer_addr[16];       ///< 16 bytes
+            unsigned char peer_as[4];          ///< 4 byte
+            unsigned char peer_bgp_id[4];      ///< 4 byte peer bgp id
+            uint32_t      ts_secs;             ///< 4 byte timestamp in seconds
+            uint32_t      ts_usecs;            ///< 4 byte timestamp microseconds
+
+        } __attribute__ ((__packed__));
+
         /*********************************************************************//**
      * Constructors for class
      ***********************************************************************/
@@ -475,6 +521,7 @@ namespace parse_bgp_lib {
 
         typedef std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib_data> attr_map;
         typedef std::map<parse_bgp_lib::BGP_LIB_NLRI, parse_bgp_lib_data> nlri_map;
+        typedef std::map<parse_bgp_lib::BGP_LIB_PEER, parse_bgp_lib_data> peer_map;
 
         struct parse_bgp_lib_nlri {
             parse_bgp_lib::BGP_AFI afi;
@@ -487,7 +534,20 @@ namespace parse_bgp_lib {
             std::list<parse_bgp_lib_nlri> nlri_list;
             std::list<parse_bgp_lib_nlri> withdrawn_nlri_list;
             attr_map attrs;
+            peer_map peer;
         };
+
+        /**
+         * Parses the BMP peer header message
+         *
+         * \details
+         * Parse BGP update message
+         * \param [in]   peer_hdr       Struct peer_hdr
+         * \param [in]  parsed_update   Reference to parsed_update; will be updated with all parsed data
+         *
+         * \return ZERO is error, otherwise a positive value indicating the number of bytes read from update message
+         */
+        size_t parseBmpPeer(int sock, parse_bgp_lib_peer_hdr &peer_hdr, parsed_update &update);
 
         /**
          * Parses the update message

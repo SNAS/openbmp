@@ -82,7 +82,7 @@ public:
      * \param [in,out] peer_info   Persistent peer information
      */
     parseBGP(Logger *logPtr, MsgBusInterface *mbus_ptr, MsgBusInterface::obj_bgp_peer *peer_entry, string routerAddr,
-             BMPReader::peer_info *peer_info);
+             BMPReader::peer_info *peer_info, parse_bgp_lib::parseBgpLib *parseBgp);
 
     virtual ~parseBGP();
 
@@ -97,7 +97,7 @@ public:
      *
      * \returns True if error, false if no error.
      */
-    bool handleUpdate(u_char *data, size_t size, Template_map *template_map);
+    bool handleUpdate(u_char *data, size_t size, Template_map *template_map, parse_bgp_lib::parseBgpLib::parsed_update &update);
 
     /**
      * handle BGP notify event - updates the down event with parsed data
@@ -157,7 +157,9 @@ private:
     BMPReader::peer_info             *p_info;        ///< Persistent Peer information
 
     bool            debug;                           ///< debug flag to indicate debugging
-    Logger          *logger;                         ///< Logging class pointer
+    Logger          *logger;                        ///< Logging class pointer
+
+    parse_bgp_lib::parseBgpLib *parser;
 
     /**
      * Parses the BGP common header

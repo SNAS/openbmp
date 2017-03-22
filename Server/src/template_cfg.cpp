@@ -134,109 +134,6 @@
         return (true);
     }
 
-    bool Template_map::load_custom(const char *template_filename) {
-        /*
-         * Read the top level template file and populate top level template map
-         */
-        std::ifstream in(template_filename);
-        std::string contents((std::istreambuf_iterator<char>(in)),
-                             std::istreambuf_iterator<char>());
-//        std::cout << "Input file is " << contents.c_str() << std::endl;
-
-        char tmp[contents.length() + 1];
-        std::strcpy(tmp, contents.c_str());
-
-        char *bpos = tmp;
-        char *epos = tmp;
-        std::string prepend_string;
-        size_t remaining_length = strlen(bpos);
-        size_t read = 0;
-        template_cfg::TEMPLATE_TOPICS topic;
-
-        /*
-         * Append to a prepend string
-         */
-        while (remaining_length > 0) {
-            epos = strstr(bpos, "{{");
-            if (!epos) {
-                cout << "Done loading" << endl;
-                return(true);
-            }
-
-            prepend_string.append(bpos, epos - bpos);
-//            std::cout << "load Prepend string is now " << prepend_string << std::endl;
-
-            remaining_length -= epos - bpos + 2;
-            bpos += epos - bpos + 2; epos = bpos;
-//            std::cout << "load bpos: " << bpos << std::endl;
-//            std::cout << "load epos: " << epos << std::endl;
-
-
-            if (strncmp(bpos, "/*", strlen("/*")) == 0) {
-                std::cout << "Found a comment, skipping" << std::endl;
-
-                //Strip the newline
-                strip_last_newline(prepend_string);
-
-                epos = strstr(bpos, "}}");
-                remaining_length -= epos - bpos + 2;
-                bpos += epos - bpos + 2; epos = bpos;
-            } else if (strncmp(bpos, "#", strlen("#")) == 0) {
-                std::cout << "Found a special type" << std::endl;
-                strip_last_newline(prepend_string);
-
-                remaining_length -= 1;
-                bpos += 1; epos = bpos;
-                if (strncmp(bpos, "loop", strlen("loop")) == 0) {
-                    std::cout << "Error: Found a loop type at top level" << std::endl;
-                    return(false);
-                } else if (strncmp(bpos, "if_", strlen("if_")) == 0) {
-                    std::cout << "Error: Found a if type at top level" << std::endl;
-                    return(false);
-                } else {
-                    std::cout << "Found container type" << std::endl;
-                    template_cfg::Template_cfg template_cfg(logger, debug);
-                    if (strncmp(bpos, "unicast_prefix", strlen("unicast_prefix")) == 0) {
-                        topic = template_cfg::UNICAST_PREFIX;
-                    } else if (strncmp(bpos, "ls_nodes", strlen("ls_nodes")) == 0) {
-                        topic = template_cfg::LS_NODES;
-                    } else if (strncmp(bpos, "ls_links", strlen("ls_links")) == 0) {
-                        topic = template_cfg::LS_LINKS;
-                    } else if (strncmp(bpos, "ls_prefixes", strlen("ls_prefixes")) == 0) {
-                        topic = template_cfg::LS_PREFIXES;
-                    } else if (strncmp(bpos, "l3vpn", strlen("l3vpn")) == 0) {
-                        topic = template_cfg::L3_VPN;
-                    } else if (strncmp(bpos, "evpn", strlen("evpn")) == 0) {
-                        topic = template_cfg::EVPN;
-                    } else {
-                        std::cout << "Unknown template topic" << std::endl;
-                        return(false);
-                    }
-                    epos = strstr(bpos, "}}");
-                    remaining_length -= epos - bpos + 2;
-                    bpos += epos - bpos + 2;
-                    epos = bpos;
-
-                    read = template_cfg.create_container_loop(template_cfg::CONTAINER, topic, bpos, prepend_string);
-                    /*
-                     * Clear the prepend string
-                     */
-                    prepend_string.clear();
-                    if (!read) {
-                        std::cout << "Error creating container" << std::endl;
-                        return(false);
-                    }
-
-                    remaining_length -= read;
-                    bpos += read; epos = bpos;
-                    this->template_map.insert(std::pair<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>(topic,
-                                                                                                 template_cfg));
-                }
-            }
-        }
-        return(true);
-    }
-
 namespace template_cfg {
 
 
@@ -249,7 +146,7 @@ namespace template_cfg {
 
     size_t Template_cfg::execute_replace(char *buf, size_t max_buf_length,
                                            parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &nlri,
-                                           parse_bgp_lib::parseBgpLib::attr_map &attrs) {
+                                           parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer) {
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -273,7 +170,11 @@ namespace template_cfg {
                 replace_string = map_string(nlri.nlri[static_cast<parse_bgp_lib::BGP_LIB_NLRI>(this->replacement_var)].value);
                 break;
             }
-            default:
+            case template_cfg:: PEER : {
+                replace_string = map_string(peer[static_cast<parse_bgp_lib::BGP_LIB_PEER>(this->replacement_var)].value);
+                break;
+            }
+                default:
                 break;
         }
 
@@ -290,7 +191,7 @@ namespace template_cfg {
 
     size_t Template_cfg::execute_loop(char *buf, size_t max_buf_length,
                                            std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                                           parse_bgp_lib::parseBgpLib::attr_map &attrs) {
+                                           parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer) {
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -328,7 +229,7 @@ namespace template_cfg {
                         return (0);
                     }
                     case template_cfg::REPLACE : {
-                        written = it->execute_replace(buf, remaining_len, rib_list[i], attrs);
+                        written = it->execute_replace(buf, remaining_len, rib_list[i], attrs, peer);
                         if ((remaining_len - written) <= 0) {
                             return (max_buf_length - remaining_len);
                         }
@@ -355,7 +256,7 @@ namespace template_cfg {
 
     size_t Template_cfg::execute_container(char *buf, size_t max_buf_length,
                                          std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                                         parse_bgp_lib::parseBgpLib::attr_map &attrs) {
+                                         parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer) {
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -377,7 +278,7 @@ namespace template_cfg {
                     return (0);
                 }
                 case template_cfg:: LOOP : {
-                    written = it->execute_loop(buf, remaining_len, rib_list, attrs);
+                    written = it->execute_loop(buf, remaining_len, rib_list, attrs, peer);
                     if ((remaining_len - written) <= 0) {
                         return (max_buf_length - remaining_len);
                     }
@@ -385,6 +286,15 @@ namespace template_cfg {
                     break;
                 }
                 case template_cfg:: REPLACE : {
+                    if (this->replacement_list_type == NLRI) {
+                        cout << "Error: Replacement type inside container cannot be NLRI" << endl;
+                        return (0);
+                    }
+                    written = it->execute_replace(buf, remaining_len, rib_list[0], attrs, peer);
+                    if ((remaining_len - written) <= 0) {
+                        return (max_buf_length - remaining_len);
+                    }
+                    buf += written; remaining_len -= written;
                     break;
                 }
                 case template_cfg:: END : {
@@ -563,6 +473,12 @@ namespace template_cfg {
                 template_cfg::Template_cfg::lookup_map.insert(
                         std::pair<std::string, int>(parse_bgp_lib::parse_bgp_lib_nlri_names[i], i));
             }
+
+            for (int i = 0; i < parse_bgp_lib::LIB_PEER_MAX; i++) {
+                template_cfg::Template_cfg::lookup_map.insert(
+                        std::pair<std::string, int>(parse_bgp_lib::parse_bgp_lib_peer_names[i], i));
+            }
+
         }
 
 //        std::cout << "Prepend string for replace is now " << this->prepend_string << std::endl;
@@ -579,6 +495,8 @@ namespace template_cfg {
             this->replacement_list_type = NLRI;
        } else if (strncmp(bpos, "attr", strlen("attr")) == 0) {
             this->replacement_list_type = ATTR;
+        } else if (strncmp(bpos, "peer", strlen("peer")) == 0) {
+            this->replacement_list_type = PEER;
         } else {
             cout << "Invalid replacement type " << epos << std::endl;
         }

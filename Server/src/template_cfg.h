@@ -42,7 +42,8 @@ namespace template_cfg {
 
     enum REPLACEMENT_LIST_TYPE {
         ATTR,
-        NLRI
+        NLRI,
+        PEER
     };
 
     enum TEMPLATE_FORMAT_TYPE {
@@ -82,15 +83,15 @@ namespace template_cfg {
 
         size_t execute_container(char *buf, size_t max_buf_length,
                                std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                               parse_bgp_lib::parseBgpLib::attr_map &attrs);
+                               parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer);
 
         size_t execute_loop(char *buf, size_t max_buf_length,
                                  std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                                 parse_bgp_lib::parseBgpLib::attr_map &attrs);
+                                 parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer);
 
         size_t execute_replace(char *buf, size_t max_buf_length,
                             parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &nlri,
-                            parse_bgp_lib::parseBgpLib::attr_map &attrs);
+                            parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer);
 
         std::list<template_cfg::Template_cfg> template_children;
 
@@ -210,6 +211,9 @@ static void print_template (template_cfg::Template_cfg &template_cfg_print, size
                     break;
                 case template_cfg::NLRI :
                     cout << "NLRI, replacement variable: " << template_cfg_print.replacement_var << endl;
+                    break;
+                case template_cfg::PEER :
+                    cout << "PEER, replacement variable: " << template_cfg_print.replacement_var << endl;
                     break;
                 default:
                     break;

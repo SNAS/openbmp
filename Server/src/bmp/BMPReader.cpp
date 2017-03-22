@@ -146,8 +146,12 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
     // Setup the router record table object
     memcpy(r_object.ip_addr, client->c_ip, sizeof(client->c_ip));
 
+    parse_bgp_lib::parseBgpLib parser(logger, debug, &peer_info_map[peer_info_key]);
+    parse_bgp_lib::parseBgpLib::parsed_update update;
+    parse_bgp_lib::parseBgpLib::parse_bgp_lib_peer_hdr parse_peer_hdr;
+
     try {
-        bmp_type = pBMP->handleMessage(read_fd);
+        bmp_type = pBMP->handleMessage(read_fd, &parse_peer_hdr);
 
         /*
          * Now that we have parsed the BMP message...
@@ -164,8 +168,37 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             peer_info_key =  p_entry.peer_addr;
             peer_info_key += p_entry.peer_rd;
 
+            parser.parseBmpPeer(read_fd, parse_peer_hdr, update);
+            update.peer[parse_bgp_lib::LIB_ROUTER_HASH_ID].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_ROUTER_HASH_ID];
+            update.peer[parse_bgp_lib::LIB_ROUTER_HASH_ID].value.push_back(parse_bgp_lib::hash_toStr(r_object.hash_id));
+
             if (bmp_type != parseBMP::TYPE_PEER_UP)
                 mbus_ptr->update_Peer(p_entry, NULL, NULL, mbus_ptr->PEER_ACTION_FIRST);     // add the peer entry
+            /*
+             * Create the peer hash_id here
+             */
+            // Generate the hash
+            MD5 hash;
+
+            parse_bgp_lib::update_hash(&update.peer[parse_bgp_lib::LIB_PEER_ADDR].value, &hash);
+            parse_bgp_lib::update_hash(&update.peer[parse_bgp_lib::LIB_PEER_RD].value, &hash);
+            parse_bgp_lib::update_hash(&update.peer[parse_bgp_lib::LIB_ROUTER_HASH_ID].value, &hash);
+
+            /* TODO: Uncomment once this is fixed in XR
+             * Disable hashing the bgp peer ID since XR has an issue where it sends 0.0.0.0 on subsequent PEER_UP's
+             *    This will be fixed in XR, but for now we can disable hashing on it.
+             *
+            hash.update((unsigned char *) p_object.peer_bgp_id,
+                    strlen(p_object.peer_bgp_id));
+            */
+
+            hash.finalize();
+
+            // Save the hash
+            unsigned char *hash_raw = hash.raw_digest();
+            update.peer[parse_bgp_lib::LIB_PEER_HASH_ID].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_HASH_ID];
+            update.peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
+            delete[] hash_raw;
         }
 
         /*
@@ -183,7 +216,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
 
                     // Prepare the BGP parser
                     pBGP = new parseBGP(logger, mbus_ptr, &p_entry, (char *)r_object.ip_addr,
-                                        &peer_info_map[peer_info_key]);
+                                        &peer_info_map[peer_info_key], &parser);
 
                     if (cfg->debug_bgp)
                        pBGP->enableDebug();
@@ -244,7 +277,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
 
                     // Prepare the BGP parser
                     pBGP = new parseBGP(logger, mbus_ptr, &p_entry, (char *)r_object.ip_addr,
-                                        &peer_info_map[peer_info_key]);
+                                        &peer_info_map[peer_info_key], &parser);
 
                     if (cfg->debug_bgp)
                        pBGP->enableDebug();
@@ -272,12 +305,12 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                  *     parseBGP will update mysql directly
                  */
                 pBGP = new parseBGP(logger, mbus_ptr, &p_entry, (char *)r_object.ip_addr,
-                                    &peer_info_map[peer_info_key]);
+                                    &peer_info_map[peer_info_key], &parser);
 
                 if (cfg->debug_bgp)
                     pBGP->enableDebug();
 
-                pBGP->handleUpdate(pBMP->bmp_data, pBMP->bmp_data_len, template_map);
+                pBGP->handleUpdate(pBMP->bmp_data, pBMP->bmp_data_len, template_map, update);
                 delete pBGP;
 
                 break;
