@@ -22,6 +22,11 @@
 
 namespace parse_bgp_lib {
 
+    #define BMP_PACKET_BUF_SIZE 68000   ///< Size of the BMP packet buffer (memory)
+    #define BMP_ROUTER_INIT_DATA_SIZE 4096   ///< Size of the BMP packet buffer (memory)
+    #define BMP_INIT_MSG_LEN 4          ///< BMP init message header length, does not count the info field
+
+
     /**
      * Defines the attribute types
      *
@@ -342,7 +347,6 @@ namespace parse_bgp_lib {
 
     enum BGP_LIB_PEER {
         LIB_PEER_HASH_ID,
-        LIB_ROUTER_HASH_ID,
         LIB_PEER_RD,
         LIB_PEER_ADDR,
         LIB_PEER_BGP_ID,
@@ -358,7 +362,6 @@ namespace parse_bgp_lib {
 
     const std::array<std::string, parse_bgp_lib::LIB_PEER_MAX> parse_bgp_lib_peer_names = {
             std::string("peerHashId"),
-            "routerHashId",
             "peerRd",
             "peerAddr",
             "peerBgpId",
@@ -368,7 +371,60 @@ namespace parse_bgp_lib {
             "peerIsAdjin",
             "peerIsIpv4",
             "peerTimestampSecs",
-            "peerTimestampMicrosecs",
+            "peerTimestampMicrosecs"
+    };
+
+    /**
+ * OBJECT: routers
+ *
+ * Router table schema
+ */
+    struct obj_router {
+        u_char      hash_id[16];            ///< Router hash ID of name and src_addr
+        u_char      name[255];              ///< BMP router sysName (initiation Type=2)
+        u_char      descr[255];             ///< BMP router sysDescr (initiation Type=1)
+        u_char      ip_addr[46];            ///< BMP router source IP address in printed form
+        char        bgp_id[16];             ///< BMP Router bgp-id
+        uint32_t    asn;                    ///< BMP router ASN
+        uint16_t    term_reason_code;       ///< BMP termination reason code
+        char        term_reason_text[255];  ///< BMP termination reason text decode string
+
+        char        term_data[4096];        ///< Type=0 String termination info data
+        char        initiate_data[4096];    ///< Type=0 String initiation info data
+
+        uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
+        uint32_t    timestamp_us;           ///< Timestamp microseconds
+    };
+
+    enum BGP_LIB_ROUTER {
+        LIB_ROUTER_HASH_ID,
+        LIB_ROUTER_NAME,
+        LIB_ROUTER_DESCR,
+        LIB_ROUTER_IP,
+        LIB_ROUTER_BGP_ID,
+        LIB_ROUTER_ASN,
+        LIB_ROUTER_TERM_REASON_CODE,
+        LIB_ROUTER_TERM_REASON_TEXT,
+        LIB_ROUTER_TERM_DATA,
+        LIB_ROUTER_INITIATE_DATA,
+        LIB_ROUTER_TIMESTAMP_SECS,
+        LIB_ROUTER_TIMESTAMP_USECS,
+        LIB_ROUTER_MAX
+    };
+
+    const std::array<std::string, parse_bgp_lib::LIB_ROUTER_MAX> parse_bgp_lib_router_names = {
+            std::string("routerHashId"),
+            "routerName",
+            "routerDescr",
+            "routerIp",
+            "routerBgpId",
+            "routerAsn",
+            "routerTermReasonCode",
+            "routerTermReasonText",
+            "routerTermData",
+            "routerInitiateData",
+            "routerTimestampSecs",
+            "routerTimestampMicrosecs"
     };
 
 
@@ -499,6 +555,18 @@ namespace parse_bgp_lib {
 
         } __attribute__ ((__packed__));
 
+        /**
+         * BMP Init message
+         */
+        struct parse_bgp_lib_init_msg_v3 {
+            uint16_t        type;              ///< 2 bytes - Information type
+            uint16_t        len;               ///< 2 bytes - Length of the information that follows
+
+            char           *info;              ///< Information - variable
+
+        } __attribute__ ((__packed__));
+
+
         /*********************************************************************//**
      * Constructors for class
      ***********************************************************************/
@@ -522,6 +590,8 @@ namespace parse_bgp_lib {
         typedef std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib_data> attr_map;
         typedef std::map<parse_bgp_lib::BGP_LIB_NLRI, parse_bgp_lib_data> nlri_map;
         typedef std::map<parse_bgp_lib::BGP_LIB_PEER, parse_bgp_lib_data> peer_map;
+        typedef std::map<parse_bgp_lib::BGP_LIB_ROUTER, parse_bgp_lib_data> router_map;
+
 
         struct parse_bgp_lib_nlri {
             parse_bgp_lib::BGP_AFI afi;
@@ -535,19 +605,32 @@ namespace parse_bgp_lib {
             std::list<parse_bgp_lib_nlri> withdrawn_nlri_list;
             attr_map attrs;
             peer_map peer;
+            router_map router;
         };
+
+
+        /**
+         * Parses the BMP router init message
+         *
+         * \details
+         * Parse BMP Router Init message
+         * \param [in]  bmp_data        Buffer containing the data
+         * \param [in]  parsed_update   Reference to parsed_update; will be updated with all parsed data
+         *
+         */
+        void parseBmpInitMsg(int sock, u_char *bmp_data, size_t bmp_data_len, parsed_update &update);
+
 
         /**
          * Parses the BMP peer header message
          *
          * \details
-         * Parse BGP update message
+         * Parse BMP Peer header
          * \param [in]   peer_hdr       Struct peer_hdr
          * \param [in]  parsed_update   Reference to parsed_update; will be updated with all parsed data
          *
-         * \return ZERO is error, otherwise a positive value indicating the number of bytes read from update message
          */
-        size_t parseBmpPeer(int sock, parse_bgp_lib_peer_hdr &peer_hdr, parsed_update &update);
+        void parseBmpPeer(int sock, parse_bgp_lib_peer_hdr &peer_hdr, parsed_update &update);
 
         /**
          * Parses the update message
@@ -654,6 +737,27 @@ namespace parse_bgp_lib {
             BGP_SAFI_RT_CONSTRAINTS_INTERNAL,        // RFC4684
             BGP_SAFI_MAX_INTERNAL
         };
+
+        /**
+         * BMP Initiation Message Types
+         */
+        enum BMP_INIT_TYPES { INIT_TYPE_FREE_FORM_STRING=0, INIT_TYPE_SYSDESCR, INIT_TYPE_SYSNAME,
+            INIT_TYPE_ROUTER_BGP_ID=65531 };
+
+        /**
+         * BMP Termination Message Types
+         */
+        enum BMP_TERM_TYPES { TERM_TYPE_FREE_FORM_STRING=0, TERM_TYPE_REASON };
+
+        /**
+         * BMP Termination Message reasons for type=1
+         */
+        enum BMP_TERM_TYPE1_REASON { TERM_REASON_ADMIN_CLOSE=0, TERM_REASON_UNSPECIFIED, TERM_REASON_OUT_OF_RESOURCES,
+            TERM_REASON_REDUNDANT_CONN,
+            TERM_REASON_OPENBMP_CONN_CLOSED=65533, TERM_REASON_OPENBMP_CONN_ERR=65534 };
+
+
+
 
         /*
          * An array to track if AddPath is enabled for a AFI/SAFI, this should be populated

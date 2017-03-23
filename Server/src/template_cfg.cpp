@@ -61,6 +61,8 @@
                         topic = template_cfg::L3_VPN;
                     } else if (key.compare("evpn") == 0) {
                         topic = template_cfg::EVPN;
+                    } else if (key.compare("router") == 0) {
+                        topic = template_cfg::BMP_ROUTER;
                     } else {
                         std::cout << "Unknown template topic" << std::endl;
                         return (false);
@@ -146,7 +148,9 @@ namespace template_cfg {
 
     size_t Template_cfg::execute_replace(char *buf, size_t max_buf_length,
                                            parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &nlri,
-                                           parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer) {
+                                           parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                         parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                         parse_bgp_lib::parseBgpLib::router_map &router) {
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -174,7 +178,11 @@ namespace template_cfg {
                 replace_string = map_string(peer[static_cast<parse_bgp_lib::BGP_LIB_PEER>(this->replacement_var)].value);
                 break;
             }
-                default:
+            case template_cfg:: ROUTER : {
+                replace_string = map_string(router[static_cast<parse_bgp_lib::BGP_LIB_ROUTER>(this->replacement_var)].value);
+                break;
+            }
+            default:
                 break;
         }
 
@@ -191,7 +199,9 @@ namespace template_cfg {
 
     size_t Template_cfg::execute_loop(char *buf, size_t max_buf_length,
                                            std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                                           parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer) {
+                                           parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                           parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                           parse_bgp_lib::parseBgpLib::router_map &router) {
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -229,7 +239,7 @@ namespace template_cfg {
                         return (0);
                     }
                     case template_cfg::REPLACE : {
-                        written = it->execute_replace(buf, remaining_len, rib_list[i], attrs, peer);
+                        written = it->execute_replace(buf, remaining_len, rib_list[i], attrs, peer, router);
                         if ((remaining_len - written) <= 0) {
                             return (max_buf_length - remaining_len);
                         }
@@ -256,7 +266,9 @@ namespace template_cfg {
 
     size_t Template_cfg::execute_container(char *buf, size_t max_buf_length,
                                          std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                                         parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer) {
+                                         parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                           parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                           parse_bgp_lib::parseBgpLib::router_map &router) {
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -278,7 +290,7 @@ namespace template_cfg {
                     return (0);
                 }
                 case template_cfg:: LOOP : {
-                    written = it->execute_loop(buf, remaining_len, rib_list, attrs, peer);
+                    written = it->execute_loop(buf, remaining_len, rib_list, attrs, peer, router);
                     if ((remaining_len - written) <= 0) {
                         return (max_buf_length - remaining_len);
                     }
@@ -290,7 +302,8 @@ namespace template_cfg {
                         cout << "Error: Replacement type inside container cannot be NLRI" << endl;
                         return (0);
                     }
-                    written = it->execute_replace(buf, remaining_len, rib_list[0], attrs, peer);
+                    written = it->execute_replace(buf, remaining_len, *(parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri *)NULL,
+                                                  attrs, peer, router);
                     if ((remaining_len - written) <= 0) {
                         return (max_buf_length - remaining_len);
                     }
@@ -479,6 +492,12 @@ namespace template_cfg {
                         std::pair<std::string, int>(parse_bgp_lib::parse_bgp_lib_peer_names[i], i));
             }
 
+            for (int i = 0; i < parse_bgp_lib::LIB_ROUTER_MAX; i++) {
+                template_cfg::Template_cfg::lookup_map.insert(
+                        std::pair<std::string, int>(parse_bgp_lib::parse_bgp_lib_router_names[i], i));
+            }
+
+
         }
 
 //        std::cout << "Prepend string for replace is now " << this->prepend_string << std::endl;
@@ -497,6 +516,8 @@ namespace template_cfg {
             this->replacement_list_type = ATTR;
         } else if (strncmp(bpos, "peer", strlen("peer")) == 0) {
             this->replacement_list_type = PEER;
+        } else if (strncmp(bpos, "router", strlen("router")) == 0) {
+            this->replacement_list_type = ROUTER;
         } else {
             cout << "Invalid replacement type " << epos << std::endl;
         }

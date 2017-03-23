@@ -280,6 +280,101 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
 }
 
     /**
+     * Parses the BMP router init message
+     *
+     * \details
+     * Parse BMP Router Init message
+     * \param [in]  bmp_data        Buffer containing the data
+     * \param [in]  parsed_update   Reference to parsed_update; will be updated with all parsed data
+     *
+     */
+    void parseBgpLib::parseBmpInitMsg(int sock, u_char *bmp_data, size_t bmp_data_len, parsed_update &update) {
+        parse_bgp_lib_init_msg_v3 initMsg;
+        char infoBuf[BMP_ROUTER_INIT_DATA_SIZE];
+        int infoLen;
+
+        u_char *bufPtr = bmp_data;
+
+        /*
+         * Loop through the init message (in buffer) to parse each TLV
+         */
+        for (int i=0; i < bmp_data_len; i += BMP_INIT_MSG_LEN) {
+            memcpy(&initMsg, bufPtr, BMP_INIT_MSG_LEN);
+            initMsg.info = NULL;
+            bgp::SWAP_BYTES(&initMsg.len);
+            bgp::SWAP_BYTES(&initMsg.type);
+
+            bufPtr += BMP_INIT_MSG_LEN;                // Move pointer past the info header
+
+            // TODO: Change to SELF_DEBUG after IOS supports INIT messages correctly
+            SELF_DEBUG("Init message type %hu and length %hu parsed", initMsg.type, initMsg.len);
+
+            if (initMsg.len > 0) {
+                infoLen = sizeof(infoBuf) < initMsg.len ? sizeof(infoBuf) : initMsg.len;
+                bzero(infoBuf, sizeof(infoBuf));
+                memcpy(infoBuf, bufPtr, infoLen);
+                bufPtr += infoLen;                     // Move pointer past the info data
+                i += infoLen;                          // Update the counter past the info data
+
+                initMsg.info = infoBuf;
+
+            }
+
+            /*
+             * Save the data based on info type
+             */
+            switch (initMsg.type) {
+                case INIT_TYPE_FREE_FORM_STRING :
+                    update.router[LIB_ROUTER_INITIATE_DATA].name = parse_bgp_lib::parse_bgp_lib_router_names[LIB_ROUTER_INITIATE_DATA];
+                    update.router[LIB_ROUTER_INITIATE_DATA].value.push_back(std::string(initMsg.info, infoLen));
+
+                    SELF_DEBUG("Init message type %hu = %s",
+                               initMsg.type, update.router[LIB_ROUTER_INITIATE_DATA].value.front().c_str());
+
+                    break;
+
+                case INIT_TYPE_SYSNAME :
+                    update.router[LIB_ROUTER_NAME].name = parse_bgp_lib::parse_bgp_lib_router_names[LIB_ROUTER_NAME];
+                    update.router[LIB_ROUTER_NAME].value.push_back(std::string(initMsg.info, infoLen));
+
+                    SELF_DEBUG("Init message type %hu = %s",
+                               initMsg.type, update.router[LIB_ROUTER_NAME].value.front().c_str());
+
+                    break;
+
+                case INIT_TYPE_SYSDESCR :
+                    update.router[LIB_ROUTER_DESCR].name = parse_bgp_lib::parse_bgp_lib_router_names[LIB_ROUTER_DESCR];
+                    update.router[LIB_ROUTER_DESCR].value.push_back(std::string(initMsg.info, infoLen));
+
+                    SELF_DEBUG("Init message type %hu = %s",
+                               initMsg.type, update.router[LIB_ROUTER_DESCR].value.front().c_str());
+                    break;
+
+                case INIT_TYPE_ROUTER_BGP_ID:
+                    if (initMsg.len != sizeof(in_addr_t)) {
+                        LOG_NOTICE("Init message type BGP ID not of IPv4 addr length");
+                        break;
+                    }
+                    char ipv4_char[16];
+                    inet_ntop(AF_INET, initMsg.info, ipv4_char, sizeof(ipv4_char));
+
+                    update.router[LIB_ROUTER_BGP_ID].name = parse_bgp_lib::parse_bgp_lib_router_names[LIB_ROUTER_BGP_ID];
+                    update.router[LIB_ROUTER_BGP_ID].value.push_back(ipv4_char);
+
+                    SELF_DEBUG("Init message type %hu = %s",
+                               initMsg.type, update.router[LIB_ROUTER_BGP_ID].value.front().c_str());
+
+                    break;
+
+                default:
+                    LOG_NOTICE("Init message type %hu is unexpected per rfc7854", initMsg.type);
+            }
+        }
+    }
+
+
+
+    /**
      * Parses the BMP peer header message
      *
      * \details
@@ -287,9 +382,8 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
      * \param [in]   peer_hdr       Struct peer_hdr
      * \param [in]  parsed_update   Reference to parsed_update; will be updated with all parsed data
      *
-     * \return ZERO is error, otherwise a positive value indicating the number of bytes read from update message
      */
-    size_t parseBgpLib::parseBmpPeer(int sock, parse_bgp_lib_peer_hdr &p_hdr, parsed_update &update) {
+    void parseBgpLib::parseBmpPeer(int sock, parse_bgp_lib_peer_hdr &p_hdr, parsed_update &update) {
         char peer_addr[40];                         ///< Printed format of the peer address (Ipv4 and Ipv6)
         char peer_as[32];                           ///< Printed format of the peer ASN
         char peer_rd[32];                           ///< Printed format of the peer RD

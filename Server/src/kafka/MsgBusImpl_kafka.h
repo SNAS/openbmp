@@ -79,11 +79,19 @@ public:
     void send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data, size_t data_len);
 
     virtual void update_unicastPrefixTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                                               parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                               parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                               parse_bgp_lib::parseBgpLib::router_map &router,
                                                unicast_prefix_action_code code, template_cfg::Template_cfg &template_container);
+
     void update_LsNodeTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
-                       parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                parse_bgp_lib::parseBgpLib::router_map &router,
                                 ls_action_code code, template_cfg::Template_cfg &template_container);
+
+    void update_RouterTemplated(parse_bgp_lib::parseBgpLib::router_map &router,
+                                router_action_code code, template_cfg::Template_cfg &template_container);
 
 
     // Debug methods

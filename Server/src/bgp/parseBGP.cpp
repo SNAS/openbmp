@@ -427,7 +427,8 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
         mbus_ptr->update_unicastPrefix(*p_entry, rib_list, update.attrs, mbus_ptr->UNICAST_PREFIX_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::UNICAST_PREFIX);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_unicastPrefixTemplated(rib_list, update.attrs, update.peer, mbus_ptr->UNICAST_PREFIX_ACTION_ADD, it->second);
+            mbus_ptr->update_unicastPrefixTemplated(rib_list, update.attrs, update.peer, update.router,
+                                                    mbus_ptr->UNICAST_PREFIX_ACTION_ADD, it->second);
         rib_list.clear();
     }
 
@@ -436,7 +437,8 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
         mbus_ptr->update_LsNode(*p_entry, ls_node_list, update.attrs, mbus_ptr->LS_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_NODES);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_LsNodeTemplated(ls_node_list, update.attrs, update.peer, mbus_ptr->LS_ACTION_ADD, it->second);
+            mbus_ptr->update_LsNodeTemplated(ls_node_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->LS_ACTION_ADD, it->second);
         ls_node_list.clear();
     }
 
@@ -528,7 +530,8 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
         mbus_ptr->update_unicastPrefix(*p_entry, rib_list, update.attrs, mbus_ptr->UNICAST_PREFIX_ACTION_DEL);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::UNICAST_PREFIX);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_unicastPrefixTemplated(rib_list, update.attrs, update.peer, mbus_ptr->UNICAST_PREFIX_ACTION_DEL, it->second);
+            mbus_ptr->update_unicastPrefixTemplated(rib_list, update.attrs, update.peer, update.router,
+                                                    mbus_ptr->UNICAST_PREFIX_ACTION_DEL, it->second);
     }
 
     if (ls_node_list.size() > 0) {
@@ -536,7 +539,8 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
         mbus_ptr->update_LsNode(*p_entry, ls_node_list, update.attrs, mbus_ptr->LS_ACTION_DEL);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_NODES);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_LsNodeTemplated(ls_node_list, update.attrs, update.peer, mbus_ptr->LS_ACTION_DEL, it->second);
+            mbus_ptr->update_LsNodeTemplated(ls_node_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->LS_ACTION_DEL, it->second);
     }
 
     if (ls_link_list.size() > 0) {

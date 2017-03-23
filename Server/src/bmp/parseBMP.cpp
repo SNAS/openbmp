@@ -733,7 +733,8 @@ bool parseBMP::handleStatsReport(int sock, MsgBusInterface::obj_stats_report &st
  * \param [in]     sock        Socket to read the init message from
  * \param [in/out] r_entry     Already defined router entry reference (will be updated)
  */
-void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
+void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry,
+                             void *parse_bgp_lib_bmp_data, size_t &parse_bgp_lib_data_len) {
     init_msg_v3 initMsg;
     char infoBuf[sizeof(r_entry.initiate_data)];
     int infoLen;
@@ -741,6 +742,8 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
     // Buffer the init message for parsing
     bufferBMPMessage(sock);
 
+    memcpy(parse_bgp_lib_bmp_data, bmp_data, bmp_data_len);
+    parse_bgp_lib_data_len = bmp_data_len;
     u_char *bufPtr = bmp_data;
 
     /*

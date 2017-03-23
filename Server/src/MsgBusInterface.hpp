@@ -236,6 +236,25 @@ public:
     virtual void update_Router(struct obj_router &r_object, router_action_code code) = 0;
 
     /*****************************************************************//**
+     * \brief       Add/Update a router object templated
+     *
+     * \details     Will generate a message to add a new router or update an existing
+     *              router.
+     *
+     * \param[in,out]   router          Router object
+     * \param[in]       code            Action code for router update
+     * \param[in]       template Template
+     *
+     * \returns     The router.hash_id will be updated based on the
+     *              supplied data.
+     *
+     * \note        Caller must free any allocated memory, which is
+     *              safe to do so when this method returns.
+     *****************************************************************/
+    virtual void update_RouterTemplated(parse_bgp_lib::parseBgpLib::router_map &router,
+                               router_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+    /*****************************************************************//**
      * \brief       Add/Update a BGP peer object
      *
      * \details     Will generate a message to add a new BGP peer
@@ -308,8 +327,10 @@ public:
      *              safe to do so when this method returns.
      *****************************************************************/
     virtual void update_unicastPrefixTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                                      parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
-                                      unicast_prefix_action_code code, template_cfg::Template_cfg &template_container) = 0;
+                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                               parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                               parse_bgp_lib::parseBgpLib::router_map &router,
+                                               unicast_prefix_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
 
     /*****************************************************************//**
@@ -386,8 +407,10 @@ public:
      * \param[in]   code       Linkstate action code
      *****************************************************************/
     virtual void update_LsNodeTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
-                               parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
-                               ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
+                                        parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                        parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                        parse_bgp_lib::parseBgpLib::router_map &router,
+                                        ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
 
     /*****************************************************************//**

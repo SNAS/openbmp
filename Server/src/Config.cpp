@@ -76,6 +76,7 @@ Config::Config() {
     topic_names_map[MSGBUS_TOPIC_VAR_LS_PREFIX_TEMPLATED] = MSGBUS_TOPIC_LS_PREFIX_TEMPLATED;
     topic_names_map[MSGBUS_TOPIC_VAR_L3VPN_TEMPLATED] = MSGBUS_TOPIC_L3VPN_TEMPLATED;
     topic_names_map[MSGBUS_TOPIC_VAR_EVPN_TEMPLATED] = MSGBUS_TOPIC_EVPN_TEMPLATED;
+    topic_names_map[MSGBUS_TOPIC_VAR_ROUTER_TEMPLATED] = MSGBUS_TOPIC_ROUTER_TEMPLATED;
 }
 
 /*********************************************************************//**

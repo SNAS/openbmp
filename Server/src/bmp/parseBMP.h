@@ -211,7 +211,8 @@ public:
      * \param [in]     sock        Socket to read the init message from
      * \param [in/out] r_entry     Already defined router entry reference (will be updated)
      */
-    void handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry);
+    void handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry,
+                       void *parse_bgp_lib_bmp_data, size_t &parse_bgp_lib_data_len);
 
     /**
      * handle the termination message, router entry will be updated
