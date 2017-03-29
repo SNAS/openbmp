@@ -93,6 +93,9 @@ public:
     void update_RouterTemplated(parse_bgp_lib::parseBgpLib::router_map &router,
                                 router_action_code code, template_cfg::Template_cfg &template_container);
 
+    void update_CollectorTemplated(parse_bgp_lib::parseBgpLib::collector_map &collector,
+                                           collector_action_code action_code, template_cfg::Template_cfg &template_container);
+
 
     // Debug methods
     void enableDebug();

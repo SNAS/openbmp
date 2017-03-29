@@ -36,10 +36,12 @@ public:
     #define MSGBUS_TOPIC_UNICAST_PREFIX_TEMPLATED   "openbmp.parsed.unicast_prefix_templated"
     #define MSGBUS_TOPIC_LS_NODE_TEMPLATED          "openbmp.parsed.ls_node_templated"
     #define MSGBUS_TOPIC_LS_LINK_TEMPLATED          "openbmp.parsed.ls_link_templated"
-    #define MSGBUS_TOPIC_LS_PREFIX_TEMPLATED          "openbmp.parsed.ls_prefix_templated"
-    #define MSGBUS_TOPIC_L3VPN_TEMPLATED          "openbmp.parsed.l3vpn_templated"
-    #define MSGBUS_TOPIC_EVPN_TEMPLATED          "openbmp.parsed.evpn_templated"
-    #define MSGBUS_TOPIC_ROUTER_TEMPLATED          "openbmp.parsed.router_templated"
+    #define MSGBUS_TOPIC_LS_PREFIX_TEMPLATED        "openbmp.parsed.ls_prefix_templated"
+    #define MSGBUS_TOPIC_L3VPN_TEMPLATED            "openbmp.parsed.l3vpn_templated"
+    #define MSGBUS_TOPIC_EVPN_TEMPLATED             "openbmp.parsed.evpn_templated"
+    #define MSGBUS_TOPIC_ROUTER_TEMPLATED           "openbmp.parsed.router_templated"
+    #define MSGBUS_TOPIC_COLLECTOR_TEMPLATED        "openbmp.parsed.collector_templated"
+
 
     /**
      * MSGBUS_TOPIC_VAR_* defines the topic var/key for the topic maps.
@@ -65,6 +67,7 @@ public:
     #define MSGBUS_TOPIC_VAR_L3VPN_TEMPLATED            "l3vpn_templated"
     #define MSGBUS_TOPIC_VAR_EVPN_TEMPLATED             "evpn_templated"
     #define MSGBUS_TOPIC_VAR_ROUTER_TEMPLATED           "router_templated"
+    #define MSGBUS_TOPIC_VAR_COLLECTOR_TEMPLATED        "collector_templated"
 
 
 

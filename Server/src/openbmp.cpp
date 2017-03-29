@@ -379,9 +379,12 @@ bool ReadCmdArgs(int argc, char **argv, Config &cfg) {
  * \param [in] code                  reason code for the update
  */
 void collector_update_msg(msgBus_kafka *kafka, Config &cfg,
-                          MsgBusInterface::collector_action_code code) {
+                          MsgBusInterface::collector_action_code code,
+                          Template_map template_map) {
 
     MsgBusInterface::obj_collector oc;
+
+    parse_bgp_lib::parseBgpLib::collector_map collector;
 
     snprintf(oc.admin_id, sizeof(oc.admin_id), "%s", cfg.admin_id);
 
@@ -402,6 +405,44 @@ void collector_update_msg(msgBus_kafka *kafka, Config &cfg,
     gettimeofday(&tv, NULL);
     oc.timestamp_secs = tv.tv_sec;
     oc.timestamp_us = tv.tv_usec;
+
+    kafka->update_Collector(oc, code);
+
+    collector[parse_bgp_lib::LIB_COLLECTOR_HASH_ID].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_HASH_ID];
+    collector[parse_bgp_lib::LIB_COLLECTOR_HASH_ID].value.push_back(parse_bgp_lib::hash_toStr(cfg.c_hash_id));
+
+    collector[parse_bgp_lib::LIB_COLLECTOR_ADMIN_ID].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_ADMIN_ID];
+    collector[parse_bgp_lib::LIB_COLLECTOR_ADMIN_ID].value.push_back(string(cfg.admin_id));
+
+    std::ostringstream numString;
+
+    numString << thr_list.size();
+
+    collector[parse_bgp_lib::LIB_COLLECTOR_ROUTER_COUNT].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_ROUTER_COUNT];
+    collector[parse_bgp_lib::LIB_COLLECTOR_ROUTER_COUNT].value.push_back(numString.str());
+
+    collector[parse_bgp_lib::LIB_COLLECTOR_ROUTERS].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_ROUTERS];
+    for (int i=0; i < thr_list.size(); i++) {
+        router_ips.append(thr_list.at(i)->client.c_ip);
+        collector[parse_bgp_lib::LIB_COLLECTOR_ROUTERS].value.push_back(string(thr_list.at(i)->client.c_ip));
+    }
+
+    numString.str(std::string());
+    numString << tv.tv_sec;
+
+    collector[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP_SECS].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP_SECS];
+    collector[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP_SECS].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << tv.tv_usec;
+
+    collector[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP_USECS].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP_USECS];
+    collector[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP_USECS].value.push_back(numString.str());
+
+    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map.template_map.find(template_cfg::BMP_COLLECTOR);
+    if (it != template_map.template_map.end())
+        kafka->update_CollectorTemplated(collector, code, it->second);
+
 
     kafka->update_Collector(oc, code);
 }
@@ -436,7 +477,30 @@ void runServer(Config &cfg) {
         BMPListener *bmp_svr = new BMPListener(logger, &cfg);
 
         BMPListener::ClientInfo client;
-        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_STARTED);
+
+        Template_map template_map(logger, cfg.debug_general);
+        /*
+         * Construct the template
+         */
+        if (template_filename) {
+            cout << "openbmp: template_filename is " << template_filename << endl;
+            try {
+                if (!template_map.load(template_filename)) {
+                    cout << "Error loading template" << endl;
+                    template_map.template_map.clear();
+                }
+            } catch (char const *str) {
+                cout << "ERROR: Failed to load the template file: " << str << endl;
+            }
+            //TODO: Remove, after load, test the template_map
+            for (std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map.template_map.begin();
+                 it != template_map.template_map.end(); it++) {
+                template_cfg::Template_cfg template_cfg_print = it->second;
+                print_template(template_cfg_print, 0);
+            }
+        }
+
+        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_STARTED, template_map);
         last_heartbeat_time = time(NULL);
 
         LOG_INFO("Ready. Waiting for connections");
@@ -460,7 +524,7 @@ void runServer(Config &cfg) {
                     thr_list.erase(thr_list.begin() + i);
 
                     collector_update_msg(kafka, cfg,
-                                         MsgBusInterface::COLLECTOR_ACTION_CHANGE);
+                                         MsgBusInterface::COLLECTOR_ACTION_CHANGE, template_map);
 
                 }
 
@@ -507,7 +571,7 @@ void runServer(Config &cfg) {
                     pthread_attr_destroy(&thr_attr);
 
                     collector_update_msg(kafka, cfg,
-                                         MsgBusInterface::COLLECTOR_ACTION_CHANGE);
+                                         MsgBusInterface::COLLECTOR_ACTION_CHANGE, template_map);
 
                     last_heartbeat_time = time(NULL);
                 }
@@ -517,7 +581,7 @@ void runServer(Config &cfg) {
                     // Send heartbeat if needed
                     if ( (time(NULL) - last_heartbeat_time) >= cfg.heartbeat_interval) {
                         BMPListener::ClientInfo client;
-                        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_HEARTBEAT);
+                        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_HEARTBEAT, template_map);
                         last_heartbeat_time = time(NULL);
                     }
 
@@ -530,7 +594,7 @@ void runServer(Config &cfg) {
             }
         }
 
-        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_STOPPED);
+        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_STOPPED, template_map);
         delete kafka;
 
     } catch (char const *str) {

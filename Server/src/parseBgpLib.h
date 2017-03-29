@@ -374,28 +374,6 @@ namespace parse_bgp_lib {
             "peerTimestampMicrosecs"
     };
 
-    /**
- * OBJECT: routers
- *
- * Router table schema
- */
-    struct obj_router {
-        u_char      hash_id[16];            ///< Router hash ID of name and src_addr
-        u_char      name[255];              ///< BMP router sysName (initiation Type=2)
-        u_char      descr[255];             ///< BMP router sysDescr (initiation Type=1)
-        u_char      ip_addr[46];            ///< BMP router source IP address in printed form
-        char        bgp_id[16];             ///< BMP Router bgp-id
-        uint32_t    asn;                    ///< BMP router ASN
-        uint16_t    term_reason_code;       ///< BMP termination reason code
-        char        term_reason_text[255];  ///< BMP termination reason text decode string
-
-        char        term_data[4096];        ///< Type=0 String termination info data
-        char        initiate_data[4096];    ///< Type=0 String initiation info data
-
-        uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
-        uint32_t    timestamp_us;           ///< Timestamp microseconds
-    };
-
     enum BGP_LIB_ROUTER {
         LIB_ROUTER_HASH_ID,
         LIB_ROUTER_NAME,
@@ -427,10 +405,32 @@ namespace parse_bgp_lib {
             "routerTimestampMicrosecs"
     };
 
+    enum BGP_LIB_COLLECTOR {
+        LIB_COLLECTOR_HASH_ID,
+        LIB_COLLECTOR_ADMIN_ID,
+        LIB_COLLECTOR_DESCR,
+        LIB_COLLECTOR_ROUTERS,
+        LIB_COLLECTOR_ROUTER_COUNT,
+        LIB_COLLECTOR_TIMESTAMP_SECS,
+        LIB_COLLECTOR_TIMESTAMP_USECS,
+        LIB_COLLECTOR_MAX
+    };
 
-    /**
-     * ENUM to define the prefix type used for prefix nlri in case AFI/SAFI is not sufficient, eg, BGP-LS nodes/link/prefix
-     */
+    const std::array<std::string, parse_bgp_lib::LIB_COLLECTOR_MAX> parse_bgp_lib_collector_names = {
+            std::string("collectorHashId"),
+            "collectorAdminId",
+            "collectorDescr",
+            "collectorRouters",
+            "collectorRouterCount",
+            "collectorTimestampSecs",
+            "collectorTimestampMicrosecs"
+    };
+
+
+
+            /**
+             * ENUM to define the prefix type used for prefix nlri in case AFI/SAFI is not sufficient, eg, BGP-LS nodes/link/prefix
+             */
     enum BGP_LIB_NLRI_TYPES {
         LIB_NLRI_TYPE_NONE,
         LIB_NLRI_TYPE_LS_NODE,
@@ -591,6 +591,7 @@ namespace parse_bgp_lib {
         typedef std::map<parse_bgp_lib::BGP_LIB_NLRI, parse_bgp_lib_data> nlri_map;
         typedef std::map<parse_bgp_lib::BGP_LIB_PEER, parse_bgp_lib_data> peer_map;
         typedef std::map<parse_bgp_lib::BGP_LIB_ROUTER, parse_bgp_lib_data> router_map;
+        typedef std::map<parse_bgp_lib::BGP_LIB_COLLECTOR, parse_bgp_lib_data> collector_map;
 
 
         struct parse_bgp_lib_nlri {

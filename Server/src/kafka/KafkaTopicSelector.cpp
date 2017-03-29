@@ -333,7 +333,7 @@ RdKafka::Topic * KafkaTopicSelector::initTopic(const std::string &topic_var,
     std::string topic_key = getTopicKey(topic_var, router_group, peer_group, peer_asn);
 
     // Update the topic name based on app variables
-    if (topic_var.compare(MSGBUS_TOPIC_VAR_COLLECTOR)) {   // if not collector topic
+    if (topic_var.compare(MSGBUS_TOPIC_VAR_COLLECTOR) and topic_var.compare(MSGBUS_TOPIC_VAR_COLLECTOR_TEMPLATED)) {   // if not collector topic
         if (router_group != NULL and router_group->size() > 0) {
             boost::replace_all(topic_name, "{router_group}", *router_group);
         } else
@@ -401,7 +401,7 @@ std::string KafkaTopicSelector::getTopicKey(const std::string &topic_var,
     char uint32_str[12];
 
     // Update the topic name based on app variables
-    if (topic_var.compare(MSGBUS_TOPIC_VAR_COLLECTOR)) {   // if not collector topic
+    if (topic_var.compare(MSGBUS_TOPIC_VAR_COLLECTOR) and topic_var.compare(MSGBUS_TOPIC_VAR_COLLECTOR_TEMPLATED)) {   // if not collector topic
         topic_key += "_";
 
         if (router_group != NULL and router_group->size() > 0) {

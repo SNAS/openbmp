@@ -219,6 +219,19 @@ public:
     virtual void update_Collector(struct obj_collector &c_obj, collector_action_code action_code) = 0;
 
     /*****************************************************************//**
+     * \brief       Add/Update a collector object templated
+     *
+     * \details     Will generate a message for a new/updated collector based on template.
+     *
+     * \param[in,out]   collector       Router object
+     * \param[in]       code            Action code for collector update
+     * \param[in]       template Template
+     *
+    *****************************************************************/
+    virtual void update_CollectorTemplated(parse_bgp_lib::parseBgpLib::collector_map &collector,
+                                        collector_action_code action_code, template_cfg::Template_cfg &template_container) = 0;
+
+    /*****************************************************************//**
      * \brief       Add/Update a router object
      *
      * \details     Will generate a message to add a new router or update an existing
