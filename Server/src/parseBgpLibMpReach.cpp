@@ -389,8 +389,6 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
     if (len <= 0 or data == NULL)
         return;
 
-        SELF_DEBUG("Manish: total len is : %d", len);
-
         int parsed_bytes = 0;
 
     // Loop through all prefixes
@@ -410,7 +408,6 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         if ((safi != parse_bgp_lib::BGP_SAFI_MPLS) and (peer_info_addpath or parser->getAddpathCapability(nlri.afi, nlri.safi))
              and (len - read_size) >= 4) {
             memcpy(&path_id, data, 4);
-            SELF_DEBUG("Manish: path id is : %d", path_id);
             parse_bgp_lib::SWAP_BYTES(&path_id);
             data += 4;
             read_size += 4;
@@ -453,7 +450,6 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
             prefix_len -= 24;        // Update prefix len to not include the label just parsed
             std::ostringstream convert;
             convert << label.decode.value;
-            SELF_DEBUG("Manish: label is : %s", convert.str().c_str());
 
             nlri.nlri[LIB_NLRI_LABELS].value.push_back(convert.str());
 

@@ -561,8 +561,6 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
     if (len <= 0 or data == NULL)
         return;
 
-        SELF_DEBUG("Manish: total len is : %d", len);
-
         // Loop through all prefixes
     for (size_t read_size = 0; read_size < len; read_size++) {
         parse_bgp_lib_nlri nlri;
@@ -582,7 +580,6 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
             and (len - read_size) >= 4) {
             memcpy(&path_id, data, 4);
             parse_bgp_lib::SWAP_BYTES(&path_id);
-            SELF_DEBUG("Manish: path id is : %d", path_id);
             data += 4;
             read_size += 4;
         } else
@@ -597,10 +594,8 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
 
         // set the address in bits length
         prefix_len = *data++;
-        SELF_DEBUG("Manish: prefix_len  is : %d", prefix_len);
         numString.str(std::string());
         numString << static_cast<unsigned>(prefix_len);
-        SELF_DEBUG("Manish: prefix_len is now : %d", prefix_len);
 
         nlri.nlri[LIB_NLRI_PREFIX_LENGTH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_LENGTH];
         nlri.nlri[LIB_NLRI_PREFIX_LENGTH].value.push_back(numString.str());
