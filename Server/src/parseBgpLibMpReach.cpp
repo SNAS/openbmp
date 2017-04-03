@@ -389,7 +389,9 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
     if (len <= 0 or data == NULL)
         return;
 
-    int parsed_bytes = 0;
+        SELF_DEBUG("Manish: total len is : %d", len);
+
+        int parsed_bytes = 0;
 
     // Loop through all prefixes
     for (size_t read_size = 0; read_size < len; read_size++) {
@@ -408,6 +410,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         if ((safi != parse_bgp_lib::BGP_SAFI_MPLS) and (peer_info_addpath or parser->getAddpathCapability(nlri.afi, nlri.safi))
              and (len - read_size) >= 4) {
             memcpy(&path_id, data, 4);
+            SELF_DEBUG("Manish: path id is : %d", path_id);
             parse_bgp_lib::SWAP_BYTES(&path_id);
             data += 4;
             read_size += 4;
@@ -425,7 +428,6 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
             break;
         }
 
-        bzero(&label, sizeof(label));
         bzero(ip_raw, sizeof(ip_raw));
 
         // set the address in bits length
@@ -441,6 +443,7 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         nlri.nlri[LIB_NLRI_LABELS].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_LABELS];
         // the label is 3 octets long
         while (addr_bytes >= 3) {
+            bzero(&label, sizeof(label));
             memcpy(&label.data, data, 3);
             parse_bgp_lib::SWAP_BYTES(&label.data);     // change to host order
 
@@ -450,6 +453,8 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
             prefix_len -= 24;        // Update prefix len to not include the label just parsed
             std::ostringstream convert;
             convert << label.decode.value;
+            SELF_DEBUG("Manish: label is : %s", convert.str().c_str());
+
             nlri.nlri[LIB_NLRI_LABELS].value.push_back(convert.str());
 
             if (label.decode.bos == 1 or label.data == 0x80000000 or label.data == 0 /* withdrawn label as 32bits instead of 24 */) {

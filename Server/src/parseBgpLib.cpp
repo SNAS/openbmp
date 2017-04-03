@@ -214,7 +214,7 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
     read_size += sizeof(withdrawn_len);
     parse_bgp_lib::SWAP_BYTES(&withdrawn_len);
 
-    // Set the withdrawn data pointer
+        // Set the withdrawn data pointer
     if ((size - read_size) < withdrawn_len) {
         LOG_WARN("%sUpdate message is too short to parse withdrawn data", debug_prepend_string.c_str());
         return 0;
@@ -224,13 +224,13 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
     bufPtr += withdrawn_len;
     read_size += withdrawn_len;
 
-    SELF_DEBUG("%sWithdrawn len = %hu", debug_prepend_string.c_str(), withdrawn_len);
+        SELF_DEBUG("%sWithdrawn len = %hu", debug_prepend_string.c_str(), withdrawn_len);
 
     // Get the attributes length
     memcpy(&attr_len, bufPtr, sizeof(attr_len));
     bufPtr += sizeof(attr_len);
     read_size += sizeof(attr_len);
-    parse_bgp_lib::SWAP_BYTES(&attr_len);
+        parse_bgp_lib::SWAP_BYTES(&attr_len);
     SELF_DEBUG("%sAttribute len = %hu", debug_prepend_string.c_str(), attr_len);
 
     // Set the attributes data pointer
@@ -242,7 +242,7 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
     bufPtr += attr_len;
     read_size += attr_len;
 
-    // Set the NLRI data pointer
+        // Set the NLRI data pointer
     nlriPtr = bufPtr;
 
     /*
@@ -561,7 +561,9 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
     if (len <= 0 or data == NULL)
         return;
 
-    // Loop through all prefixes
+        SELF_DEBUG("Manish: total len is : %d", len);
+
+        // Loop through all prefixes
     for (size_t read_size = 0; read_size < len; read_size++) {
         parse_bgp_lib_nlri nlri;
         nlri.afi = parse_bgp_lib::BGP_AFI_IPV4;
@@ -580,6 +582,7 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
             and (len - read_size) >= 4) {
             memcpy(&path_id, data, 4);
             parse_bgp_lib::SWAP_BYTES(&path_id);
+            SELF_DEBUG("Manish: path id is : %d", path_id);
             data += 4;
             read_size += 4;
         } else
@@ -594,8 +597,11 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
 
         // set the address in bits length
         prefix_len = *data++;
+        SELF_DEBUG("Manish: prefix_len  is : %d", prefix_len);
         numString.str(std::string());
         numString << static_cast<unsigned>(prefix_len);
+        SELF_DEBUG("Manish: prefix_len is now : %d", prefix_len);
+
         nlri.nlri[LIB_NLRI_PREFIX_LENGTH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_PREFIX_LENGTH];
         nlri.nlri[LIB_NLRI_PREFIX_LENGTH].value.push_back(numString.str());
         update_hash(&nlri.nlri[LIB_NLRI_PREFIX_LENGTH].value, &hash);

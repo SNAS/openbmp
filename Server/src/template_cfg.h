@@ -83,6 +83,9 @@ namespace template_cfg {
         size_t
         create_container_loop(TEMPLATE_TYPES type, TEMPLATE_TOPICS topic, char *buf, std::string &prepend_string);
 
+        bool
+        create_container_loop_tsv(TEMPLATE_TYPES type, TEMPLATE_TOPICS topic, const YAML::Node &node);
+
         size_t create_replacement(char *buf, std::string &prepend_string);
 
         size_t execute_container(char *buf, size_t max_buf_length,
@@ -107,6 +110,7 @@ namespace template_cfg {
 
         TEMPLATE_TYPES type;
         TEMPLATE_TOPICS topic;
+        TEMPLATE_FORMAT_TYPE format;
 
         REPLACEMENT_LIST_TYPE replacement_list_type;
         int replacement_var;
@@ -116,6 +120,7 @@ namespace template_cfg {
         bool debug;                             ///< debug flag to indicate debugging
         Logger *logger;                         ///< Logging class pointer
         std::string prepend_string;
+        void printWarning(const std::string msg, const YAML::Node &node);
     };
 }
 
@@ -135,13 +140,13 @@ namespace template_cfg {
          *
          * \param [in] template_filename     template filename
          ***********************************************************************/
-        bool load_custom(const char *template_filename);
         bool load(const char *template_filename);
 
 
     private:
         bool debug;                             ///< debug flag to indicate debugging
         Logger *logger;                         ///< Logging class pointer
+
     };
 
 static void strip_last_newline (std::string &s) {

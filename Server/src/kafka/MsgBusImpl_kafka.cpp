@@ -956,7 +956,7 @@ void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<parse_bgp_lib::pa
  */
 void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
                                         parse_bgp_lib::parseBgpLib::attr_map &attrs, unicast_prefix_action_code code) {
-    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+//    bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
     prep_buf[0] = 0;
 
     char    buf2[80000];                         // Second working buffer
