@@ -94,11 +94,6 @@ bool parseBGP::handleUpdate(u_char *data, size_t size, Template_map *template_ma
     if (parseBgpHeader(data, size) == BGP_MSG_UPDATE) {
         data += BGP_MSG_HDR_LEN;
 
-     //Fill p_info fields to be passed to the parser
-        p_info->peer_hash_str= parse_bgp_lib::hash_toStr(p_entry->hash_id);
-        p_info->routerAddr = this->router_addr;
-        p_info->peerAddr = p_entry->peer_addr;
-
         if ((read_size=parser->parseBgpUpdate(data, data_bytes_remaining, update)) != (size - BGP_MSG_HDR_LEN)) {
             LOG_NOTICE("%s: rtr=%s: Failed to parse the update message, read %d expected %d", p_entry->peer_addr,
                        router_addr.c_str(), read_size, (size - read_size));

@@ -45,6 +45,20 @@ parseBgpLib::~parseBgpLib() {
 }
 
 /**
+* Set the peer Info
+*
+* \details
+* Set the peer info used late to parse the update message and for logging
+* \param [in]   p_info        peer info
+*
+*/
+void parseBgpLib::setPeerInfo(BMPReader::peer_info *peer_info) {
+    this->p_info = peer_info;
+    four_octet_asn = peer_info->recv_four_octet_asn and peer_info->sent_four_octet_asn;
+    debug_prepend_string = peer_info->peerAddr + ", rtr= " + peer_info->routerAddr + ": ";
+}
+
+/**
  * Get internal afi
  *
  * \details

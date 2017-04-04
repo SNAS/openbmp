@@ -647,6 +647,17 @@ namespace parse_bgp_lib {
         size_t parseBgpUpdate(u_char *data, size_t size, parsed_update &update);
 
         /**
+         * Set the peer Info
+         *
+         * \details
+         * Set the peer info used late to parse the update message and for logging
+         * \param [in]   p_info        peer info
+         *
+         */
+        void setPeerInfo(BMPReader::peer_info *peer_info);
+
+
+        /**
          * Addpath capability for a peer
          *
          * \details

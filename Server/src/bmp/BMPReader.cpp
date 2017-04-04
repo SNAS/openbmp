@@ -138,7 +138,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
 
     char bmp_type = 0;
 
-    parse_bgp_lib::parseBgpLib parser(logger, debug, &peer_info_map[peer_info_key]);
+    parse_bgp_lib::parseBgpLib parser(logger, debug);
     parse_bgp_lib::parseBgpLib::parsed_update update;
     parse_bgp_lib::parseBgpLib::parse_bgp_lib_peer_hdr parse_peer_hdr;
 
@@ -173,6 +173,13 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             memcpy(p_entry.router_hash_id, r_object.hash_id, sizeof(r_object.hash_id));
             peer_info_key =  p_entry.peer_addr;
             peer_info_key += p_entry.peer_rd;
+            BMPReader::peer_info *peer_info = &peer_info_map[peer_info_key];
+            //Fill p_info fields to be passed to the parser
+            peer_info->peer_hash_str= parse_bgp_lib::hash_toStr(p_entry.hash_id);
+            peer_info->routerAddr = std::string((char *)r_object.ip_addr);
+            peer_info->peerAddr = p_entry.peer_addr;
+
+            parser.setPeerInfo(peer_info);
 
             parser.parseBmpPeer(read_fd, parse_peer_hdr, update);
             if (bmp_type != parseBMP::TYPE_PEER_UP)
