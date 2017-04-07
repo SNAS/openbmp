@@ -397,7 +397,7 @@ namespace template_cfg {
         this->type = type;
         this->topic = topic;
         this->format = template_cfg::RAW;
-        seq = 0;
+        this->seq = 0;
 
         char *bpos = buf;
         char *epos = buf;
@@ -530,13 +530,16 @@ namespace template_cfg {
         this->topic = topic;
         this->format = template_cfg::TSV;
         bool headers = false;
-        seq = 0;
+        this->seq = 0;
 
         size_t read;
         std::string prepend_string_null = std::string("");
         std::string prepend_string_tab = std::string("\t");
 
+
         if (node.Type() == YAML::NodeType::Map) {
+            template_cfg::Template_cfg template_cfg_loop(logger, debug);
+
             for (YAML::const_iterator it = node.begin(); it != node.end(); ++it) {
                 const YAML::Node &node2 = it->second;
                 const std::string &key2 = it->first.Scalar();
@@ -575,15 +578,14 @@ namespace template_cfg {
                     }
                 } else if (key2.compare("loop") == 0) {
                     std::cout << " Found a loop type inside type" << type << std::endl;
-                    template_cfg::Template_cfg template_cfg(logger, debug);
-                    template_cfg.type = template_cfg::LOOP;
-                    template_cfg.topic = topic;
-                    template_cfg.format = template_cfg::TSV;
+                    template_cfg_loop.type = template_cfg::LOOP;
+                    template_cfg_loop.topic = topic;
+                    template_cfg_loop.format = template_cfg::TSV;
                     if (headers)
-                        template_cfg.prepend_string.assign(std::string("\n"));
+                        template_cfg_loop.prepend_string.assign(std::string("\n"));
 
-                    for (std::size_t i = 0; i < node2.size(); i++) {
-                        try {
+                   for (std::size_t i = 0; i < node2.size(); i++) {
+                       try {
                             value = node2[i].as<std::string>();
                             template_cfg::Template_cfg template_cfg_replace(logger, debug);
                             template_cfg_replace.format = template_cfg::TSV;
@@ -601,7 +603,7 @@ namespace template_cfg {
                                 return(false);
                             }
 
-                            template_cfg.template_children.push_back(template_cfg_replace);
+                            template_cfg_loop.template_children.push_back(template_cfg_replace);
                         } catch (YAML::TypedBadConversion<std::string> err) {
                             printWarning("template type is not of type string", node2[i]);
                             return (false);
@@ -613,8 +615,8 @@ namespace template_cfg {
                     template_cfg_end.type = template_cfg::END;
                     template_cfg_end.prepend_string.append(std::string("\n"));
 
-                    template_cfg.template_children.push_back(template_cfg_end);
-                    this->template_children.push_back(template_cfg);
+                    template_cfg_loop.template_children.push_back(template_cfg_end);
+                    this->template_children.push_back(template_cfg_loop);
                 } else {
                     std::cout << "Unknown template container type" << std::endl;
                     return (false);
@@ -644,9 +646,6 @@ namespace template_cfg {
         char *bpos = buf;
         char *epos = buf;
         size_t read = 0;
-
-        std::cout << "replacement bpos1: " << bpos << std::endl;
-        std::cout << "replacement epos1: " << epos << std::endl;
 
         if (template_cfg::Template_cfg::lookup_map.empty()) {
             /*
@@ -684,15 +683,13 @@ namespace template_cfg {
 
         }
 
-        std::cout << "Prepend string for replace is now " << this->prepend_string << std::endl;
+//        std::cout << "Prepend string for replace is now " << this->prepend_string << std::endl;
         epos = strstr(bpos, ".");
-        std::cout << "replacement bpo2: " << bpos << std::endl;
-        std::cout << "replacement epos2: " << epos << std::endl;
         if (!epos) {
             std::cout << "Error replacement variable is empty" << std::endl;
             return(0);
         }
-        std::cout << "Replacement variable list is " << epos << std::endl;
+//        std::cout << "Replacement variable list is " << epos << std::endl;
 
         if (strncmp(bpos, "nlri", strlen("nlri")) == 0) {
             this->replacement_list_type = NLRI;
@@ -723,9 +720,6 @@ namespace template_cfg {
                 epos = buf + strlen(buf);
             }
         }
-        std::cout << "replacement bpos3: " << bpos << std::endl;
-        std::cout << "replacement epos3: " << epos << std::endl;
-
         std::string lookup_string(bpos, epos - bpos);
         std::map<std::string, int>::iterator it = template_cfg::Template_cfg::lookup_map.find(lookup_string);
         if (it == template_cfg::Template_cfg::lookup_map.end()) {
