@@ -426,6 +426,16 @@ namespace parse_bgp_lib {
             "collectorTimestampMicrosecs"
     };
 
+    enum BGP_LIB_HEADER {
+        LIB_HEADER_ACTION,
+        LIB_HEADER_SEQUENCE_NUMBER,
+        LIB_HEADER_MAX
+    };
+
+    const std::array<std::string, parse_bgp_lib::LIB_HEADER_MAX> parse_bgp_lib_header_names = {
+            std::string("action"),
+            "sequenceNumber"
+    };
 
 
             /**
@@ -592,6 +602,7 @@ namespace parse_bgp_lib {
         typedef std::map<parse_bgp_lib::BGP_LIB_PEER, parse_bgp_lib_data> peer_map;
         typedef std::map<parse_bgp_lib::BGP_LIB_ROUTER, parse_bgp_lib_data> router_map;
         typedef std::map<parse_bgp_lib::BGP_LIB_COLLECTOR, parse_bgp_lib_data> collector_map;
+        typedef std::map<parse_bgp_lib::BGP_LIB_HEADER, parse_bgp_lib_data> header_map;
 
 
         struct parse_bgp_lib_nlri {

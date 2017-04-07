@@ -47,7 +47,8 @@ namespace template_cfg {
         NLRI,
         PEER,
         ROUTER,
-        COLLECTOR
+        COLLECTOR,
+        HEADER
     };
 
     enum TEMPLATE_FORMAT_TYPE {
@@ -92,19 +93,23 @@ namespace template_cfg {
                                std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
                                parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
                                  parse_bgp_lib::parseBgpLib::router_map &router,
-                                 parse_bgp_lib::parseBgpLib::collector_map &collector);
+                                 parse_bgp_lib::parseBgpLib::collector_map &collector,
+                                 parse_bgp_lib::parseBgpLib::header_map &header);
 
         size_t execute_loop(char *buf, size_t max_buf_length,
                                  std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
                                  parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
                             parse_bgp_lib::parseBgpLib::router_map &router,
-                            parse_bgp_lib::parseBgpLib::collector_map &collector);
+                            parse_bgp_lib::parseBgpLib::collector_map &collector,
+                            parse_bgp_lib::parseBgpLib::header_map &header,
+                            uint64_t &seq);
 
         size_t execute_replace(char *buf, size_t max_buf_length,
                             parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &nlri,
                             parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
                                parse_bgp_lib::parseBgpLib::router_map &router,
-                               parse_bgp_lib::parseBgpLib::collector_map &collector);
+                               parse_bgp_lib::parseBgpLib::collector_map &collector,
+                               parse_bgp_lib::parseBgpLib::header_map &header);
 
         std::list<template_cfg::Template_cfg> template_children;
 
@@ -114,7 +119,7 @@ namespace template_cfg {
 
         REPLACEMENT_LIST_TYPE replacement_list_type;
         int replacement_var;
-
+        uint64_t    seq;
 
     private:
         bool debug;                             ///< debug flag to indicate debugging
@@ -243,6 +248,9 @@ static void print_template (template_cfg::Template_cfg &template_cfg_print, size
                     break;
                 case template_cfg::COLLECTOR :
                     cout << "COLLECTOR, replacement variable: " << template_cfg_print.replacement_var << endl;
+                    break;
+                case template_cfg::HEADER :
+                    cout << "HEADER, replacement variable: " << template_cfg_print.replacement_var << endl;
                     break;
 
                 default:
