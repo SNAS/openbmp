@@ -420,6 +420,7 @@ namespace template_cfg {
 
                 template_cfg::Template_cfg template_cfg(logger, debug);
                 template_cfg.type = template_cfg::END;
+                strip_last_newline(prepend_string);
                 template_cfg.prepend_string.append(bpos, remaining_length);
 
                 this->template_children.push_back(template_cfg);
@@ -490,6 +491,7 @@ namespace template_cfg {
 //                    std::cout << "container epos: " << epos << std::endl;
                     template_cfg::Template_cfg template_cfg(logger, debug);
                     template_cfg.type = template_cfg::END;
+                    strip_last_newline(prepend_string);
                     template_cfg.prepend_string.append(prepend_string);
                     prepend_string.clear();
 
@@ -630,7 +632,7 @@ namespace template_cfg {
 
         template_cfg::Template_cfg template_cfg(logger, debug);
         template_cfg.type = template_cfg::END;
-        template_cfg.prepend_string.append(std::string("\n"));
+//        template_cfg.prepend_string.append(std::string("\n"));
 
         this->template_children.push_back(template_cfg);
 

@@ -1080,6 +1080,21 @@ void msgBus_kafka::update_unicastPrefixTemplated(std::vector<parse_bgp_lib::pars
             break;
     }
 
+    bool nexthop_isIPv4 =  (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
+    size_t as_path_size = attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size();
+
+    std::ostringstream numString;
+    numString << nexthop_isIPv4;
+
+    attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4];
+    attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << as_path_size;
+
+    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE];
+    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE].value.push_back(numString.str());
+
     size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE, rib_list, attrs, peer, router,
                                                           *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
     if (written) {

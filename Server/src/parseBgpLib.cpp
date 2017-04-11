@@ -310,6 +310,14 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
         u_char *bufPtr = bmp_data;
 
         /*
+         * Create router timestamp
+         */
+        update.router[LIB_ROUTER_TIMESTAMP].name = parse_bgp_lib::parse_bgp_lib_router_names[LIB_ROUTER_TIMESTAMP];
+        string ts;
+        getTimestamp(0, 0, ts);
+        update.router[LIB_ROUTER_TIMESTAMP].value.push_back(ts);
+
+        /*
          * Loop through the init message (in buffer) to parse each TLV
          */
         for (int i=0; i < bmp_data_len; i += BMP_INIT_MSG_LEN) {
@@ -515,6 +523,11 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
             update.peer[LIB_PEER_TIMESTAMP_USECS].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_TIMESTAMP_USECS];
             update.peer[LIB_PEER_TIMESTAMP_USECS].value.push_back(numString.str());
 
+            update.peer[LIB_PEER_TIMESTAMP].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_TIMESTAMP];
+            string ts;
+            getTimestamp(p_hdr.ts_secs, p_hdr.ts_usecs, ts);
+            update.peer[LIB_PEER_TIMESTAMP].value.push_back(ts);
+
         } else {
             timeval tv;
 
@@ -531,6 +544,12 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
 
             update.peer[LIB_PEER_TIMESTAMP_USECS].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_TIMESTAMP_USECS];
             update.peer[LIB_PEER_TIMESTAMP_USECS].value.push_back(numString.str());
+
+            update.peer[LIB_PEER_TIMESTAMP].name = parse_bgp_lib::parse_bgp_lib_peer_names[LIB_PEER_TIMESTAMP];
+            string ts;
+            getTimestamp(tv.tv_sec, tv.tv_usec, ts);
+            update.peer[LIB_PEER_TIMESTAMP].value.push_back(ts);
+
         }
 
 
@@ -649,6 +668,9 @@ void parseBgpLib::parseBgpNlri_v4(u_char *data, uint16_t len, std::list<parse_bg
             nlri.nlri[LIB_NLRI_HASH].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_HASH];
             nlri.nlri[LIB_NLRI_HASH].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
             delete[] hash_raw;
+
+            nlri.nlri[LIB_NLRI_IS_IPV4].name =parse_bgp_lib_nlri_names[LIB_NLRI_IS_IPV4];
+            nlri.nlri[LIB_NLRI_IS_IPV4].value.push_back(string("1"));
 
             // Add tuple to prefix list
             nlri_list.push_back(nlri);

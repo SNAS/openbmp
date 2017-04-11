@@ -406,7 +406,10 @@ void collector_update_msg(msgBus_kafka *kafka, Config &cfg,
     oc.timestamp_secs = tv.tv_sec;
     oc.timestamp_us = tv.tv_usec;
 
-    kafka->update_Collector(oc, code);
+    collector[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP];
+    string ts;
+    parse_bgp_lib::getTimestamp(tv.tv_sec, tv.tv_usec, ts);
+    collector[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP].value.push_back(ts);
 
     collector[parse_bgp_lib::LIB_COLLECTOR_HASH_ID].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_HASH_ID];
     collector[parse_bgp_lib::LIB_COLLECTOR_HASH_ID].value.push_back(parse_bgp_lib::hash_toStr(cfg.c_hash_id));

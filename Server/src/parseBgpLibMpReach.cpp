@@ -275,6 +275,11 @@ void MPReachAttr::parseNlriData_IPv4IPv6(bool isIPv4, u_char *data, uint16_t len
         nlri.safi = parse_bgp_lib::BGP_SAFI_UNICAST;
         nlri.type = parse_bgp_lib::LIB_NLRI_TYPE_NONE;
 
+        nlri.nlri[LIB_NLRI_IS_IPV4].name =parse_bgp_lib_nlri_names[LIB_NLRI_IS_IPV4];
+        if (isIPv4) {
+            nlri.nlri[LIB_NLRI_IS_IPV4].value.push_back(string("1"));
+        }
+
         // Generate the hash
         MD5 hash;
 
@@ -397,6 +402,11 @@ void MPReachAttr::parseNlriData_LabelIPv4IPv6(bool isIPv4, u_char *data, uint16_
         nlri.afi = isIPv4 ? parse_bgp_lib::BGP_AFI_IPV4 : parse_bgp_lib::BGP_AFI_IPV6;
         nlri.safi = (BGP_SAFI) safi;
         nlri.type = parse_bgp_lib::LIB_NLRI_TYPE_NONE;
+
+        nlri.nlri[LIB_NLRI_IS_IPV4].name =parse_bgp_lib_nlri_names[LIB_NLRI_IS_IPV4];
+        if (isIPv4) {
+            nlri.nlri[LIB_NLRI_IS_IPV4].value.push_back(string("1"));
+        }
 
         // Generate the hash
         MD5 hash;

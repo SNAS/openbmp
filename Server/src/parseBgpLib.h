@@ -19,6 +19,7 @@
 #include <bmp/BMPReader.h>
 #include "Logger.h"
 #include "md5.h"
+#include <sys/time.h>
 
 namespace parse_bgp_lib {
 
@@ -124,7 +125,9 @@ namespace parse_bgp_lib {
                 LIB_ATTR_ORIGIN,
         LIB_ATTR_AS_PATH,
         LIB_ATTR_AS_ORIGIN,
+        LIB_ATTR_AS_PATH_SIZE,
         LIB_ATTR_NEXT_HOP,
+        LIB_ATTR_NEXT_HOP_ISIPV4,
         LIB_ATTR_MED,
         LIB_ATTR_LOCAL_PREF,
         LIB_ATTR_ATOMIC_AGGREGATE,
@@ -182,7 +185,9 @@ namespace parse_bgp_lib {
             std::string("origin"),
             "asPath",
             "asOrigin",
+            "asPathSize",
             "nextHop",
+            "nextHopIsIpv4",
             "med",
             "localPref",
             "atomicAggregate",
@@ -243,6 +248,7 @@ namespace parse_bgp_lib {
         LIB_NLRI_PATH_ID,
         LIB_NLRI_LABELS,
         LIB_NLRI_HASH,
+        LIB_NLRI_IS_IPV4,
 
         LIB_NLRI_LS_PROTOCOL,
         LIB_NLRI_LS_ROUTING_ID, //Identified in Linkstate NLRI header
@@ -298,6 +304,7 @@ namespace parse_bgp_lib {
             "pathId",
             "labels",
             "nlriHash",
+            "isIpv4",
 
             "linkstateProtocol",
             "linkstateRoutingId",
@@ -357,6 +364,7 @@ namespace parse_bgp_lib {
         LIB_PEER_ISIPV4,
         LIB_PEER_TIMESTAMP_SECS,
         LIB_PEER_TIMESTAMP_USECS,
+        LIB_PEER_TIMESTAMP,
         LIB_PEER_MAX
     };
 
@@ -371,7 +379,8 @@ namespace parse_bgp_lib {
             "peerIsAdjin",
             "peerIsIpv4",
             "peerTimestampSecs",
-            "peerTimestampMicrosecs"
+            "peerTimestampMicrosecs",
+            "peerTimestamp"
     };
 
     enum BGP_LIB_ROUTER {
@@ -387,6 +396,7 @@ namespace parse_bgp_lib {
         LIB_ROUTER_INITIATE_DATA,
         LIB_ROUTER_TIMESTAMP_SECS,
         LIB_ROUTER_TIMESTAMP_USECS,
+        LIB_ROUTER_TIMESTAMP,
         LIB_ROUTER_MAX
     };
 
@@ -402,7 +412,8 @@ namespace parse_bgp_lib {
             "routerTermData",
             "routerInitiateData",
             "routerTimestampSecs",
-            "routerTimestampMicrosecs"
+            "routerTimestampMicrosecs",
+            "routerTimestamp"
     };
 
     enum BGP_LIB_COLLECTOR {
@@ -413,6 +424,7 @@ namespace parse_bgp_lib {
         LIB_COLLECTOR_ROUTER_COUNT,
         LIB_COLLECTOR_TIMESTAMP_SECS,
         LIB_COLLECTOR_TIMESTAMP_USECS,
+        LIB_COLLECTOR_TIMESTAMP,
         LIB_COLLECTOR_MAX
     };
 
@@ -423,7 +435,8 @@ namespace parse_bgp_lib {
             "collectorRouters",
             "collectorRouterCount",
             "collectorTimestampSecs",
-            "collectorTimestampMicrosecs"
+            "collectorTimestampMicrosecs",
+            "collectorTimestamp"
     };
 
     enum BGP_LIB_HEADER {
@@ -541,6 +554,39 @@ namespace parse_bgp_lib {
         for (int i = size - 1; i >= 0; i--)
             v[i2++] = buf[i];
 
+    }
+
+    /**
+ * \brief       Time in seconds to printed string format
+ *
+ * \param[in]   time_secs     Time since epoch in seconds
+ * \param[in]   time_us       Microseconds to add to timestamp
+ * \param[out]  ts_str        Reference to storage of string value
+ *
+ */
+    static void getTimestamp(uint32_t time_secs, uint32_t time_us, std::string &ts_str){
+        char buf[48];
+        timeval tv;
+        std::time_t secs;
+        uint32_t us;
+        tm *p_tm;
+
+        if (time_secs <= 1000) {
+            gettimeofday(&tv, NULL);
+            secs = tv.tv_sec;
+            us = tv.tv_usec;
+
+        } else {
+            secs = time_secs;
+            us = time_us;
+        }
+
+        p_tm = std::gmtime(&secs);
+        std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", p_tm);
+        ts_str = buf;
+
+        sprintf(buf, ".%06u", us);
+        ts_str.append(buf);
     }
 
     /**

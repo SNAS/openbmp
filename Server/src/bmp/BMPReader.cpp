@@ -154,7 +154,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
     // Setup the router record table object
     memcpy(r_object.ip_addr, client->c_ip, sizeof(client->c_ip));
     update.router[parse_bgp_lib::LIB_ROUTER_IP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_ROUTER_IP];
-    update.router[parse_bgp_lib::LIB_ROUTER_IP].value.push_back(string(client->c_ip, sizeof(client->c_ip)));
+    update.router[parse_bgp_lib::LIB_ROUTER_IP].value.push_back(string(client->c_ip));
 
     try {
         bmp_type = pBMP->handleMessage(read_fd, &parse_peer_hdr);
