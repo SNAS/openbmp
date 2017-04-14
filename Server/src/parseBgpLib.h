@@ -146,11 +146,13 @@ namespace parse_bgp_lib {
         LIB_ATTR_LS_ISIS_AREA_ID,
         LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4,
         LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6,
+        LIB_ATTR_LS_LOCAL_ROUTER_ID,
         LIB_ATTR_LS_SR_CAPABILITIES_TLV,
 
         //Linkstate Link attributes
                 LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV4,
         LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6,
+        LIB_ATTR_LS_REMOTE_ROUTER_ID,
         LIB_ATTR_LS_ADMIN_GROUP,
         LIB_ATTR_LS_MAX_LINK_BW,
         LIB_ATTR_LS_MAX_RESV_BW,
@@ -175,7 +177,6 @@ namespace parse_bgp_lib {
         LIB_ATTR_LS_OSPF_FWD_ADDR,
         LIB_ATTR_LS_OPAQUE_PREFIX,
         LIB_ATTR_LS_PREFIX_SID,
-
 
         LIB_ATTR_MAX
     };
@@ -206,11 +207,13 @@ namespace parse_bgp_lib {
             "linkstateIsisAreaId",
             "linkstateLocalRouterIdIpv4",
             "linkstateLocalRouterIdIpv6",
+            "linkstateLocalRouterId",
             "linkstateSrCapabilitiesTlv",
 
             //Linkstate Link attributes
             "linkstateRemoteRouterIdIpv4",
             "linkstateRemoteRouterIdIpv6",
+            "linkstateRemoteRouterId",
             "linkstateAdminGroup",
             "linkstateMaxLinkBw",
             "linkstateMaxReservedBw",
@@ -282,6 +285,7 @@ namespace parse_bgp_lib {
         LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD,
         LIB_NLRI_VPN_RD_ASSIGNED_NUMBER,
         LIB_NLRI_VPN_RD_TYPE,
+        LIB_NLRI_VPN_RD,
 
         LIB_NLRI_EVPN_ETHERNET_SEGMENT_ID,
         LIB_NLRI_EVPN_ETHERNET_TAG_ID_HEX,
@@ -338,6 +342,7 @@ namespace parse_bgp_lib {
             "vpnRdAdministratorSubfield",
             "vpnRdAssignedNumber",
             "vpnRdType",
+            "vpnRd",
 
             "evpnEthernetSegmentId",
             "evpnEthernetTagIdHex",

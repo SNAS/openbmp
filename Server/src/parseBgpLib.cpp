@@ -1123,7 +1123,6 @@ void parseBgpLib::parseAttrDataAsPath(uint16_t attr_len, u_char *data, parsed_up
         }
     }
 
-    std::cout << "parsed as_path count " << update.attrs[LIB_ATTR_AS_PATH].value.size() << ", origin as: " << origin_asn << std::endl;
         if (origin_asn >= 0) {
             update.attrs[LIB_ATTR_AS_ORIGIN].name = parse_bgp_lib::parse_bgp_lib_attr_names[LIB_ATTR_AS_ORIGIN];
             std::ostringstream numString;

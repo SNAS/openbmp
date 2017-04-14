@@ -264,6 +264,8 @@ namespace parse_bgp_lib {
         parsed_nlri.nlri[LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD].name = parse_bgp_lib::parse_bgp_lib_nlri_names[LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD];
         parsed_nlri.nlri[LIB_NLRI_VPN_RD_ADMINISTRATOR_SUBFIELD].value.push_back(rd_administrator_subfield);
 
+        parsed_nlri.nlri[LIB_NLRI_VPN_RD].name = parse_bgp_lib_nlri_names[parse_bgp_lib::LIB_NLRI_VPN_RD];
+        parsed_nlri.nlri[LIB_NLRI_VPN_RD].value.push_back(std::string(rd_administrator_subfield + ":" + rd_assigned_number));
     }
 
     // TODO: Refactor this method as it's overloaded - each case statement can be its own method

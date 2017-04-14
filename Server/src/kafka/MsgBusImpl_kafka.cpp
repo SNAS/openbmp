@@ -686,12 +686,7 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, parse_bgp_lib::parse
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
-    bool nexthop_isIPv4 = (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
-    bool atomic_agg;
-    if (attrs.count(parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE)) {
-        atomic_agg     = attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value.front().compare("1") == 0 ? true : false;
-    }
-    buf_len =
+   buf_len =
             snprintf(prep_buf, MSGBUS_WORKING_BUF_SIZE,
                      "add\t%d\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIu16 "\t%s"
                              "\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
@@ -709,8 +704,8 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, parse_bgp_lib::parse
                      map_string(attrs[parse_bgp_lib::LIB_ATTR_COMMUNITIES].value).c_str(),
                      map_string(attrs[parse_bgp_lib::LIB_ATTR_EXT_COMMUNITY].value).c_str(),
                      map_string(attrs[parse_bgp_lib::LIB_ATTR_CLUSTER_LIST].value).c_str(),
-                     atomic_agg,
-                     nexthop_isIPv4,
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value).c_str(),
+                     map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].value).c_str(),
                      map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGINATOR_ID].value).c_str());
 
 
@@ -738,12 +733,6 @@ void msgBus_kafka::update_L3Vpn(obj_bgp_peer &peer, std::vector<parse_bgp_lib::p
 
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
-
-    bool nexthop_isIPv4 = (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
-    bool atomic_agg;
-    if (attrs.count(parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE)) {
-        atomic_agg     = attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value.front().compare("1") == 0 ? true : false;
-    }
 
     // Loop through the vector array of rib entries
     for (size_t i = 0; i < l3vpn_list.size(); i++) {
@@ -780,8 +769,8 @@ void msgBus_kafka::update_L3Vpn(obj_bgp_peer &peer, std::vector<parse_bgp_lib::p
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_COMMUNITIES].value).c_str(),
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_EXT_COMMUNITY].value).c_str(),
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_CLUSTER_LIST].value).c_str(),
-                                    atomic_agg,
-                                    nexthop_isIPv4,
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].value).c_str(),
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGINATOR_ID].value).c_str(),
                                     map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PATH_ID].value).c_str(),
                                     map_string(l3vpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_LABELS].value).c_str(),
@@ -847,12 +836,6 @@ void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<parse_bgp_lib::pa
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
-    bool nexthop_isIPv4 = (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
-    bool atomic_agg;
-    if (attrs.count(parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE)) {
-        atomic_agg     = attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value.front().compare("1") == 0 ? true : false;
-    }
-
     // Loop through the vector array of rib entries
     for (size_t i = 0; i < evpn_list.size(); i++) {
 
@@ -886,8 +869,8 @@ void msgBus_kafka::update_eVPN(obj_bgp_peer &peer, std::vector<parse_bgp_lib::pa
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_COMMUNITIES].value).c_str(),
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_EXT_COMMUNITY].value).c_str(),
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_CLUSTER_LIST].value).c_str(),
-                                    atomic_agg,
-                                    nexthop_isIPv4,
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].value).c_str(),
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGINATOR_ID].value).c_str(),
                                     map_string(evpn_list[i].nlri[parse_bgp_lib::LIB_NLRI_PATH_ID].value).c_str(),
                                     peer.isPrePolicy, peer.isAdjIn,
@@ -978,12 +961,6 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<parse_bg
             break;
     }
 
-    bool nexthop_isIPv4 =  (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
-    bool atomic_agg = false;
-    if (attrs.count(parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE)) {
-        atomic_agg     = attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value.front().compare("1") == 0 ? true : false;
-    }
-
     string ts;
     getTimestamp(peer.timestamp_secs, peer.timestamp_us, ts);
 
@@ -1021,8 +998,8 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<parse_bg
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_COMMUNITIES].value).c_str(),
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_EXT_COMMUNITY].value).c_str(),
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_CLUSTER_LIST].value).c_str(),
-                                    atomic_agg,
-                                    nexthop_isIPv4,
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_ATOMIC_AGGREGATE].value).c_str(),
+                                    map_string(attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].value).c_str(),
                                     map_string(attrs[parse_bgp_lib::LIB_ATTR_ORIGINATOR_ID].value).c_str(),
                                     map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_PATH_ID].value).c_str(),
                                     map_string(rib_list[i].nlri[parse_bgp_lib::LIB_NLRI_LABELS].value).c_str(),
@@ -1058,6 +1035,32 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<parse_bg
 }
 
 /**
+ * Abstract method Implementation - See Msvim ./tem gBusInterface.hpp for details
+ */
+void msgBus_kafka::update_baseAttributeTemplated(parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                                 parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                                 parse_bgp_lib::parseBgpLib::router_map &router,
+                                                 base_attr_action_code code, template_cfg::Template_cfg &template_container) {
+
+    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+    prep_buf[0] = 0;
+    parse_bgp_lib::parseBgpLib::header_map header;
+
+    header[parse_bgp_lib::LIB_HEADER_ACTION].name = parse_bgp_lib::parse_bgp_lib_header_names[parse_bgp_lib::LIB_HEADER_ACTION];
+    header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("add");
+
+    size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE,
+                                                          *(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> *)NULL,
+                                                          attrs, peer, router,
+                                                          *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
+    if (written) {
+        produce(MSGBUS_TOPIC_VAR_BASE_ATTRIBUTE_TEMPLATED, prep_buf, written, 1, peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front(),
+                &peer_list[peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()], strtoll(peer[parse_bgp_lib::LIB_PEER_AS].value.front().c_str(), NULL, 16));
+    }
+}
+
+
+/**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
 void msgBus_kafka::update_unicastPrefixTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
@@ -1080,25 +1083,72 @@ void msgBus_kafka::update_unicastPrefixTemplated(std::vector<parse_bgp_lib::pars
             break;
     }
 
-    bool nexthop_isIPv4 =  (attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
-    size_t as_path_size = attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size();
-
-    std::ostringstream numString;
-    numString << nexthop_isIPv4;
-
-    attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4];
-    attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].value.push_back(numString.str());
-
-    numString.str(std::string());
-    numString << as_path_size;
-
-    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE];
-    attrs[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE].value.push_back(numString.str());
-
     size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE, rib_list, attrs, peer, router,
                                                           *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
     if (written) {
         produce(MSGBUS_TOPIC_VAR_UNICAST_PREFIX_TEMPLATED, prep_buf, written, rib_list.size(), peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front(),
+                &peer_list[peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()], strtoll(peer[parse_bgp_lib::LIB_PEER_AS].value.front().c_str(), NULL, 16));
+    }
+}
+
+/**
+ * Abstract method Implementation - See MsgBusInterface.hpp for details
+ */
+void msgBus_kafka::update_L3VpnTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                                 parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                                 parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                                 parse_bgp_lib::parseBgpLib::router_map &router,
+                                                 vpn_action_code code,
+                                                 template_cfg::Template_cfg &template_container) {
+    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+    prep_buf[0] = 0;
+    parse_bgp_lib::parseBgpLib::header_map header;
+
+    header[parse_bgp_lib::LIB_HEADER_ACTION].name = parse_bgp_lib::parse_bgp_lib_header_names[parse_bgp_lib::LIB_HEADER_ACTION];
+    switch (code) {
+        case VPN_ACTION_ADD:
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("add");
+            break;
+        case VPN_ACTION_DEL:
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("del");
+            break;
+    }
+
+   size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE, rib_list, attrs, peer, router,
+                                                          *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
+    if (written) {
+        produce(MSGBUS_TOPIC_VAR_L3VPN_TEMPLATED, prep_buf, written, rib_list.size(), peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front(),
+                &peer_list[peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()], strtoll(peer[parse_bgp_lib::LIB_PEER_AS].value.front().c_str(), NULL, 16));
+    }
+}
+
+/**
+ * Abstract method Implementation - See MsgBusInterface.hpp for details
+ */
+void msgBus_kafka::update_eVpnTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                         parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                         parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                         parse_bgp_lib::parseBgpLib::router_map &router,
+                                         vpn_action_code code,
+                                         template_cfg::Template_cfg &template_container) {
+    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+    prep_buf[0] = 0;
+    parse_bgp_lib::parseBgpLib::header_map header;
+
+    header[parse_bgp_lib::LIB_HEADER_ACTION].name = parse_bgp_lib::parse_bgp_lib_header_names[parse_bgp_lib::LIB_HEADER_ACTION];
+    switch (code) {
+        case VPN_ACTION_ADD:
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("add");
+            break;
+        case VPN_ACTION_DEL:
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("del");
+            break;
+    }
+
+    size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE, rib_list, attrs, peer, router,
+                                                          *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
+    if (written) {
+        produce(MSGBUS_TOPIC_VAR_EVPN_TEMPLATED, prep_buf, written, rib_list.size(), peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front(),
                 &peer_list[peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()], strtoll(peer[parse_bgp_lib::LIB_PEER_AS].value.front().c_str(), NULL, 16));
     }
 }
@@ -1127,10 +1177,92 @@ void msgBus_kafka::update_LsNodeTemplated(std::vector<parse_bgp_lib::parseBgpLib
             break;
     }
 
+    attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID];
+    attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID].value.push_back((attrs.find(parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6) != attrs.end()) ?
+                                                                      map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6].value).c_str() : map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4].value).c_str());
+
     size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE, rib_list, attrs, peer, router,
                                                           *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
     if (written) {
         produce(MSGBUS_TOPIC_VAR_LS_NODE_TEMPLATED, prep_buf, written, rib_list.size(), peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front(),
+                &peer_list[peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()], strtoll(peer[parse_bgp_lib::LIB_PEER_AS].value.front().c_str(), NULL, 16));
+    }
+}
+
+/**
+* Abstract method Implementation - See MsgBusInterface.hpp for details
+*/
+void msgBus_kafka::update_LsLinkTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                          parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                          parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                          parse_bgp_lib::parseBgpLib::router_map &router,
+                                          ls_action_code code,
+                                          template_cfg::Template_cfg &template_container) {
+    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+    prep_buf[0] = 0;
+
+    parse_bgp_lib::parseBgpLib::header_map header;
+
+    header[parse_bgp_lib::LIB_HEADER_ACTION].name = parse_bgp_lib::parse_bgp_lib_header_names[parse_bgp_lib::LIB_HEADER_ACTION];
+    switch (code) {
+        case LS_ACTION_ADD:
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("add");
+            break;
+        case LS_ACTION_DEL:
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("del");
+            break;
+    }
+
+    attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID];
+    attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID].value.push_back((attrs.find(parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6) != attrs.end()) ?
+                                                                      map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6].value).c_str() : map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4].value).c_str());
+
+    attrs[parse_bgp_lib::LIB_ATTR_LS_REMOTE_ROUTER_ID].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_LS_REMOTE_ROUTER_ID];
+    attrs[parse_bgp_lib::LIB_ATTR_LS_REMOTE_ROUTER_ID].value.push_back((attrs.find(parse_bgp_lib::LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6) != attrs.end()) ?
+                                                                      map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV6].value).c_str() : map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_REMOTE_ROUTER_ID_IPV4].value).c_str());
+
+
+    size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE, rib_list, attrs, peer, router,
+                                                          *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
+    if (written) {
+        produce(MSGBUS_TOPIC_VAR_LS_LINK_TEMPLATED, prep_buf, written, rib_list.size(), peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front(),
+                &peer_list[peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()], strtoll(peer[parse_bgp_lib::LIB_PEER_AS].value.front().c_str(), NULL, 16));
+    }
+}
+
+/**
+ * Abstract method Implementation - See MsgBusInterface.hpp for details
+ */
+void msgBus_kafka::update_LsPrefixTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                          parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                          parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                          parse_bgp_lib::parseBgpLib::router_map &router,
+                                          ls_action_code code,
+                                          template_cfg::Template_cfg &template_container) {
+    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+    prep_buf[0] = 0;
+
+    parse_bgp_lib::parseBgpLib::header_map header;
+
+    header[parse_bgp_lib::LIB_HEADER_ACTION].name = parse_bgp_lib::parse_bgp_lib_header_names[parse_bgp_lib::LIB_HEADER_ACTION];
+    switch (code) {
+        case LS_ACTION_ADD:
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("add");
+            break;
+        case LS_ACTION_DEL:
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("del");
+            break;
+    }
+
+    attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID];
+    attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID].value.push_back((attrs.find(parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6) != attrs.end()) ?
+                                                                      map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV6].value).c_str() : map_string(attrs[parse_bgp_lib::LIB_ATTR_LS_LOCAL_ROUTER_ID_IPV4].value).c_str());
+
+    size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE, rib_list, attrs, peer, router,
+                                                          *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
+
+    if (written) {
+        produce(MSGBUS_TOPIC_VAR_LS_PREFIX_TEMPLATED, prep_buf, written, rib_list.size(), peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front(),
                 &peer_list[peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()], strtoll(peer[parse_bgp_lib::LIB_PEER_AS].value.front().c_str(), NULL, 16));
     }
 }

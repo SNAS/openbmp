@@ -90,6 +90,35 @@ public:
                                 parse_bgp_lib::parseBgpLib::router_map &router,
                                 ls_action_code code, template_cfg::Template_cfg &template_container);
 
+    virtual void update_LsLinkTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
+                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      parse_bgp_lib::parseBgpLib::router_map &router,
+                                      ls_action_code code, template_cfg::Template_cfg &template_container);
+
+     virtual void update_LsPrefixTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
+                                          parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                          parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                          parse_bgp_lib::parseBgpLib::router_map &router,
+                                           ls_action_code code, template_cfg::Template_cfg &template_container);
+
+    void update_L3VpnTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3Vpn_list,
+                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                               parse_bgp_lib::parseBgpLib::peer_map &peer,
+                               parse_bgp_lib::parseBgpLib::router_map &router,
+                               vpn_action_code code, template_cfg::Template_cfg &template_container);
+
+    void update_eVpnTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &eVpn_list,
+                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      parse_bgp_lib::parseBgpLib::router_map &router,
+                                      vpn_action_code code, template_cfg::Template_cfg &template_container);
+
+   void update_baseAttributeTemplated(parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      parse_bgp_lib::parseBgpLib::router_map &router,
+                                      base_attr_action_code code, template_cfg::Template_cfg &template_container);
+
     void update_RouterTemplated(parse_bgp_lib::parseBgpLib::router_map &router,
                                 router_action_code code, template_cfg::Template_cfg &template_container);
 

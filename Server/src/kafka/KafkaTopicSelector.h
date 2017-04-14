@@ -33,6 +33,7 @@ public:
     #define MSGBUS_TOPIC_BMP_STAT               "openbmp.parsed.bmp_stat"
     #define MSGBUS_TOPIC_BMP_RAW                "openbmp.bmp_raw"
 
+    #define MSGBUS_TOPIC_BASE_ATTRIBUTE_TEMPLATED   "openbmp.parsed.base_attribute_templated"
     #define MSGBUS_TOPIC_UNICAST_PREFIX_TEMPLATED   "openbmp.parsed.unicast_prefix_templated"
     #define MSGBUS_TOPIC_LS_NODE_TEMPLATED          "openbmp.parsed.ls_node_templated"
     #define MSGBUS_TOPIC_LS_LINK_TEMPLATED          "openbmp.parsed.ls_link_templated"
@@ -60,6 +61,7 @@ public:
     #define MSGBUS_TOPIC_VAR_BMP_STAT           "bmp_stat"
     #define MSGBUS_TOPIC_VAR_BMP_RAW            "bmp_raw"
 
+    #define MSGBUS_TOPIC_VAR_BASE_ATTRIBUTE_TEMPLATED   "base_attribute_templated"
     #define MSGBUS_TOPIC_VAR_UNICAST_PREFIX_TEMPLATED   "unicast_prefix_templated"
     #define MSGBUS_TOPIC_VAR_LS_NODE_TEMPLATED          "ls_node_templated"
     #define MSGBUS_TOPIC_VAR_LS_LINK_TEMPLATED          "ls_link_templated"

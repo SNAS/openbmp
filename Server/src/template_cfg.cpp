@@ -65,6 +65,8 @@
                         topic = template_cfg::BMP_ROUTER;
                     } else if (key.compare("collector") == 0) {
                         topic = template_cfg::BMP_COLLECTOR;
+                    } else if (key.compare("base_attributes") == 0) {
+                        topic = template_cfg::BASE_ATTRIBUTES;
                     } else {
                         std::cout << "Unknown template topic" << std::endl;
                         return (false);

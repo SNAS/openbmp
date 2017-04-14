@@ -303,6 +303,22 @@ public:
     virtual void update_baseAttribute(obj_bgp_peer &peer, parse_bgp_lib::parseBgpLib::attr_map &attrs, base_attr_action_code code) = 0;
 
     /*****************************************************************//**
+     * \brief       Add/Update  base path attributes templated
+     *
+     * \details     Will generate a message to add/update BGP-LS nodes.
+     *
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
+     *****************************************************************/
+    virtual void update_baseAttributeTemplated(parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      parse_bgp_lib::parseBgpLib::router_map &router,
+                                       base_attr_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+
+    /*****************************************************************//**
      * \brief       Add/Update RIB objects
      *
      * \details     Will generate a message to add new RIB prefixes
@@ -424,6 +440,71 @@ public:
                                         parse_bgp_lib::parseBgpLib::peer_map &peer,
                                         parse_bgp_lib::parseBgpLib::router_map &router,
                                         ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+    /*****************************************************************//**
+     * \brief       Add/Update BGP-LS links templated
+     *
+     * \details     Will generate a message to add/update BGP-LS nodes.
+     *
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
+     *****************************************************************/
+    virtual void update_LsLinkTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
+                                        parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                        parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                        parse_bgp_lib::parseBgpLib::router_map &router,
+                                        ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+    /*****************************************************************//**
+     * \brief       Add/Update BGP-LS prefixes templated
+     *
+     * \details     Will generate a message to add/update BGP-LS nodes.
+     *
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
+     *****************************************************************/
+    virtual void update_LsPrefixTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
+                                        parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                        parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                        parse_bgp_lib::parseBgpLib::router_map &router,
+                                        ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+    /*****************************************************************//**
+     * \brief       Add/Update L3 VPN templated
+     *
+     * \details     Will generate a message to add/update BGP-LS nodes.
+     *
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
+     *****************************************************************/
+    virtual void update_L3VpnTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3Vpn_list,
+                                          parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                          parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                          parse_bgp_lib::parseBgpLib::router_map &router,
+                                          vpn_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+
+    /*****************************************************************//**
+     * \brief       Add/Update  eVPN templated
+     *
+     * \details     Will generate a message to add/update BGP-LS nodes.
+     *
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
+     *****************************************************************/
+    virtual void update_eVpnTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &eVpn_list,
+                                       parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                       parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                       parse_bgp_lib::parseBgpLib::router_map &router,
+                                       vpn_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
 
     /*****************************************************************//**

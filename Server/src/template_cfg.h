@@ -24,6 +24,7 @@ namespace template_cfg {
      *  \see http://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml
      */
     enum TEMPLATE_TOPICS {
+        BASE_ATTRIBUTES,
         UNICAST_PREFIX,
         LS_NODES,
         LS_LINKS,
@@ -208,6 +209,10 @@ static void print_template (template_cfg::Template_cfg &template_cfg_print, size
                 }
                 case template_cfg::BMP_COLLECTOR : {
                     cout << "collector" << endl;
+                    break;
+                }
+                case template_cfg::BASE_ATTRIBUTES : {
+                    cout << "base_attributes" << endl;
                     break;
                 }
                 default:
