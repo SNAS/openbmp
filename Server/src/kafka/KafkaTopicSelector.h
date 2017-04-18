@@ -42,6 +42,8 @@ public:
     #define MSGBUS_TOPIC_EVPN_TEMPLATED             "openbmp.parsed.evpn_templated"
     #define MSGBUS_TOPIC_ROUTER_TEMPLATED           "openbmp.parsed.router_templated"
     #define MSGBUS_TOPIC_COLLECTOR_TEMPLATED        "openbmp.parsed.collector_templated"
+    #define MSGBUS_TOPIC_PEER_TEMPLATED             "openbmp.parsed.peer_templated"
+
 
 
     /**
@@ -70,8 +72,7 @@ public:
     #define MSGBUS_TOPIC_VAR_EVPN_TEMPLATED             "evpn_templated"
     #define MSGBUS_TOPIC_VAR_ROUTER_TEMPLATED           "router_templated"
     #define MSGBUS_TOPIC_VAR_COLLECTOR_TEMPLATED        "collector_templated"
-
-
+    #define MSGBUS_TOPIC_VAR_PEER_TEMPLATED             "peer_templated"
 
     /*********************************************************************//**
      * Constructor for class

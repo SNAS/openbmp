@@ -125,7 +125,8 @@ bool parseBGP::handleUpdate(u_char *data, size_t size, Template_map *template_ma
  *
  * \returns True if error, false if no error.
  */
-bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_down_event &down_event) {
+bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_down_event &down_event,
+                               parse_bgp_lib::parseBgpLib::parsed_update &update) {
     bool        rval;
 
     // Process the BGP message normally
@@ -152,6 +153,30 @@ bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_p
         throw "ERROR: Invalid BGP MSG for BMP down event, expected NOTIFICATION message.";
     }
 
+    /*
+     * Fill the peer map for templating purposes
+     */
+    std::ostringstream numString;
+    numString << down_event.bmp_reason;
+
+    update.peer[parse_bgp_lib::LIB_PEER_BMP_REASON].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_BMP_REASON];
+    update.peer[parse_bgp_lib::LIB_PEER_BMP_REASON].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << down_event.bgp_err_code;
+
+    update.peer[parse_bgp_lib::LIB_PEER_BGP_ERR_CODE].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_BGP_ERR_CODE];
+    update.peer[parse_bgp_lib::LIB_PEER_BGP_ERR_CODE].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << down_event.bgp_err_subcode;
+
+    update.peer[parse_bgp_lib::LIB_PEER_BGP_ERR_SUBCODE].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_BGP_ERR_SUBCODE];
+    update.peer[parse_bgp_lib::LIB_PEER_BGP_ERR_SUBCODE].value.push_back(numString.str());
+
+    update.peer[parse_bgp_lib::LIB_PEER_ERROR_TEXT].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_ERROR_TEXT];
+    update.peer[parse_bgp_lib::LIB_PEER_ERROR_TEXT].value.push_back(down_event.error_text);
+
     return rval;
 }
 
@@ -166,7 +191,8 @@ bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_p
  *
  * \returns True if error, false if no error.
  */
-bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event) {
+bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event,
+                             parse_bgp_lib::parseBgpLib::parsed_update &update) {
     bgp_msg::OpenMsg    oMsg(logger, p_entry->peer_addr, this->p_info, debug);
     list <string>       cap_list;
     string              local_bgp_id, remote_bgp_id;
@@ -261,6 +287,57 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
                 p_entry->peer_addr, router_addr.c_str());
         throw "ERROR: Invalid BGP MSG for BMP Received OPEN message, expected OPEN message.";
     }
+
+    /*
+     * Fill the peer map for templating purposes
+     */
+    update.peer[parse_bgp_lib::LIB_PEER_INFO_DATA].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_INFO_DATA];
+    update.peer[parse_bgp_lib::LIB_PEER_INFO_DATA].value.push_back(up_event->info_data);
+
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_IP].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_IP];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_IP].value.push_back(up_event->local_ip);
+
+    std::ostringstream numString;
+    numString << up_event->local_port;
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_PORT].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_PORT];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_PORT].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << up_event->local_asn;
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_ASN].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_ASN];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_ASN].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << up_event->local_hold_time;
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_HOLD_TIME].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_HOLD_TIME];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_HOLD_TIME].value.push_back(numString.str());
+
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_BGP_ID].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_BGP_ID];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_BGP_ID].value.push_back(up_event->local_bgp_id);
+
+    numString.str(std::string());
+    numString << up_event->remote_port;
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_PORT].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_REMOTE_PORT];
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_PORT].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << up_event->remote_asn;
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_ASN].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_REMOTE_ASN];
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_ASN].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << up_event->remote_hold_time;
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_HOLD_TIME].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_REMOTE_HOLD_TIME];
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_HOLD_TIME].value.push_back(numString.str());
+
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_BGP_ID].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_REMOTE_BGP_ID];
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_BGP_ID].value.push_back(up_event->remote_bgp_id);
+
+    update.peer[parse_bgp_lib::LIB_PEER_SENT_CAP].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_SENT_CAP];
+    update.peer[parse_bgp_lib::LIB_PEER_SENT_CAP].value.push_back(up_event->sent_cap);
+
+    update.peer[parse_bgp_lib::LIB_PEER_RECV_CAP].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_RECV_CAP];
+    update.peer[parse_bgp_lib::LIB_PEER_RECV_CAP].value.push_back(up_event->recv_cap);
 
     return false;
 }

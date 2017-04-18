@@ -112,7 +112,7 @@ public:
      *
      * \returns True if error, false if no error.
      */
-    bool handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_down_event &down_event);
+    bool handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_down_event &down_event, parse_bgp_lib::parseBgpLib::parsed_update &update);
 
     /**
      * Handles the up event by parsing the BGP open messages - Up event will be updated
@@ -125,7 +125,7 @@ public:
      *
      * \returns True if error, false if no error.
      */
-    bool handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event);
+    bool handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event, parse_bgp_lib::parseBgpLib::parsed_update &update);
 
     /*
      * Debug methods

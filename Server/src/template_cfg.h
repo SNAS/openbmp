@@ -33,6 +33,9 @@ namespace template_cfg {
         EVPN,
         BMP_ROUTER,
         BMP_COLLECTOR,
+        BMP_PEER_FIRST,
+        BMP_PEER_UP,
+        BMP_PEER_DOWN
     };
 
 
@@ -49,7 +52,7 @@ namespace template_cfg {
         PEER,
         ROUTER,
         COLLECTOR,
-        HEADER
+        HEADER,
     };
 
     enum TEMPLATE_FORMAT_TYPE {
@@ -209,6 +212,12 @@ static void print_template (template_cfg::Template_cfg &template_cfg_print, size
                 }
                 case template_cfg::BMP_COLLECTOR : {
                     cout << "collector" << endl;
+                    break;
+                }
+                case template_cfg::BMP_PEER_FIRST :
+                case template_cfg::BMP_PEER_UP :
+                case template_cfg::BMP_PEER_DOWN : {
+                    cout << "peer" << endl;
                     break;
                 }
                 case template_cfg::BASE_ATTRIBUTES : {

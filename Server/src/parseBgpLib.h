@@ -370,7 +370,28 @@ namespace parse_bgp_lib {
         LIB_PEER_TIMESTAMP_SECS,
         LIB_PEER_TIMESTAMP_USECS,
         LIB_PEER_TIMESTAMP,
+        LIB_PEER_NAME,
+
+        LIB_PEER_BMP_REASON,
+        LIB_PEER_BGP_ERR_CODE,
+        LIB_PEER_BGP_ERR_SUBCODE,
+        LIB_PEER_ERROR_TEXT,
+
+        LIB_PEER_INFO_DATA,
+        LIB_PEER_LOCAL_IP,
+        LIB_PEER_LOCAL_PORT,
+        LIB_PEER_LOCAL_ASN,
+        LIB_PEER_LOCAL_HOLD_TIME,
+        LIB_PEER_LOCAL_BGP_ID,
+        LIB_PEER_REMOTE_ASN,
+        LIB_PEER_REMOTE_PORT,
+        LIB_PEER_REMOTE_HOLD_TIME,
+        LIB_PEER_REMOTE_BGP_ID,
+        LIB_PEER_SENT_CAP,
+        LIB_PEER_RECV_CAP,
+
         LIB_PEER_MAX
+
     };
 
     const std::array<std::string, parse_bgp_lib::LIB_PEER_MAX> parse_bgp_lib_peer_names = {
@@ -385,7 +406,25 @@ namespace parse_bgp_lib {
             "peerIsIpv4",
             "peerTimestampSecs",
             "peerTimestampMicrosecs",
-            "peerTimestamp"
+            "peerTimestamp",
+            "peerName",
+
+            "peerBmpReason",
+            "peerBgpErrCode",
+            "peerBgpErrSubcode",
+            "peerErrorText",
+            "peerInfoData",
+            "peerLocalIp",
+            "peerLocalPort",
+            "peerLocalAsn",
+            "peerLocalHoldTime",
+            "peerLocalBgpId",
+            "peerRemoteAsn",
+            "peerRemotePort",
+            "peerRemoteHoldTime",
+            "peerRemoteBgpId",
+            "peerSentCap",
+            "peerRecvCap"
     };
 
     enum BGP_LIB_ROUTER {

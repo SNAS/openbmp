@@ -88,7 +88,7 @@ void BMPReader::readerThreadLoop(bool &run, BMPListener::ClientInfo *client, Msg
         for (std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map.template_map.begin();
              it != template_map.template_map.end(); it++) {
             template_cfg::Template_cfg template_cfg_print = it->second;
-            print_template(template_cfg_print, 0);
+ //           print_template(template_cfg_print, 0);
         }
     }
 
@@ -174,6 +174,13 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             peer_info_key =  p_entry.peer_addr;
             peer_info_key += p_entry.peer_rd;
             BMPReader::peer_info *peer_info = &peer_info_map[peer_info_key];
+             if (bmp_type != parseBMP::TYPE_PEER_UP)
+                mbus_ptr->update_Peer(p_entry, NULL, NULL, mbus_ptr->PEER_ACTION_FIRST);     // add the peer entry
+
+            /*
+             * Create the peer hash_id here
+             */
+            // Generate the hash
             //Fill p_info fields to be passed to the parser
             peer_info->peer_hash_str= parse_bgp_lib::hash_toStr(p_entry.hash_id);
             peer_info->routerAddr = std::string((char *)r_object.ip_addr);
@@ -182,12 +189,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             parser.setPeerInfo(peer_info);
 
             parser.parseBmpPeer(read_fd, parse_peer_hdr, update);
-            if (bmp_type != parseBMP::TYPE_PEER_UP)
-                mbus_ptr->update_Peer(p_entry, NULL, NULL, mbus_ptr->PEER_ACTION_FIRST);     // add the peer entry
-            /*
-             * Create the peer hash_id here
-             */
-            // Generate the hash
+
             MD5 hash;
 
             parse_bgp_lib::update_hash(&update.peer[parse_bgp_lib::LIB_PEER_ADDR].value, &hash);
@@ -209,6 +211,11 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             update.peer[parse_bgp_lib::LIB_PEER_HASH_ID].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_HASH_ID];
             update.peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
             delete[] hash_raw;
+
+            std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_PEER_FIRST);
+            if (it != template_map->template_map.end() and (bmp_type != parseBMP::TYPE_PEER_UP)) {
+                mbus_ptr->update_PeerTemplated(update.router, update.peer, mbus_ptr->PEER_ACTION_FIRST, it->second);
+            }
         }
 
         /*
@@ -237,7 +244,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                             snprintf(down_event.error_text, sizeof(down_event.error_text),
                                     "Local close by (%s) for peer (%s) : ", r_object.ip_addr,
                                     p_entry.peer_addr);
-                            pBGP->handleDownEvent(pBMP->bmp_data, pBMP->bmp_data_len, down_event);
+                            pBGP->handleDownEvent(pBMP->bmp_data, pBMP->bmp_data_len, down_event, update);
                             break;
                         }
                         case 2 : // Local system close, no bgp notify
@@ -257,7 +264,7 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                                     "Remote peer (%s) closed local (%s) session: ", r_object.ip_addr,
                                     p_entry.peer_addr);
 
-                            pBGP->handleDownEvent(pBMP->bmp_data, pBMP->bmp_data_len, down_event);
+                            pBGP->handleDownEvent(pBMP->bmp_data, pBMP->bmp_data_len, down_event, update);
                             break;
                         }
                     }
@@ -266,6 +273,10 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
 
                     // Add event to the database
                     mbus_ptr->update_Peer(p_entry, NULL, &down_event, mbus_ptr->PEER_ACTION_DOWN);
+                    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_PEER_DOWN);
+                    if (it != template_map->template_map.end()) {
+                        mbus_ptr->update_PeerTemplated(update.router, update.peer, mbus_ptr->PEER_ACTION_DOWN, it->second);
+                    }
 
                 } else {
                     LOG_ERR("Error with client socket %d", read_fd);
@@ -293,14 +304,17 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                        pBGP->enableDebug();
 
                     // Parse the BGP sent/received open messages
-                    pBGP->handleUpEvent(pBMP->bmp_data, pBMP->bmp_data_len, &up_event);
+                    pBGP->handleUpEvent(pBMP->bmp_data, pBMP->bmp_data_len, &up_event, update);
 
                     // Free the bgp parser
                     delete pBGP;
 
                     // Add the up event to the DB
                     mbus_ptr->update_Peer(p_entry, &up_event, NULL, mbus_ptr->PEER_ACTION_UP);
-
+                    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_PEER_UP);
+                    if (it != template_map->template_map.end()) {
+                        mbus_ptr->update_PeerTemplated(update.router, update.peer, mbus_ptr->PEER_ACTION_UP, it->second);
+                    }
                 } else {
                     LOG_NOTICE("%s: PEER UP Received but failed to parse the BMP header.", client->c_ip);
                 }

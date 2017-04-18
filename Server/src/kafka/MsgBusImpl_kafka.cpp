@@ -670,6 +670,117 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
     peer_seq++;
 }
 
+void msgBus_kafka::update_PeerTemplated(parse_bgp_lib::parseBgpLib::router_map &router,
+                                        parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                  peer_action_code code, template_cfg::Template_cfg &template_container) {
+    //bzero(prep_buf, MSGBUS_WORKING_BUF_SIZE);
+    prep_buf[0] = 0;
+    parse_bgp_lib::parseBgpLib::header_map header;
+    size_t written = 0;
+
+    bool skip_if_in_cache = true;
+    bool add_to_cache = true;
+
+    string action = "first";
+
+    // Determine the action and if cache should be used or not - don't want to do too much in this switch block
+    switch (code) {
+        case PEER_ACTION_FIRST :
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("first");
+            break;
+
+        case PEER_ACTION_UP :
+            skip_if_in_cache = false;
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("up");
+            break;
+
+        case PEER_ACTION_DOWN:
+            skip_if_in_cache = false;
+            header[parse_bgp_lib::LIB_HEADER_ACTION].value.push_back("down");
+            add_to_cache = false;
+
+            if (peer_list.find(peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()) != peer_list.end())
+                peer_list.erase(peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front());
+
+            break;
+    }
+
+    // Check if we have already processed this entry, if so return
+    if (skip_if_in_cache and peer_list.find(peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()) != peer_list.end()) {
+        return;
+    }
+
+    // Get the hostname using DNS
+    string hostname;
+    resolveIp(peer[parse_bgp_lib::LIB_PEER_ADDR].value.front(), hostname);
+
+    peer[parse_bgp_lib::LIB_PEER_NAME].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_NAME];
+    peer[parse_bgp_lib::LIB_PEER_NAME].value.push_back(hostname);
+
+
+    // Insert/Update map entry
+    if (add_to_cache) {
+        if (topicSel != NULL)
+            topicSel->lookupPeerGroup(peer[parse_bgp_lib::LIB_PEER_NAME].value.front(),
+                                      peer[parse_bgp_lib::LIB_PEER_ADDR].value.front(),
+                                      strtoll(peer[parse_bgp_lib::LIB_PEER_AS].value.front().c_str(), NULL, 16),
+                                      peer_list[peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()]);
+    }
+
+    switch (code) {
+        case PEER_ACTION_FIRST :
+            written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE,
+                                                                  *(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> *)NULL,
+                                                                  *(parse_bgp_lib::parseBgpLib::attr_map *)NULL,
+                                                                  peer,
+                                                                  router,
+                                                                  *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
+
+            action.assign("first");
+            break;
+
+        case PEER_ACTION_UP : {
+            if ((peer.find(parse_bgp_lib::LIB_PEER_INFO_DATA) != peer.end())) {
+                boost::replace_all(peer[parse_bgp_lib::LIB_PEER_INFO_DATA].value.front(), "\n", "\\n");
+                boost::replace_all(peer[parse_bgp_lib::LIB_PEER_INFO_DATA].value.front(), "\t", " ");
+            }
+
+            written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE,
+                                                                  *(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> *)NULL,
+                                                                  *(parse_bgp_lib::parseBgpLib::attr_map *)NULL,
+                                                                  peer,
+                                                                  router,
+                                                                  *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
+
+            skip_if_in_cache = false;
+            action.assign("up");
+            break;
+        }
+        case PEER_ACTION_DOWN: {
+            written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE,
+                                                                  *(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> *)NULL,
+                                                                  *(parse_bgp_lib::parseBgpLib::attr_map *)NULL,
+                                                                  peer,
+                                                                  router,
+                                                                  *(parse_bgp_lib::parseBgpLib::collector_map *)NULL, header);
+            skip_if_in_cache = false;
+            action.assign("down");
+            add_to_cache = false;
+
+            if (peer_list.find(peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()) != peer_list.end())
+                peer_list.erase(peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front());
+
+            break;
+        }
+    }
+
+    if (written) {
+        produce(MSGBUS_TOPIC_VAR_PEER_TEMPLATED, prep_buf, written, 1, peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front(),
+                &peer_list[peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.front()], strtoll(peer[parse_bgp_lib::LIB_PEER_AS].value.front().c_str(), NULL, 16));
+    }
+}
+
+
 /**
  * Abstract method Implementation - See MsgBusInterface.hpp for details
  */
@@ -1304,6 +1415,24 @@ void msgBus_kafka::update_RouterTemplated(parse_bgp_lib::parseBgpLib::router_map
         }
     }
 
+    parse_bgp_lib::parseBgpLib::router_map::iterator it = router.find(parse_bgp_lib::LIB_ROUTER_DESCR);
+    if (it != router.end()) {
+        boost::replace_all(router[parse_bgp_lib::LIB_ROUTER_DESCR].value.front(), "\n", "\\n");
+        boost::replace_all(router[parse_bgp_lib::LIB_ROUTER_DESCR].value.front(), "\t", " ");
+    }
+
+    it = router.find(parse_bgp_lib::LIB_ROUTER_INITIATE_DATA);
+    if (it != router.end()) {
+        boost::replace_all(router[parse_bgp_lib::LIB_ROUTER_INITIATE_DATA].value.front(), "\n", "\\n");
+        boost::replace_all(router[parse_bgp_lib::LIB_ROUTER_INITIATE_DATA].value.front(), "\t", " ");
+    }
+
+    it = router.find(parse_bgp_lib::LIB_ROUTER_TERM_DATA);
+    if (it != router.end()) {
+        boost::replace_all(router[parse_bgp_lib::LIB_ROUTER_TERM_DATA].value.front(), "\n", "\\n");
+        boost::replace_all(router[parse_bgp_lib::LIB_ROUTER_TERM_DATA].value.front(), "\t", " ");
+    }
+
     size_t written = template_container.execute_container(prep_buf, MSGBUS_WORKING_BUF_SIZE,
                                                           *(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> *)NULL,
                                                           *(parse_bgp_lib::parseBgpLib::attr_map *)NULL,
@@ -1313,7 +1442,7 @@ void msgBus_kafka::update_RouterTemplated(parse_bgp_lib::parseBgpLib::router_map
 
     // Get the hostname
     string hostname = "";
-    parse_bgp_lib::parseBgpLib::router_map::iterator it = router.find(parse_bgp_lib::LIB_ROUTER_NAME);
+    it = router.find(parse_bgp_lib::LIB_ROUTER_NAME);
     if (it != router.end()) {
         resolveIp(router[parse_bgp_lib::LIB_ROUTER_IP].value.front(), hostname);
         router[parse_bgp_lib::LIB_ROUTER_NAME].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_ROUTER_NAME];

@@ -286,6 +286,27 @@ public:
     virtual void update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_peer_down_event *down, peer_action_code code) = 0;
 
     /*****************************************************************//**
+     * \brief       Add/Update a peer object templated
+     *
+     * \details     Will generate a message to add a new router or update an existing
+     *              router.
+     *
+     * \param[in,out]   peer          Peer object
+     * \param[in]       code            Action code for router update
+     * \param[in]       template Template
+     *
+     * \returns     The router.hash_id will be updated based on the
+     *              supplied data.
+     *
+     * \note        Caller must free any allocated memory, which is
+     *              safe to do so when this method returns.
+     *****************************************************************/
+    virtual void update_PeerTemplated(parse_bgp_lib::parseBgpLib::router_map &router,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      peer_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+
+    /*****************************************************************//**
      * \brief       Add/Update base path attributes
      *
      * \details     Will generate a message to add a new path object.

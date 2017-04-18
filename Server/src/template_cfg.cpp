@@ -67,6 +67,12 @@
                         topic = template_cfg::BMP_COLLECTOR;
                     } else if (key.compare("base_attributes") == 0) {
                         topic = template_cfg::BASE_ATTRIBUTES;
+                    } else if (key.compare("peer_first") == 0) {
+                        topic = template_cfg::BMP_PEER_FIRST;
+                    } else if (key.compare("peer_up") == 0) {
+                        topic = template_cfg::BMP_PEER_UP;
+                    } else if (key.compare("peer_down") == 0) {
+                        topic = template_cfg::BMP_PEER_DOWN;
                     } else {
                         std::cout << "Unknown template topic" << std::endl;
                         return (false);
@@ -457,7 +463,6 @@ namespace template_cfg {
                 remaining_length -= 1; total_read += 1;
                 bpos += 1; epos = bpos;
                 if (strncmp(bpos, "loop", strlen("loop")) == 0) {
-                    std::cout << " Found a loop type inside type" << type << std::endl;
                     template_cfg::Template_cfg template_cfg(logger, debug);
                     if (type == LOOP) {
                         std::cout << " Error: Found a loop type inside type" << type << std::endl;
@@ -581,7 +586,6 @@ namespace template_cfg {
                         }
                     }
                 } else if (key2.compare("loop") == 0) {
-                    std::cout << " Found a loop type inside type" << type << std::endl;
                     template_cfg_loop.type = template_cfg::LOOP;
                     template_cfg_loop.topic = topic;
                     template_cfg_loop.format = template_cfg::TSV;
@@ -613,8 +617,6 @@ namespace template_cfg {
                             return (false);
                         }
                     }
-                    std::cout << "Craft end object for loop" << std::endl;
-
                     template_cfg::Template_cfg template_cfg_end(logger, debug);
                     template_cfg_end.type = template_cfg::END;
                     template_cfg_end.prepend_string.append(std::string("\n"));
@@ -629,8 +631,6 @@ namespace template_cfg {
         } else {
             cout << "Container/schema should only have maps at the root/base level" << endl;
         }
-
-        cout << "Craft end object for container" << endl;
 
         template_cfg::Template_cfg template_cfg(logger, debug);
         template_cfg.type = template_cfg::END;
@@ -730,14 +730,14 @@ namespace template_cfg {
             /*
              * Couldnt find
              */
-            cout << "Error in replacement variable name" << endl;
+            cout << "Error in replacement variable name: " << lookup_string << endl;
             return(0);
         }
 
         this->replacement_var = it->second;
         read += epos - bpos + 2;
-        cout << "Created replacement var list type " << this->replacement_list_type << ", var is " << this->replacement_var << std::endl;
-        cout << "replacement read is " << read << endl;
+//        cout << "Created replacement var list type " << this->replacement_list_type << ", var is " << this->replacement_var << std::endl;
+//        cout << "replacement read is " << read << endl;
 
         return(read);
     }
