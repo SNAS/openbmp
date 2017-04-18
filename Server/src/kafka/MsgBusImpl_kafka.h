@@ -128,6 +128,10 @@ public:
     void update_PeerTemplated(parse_bgp_lib::parseBgpLib::router_map &router, parse_bgp_lib::parseBgpLib::peer_map &peer,
                                       peer_action_code code, template_cfg::Template_cfg &template_container);
 
+    void add_StatReportTemplated(parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                         parse_bgp_lib::parseBgpLib::router_map &router,
+                                         parse_bgp_lib::parseBgpLib::stat_map stats, template_cfg::Template_cfg &template_container);
+
 
     // Debug methods
     void enableDebug();

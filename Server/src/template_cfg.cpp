@@ -73,6 +73,8 @@
                         topic = template_cfg::BMP_PEER_UP;
                     } else if (key.compare("peer_down") == 0) {
                         topic = template_cfg::BMP_PEER_DOWN;
+                    } else if (key.compare("bmp_stat") == 0) {
+                        topic = template_cfg::BMP_STATS;
                     } else {
                         std::cout << "Unknown template topic" << std::endl;
                         return (false);
@@ -170,7 +172,8 @@ namespace template_cfg {
                                          parse_bgp_lib::parseBgpLib::peer_map &peer,
                                          parse_bgp_lib::parseBgpLib::router_map &router,
                                          parse_bgp_lib::parseBgpLib::collector_map &collector,
-                                         parse_bgp_lib::parseBgpLib::header_map &header) {
+                                         parse_bgp_lib::parseBgpLib::header_map &header,
+                                         parse_bgp_lib::parseBgpLib::stat_map &stats) {
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -210,6 +213,10 @@ namespace template_cfg {
                 replace_string = map_string(header[static_cast<parse_bgp_lib::BGP_LIB_HEADER>(this->replacement_var)].value);
                 break;
             }
+            case template_cfg::STATS : {
+                replace_string = map_string(stats[static_cast<parse_bgp_lib::BGP_LIB_STATS>(this->replacement_var)].value);
+                break;
+            }
             default:
                 break;
         }
@@ -231,7 +238,8 @@ namespace template_cfg {
                                       parse_bgp_lib::parseBgpLib::peer_map &peer,
                                       parse_bgp_lib::parseBgpLib::router_map &router,
                                       parse_bgp_lib::parseBgpLib::collector_map &collector,
-                                      parse_bgp_lib::parseBgpLib::header_map &header, uint64_t &sequence) {
+                                      parse_bgp_lib::parseBgpLib::header_map &header,
+                                      parse_bgp_lib::parseBgpLib::stat_map &stats, uint64_t &sequence) {
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -286,7 +294,7 @@ namespace template_cfg {
                             buf += written; remaining_len -= written;
                         } else {
                             written = it->execute_replace(buf, remaining_len, rib_list[i], attrs, peer, router,
-                                                          collector, header);
+                                                          collector, header, stats);
                             if ((remaining_len - written) <= 0) {
                                 return (max_buf_length - remaining_len);
                             }
@@ -319,7 +327,8 @@ namespace template_cfg {
                                            parse_bgp_lib::parseBgpLib::peer_map &peer,
                                            parse_bgp_lib::parseBgpLib::router_map &router,
                                            parse_bgp_lib::parseBgpLib::collector_map &collector,
-                                           parse_bgp_lib::parseBgpLib::header_map &header) {
+                                           parse_bgp_lib::parseBgpLib::header_map &header,
+                                           parse_bgp_lib::parseBgpLib::stat_map &stats) {
 
         char buf2[80000] = {0}; // Second working buffer
 
@@ -343,7 +352,8 @@ namespace template_cfg {
                 }
                 case template_cfg:: LOOP : {
                     noLoop = false;
-                    written = it->execute_loop(buf, remaining_len, rib_list, attrs, peer, router, collector, header, seq);
+                    written = it->execute_loop(buf, remaining_len, rib_list, attrs, peer, router, collector, header,
+                                               stats, seq);
                     if ((remaining_len - written) <= 0) {
                         return (max_buf_length - remaining_len);
                     }
@@ -373,7 +383,7 @@ namespace template_cfg {
                     } else {
                         written = it->execute_replace(buf, remaining_len,
                                                       *(parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri *) NULL,
-                                                      attrs, peer, router, collector, header);
+                                                      attrs, peer, router, collector, header, stats);
                         if ((remaining_len - written) <= 0) {
                             return (max_buf_length - remaining_len);
                         }
@@ -684,6 +694,10 @@ namespace template_cfg {
                 template_cfg::Template_cfg::lookup_map.insert(
                         std::pair<std::string, int>(parse_bgp_lib::parse_bgp_lib_header_names[i], i));
             }
+            for (int i = 0; i < parse_bgp_lib::LIB_STATS_MAX; i++) {
+                template_cfg::Template_cfg::lookup_map.insert(
+                        std::pair<std::string, int>(parse_bgp_lib::parse_bgp_lib_stats_names[i], i));
+            }
 
         }
 
@@ -707,6 +721,8 @@ namespace template_cfg {
             this->replacement_list_type = COLLECTOR;
         } else if (strncmp(bpos, "header", strlen("header")) == 0) {
             this->replacement_list_type = HEADER;
+        } else if (strncmp(bpos, "stats", strlen("stats")) == 0) {
+            this->replacement_list_type = STATS;
         } else {
             cout << "Invalid replacement type " << epos << std::endl;
             return (0);

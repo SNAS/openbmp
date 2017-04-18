@@ -494,6 +494,31 @@ namespace parse_bgp_lib {
             "sequenceNumber"
     };
 
+    enum BGP_LIB_STATS {
+        LIB_STATS_PREFIXES_REJ,
+        LIB_STATS_KNOWN_DUP_PREFIXES,
+        LIB_STATS_KNOWN_DUP_WITHDRAWS,
+        LIB_STATS_INVALID_CLUSTER_LIST,
+        LIB_STATS_INVALID_AS_PATH_LOOP,
+        LIB_STATS_INVALID_ORIGINATOR_ID,
+        LIB_STATS_INVALID_AS_CONFED_LOOP,
+        LIB_STATS_ROUTES_ADJ_RIB_IN,
+        LIB_STATS_ROUTES_LOC_RIB,
+        LIB_STATS_MAX
+    };
+
+    const std::array<std::string, parse_bgp_lib::LIB_STATS_MAX> parse_bgp_lib_stats_names = {
+            std::string("statsPrefixesRej"),
+            "statsKnownDupPrefixes",
+            "statsKnownDupWithdraws",
+            "statsInvalidClusterList",
+            "statsInvalidAsPathLoop",
+            "statsInvalidOriginatorId",
+            "statsInvalidAsConfedLoop",
+            "statsRoutesAdjIn",
+            "statsRoutesLocRib"
+    };
+
 
             /**
              * ENUM to define the prefix type used for prefix nlri in case AFI/SAFI is not sufficient, eg, BGP-LS nodes/link/prefix
@@ -693,6 +718,7 @@ namespace parse_bgp_lib {
         typedef std::map<parse_bgp_lib::BGP_LIB_ROUTER, parse_bgp_lib_data> router_map;
         typedef std::map<parse_bgp_lib::BGP_LIB_COLLECTOR, parse_bgp_lib_data> collector_map;
         typedef std::map<parse_bgp_lib::BGP_LIB_HEADER, parse_bgp_lib_data> header_map;
+        typedef std::map<parse_bgp_lib::BGP_LIB_STATS, parse_bgp_lib_data> stat_map;
 
 
         struct parse_bgp_lib_nlri {

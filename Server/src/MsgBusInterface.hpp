@@ -432,6 +432,24 @@ public:
      *****************************************************************/
     virtual void add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats) = 0;
 
+
+    /*****************************************************************//**
+     * \brief       Add Stats object templated
+     *
+     * \details     Will generate a message to add new RIB prefixes
+     *
+     * \param[in]       peer    Peer object
+     * \param[in]       router  Router object
+     * \param[in]       stats   Stats object
+     * \param[in]       template Template
+     *
+     * \note        Caller must free any allocated memory, which is
+     *              safe to do so when this method returns.
+     *****************************************************************/
+    virtual void add_StatReportTemplated(parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                         parse_bgp_lib::parseBgpLib::router_map &router,
+                                         parse_bgp_lib::parseBgpLib::stat_map stats, template_cfg::Template_cfg &template_container) = 0;
+
     /*****************************************************************//**
      * \brief       Add/Update BGP-LS nodes
      *

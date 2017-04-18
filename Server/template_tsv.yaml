@@ -365,3 +365,27 @@ collector:
       - collector.collectorRouters
       - collector.collectorRouterCount
       - collector.collectorTimestamp
+
+bmp_stat:
+  format: tsv
+  schema:
+    header:
+      - header.action
+      - header.sequenceNumber
+      - router.routerHashId
+      - router.routerIp
+      - peer.peerHashId
+      - peer.peerAddr
+      - peer.peerAs
+      - peer.peerTimestamp
+      - stats.statsPrefixesRej
+      - stats.statsKnownDupPrefixes
+      - stats.statsKnownDupWithdraws
+      - stats.statsInvalidClusterList
+      - stats.statsInvalidAsPathLoop
+      - stats.statsInvalidOriginatorId
+      - stats.statsInvalidAsConfedLoop
+      - stats.statsRoutesAdjIn
+      - stats.statsRoutesLocRib
+
+

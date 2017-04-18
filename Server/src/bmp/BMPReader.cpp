@@ -345,6 +345,60 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                 if (! pBMP->handleStatsReport(read_fd, stats))
                     // Add to mysql
                     mbus_ptr->add_StatReport(p_entry, stats);
+                /*
+                 * Only create the stats map if templating requires it
+                 */
+                std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_STATS);
+                if (it != template_map->template_map.end()) {
+                    parse_bgp_lib::parseBgpLib::stat_map parse_stats;
+                    std::ostringstream numString;
+
+                    numString << stats.prefixes_rej;
+                    parse_stats[parse_bgp_lib::LIB_STATS_PREFIXES_REJ].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_PREFIXES_REJ];
+                    parse_stats[parse_bgp_lib::LIB_STATS_PREFIXES_REJ].value.push_back(numString.str());
+
+                    numString.str(std::string());
+                    numString << stats.invalid_as_confed_loop;
+                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_CONFED_LOOP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_AS_CONFED_LOOP];
+                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_CONFED_LOOP].value.push_back(numString.str());
+
+                    numString.str(std::string());
+                    numString << stats.invalid_as_path_loop;
+                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_PATH_LOOP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_AS_PATH_LOOP];
+                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_PATH_LOOP].value.push_back(numString.str());
+
+                    numString.str(std::string());
+                    numString << stats.invalid_cluster_list;
+                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_CLUSTER_LIST].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_CLUSTER_LIST];
+                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_CLUSTER_LIST].value.push_back(numString.str());
+
+                    numString.str(std::string());
+                    numString << stats.invalid_originator_id;
+                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_ORIGINATOR_ID].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_ORIGINATOR_ID];
+                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_ORIGINATOR_ID].value.push_back(numString.str());
+
+                    numString.str(std::string());
+                    numString << stats.known_dup_prefixes;
+                    parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_PREFIXES].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_KNOWN_DUP_PREFIXES];
+                    parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_PREFIXES].value.push_back(numString.str());
+
+                    numString.str(std::string());
+                    numString << stats.known_dup_withdraws;
+                    parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_WITHDRAWS].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_KNOWN_DUP_WITHDRAWS];
+                    parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_WITHDRAWS].value.push_back(numString.str());
+
+                    numString.str(std::string());
+                    numString << stats.routes_adj_rib_in;
+                    parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_ADJ_RIB_IN].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_ROUTES_ADJ_RIB_IN];
+                    parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_ADJ_RIB_IN].value.push_back(numString.str());
+
+                    numString.str(std::string());
+                    numString << stats.routes_loc_rib;
+                    parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_LOC_RIB].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_ROUTES_LOC_RIB];
+                    parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_LOC_RIB].value.push_back(numString.str());
+
+                    mbus_ptr->add_StatReportTemplated(update.peer, update.router, parse_stats, it->second);
+                }
 
                 break;
             }

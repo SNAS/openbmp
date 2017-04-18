@@ -80,6 +80,7 @@ Config::Config() {
     topic_names_map[MSGBUS_TOPIC_VAR_ROUTER_TEMPLATED]          = MSGBUS_TOPIC_ROUTER_TEMPLATED;
     topic_names_map[MSGBUS_TOPIC_VAR_COLLECTOR_TEMPLATED]       = MSGBUS_TOPIC_COLLECTOR_TEMPLATED;
     topic_names_map[MSGBUS_TOPIC_VAR_PEER_TEMPLATED]            = MSGBUS_TOPIC_PEER_TEMPLATED;
+    topic_names_map[MSGBUS_TOPIC_VAR_BMP_STAT_TEMPLATED]        = MSGBUS_TOPIC_BMP_STAT_TEMPLATED;
 }
 
 /*********************************************************************//**

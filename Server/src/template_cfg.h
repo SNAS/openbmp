@@ -35,7 +35,8 @@ namespace template_cfg {
         BMP_COLLECTOR,
         BMP_PEER_FIRST,
         BMP_PEER_UP,
-        BMP_PEER_DOWN
+        BMP_PEER_DOWN,
+        BMP_STATS
     };
 
 
@@ -53,6 +54,7 @@ namespace template_cfg {
         ROUTER,
         COLLECTOR,
         HEADER,
+        STATS
     };
 
     enum TEMPLATE_FORMAT_TYPE {
@@ -98,7 +100,8 @@ namespace template_cfg {
                                parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
                                  parse_bgp_lib::parseBgpLib::router_map &router,
                                  parse_bgp_lib::parseBgpLib::collector_map &collector,
-                                 parse_bgp_lib::parseBgpLib::header_map &header);
+                                 parse_bgp_lib::parseBgpLib::header_map &header,
+                                 parse_bgp_lib::parseBgpLib::stat_map &stats);
 
         size_t execute_loop(char *buf, size_t max_buf_length,
                                  std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
@@ -106,6 +109,7 @@ namespace template_cfg {
                             parse_bgp_lib::parseBgpLib::router_map &router,
                             parse_bgp_lib::parseBgpLib::collector_map &collector,
                             parse_bgp_lib::parseBgpLib::header_map &header,
+                            parse_bgp_lib::parseBgpLib::stat_map &stats,
                             uint64_t &seq);
 
         size_t execute_replace(char *buf, size_t max_buf_length,
@@ -113,7 +117,8 @@ namespace template_cfg {
                             parse_bgp_lib::parseBgpLib::attr_map &attrs, parse_bgp_lib::parseBgpLib::peer_map &peer,
                                parse_bgp_lib::parseBgpLib::router_map &router,
                                parse_bgp_lib::parseBgpLib::collector_map &collector,
-                               parse_bgp_lib::parseBgpLib::header_map &header);
+                               parse_bgp_lib::parseBgpLib::header_map &header,
+                               parse_bgp_lib::parseBgpLib::stat_map &stats);
 
         std::list<template_cfg::Template_cfg> template_children;
 
@@ -224,7 +229,11 @@ static void print_template (template_cfg::Template_cfg &template_cfg_print, size
                     cout << "base_attributes" << endl;
                     break;
                 }
-                default:
+                case template_cfg::BMP_STATS : {
+                    cout << "stats" << endl;
+                    break;
+                }
+                    default:
                     break;
             }
             for (std::list<template_cfg::Template_cfg>::iterator it = template_cfg_print.template_children.begin();
@@ -265,6 +274,9 @@ static void print_template (template_cfg::Template_cfg &template_cfg_print, size
                     break;
                 case template_cfg::HEADER :
                     cout << "HEADER, replacement variable: " << template_cfg_print.replacement_var << endl;
+                    break;
+                case template_cfg::STATS :
+                    cout << "STATS, replacement variable: " << template_cfg_print.replacement_var << endl;
                     break;
 
                 default:
