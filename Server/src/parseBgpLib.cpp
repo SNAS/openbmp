@@ -303,8 +303,8 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
      *
      */
     void parseBgpLib::parseBmpInitMsg(int sock, u_char *bmp_data, size_t bmp_data_len, parsed_update &update) {
-        parse_bgp_lib_init_msg_v3 initMsg;
-        char infoBuf[BMP_ROUTER_INIT_DATA_SIZE];
+        parse_bgp_lib_bmp_msg_v3 initMsg;
+        char infoBuf[BMP_ROUTER_DATA_SIZE];
         int infoLen;
 
         u_char *bufPtr = bmp_data;
@@ -320,13 +320,13 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
         /*
          * Loop through the init message (in buffer) to parse each TLV
          */
-        for (int i=0; i < bmp_data_len; i += BMP_INIT_MSG_LEN) {
-            memcpy(&initMsg, bufPtr, BMP_INIT_MSG_LEN);
+        for (int i=0; i < bmp_data_len; i += BMP_MSG_LEN) {
+            memcpy(&initMsg, bufPtr, BMP_MSG_LEN);
             initMsg.info = NULL;
             bgp::SWAP_BYTES(&initMsg.len);
             bgp::SWAP_BYTES(&initMsg.type);
 
-            bufPtr += BMP_INIT_MSG_LEN;                // Move pointer past the info header
+            bufPtr += BMP_MSG_LEN;                // Move pointer past the info header
 
             // TODO: Change to SELF_DEBUG after IOS supports INIT messages correctly
             SELF_DEBUG("Init message type %hu and length %hu parsed", initMsg.type, initMsg.len);
@@ -394,6 +394,112 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
         }
     }
 
+    /**
+     * Parses the BMP router Term message
+     *
+     * \details
+     * Parse BMP Router Init message
+     * \param [in]  bmp_data        Buffer containing the data
+     * \param [in]  parsed_update   Reference to parsed_update; will be updated with all parsed data
+     *
+     */
+    void parseBgpLib::parseBmpTermMsg(int sock, u_char *bmp_data, size_t bmp_data_len, parsed_update &update) {
+        parse_bgp_lib_bmp_msg_v3 termMsg;
+        char infoBuf[BMP_ROUTER_DATA_SIZE];
+        int infoLen;
+
+        u_char *bufPtr = bmp_data;
+
+        /*
+         * Create router timestamp
+         */
+        update.router[LIB_ROUTER_TIMESTAMP].name = parse_bgp_lib::parse_bgp_lib_router_names[LIB_ROUTER_TIMESTAMP];
+        string ts;
+        getTimestamp(0, 0, ts);
+        update.router[LIB_ROUTER_TIMESTAMP].value.push_back(ts);
+
+        /*
+         * Loop through the term message (in buffer) to parse each TLV
+         */
+        for (int i=0; i < bmp_data_len; i += BMP_MSG_LEN) {
+            memcpy(&termMsg, bufPtr, BMP_MSG_LEN);
+            termMsg.info = NULL;
+            bgp::SWAP_BYTES(&termMsg.len);
+            bgp::SWAP_BYTES(&termMsg.type);
+
+            bufPtr += BMP_MSG_LEN;                // Move pointer past the info header
+
+            LOG_INFO("Term message type %hu and length %hu parsed", termMsg.type, termMsg.len);
+
+            if (termMsg.len > 0) {
+                infoLen = sizeof(infoBuf) < termMsg.len ? sizeof(infoBuf) : termMsg.len;
+                bzero(infoBuf, sizeof(infoBuf));
+                memcpy(infoBuf, bufPtr, infoLen);
+                bufPtr += infoLen;                     // Move pointer past the info data
+                i += infoLen;                       // Update the counter past the info data
+
+                termMsg.info = infoBuf;
+
+                LOG_INFO("Term message type %hu = %s", termMsg.type, termMsg.info);
+            }
+
+            /*
+             * Save the data based on info type
+             */
+            switch (termMsg.type) {
+                case TERM_TYPE_FREE_FORM_STRING :
+                    update.router[LIB_ROUTER_TERM_DATA].name = parse_bgp_lib::parse_bgp_lib_router_names[LIB_ROUTER_TERM_DATA];
+                    update.router[LIB_ROUTER_TERM_DATA].value.push_back(std::string(termMsg.info, infoLen));
+                    break;
+
+                case TERM_TYPE_REASON :
+                {
+                    // Get the term reason code from info data (first 2 bytes)
+                    uint16_t term_reason;
+                    memcpy(&term_reason, termMsg.info, 2);
+                    bgp::SWAP_BYTES(&term_reason);
+                    std::ostringstream numString;
+                    numString << term_reason;
+                    update.router[LIB_ROUTER_TERM_REASON_CODE].name = parse_bgp_lib::parse_bgp_lib_router_names[LIB_ROUTER_TERM_REASON_CODE];
+                    update.router[LIB_ROUTER_TERM_REASON_CODE].value.push_back(numString.str());
+
+                    string term_reason_text;
+                    switch (term_reason) {
+                        case TERM_REASON_ADMIN_CLOSE :
+                            LOG_INFO("BMP session closed by remote administratively");
+                            term_reason_text.assign("Remote session administratively closed");
+                            break;
+
+                        case TERM_REASON_OUT_OF_RESOURCES:
+                            LOG_INFO("BMP session closed by remote due to out of resources");
+                            term_reason_text.assign("Remote out of resources");
+                            break;
+
+                        case TERM_REASON_REDUNDANT_CONN:
+                            LOG_INFO("BMP session closed by remote due to connection being redundant");
+                            term_reason_text.assign("Remote considers connection redundant");
+                            break;
+
+                        case TERM_REASON_UNSPECIFIED:
+                            LOG_INFO("BMP session closed by remote as unspecified");
+                            term_reason_text.assign("Remote closed with unspecified reason");
+                            break;
+
+                        default:
+                            LOG_INFO("closed with undefined reason code of %d", term_reason);
+                            term_reason_text.assign("Unknown %d termination reason, which is not part of draft.", term_reason);
+                    }
+                    update.router[LIB_ROUTER_TERM_REASON_TEXT].name = parse_bgp_lib::parse_bgp_lib_router_names[LIB_ROUTER_TERM_REASON_TEXT];
+                    update.router[LIB_ROUTER_TERM_REASON_TEXT].value.push_back(term_reason_text);
+
+                    break;
+                }
+
+                default:
+                    LOG_NOTICE("Term message type %hu is unexpected per draft", termMsg.type);
+            }
+        }
+    }
 
 
     /**

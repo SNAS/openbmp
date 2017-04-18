@@ -24,8 +24,8 @@
 namespace parse_bgp_lib {
 
     #define BMP_PACKET_BUF_SIZE 68000   ///< Size of the BMP packet buffer (memory)
-    #define BMP_ROUTER_INIT_DATA_SIZE 4096   ///< Size of the BMP packet buffer (memory)
-    #define BMP_INIT_MSG_LEN 4          ///< BMP init message header length, does not count the info field
+    #define BMP_ROUTER_DATA_SIZE 4096   ///< Size of the BMP packet buffer (memory)
+    #define BMP_MSG_LEN 4          ///< BMP init message header length, does not count the info field
 
 
     /**
@@ -658,7 +658,7 @@ namespace parse_bgp_lib {
         /**
          * BMP Init message
          */
-        struct parse_bgp_lib_init_msg_v3 {
+        struct parse_bgp_lib_bmp_msg_v3 {
             uint16_t        type;              ///< 2 bytes - Information type
             uint16_t        len;               ///< 2 bytes - Length of the information that follows
 
@@ -721,6 +721,17 @@ namespace parse_bgp_lib {
          *
          */
         void parseBmpInitMsg(int sock, u_char *bmp_data, size_t bmp_data_len, parsed_update &update);
+
+        /**
+          * Parses the BMP router Term message
+          *
+          * \details
+          * Parse BMP Router Init message
+          * \param [in]  bmp_data        Buffer containing the data
+          * \param [in]  parsed_update   Reference to parsed_update; will be updated with all parsed data
+          *
+          */
+        void parseBmpTermMsg(int sock, u_char *bmp_data, size_t bmp_data_len, parsed_update &update);
 
 
         /**

@@ -815,13 +815,16 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry,
  * \param [in]     sock        Socket to read the term message from
  * \param [in/out] r_entry     Already defined router entry reference (will be updated)
  */
-void parseBMP::handleTermMsg(int sock, MsgBusInterface::obj_router &r_entry) {
+void parseBMP::handleTermMsg(int sock, MsgBusInterface::obj_router &r_entry,
+                             void *parse_bgp_lib_bmp_data, size_t &parse_bgp_lib_data_len) {
     term_msg_v3 termMsg;
     char infoBuf[sizeof(r_entry.term_data)];
     int infoLen;
 
     // Buffer the init message for parsing
     bufferBMPMessage(sock);
+    memcpy(parse_bgp_lib_bmp_data, bmp_data, bmp_data_len);
+    parse_bgp_lib_data_len = bmp_data_len;
 
     u_char *bufPtr = bmp_data;
 

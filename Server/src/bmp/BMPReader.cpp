@@ -375,11 +375,19 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             case parseBMP::TYPE_TERM_MSG : { // Termination Message
                 LOG_INFO("%s: Term message received with length of %u", client->c_ip, pBMP->getBMPLength());
 
+                u_char parse_bgp_lib_bmp_data[BMP_PACKET_BUF_SIZE + 1];
+                bzero(parse_bgp_lib_bmp_data, BMP_PACKET_BUF_SIZE + 1);
+                size_t parse_bgp_lib_data_len;
 
-                pBMP->handleTermMsg(read_fd, r_object);
+                pBMP->handleTermMsg(read_fd, r_object, parse_bgp_lib_bmp_data, parse_bgp_lib_data_len);
+                parser.parseBmpTermMsg(read_fd, parse_bgp_lib_bmp_data, parse_bgp_lib_data_len, update);
 
                 LOG_INFO("Proceeding to disconnect router");
                 mbus_ptr->update_Router(r_object, mbus_ptr->ROUTER_ACTION_TERM);
+                std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_ROUTER);
+                if (it != template_map->template_map.end())
+                    mbus_ptr->update_RouterTemplated(update.router, mbus_ptr->ROUTER_ACTION_TERM, it->second);
+
                 close(client->c_sock);
 
                 rval = false;                           // Indicate connection is closed
