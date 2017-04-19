@@ -95,6 +95,10 @@ void BMPReader::readerThreadLoop(bool &run, BMPListener::ClientInfo *client, Msg
     while (run) {
 
         try {
+            /*
+             * Set the template for the msgbus
+             */
+            mbus_ptr->template_map = &template_map;
             if (not ReadIncomingMsg(client, mbus_ptr, &template_map))
                 break;
 
@@ -164,8 +168,17 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
          *  add record to the database
          */
 
-        if (bmp_type != parseBMP::TYPE_INIT_MSG)
-            mbus_ptr->update_Router(r_object, mbus_ptr->ROUTER_ACTION_FIRST);              // add the router entry
+        if (bmp_type != parseBMP::TYPE_INIT_MSG) {
+            std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(
+                    template_cfg::BMP_ROUTER);
+            if (it != template_map->template_map.end()) {
+                update.router[parse_bgp_lib::LIB_ROUTER_TIMESTAMP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_ROUTER_TIMESTAMP];
+                string ts;
+                parse_bgp_lib::getTimestamp(0, 0, ts);
+                update.router[parse_bgp_lib::LIB_ROUTER_TIMESTAMP].value.push_back(ts);
+                mbus_ptr->update_Router(update.router, mbus_ptr->ROUTER_ACTION_FIRST, it->second);
+            }
+        }
 
         // only process the peering info if the message includes it
         if (bmp_type < 4) {
@@ -174,9 +187,6 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             peer_info_key =  p_entry.peer_addr;
             peer_info_key += p_entry.peer_rd;
             BMPReader::peer_info *peer_info = &peer_info_map[peer_info_key];
-             if (bmp_type != parseBMP::TYPE_PEER_UP)
-                mbus_ptr->update_Peer(p_entry, NULL, NULL, mbus_ptr->PEER_ACTION_FIRST);     // add the peer entry
-
             /*
              * Create the peer hash_id here
              */
@@ -212,9 +222,9 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
             update.peer[parse_bgp_lib::LIB_PEER_HASH_ID].value.push_back(parse_bgp_lib::hash_toStr(hash_raw));
             delete[] hash_raw;
 
-            std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_PEER_FIRST);
+            std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_PEER);
             if (it != template_map->template_map.end() and (bmp_type != parseBMP::TYPE_PEER_UP)) {
-                mbus_ptr->update_PeerTemplated(update.router, update.peer, mbus_ptr->PEER_ACTION_FIRST, it->second);
+                mbus_ptr->update_Peer(update.router, update.peer, mbus_ptr->PEER_ACTION_FIRST, it->second);
             }
         }
 
@@ -272,10 +282,9 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                     delete pBGP;            // Free the bgp parser after each use.
 
                     // Add event to the database
-                    mbus_ptr->update_Peer(p_entry, NULL, &down_event, mbus_ptr->PEER_ACTION_DOWN);
-                    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_PEER_DOWN);
+                    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_PEER);
                     if (it != template_map->template_map.end()) {
-                        mbus_ptr->update_PeerTemplated(update.router, update.peer, mbus_ptr->PEER_ACTION_DOWN, it->second);
+                        mbus_ptr->update_Peer(update.router, update.peer, mbus_ptr->PEER_ACTION_DOWN, it->second);
                     }
 
                 } else {
@@ -310,10 +319,9 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                     delete pBGP;
 
                     // Add the up event to the DB
-                    mbus_ptr->update_Peer(p_entry, &up_event, NULL, mbus_ptr->PEER_ACTION_UP);
-                    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_PEER_UP);
+                    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_PEER);
                     if (it != template_map->template_map.end()) {
-                        mbus_ptr->update_PeerTemplated(update.router, update.peer, mbus_ptr->PEER_ACTION_UP, it->second);
+                        mbus_ptr->update_Peer(update.router, update.peer, mbus_ptr->PEER_ACTION_UP, it->second);
                     }
                 } else {
                     LOG_NOTICE("%s: PEER UP Received but failed to parse the BMP header.", client->c_ip);
@@ -342,62 +350,61 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
 
             case parseBMP::TYPE_STATS_REPORT : { // Stats Report
                 MsgBusInterface::obj_stats_report stats = {};
-                if (! pBMP->handleStatsReport(read_fd, stats))
-                    // Add to mysql
-                    mbus_ptr->add_StatReport(p_entry, stats);
-                /*
-                 * Only create the stats map if templating requires it
-                 */
-                std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_STATS);
-                if (it != template_map->template_map.end()) {
-                    parse_bgp_lib::parseBgpLib::stat_map parse_stats;
-                    std::ostringstream numString;
+                if (!pBMP->handleStatsReport(read_fd, stats)) {
+                    /*
+                     * Only create the stats map if templating requires it
+                     */
+                    std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_STATS);
+                    if (it != template_map->template_map.end()) {
+                        parse_bgp_lib::parseBgpLib::stat_map parse_stats;
+                        std::ostringstream numString;
 
-                    numString << stats.prefixes_rej;
-                    parse_stats[parse_bgp_lib::LIB_STATS_PREFIXES_REJ].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_PREFIXES_REJ];
-                    parse_stats[parse_bgp_lib::LIB_STATS_PREFIXES_REJ].value.push_back(numString.str());
+                        numString << stats.prefixes_rej;
+                        parse_stats[parse_bgp_lib::LIB_STATS_PREFIXES_REJ].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_PREFIXES_REJ];
+                        parse_stats[parse_bgp_lib::LIB_STATS_PREFIXES_REJ].value.push_back(numString.str());
 
-                    numString.str(std::string());
-                    numString << stats.invalid_as_confed_loop;
-                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_CONFED_LOOP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_AS_CONFED_LOOP];
-                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_CONFED_LOOP].value.push_back(numString.str());
+                        numString.str(std::string());
+                        numString << stats.invalid_as_confed_loop;
+                        parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_CONFED_LOOP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_AS_CONFED_LOOP];
+                        parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_CONFED_LOOP].value.push_back(numString.str());
 
-                    numString.str(std::string());
-                    numString << stats.invalid_as_path_loop;
-                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_PATH_LOOP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_AS_PATH_LOOP];
-                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_PATH_LOOP].value.push_back(numString.str());
+                        numString.str(std::string());
+                        numString << stats.invalid_as_path_loop;
+                        parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_PATH_LOOP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_AS_PATH_LOOP];
+                        parse_stats[parse_bgp_lib::LIB_STATS_INVALID_AS_PATH_LOOP].value.push_back(numString.str());
 
-                    numString.str(std::string());
-                    numString << stats.invalid_cluster_list;
-                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_CLUSTER_LIST].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_CLUSTER_LIST];
-                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_CLUSTER_LIST].value.push_back(numString.str());
+                        numString.str(std::string());
+                        numString << stats.invalid_cluster_list;
+                        parse_stats[parse_bgp_lib::LIB_STATS_INVALID_CLUSTER_LIST].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_CLUSTER_LIST];
+                        parse_stats[parse_bgp_lib::LIB_STATS_INVALID_CLUSTER_LIST].value.push_back(numString.str());
 
-                    numString.str(std::string());
-                    numString << stats.invalid_originator_id;
-                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_ORIGINATOR_ID].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_ORIGINATOR_ID];
-                    parse_stats[parse_bgp_lib::LIB_STATS_INVALID_ORIGINATOR_ID].value.push_back(numString.str());
+                        numString.str(std::string());
+                        numString << stats.invalid_originator_id;
+                        parse_stats[parse_bgp_lib::LIB_STATS_INVALID_ORIGINATOR_ID].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_INVALID_ORIGINATOR_ID];
+                        parse_stats[parse_bgp_lib::LIB_STATS_INVALID_ORIGINATOR_ID].value.push_back(numString.str());
 
-                    numString.str(std::string());
-                    numString << stats.known_dup_prefixes;
-                    parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_PREFIXES].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_KNOWN_DUP_PREFIXES];
-                    parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_PREFIXES].value.push_back(numString.str());
+                        numString.str(std::string());
+                        numString << stats.known_dup_prefixes;
+                        parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_PREFIXES].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_KNOWN_DUP_PREFIXES];
+                        parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_PREFIXES].value.push_back(numString.str());
 
-                    numString.str(std::string());
-                    numString << stats.known_dup_withdraws;
-                    parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_WITHDRAWS].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_KNOWN_DUP_WITHDRAWS];
-                    parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_WITHDRAWS].value.push_back(numString.str());
+                        numString.str(std::string());
+                        numString << stats.known_dup_withdraws;
+                        parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_WITHDRAWS].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_KNOWN_DUP_WITHDRAWS];
+                        parse_stats[parse_bgp_lib::LIB_STATS_KNOWN_DUP_WITHDRAWS].value.push_back(numString.str());
 
-                    numString.str(std::string());
-                    numString << stats.routes_adj_rib_in;
-                    parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_ADJ_RIB_IN].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_ROUTES_ADJ_RIB_IN];
-                    parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_ADJ_RIB_IN].value.push_back(numString.str());
+                        numString.str(std::string());
+                        numString << stats.routes_adj_rib_in;
+                        parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_ADJ_RIB_IN].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_ROUTES_ADJ_RIB_IN];
+                        parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_ADJ_RIB_IN].value.push_back(numString.str());
 
-                    numString.str(std::string());
-                    numString << stats.routes_loc_rib;
-                    parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_LOC_RIB].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_ROUTES_LOC_RIB];
-                    parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_LOC_RIB].value.push_back(numString.str());
+                        numString.str(std::string());
+                        numString << stats.routes_loc_rib;
+                        parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_LOC_RIB].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_STATS_ROUTES_LOC_RIB];
+                        parse_stats[parse_bgp_lib::LIB_STATS_ROUTES_LOC_RIB].value.push_back(numString.str());
 
-                    mbus_ptr->add_StatReportTemplated(update.peer, update.router, parse_stats, it->second);
+                        mbus_ptr->add_StatReport(update.peer, update.router, parse_stats, it->second);
+                    }
                 }
 
                 break;
@@ -418,10 +425,9 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                 parser.parseBmpInitMsg(read_fd, parse_bgp_lib_bmp_data, parse_bgp_lib_data_len, update);
 
                 // Update the router entry with the details
-                mbus_ptr->update_Router(r_object, mbus_ptr->ROUTER_ACTION_INIT);
                 std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_ROUTER);
                 if (it != template_map->template_map.end())
-                    mbus_ptr->update_RouterTemplated(update.router, mbus_ptr->ROUTER_ACTION_INIT, it->second);
+                    mbus_ptr->update_Router(update.router, mbus_ptr->ROUTER_ACTION_INIT, it->second);
 
                 break;
             }
@@ -437,10 +443,9 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                 parser.parseBmpTermMsg(read_fd, parse_bgp_lib_bmp_data, parse_bgp_lib_data_len, update);
 
                 LOG_INFO("Proceeding to disconnect router");
-                mbus_ptr->update_Router(r_object, mbus_ptr->ROUTER_ACTION_TERM);
                 std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BMP_ROUTER);
                 if (it != template_map->template_map.end())
-                    mbus_ptr->update_RouterTemplated(update.router, mbus_ptr->ROUTER_ACTION_TERM, it->second);
+                    mbus_ptr->update_Router(update.router, mbus_ptr->ROUTER_ACTION_TERM, it->second);
 
                 close(client->c_sock);
 
@@ -453,7 +458,37 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
     } catch (char const *str) {
         // Mark the router as disconnected and update the error to be a local disconnect (no term message received)
         LOG_INFO("%s: Caught: %s", client->c_ip, str);
-        disconnect(client, mbus_ptr, parseBMP::TERM_REASON_OPENBMP_CONN_ERR, str);
+
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(
+                template_cfg::BMP_ROUTER);
+        if (it != template_map->template_map.end()) {
+
+            parse_bgp_lib::parseBgpLib::router_map router;
+            router[parse_bgp_lib::LIB_ROUTER_HASH_ID].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_ROUTER_HASH_ID];
+            router[parse_bgp_lib::LIB_ROUTER_HASH_ID].value.push_back(parse_bgp_lib::hash_toStr(router_hash_id));
+
+            router[parse_bgp_lib::LIB_ROUTER_IP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_ROUTER_IP];
+            router[parse_bgp_lib::LIB_ROUTER_IP].value.push_back(string(client->c_ip));
+
+            router[parse_bgp_lib::LIB_ROUTER_TIMESTAMP].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_ROUTER_TIMESTAMP];
+            string ts;
+            parse_bgp_lib::getTimestamp(0, 0, ts);
+            router[parse_bgp_lib::LIB_ROUTER_TIMESTAMP].value.push_back(ts);
+
+            std::ostringstream numString;
+            numString << parseBMP::TERM_REASON_OPENBMP_CONN_ERR;
+            router[parse_bgp_lib::LIB_ROUTER_TERM_REASON_CODE].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_ROUTER_TERM_REASON_CODE];
+            router[parse_bgp_lib::LIB_ROUTER_TERM_REASON_CODE].value.push_back(numString.str());
+
+            if (str != NULL) {
+                router[parse_bgp_lib::LIB_ROUTER_TERM_REASON_TEXT].name = parse_bgp_lib::parse_bgp_lib_router_names[parse_bgp_lib::LIB_ROUTER_TERM_REASON_TEXT];
+                router[parse_bgp_lib::LIB_ROUTER_TERM_REASON_TEXT].value.push_back(str);
+            }
+            mbus_ptr->update_Router(router, mbus_ptr->ROUTER_ACTION_TERM, it->second);
+        }
+
+
+        close(client->c_sock);
 
         delete pBMP;                    // Make sure to free the resource
         throw str;
@@ -466,33 +501,6 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
     delete pBMP;
 
     return rval;
-}
-
-/**
- * disconnect/close bmp stream
- *
- * Closes the BMP stream and disconnects router as needed
- *
- * \param [in]  client      Client information pointer
- * \param [in]  mbus_ptr     The database pointer referencer - DB should be already initialized
- * \param [in]  reason_code The reason code for closing the stream/feed
- * \param [in]  reason_text String detailing the reason for close
- *
- */
-void BMPReader::disconnect(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, int reason_code, char const *reason_text) {
-
-    MsgBusInterface::obj_router r_object;
-    bzero(&r_object, sizeof(r_object));
-    memcpy(r_object.hash_id, router_hash_id, sizeof(r_object.hash_id));
-    memcpy(r_object.ip_addr, client->c_ip, sizeof(client->c_ip));
-
-    r_object.term_reason_code = reason_code;
-    if (reason_text != NULL)
-        snprintf(r_object.term_reason_text, sizeof(r_object.term_reason_text), "%s", reason_text);
-
-    mbus_ptr->update_Router(r_object, mbus_ptr->ROUTER_ACTION_TERM);
-
-    close(client->c_sock);
 }
 
 /*

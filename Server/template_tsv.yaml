@@ -266,26 +266,7 @@ evpn:
       - nlri.evpnMplsLabel1
       - nlri.evpnMplsLabel2
 
-peer_first:
-  format: tsv
-  schema:
-    header:
-      - header.action
-      - header.sequenceNumber
-      - peer.peerHashId
-      - router.routerHashId
-      - peer.peerName
-      - peer.peerBgpId
-      - router.routerIp
-      - peer.peerTimestamp
-      - peer.peerAs
-      - peer.peerAddr
-      - peer.peerRd
-      - peer.peerIsL3vpn
-      - peer.peerIsPrepolicy
-      - peer.peerIsIpv4
-
-peer_up:
+peer:
   format: tsv
   schema:
     header:
@@ -310,25 +291,6 @@ peer_up:
       - peer.peerRecvCap
       - peer.peerRemoteHoldTime
       - peer.peerLocalHoldTime
-      - peer.peerIsL3vpn
-      - peer.peerIsPrepolicy
-      - peer.peerIsIpv4
-
-peer_down:
-  format: tsv
-  schema:
-    header:
-      - header.action
-      - header.sequenceNumber
-      - peer.peerHashId
-      - router.routerHashId
-      - peer.peerName
-      - peer.peerBgpId
-      - router.routerIp
-      - peer.peerTimestamp
-      - peer.peerAs
-      - peer.peerAddr
-      - peer.peerRd
       - peer.peerBmpReason
       - peer.peerBgpErrCode
       - peer.peerBgpErrSubcode

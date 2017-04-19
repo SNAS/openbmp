@@ -208,17 +208,6 @@ public:
     virtual ~MsgBusInterface() { };
 
     /*****************************************************************//**
-     * \brief       Add/Update/del a collector object
-     *
-     * \details     Will generate a message for a new/updated collector.
-     *
-     * \param[in,out]   collector       Collector object
-     *
-     * \returns     collector.hash_id will be updated based on the supplied data.
-     */
-    virtual void update_Collector(struct obj_collector &c_obj, collector_action_code action_code) = 0;
-
-    /*****************************************************************//**
      * \brief       Add/Update a collector object templated
      *
      * \details     Will generate a message for a new/updated collector based on template.
@@ -228,25 +217,8 @@ public:
      * \param[in]       template Template
      *
     *****************************************************************/
-    virtual void update_CollectorTemplated(parse_bgp_lib::parseBgpLib::collector_map &collector,
+    virtual void update_Collector(parse_bgp_lib::parseBgpLib::collector_map &collector,
                                         collector_action_code action_code, template_cfg::Template_cfg &template_container) = 0;
-
-    /*****************************************************************//**
-     * \brief       Add/Update a router object
-     *
-     * \details     Will generate a message to add a new router or update an existing
-     *              router.
-     *
-     * \param[in,out]   router          Router object
-     * \param[in]       code            Action code for router update
-     *
-     * \returns     The router.hash_id will be updated based on the
-     *              supplied data.
-     *
-     * \note        Caller must free any allocated memory, which is
-     *              safe to do so when this method returns.
-     *****************************************************************/
-    virtual void update_Router(struct obj_router &r_object, router_action_code code) = 0;
 
     /*****************************************************************//**
      * \brief       Add/Update a router object templated
@@ -264,26 +236,8 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_RouterTemplated(parse_bgp_lib::parseBgpLib::router_map &router,
+    virtual void update_Router(parse_bgp_lib::parseBgpLib::router_map &router,
                                router_action_code code, template_cfg::Template_cfg &template_container) = 0;
-
-    /*****************************************************************//**
-     * \brief       Add/Update a BGP peer object
-     *
-     * \details     Will generate a message to add a new BGP peer
-     *
-     * \param[in,out] peer            BGP peer object
-     * \param[in]     peer_up_event   Peer up event struct (null if not used)
-     * \param[in]     peer_down_event Peer down event struct (null if not used)
-     * \param[in]     code            Action code for router update
-     *
-     * \returns     The peer.hash_id will be updated based on the
-     *              supplied data.
-     *
-     * \note        Caller must free any allocated memory, which is
-     *              safe to do so when this method returns.
-     ****************************************************************/
-    virtual void update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_peer_down_event *down, peer_action_code code) = 0;
 
     /*****************************************************************//**
      * \brief       Add/Update a peer object templated
@@ -301,27 +255,10 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_PeerTemplated(parse_bgp_lib::parseBgpLib::router_map &router,
+    virtual void update_Peer(parse_bgp_lib::parseBgpLib::router_map &router,
                                       parse_bgp_lib::parseBgpLib::peer_map &peer,
                                       peer_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
-
-    /*****************************************************************//**
-     * \brief       Add/Update base path attributes
-     *
-     * \details     Will generate a message to add a new path object.
-     *
-     * \param[in]       peer      Peer object
-     * \param[in,out]   attr      Path attribute object
-     * \param[in]       code      Base attribute action code
-     *
-     * \returns     The path.hash_id will be updated based on the
-     *              supplied data.
-     *
-     * \note        Caller must free any allocated memory, which is
-     *              safe to do so when this method returns.
-     *****************************************************************/
-    virtual void update_baseAttribute(obj_bgp_peer &peer, parse_bgp_lib::parseBgpLib::attr_map &attrs, base_attr_action_code code) = 0;
 
     /*****************************************************************//**
      * \brief       Add/Update  base path attributes templated
@@ -333,31 +270,10 @@ public:
      * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_baseAttributeTemplated(parse_bgp_lib::parseBgpLib::attr_map &attrs,
+    virtual void update_baseAttribute(parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                       parse_bgp_lib::parseBgpLib::peer_map &peer,
                                       parse_bgp_lib::parseBgpLib::router_map &router,
                                        base_attr_action_code code, template_cfg::Template_cfg &template_container) = 0;
-
-
-    /*****************************************************************//**
-     * \brief       Add/Update RIB objects
-     *
-     * \details     Will generate a message to add new RIB prefixes
-     *
-     * \param[in]       peer    Peer object
-     * \param[in,out]   rib     List of one or more RIB entries
-     * \param[in]       attr    Path attribute object (can be null if n/a)
-     * \param[in]       code    Unicast prefix action code
-     *
-     * \returns     The rib.hash_id will be updated based on the
-     *              supplied data for each object.
-     *
-     * \note        Caller must free any allocated memory, which is
-     *              safe to do so when this method returns.
-     *****************************************************************/
-    virtual void update_unicastPrefix(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
-                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
-                                      unicast_prefix_action_code code) = 0;
 
     /*****************************************************************//**
      * \brief       Add/Update RIB objects templated
@@ -376,62 +292,11 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_unicastPrefixTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+    virtual void update_unicastPrefix(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
                                       parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                                parse_bgp_lib::parseBgpLib::peer_map &peer,
                                                parse_bgp_lib::parseBgpLib::router_map &router,
                                                unicast_prefix_action_code code, template_cfg::Template_cfg &template_container) = 0;
-
-
-    /*****************************************************************//**
-     * \brief       Add/Update vpn objects
-     *
-     * \details     Will generate a message to add new vpn objects
-     *
-     * \param[in]       peer    Peer object
-     * \param[in,out]   rib     List of one or more RIB entries
-     * \param[in]       attr    Path attribute object (can be null if n/a)
-     * \param[in]       code    Vpn action code
-     *
-     * \returns     The vpn.hash_id will be updated based on the
-     *              supplied data for each object.
-     * 
-     * \note        Caller must free any allocated memory, which is
-     *              safe to do so when this method returns.
-     *****************************************************************/
-    virtual void update_L3Vpn(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3vpn_list,
-                              parse_bgp_lib::parseBgpLib::attr_map &attrs,
-                            vpn_action_code code) = 0;
-
-    /*****************************************************************//**
-     * \brief       Add/Update evpn objects
-     *
-     * \details     Will generate a message to add new evpn objects
-     *
-     * \param[in]       peer    Peer object
-     * \param[in,out]   rib     List of one or more RIB entries
-     * \param[in]       attr    Path attribute object (can be null if n/a)
-     * \param[in]       code    Vpn action code
-     *
-     * \returns     The vpn.hash_id will be updated based on the
-     *              supplied data for each object.
-     *
-     * \note        Caller must free any allocated memory, which is
-     *              safe to do so when this method returns.
-     *****************************************************************/
-    virtual void update_eVPN(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &evpn_list,
-                             parse_bgp_lib::parseBgpLib::attr_map &attrs,
-                            vpn_action_code code) = 0;
-
-    /*****************************************************************//**
-     * \brief       Add a stats report object
-     *
-     * \details     Will generate a message to add a new stats report object.
-     *
-     * \param[in,out]   stats      Stats report object
-     *****************************************************************/
-    virtual void add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats) = 0;
-
 
     /*****************************************************************//**
      * \brief       Add Stats object templated
@@ -446,25 +311,11 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void add_StatReportTemplated(parse_bgp_lib::parseBgpLib::peer_map &peer,
+    virtual void add_StatReport(parse_bgp_lib::parseBgpLib::peer_map &peer,
                                          parse_bgp_lib::parseBgpLib::router_map &router,
                                          parse_bgp_lib::parseBgpLib::stat_map stats, template_cfg::Template_cfg &template_container) = 0;
 
-    /*****************************************************************//**
-     * \brief       Add/Update BGP-LS nodes
-     *
-     * \details     Will generate a message to add/update BGP-LS nodes.
-     *
-     * \param[in]   peer       Peer object
-     * \param[in]   nodes      List of one or more node tables
-     * \param[in]   attr       Path attribute object
-     * \param[in]   code       Linkstate action code
-     *****************************************************************/
-    virtual void update_LsNode(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
-                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
-                                ls_action_code code) = 0;
-
-    /*****************************************************************//**
+ /*****************************************************************//**
      * \brief       Add/Update BGP-LS nodes templated
      *
      * \details     Will generate a message to add/update BGP-LS nodes.
@@ -474,7 +325,7 @@ public:
      * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_LsNodeTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
+    virtual void update_LsNode(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
                                         parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                         parse_bgp_lib::parseBgpLib::peer_map &peer,
                                         parse_bgp_lib::parseBgpLib::router_map &router,
@@ -490,7 +341,7 @@ public:
      * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_LsLinkTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
+    virtual void update_LsLink(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
                                         parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                         parse_bgp_lib::parseBgpLib::peer_map &peer,
                                         parse_bgp_lib::parseBgpLib::router_map &router,
@@ -506,7 +357,7 @@ public:
      * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_LsPrefixTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
+    virtual void update_LsPrefix(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
                                         parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                         parse_bgp_lib::parseBgpLib::peer_map &peer,
                                         parse_bgp_lib::parseBgpLib::router_map &router,
@@ -522,7 +373,7 @@ public:
      * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_L3VpnTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3Vpn_list,
+    virtual void update_L3Vpn(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3Vpn_list,
                                           parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                           parse_bgp_lib::parseBgpLib::peer_map &peer,
                                           parse_bgp_lib::parseBgpLib::router_map &router,
@@ -539,47 +390,11 @@ public:
      * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_eVpnTemplated(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &eVpn_list,
+    virtual void update_eVpn(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &eVpn_list,
                                        parse_bgp_lib::parseBgpLib::attr_map &attrs,
                                        parse_bgp_lib::parseBgpLib::peer_map &peer,
                                        parse_bgp_lib::parseBgpLib::router_map &router,
                                        vpn_action_code code, template_cfg::Template_cfg &template_container) = 0;
-
-
-    /*****************************************************************//**
-     * \brief       Add/Update BGP-LS links
-     *
-     * \details     Will generate a message to add/update BGP-LS links.
-     *
-     * \param[in]   peer       Peer object
-     * \param[in]   links      List of one or more link tables
-     *
-     * \param[in]   attr       Path attribute object
-     * \param[in]   code       Linkstate action code
-     *
-     * \returns     The hash_id will be updated based on the
-     *              supplied data for each object.
-     *****************************************************************/
-    virtual void update_LsLink(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
-                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
-                             ls_action_code code) = 0;
-
-    /*****************************************************************//**
-     * \brief       Add/Update BGP-LS prefixes
-     *
-     * \details     Will generate a message to add/update BGP-LS prefixes.
-     *
-     * \param[in]      peer       Peer object
-      \param[in]       prefixes   List of one or more node tables
-     * \param[in]      attr       Path attribute object
-     * \param[in]      code       Linkstate action code
-     *
-     * \returns     The hash_id will be updated based on the
-     *              supplied data for each object.
-     *****************************************************************/
-    virtual void update_LsPrefix(obj_bgp_peer &peer, std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
-                                 parse_bgp_lib::parseBgpLib::attr_map &attrs,
-                                ls_action_code code) = 0;
 
     /*****************************************************************//**
      * \brief       Send BMP packet
@@ -657,6 +472,8 @@ public:
         sprintf(buf, ".%06u", us);
         ts_str.append(buf);
     }
+
+    Template_map *template_map;
 
 protected:
 

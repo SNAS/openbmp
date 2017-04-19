@@ -67,12 +67,8 @@
                         topic = template_cfg::BMP_COLLECTOR;
                     } else if (key.compare("base_attributes") == 0) {
                         topic = template_cfg::BASE_ATTRIBUTES;
-                    } else if (key.compare("peer_first") == 0) {
-                        topic = template_cfg::BMP_PEER_FIRST;
-                    } else if (key.compare("peer_up") == 0) {
-                        topic = template_cfg::BMP_PEER_UP;
-                    } else if (key.compare("peer_down") == 0) {
-                        topic = template_cfg::BMP_PEER_DOWN;
+                    } else if (key.compare("peer") == 0) {
+                        topic = template_cfg::BMP_PEER;
                     } else if (key.compare("bmp_stat") == 0) {
                         topic = template_cfg::BMP_STATS;
                     } else {

@@ -382,29 +382,10 @@ void collector_update_msg(msgBus_kafka *kafka, Config &cfg,
                           MsgBusInterface::collector_action_code code,
                           Template_map template_map) {
 
-    MsgBusInterface::obj_collector oc;
-
     parse_bgp_lib::parseBgpLib::collector_map collector;
-
-    snprintf(oc.admin_id, sizeof(oc.admin_id), "%s", cfg.admin_id);
-
-    oc.router_count = thr_list.size();
-
-    string router_ips;
-    for (int i=0; i < thr_list.size(); i++) {
-        //MsgBusInterface::hash_toStr(thr_list.at(i)->client.hash_id, hash_str);
-        if (router_ips.size() > 0)
-            router_ips.append(", ");
-
-        router_ips.append(thr_list.at(i)->client.c_ip);
-    }
-
-    snprintf(oc.routers, sizeof(oc.routers), "%s", router_ips.c_str());
 
     timeval tv;
     gettimeofday(&tv, NULL);
-    oc.timestamp_secs = tv.tv_sec;
-    oc.timestamp_us = tv.tv_usec;
 
     collector[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_TIMESTAMP];
     string ts;
@@ -426,7 +407,6 @@ void collector_update_msg(msgBus_kafka *kafka, Config &cfg,
 
     collector[parse_bgp_lib::LIB_COLLECTOR_ROUTERS].name = parse_bgp_lib::parse_bgp_lib_collector_names[parse_bgp_lib::LIB_COLLECTOR_ROUTERS];
     for (int i=0; i < thr_list.size(); i++) {
-        router_ips.append(thr_list.at(i)->client.c_ip);
         collector[parse_bgp_lib::LIB_COLLECTOR_ROUTERS].value.push_back(string(thr_list.at(i)->client.c_ip));
     }
 
@@ -444,10 +424,7 @@ void collector_update_msg(msgBus_kafka *kafka, Config &cfg,
 
     std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map.template_map.find(template_cfg::BMP_COLLECTOR);
     if (it != template_map.template_map.end())
-        kafka->update_CollectorTemplated(collector, code, it->second);
-
-
-    kafka->update_Collector(oc, code);
+        kafka->update_Collector(collector, code, it->second);
 }
 
 /**

@@ -446,10 +446,9 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
         update.attrs[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE].value.push_back(numString.str());
 
         // Update the DB entry
-        mbus_ptr->update_baseAttribute(*p_entry, update.attrs, mbus_ptr->BASE_ATTR_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BASE_ATTRIBUTES);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_baseAttributeTemplated(update.attrs, update.peer, update.router,
+            mbus_ptr->update_baseAttribute(update.attrs, update.peer, update.router,
                                                     mbus_ptr->BASE_ATTR_ACTION_ADD, it->second);
     } else {
         SELF_DEBUG("%s: no next-hop, must be unreach; not sending attributes to message bus", p_entry->peer_addr);
@@ -515,60 +514,54 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
     }
 
     if (rib_list.size() > 0) {
-        mbus_ptr->update_unicastPrefix(*p_entry, rib_list, update.attrs, mbus_ptr->UNICAST_PREFIX_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::UNICAST_PREFIX);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_unicastPrefixTemplated(rib_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_unicastPrefix(rib_list, update.attrs, update.peer, update.router,
                                                     mbus_ptr->UNICAST_PREFIX_ACTION_ADD, it->second);
         rib_list.clear();
     }
 
     if (ls_node_list.size() > 0) {
         SELF_DEBUG("%s: Adding BGP-LS: Nodes %d", p_entry->peer_addr, ls_node_list.size());
-        mbus_ptr->update_LsNode(*p_entry, ls_node_list, update.attrs, mbus_ptr->LS_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_NODES);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_LsNodeTemplated(ls_node_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_LsNode(ls_node_list, update.attrs, update.peer, update.router,
                                              mbus_ptr->LS_ACTION_ADD, it->second);
         ls_node_list.clear();
     }
 
     if (ls_link_list.size() > 0) {
         SELF_DEBUG("%s: Adding BGP-LS: Links %d", p_entry->peer_addr, ls_link_list.size());
-        mbus_ptr->update_LsLink(*p_entry, ls_link_list, update.attrs, mbus_ptr->LS_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_LINKS);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_LsLinkTemplated(ls_link_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_LsLink(ls_link_list, update.attrs, update.peer, update.router,
                                              mbus_ptr->LS_ACTION_ADD, it->second);
         ls_link_list.clear();
     }
 
     if (ls_prefix_list.size() > 0) {
         SELF_DEBUG("%s: Adding BGP-LS: Prefixes %d", p_entry->peer_addr, ls_prefix_list.size());
-        mbus_ptr->update_LsPrefix(*p_entry, ls_prefix_list, update.attrs, mbus_ptr->LS_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_PREFIXES);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_LsPrefixTemplated(ls_prefix_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_LsPrefix(ls_prefix_list, update.attrs, update.peer, update.router,
                                              mbus_ptr->LS_ACTION_ADD, it->second);
         ls_prefix_list.clear();
     }
 
     if (l3vpn_list.size() > 0) {
         SELF_DEBUG("%s: Adding VPN: Prefixes %d", p_entry->peer_addr, l3vpn_list.size());
-        mbus_ptr->update_L3Vpn(*p_entry, l3vpn_list, update.attrs, mbus_ptr->VPN_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::L3_VPN);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_L3VpnTemplated(l3vpn_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_L3Vpn(l3vpn_list, update.attrs, update.peer, update.router,
                                              mbus_ptr->VPN_ACTION_ADD, it->second);
         l3vpn_list.clear();
     }
 
     if (evpn_list.size() > 0) {
         SELF_DEBUG("%s: Adding evpn: Prefixes %d", p_entry->peer_addr, evpn_list.size());
-        mbus_ptr->update_eVPN(*p_entry, evpn_list, update.attrs, mbus_ptr->VPN_ACTION_ADD);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::EVPN);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_eVpnTemplated(evpn_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_eVpn(evpn_list, update.attrs, update.peer, update.router,
                                              mbus_ptr->VPN_ACTION_ADD, it->second);
         evpn_list.clear();
     }
@@ -634,54 +627,48 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
     }
 
     if (rib_list.size() > 0) {
-        mbus_ptr->update_unicastPrefix(*p_entry, rib_list, update.attrs, mbus_ptr->UNICAST_PREFIX_ACTION_DEL);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::UNICAST_PREFIX);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_unicastPrefixTemplated(rib_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_unicastPrefix(rib_list, update.attrs, update.peer, update.router,
                                                     mbus_ptr->UNICAST_PREFIX_ACTION_DEL, it->second);
     }
 
     if (ls_node_list.size() > 0) {
         SELF_DEBUG("%s: Removing BGP-LS: Nodes %d", p_entry->peer_addr, ls_node_list.size());
-        mbus_ptr->update_LsNode(*p_entry, ls_node_list, update.attrs, mbus_ptr->LS_ACTION_DEL);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_NODES);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_LsNodeTemplated(ls_node_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_LsNode(ls_node_list, update.attrs, update.peer, update.router,
                                              mbus_ptr->LS_ACTION_DEL, it->second);
     }
 
     if (ls_link_list.size() > 0) {
         SELF_DEBUG("%s: Removing BGP-LS: Links %d", p_entry->peer_addr, ls_link_list.size());
-        mbus_ptr->update_LsLink(*p_entry, ls_link_list, update.attrs, mbus_ptr->LS_ACTION_DEL);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_LINKS);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_LsLinkTemplated(ls_link_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_LsLink(ls_link_list, update.attrs, update.peer, update.router,
                                              mbus_ptr->LS_ACTION_DEL, it->second);
     }
 
     if (ls_prefix_list.size() > 0) {
         SELF_DEBUG("%s: Removing BGP-LS: Prefixes %d", p_entry->peer_addr, ls_prefix_list.size());
-        mbus_ptr->update_LsPrefix(*p_entry, ls_prefix_list, update.attrs, mbus_ptr->LS_ACTION_DEL);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_PREFIXES);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_LsPrefixTemplated(ls_prefix_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_LsPrefix(ls_prefix_list, update.attrs, update.peer, update.router,
                                                mbus_ptr->LS_ACTION_DEL, it->second);
     }
     if (l3vpn_list.size() > 0) {
         SELF_DEBUG("%s: Removing VPN: Prefixes %d", p_entry->peer_addr, l3vpn_list.size());
-        mbus_ptr->update_L3Vpn(*p_entry, l3vpn_list, update.attrs, mbus_ptr->VPN_ACTION_DEL);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::L3_VPN);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_L3VpnTemplated(l3vpn_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_L3Vpn(l3vpn_list, update.attrs, update.peer, update.router,
                                              mbus_ptr->VPN_ACTION_DEL, it->second);
     }
 
     if (evpn_list.size() > 0) {
         SELF_DEBUG("%s: Removing evpn: Prefixes %d", p_entry->peer_addr, evpn_list.size());
-        mbus_ptr->update_eVPN(*p_entry, evpn_list, update.attrs, mbus_ptr->VPN_ACTION_DEL);
         std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::EVPN);
         if (it != template_map->template_map.end())
-            mbus_ptr->update_eVpnTemplated(evpn_list, update.attrs, update.peer, update.router,
+            mbus_ptr->update_eVpn(evpn_list, update.attrs, update.peer, update.router,
                                             mbus_ptr->VPN_ACTION_DEL, it->second);
     }
 }
