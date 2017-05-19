@@ -44,8 +44,6 @@ bool        run             = true;                 // Indicates if server shoul
 bool        run_foreground  = false;                // Indicates if server should run in forground
 
 
-#define MAX_THREADS 200
-
 // Global thread list
 vector<ThreadMgmt *> thr_list(0);
 
@@ -92,9 +90,7 @@ void Usage(char *prog) {
     cout << "     -hi <minutes>     Collector message heartbeat interval in minutes (default is 5 minutes)" << endl;
 
     cout << endl;
-
 }
-
 /**
  * Daemonize the program
  */
@@ -435,8 +431,9 @@ void collector_update_msg(msgBus_kafka *kafka, Config &cfg,
 void runServer(Config &cfg) {
     msgBus_kafka *kafka;
     int active_connections = 0;                 // Number of active connections/threads
+    int concurrent_routers = 0;			// Number of concurrent routers
     time_t last_heartbeat_time = 0;
-
+   
     LOG_INFO("Initializing server");
 
     try {
@@ -463,20 +460,22 @@ void runServer(Config &cfg) {
          * Construct the template
          */
         if (template_filename) {
-            cout << "openbmp: template_filename is " << template_filename << endl;
+            LOG_INFO("openbmp: template_filename is %s", template_filename);
             try {
                 if (!template_map.load(template_filename)) {
-                    cout << "Error loading template" << endl;
+                    LOG_ERR("openbmp: Error loading template");
                     template_map.template_map.clear();
                 }
             } catch (char const *str) {
-                cout << "ERROR: Failed to load the template file: " << str << endl;
+                LOG_ERR("ERROR: openbmp: Failed to load the template file: %s", str);
             }
-            //TODO: Remove, after load, test the template_map
-            for (std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map.template_map.begin();
-                 it != template_map.template_map.end(); it++) {
-                template_cfg::Template_cfg template_cfg_print = it->second;
-                print_template(template_cfg_print, 0);
+
+            if (cfg.debug_general) {
+                for (std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map.template_map.begin();
+                     it != template_map.template_map.end(); it++) {
+                    template_cfg::Template_cfg template_cfg_print = it->second;
+                    print_template(template_cfg_print, 0);
+                }
             }
         }
 
@@ -499,6 +498,9 @@ void runServer(Config &cfg) {
                     pthread_join(thr_list.at(i)->thr, NULL);
                     --active_connections;
 
+                    if (!thr_list.at(i)->baselineTimeout)
+                        --concurrent_routers;
+
                     // free the vector entry
                     delete thr_list.at(i);
                     thr_list.erase(thr_list.begin() + i);
@@ -508,72 +510,97 @@ void runServer(Config &cfg) {
 
                 }
 
+		        else if (!thr_list.at(i)->baselineTimeout) {
+
+                    int initial_time = cfg.initial_router_time;
+                    string hash(reinterpret_cast<char*>(thr_list.at(i)->client.hash_id), 16);
+
+                    //if calculate_baseline is true and the baseline time for the router is calculated, use the baseline time
+                    if (cfg.calculate_baseline && cfg.router_baseline_time.find(hash) != cfg.router_baseline_time.end())
+                        initial_time = cfg.router_baseline_time[hash];
+
+                    timeval now;
+                    gettimeofday(&now, NULL);
+
+                    //If past the baseline time, decrement concurrent router count
+                    if(now.tv_sec - thr_list.at(i)->client.startTime.tv_sec >= initial_time) {
+                        --concurrent_routers;
+                    thr_list.at(i)->baselineTimeout = true;		// Indicating that this router is not counted in the concurrent routers count
+                    }
+		        }
+
                 //TODO: Add code to check for a socket that is open, but not really connected/half open
             }
 
             /*
              * Create a new client thread if we aren't at the max number of active sessions
              */
-            if (active_connections <= MAX_THREADS) {
-                ThreadMgmt *thr = new ThreadMgmt;
-                thr->cfg = &cfg;
-                thr->log = logger;
-                if (template_filename)
-                    thr->template_filename = std::string(template_filename);
+	    if(concurrent_routers < cfg.max_concurrent_routers)
+	    {
+                if (active_connections <= MAX_THREADS) {
+                    ThreadMgmt *thr = new ThreadMgmt;
+                    thr->cfg = &cfg;
+                    thr->log = logger;
+                    if (template_filename)
+                        thr->template_filename = std::string(template_filename);
 
-                // wait for a new connection and accept
-                if (bmp_svr->wait_and_accept_connection(thr->client, 500)) {
-                    // Bump the current thread count
-                    ++active_connections;
+                    // wait for a new connection and accept
+                    if (bmp_svr->wait_and_accept_connection(thr->client, 500)) {
+                        // Bump the current thread count
+                        ++active_connections;
 
-                    LOG_INFO("Accepted new connection; active connections = %d", active_connections);
+                        // Bump the concurrent router count
+                        ++concurrent_routers;
+                        LOG_INFO("Accepted new connection; active connections = %d", active_connections);
 
-                    /*
-                     * Start a new thread for every new router connection
-                     */
-                    LOG_INFO("Client Connected => %s:%s, sock = %d",
-                             thr->client.c_ip, thr->client.c_port, thr->client.c_sock);
+                        /*
+                         * Start a new thread for every new router connection
+                         */
+                        LOG_INFO("Client Connected => %s:%s, sock = %d",
+                                 thr->client.c_ip, thr->client.c_port, thr->client.c_sock);
 
-                    pthread_attr_t thr_attr;            // thread attribute
-                    pthread_attr_init(&thr_attr);
-                    //pthread_attr_setdetachstate(&thr.thr_attr, PTHREAD_CREATE_DETACHED);
-                    pthread_attr_setdetachstate(&thr_attr, PTHREAD_CREATE_JOINABLE);
-                    thr->running = 1;
+                        pthread_attr_t thr_attr;            // thread attribute
+                        pthread_attr_init(&thr_attr);
+                        //pthread_attr_setdetachstate(&thr.thr_attr, PTHREAD_CREATE_DETACHED);
+                        pthread_attr_setdetachstate(&thr_attr, PTHREAD_CREATE_JOINABLE);
+                        thr->running = 1;
+                        thr->baselineTimeout = false;
 
-                    // Start the thread to handle the client connection
-                    pthread_create(&thr->thr, &thr_attr,
-                                   ClientThread, thr);
+                        // Start the thread to handle the client connection
+                        pthread_create(&thr->thr, &thr_attr,
+                                       ClientThread, thr);
 
-                    // Add thread to vector
-                    thr_list.insert(thr_list.end(), thr);
+                        // Add thread to vector
+                        thr_list.insert(thr_list.end(), thr);
 
-                    // Free attribute
-                    pthread_attr_destroy(&thr_attr);
+                        // Free attribute
+                        pthread_attr_destroy(&thr_attr);
 
-                    collector_update_msg(kafka, cfg,
-                                         MsgBusInterface::COLLECTOR_ACTION_CHANGE, template_map);
+                        collector_update_msg(kafka, cfg,
+                                             MsgBusInterface::COLLECTOR_ACTION_CHANGE, template_map);
 
-                    last_heartbeat_time = time(NULL);
-                }
-                else {
-                    delete thr;
-
-                    // Send heartbeat if needed
-                    if ( (time(NULL) - last_heartbeat_time) >= cfg.heartbeat_interval) {
-                        BMPListener::ClientInfo client;
-                        collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_HEARTBEAT, template_map);
                         last_heartbeat_time = time(NULL);
                     }
+                    else {
+                        delete thr;
 
-                    usleep(10000);
-                }
+                        // Send heartbeat if needed
+                        if ( (time(NULL) - last_heartbeat_time) >= cfg.heartbeat_interval) {
+                            BMPListener::ClientInfo client;
+                            collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_HEARTBEAT, template_map);
+                            last_heartbeat_time = time(NULL);
+                        }
 
-            } else {
-                LOG_WARN("Reached max number of threads, cannot accept new BMP connections at this time.");
-                sleep (1);
-            }
-        }
+                        usleep(10000);
+                    }
 
+
+                } else {
+	    	    LOG_WARN("Reached max number of threads, cannot accept new BMP connections at this time. ");
+		    sleep (1);
+	        }
+	    }
+	}
         collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_STOPPED, template_map);
         delete kafka;
 

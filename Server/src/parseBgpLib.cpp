@@ -263,6 +263,7 @@ size_t parseBgpLib::parseBgpUpdate(u_char *data, size_t size, parsed_update &upd
      * Check if End-Of-RIB
      */
     if (not withdrawn_len and (size - read_size) <= 0 and not attr_len) {
+        p_info->endOfRIB = true;		// Indicates End-of-RIB Marker received
         LOG_INFO("%sEnd-Of-RIB marker", debug_prepend_string.c_str());
     } else {
         /* ---------------------------------------------------------

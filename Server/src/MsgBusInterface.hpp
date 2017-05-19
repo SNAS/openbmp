@@ -40,7 +40,6 @@ public:
      * ---------------------------------------------------------------------------
      */
 
-
     /**
      * OBJECT: collector
      *
@@ -72,7 +71,8 @@ public:
      */
     struct obj_router {
         u_char      hash_id[16];            ///< Router hash ID of name and src_addr
-        u_char      name[255];              ///< BMP router sysName (initiation Type=2)
+        uint16_t    hash_type;	            ///< Router hash type  0:IP, 1:router_name, 2:bgp_id
+	u_char      name[255];              ///< BMP router sysName (initiation Type=2)
         u_char      descr[255];             ///< BMP router sysDescr (initiation Type=1)
         u_char      ip_addr[46];            ///< BMP router source IP address in printed form
         char        bgp_id[16];             ///< BMP Router bgp-id
@@ -82,7 +82,6 @@ public:
 
         char        term_data[4096];        ///< Type=0 String termination info data
         char        initiate_data[4096];    ///< Type=0 String initiation info data
-
         uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
         uint32_t    timestamp_us;           ///< Timestamp microseconds
     };

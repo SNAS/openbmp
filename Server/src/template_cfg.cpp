@@ -104,7 +104,6 @@
                             if (format == template_cfg::RAW) {
                                 try {
                                     value = node2.as<std::string>();
-//                                cout << "Loaded schema is: " << value.c_str();
                                     read = template_cfg.create_container_loop(template_cfg::CONTAINER, topic,
                                                                               (char *) value.c_str(), prepend_string);
                                     if (!read) {
@@ -430,7 +429,6 @@ namespace template_cfg {
                     cout << "Error: Non-closed Loop" << endl;
                     return (0);
                 }
-//                cout << "Craft end object for container" << endl;
 
                 template_cfg::Template_cfg template_cfg(logger, debug);
                 template_cfg.type = template_cfg::END;
@@ -443,23 +441,13 @@ namespace template_cfg {
             }
 
             prepend_string.append(bpos, epos - bpos);
-//            std::cout << "create_container Prepend string is now " << prepend_string << std::endl;
-
-//            std::cout << "container bpos: " << bpos << std::endl;
-//            std::cout << "container epos: " << epos << std::endl;
-
             remaining_length -= epos - bpos + 2; total_read += epos - bpos + 2;
             bpos += epos - bpos + 2; epos = bpos;
 
             if (strncmp(bpos, "/*", strlen("/*")) == 0) {
-//                std::cout << "Found a comment, skipping" << std::endl;
-
-                //Strip the newline
-                strip_last_newline(prepend_string);
+               strip_last_newline(prepend_string);
 
                 epos = strstr(bpos, "}}");
- //               std::cout << "container bpos: " << bpos << std::endl;
-//                std::cout << "container epos: " << epos << std::endl;
                 remaining_length -= epos - bpos + 2; total_read += epos - bpos + 2;
                 bpos += epos - bpos + 2; epos = bpos;
             } else if (strncmp(bpos, "#", strlen("#")) == 0) {
@@ -475,8 +463,6 @@ namespace template_cfg {
                         return (0);
                     }
                     epos = strstr(bpos, "}}");
-//                    std::cout << "container bpos: " << bpos << std::endl;
-//                    std::cout << "container epos: " << epos << std::endl;
                     remaining_length -= epos - bpos + 2; total_read += epos - bpos + 2;
                     bpos += epos - bpos + 2; epos = bpos;
 
@@ -495,13 +481,9 @@ namespace template_cfg {
                     bpos += read; epos = bpos;
                     this->template_children.push_back(template_cfg);
                 } else if (strncmp(bpos, "if_", strlen("if_")) == 0) {
-//                    std::cout << "Found a if type inside container" << std::endl;
                 } else if (strncmp(bpos, "end", strlen("end")) == 0) {
-//                    std::cout << "Found a end type inside container or loop" << std::endl;
 
                     epos = strstr(bpos, "}}");
-//                    std::cout << "container bpos: " << bpos << std::endl;
-//                    std::cout << "container epos: " << epos << std::endl;
                     template_cfg::Template_cfg template_cfg(logger, debug);
                     template_cfg.type = template_cfg::END;
                     strip_last_newline(prepend_string);
@@ -510,14 +492,12 @@ namespace template_cfg {
 
                     this->template_children.push_back(template_cfg);
                     remaining_length -= epos - bpos + 2; total_read += epos - bpos + 2;
-//                    cout << "container/loop type" << type << " read is " << total_read << endl;
                     return(total_read);
                 } else {
                     std::cout << "Error: Found container type in container" << std::endl;
                     return (0);
                 }
             } else {
-//                std::cout << "Found replacement type inside type " << type << std::endl;
                 template_cfg::Template_cfg template_cfg(logger, debug);
                 read = template_cfg.create_replacement(bpos, prepend_string);
                 /*
@@ -535,8 +515,6 @@ namespace template_cfg {
                 this->template_children.push_back(template_cfg);
             }
         }
-//        cout << "container/loop type" << type << " read is " << total_read << endl;
-
         return(total_read);
     }
 
@@ -566,7 +544,6 @@ namespace template_cfg {
                 std::string value;
                 if (key2.compare("header") == 0) {
                     headers = true;
-//                    std::cout << " Found a header type inside type" << type << std::endl;
                     for (std::size_t i = 0; i < node2.size(); i++) {
                         try {
                             value = node2[i].as<std::string>();
@@ -640,7 +617,6 @@ namespace template_cfg {
 
         template_cfg::Template_cfg template_cfg(logger, debug);
         template_cfg.type = template_cfg::END;
-//        template_cfg.prepend_string.append(std::string("\n"));
 
         this->template_children.push_back(template_cfg);
 
@@ -697,13 +673,11 @@ namespace template_cfg {
 
         }
 
-//        std::cout << "Prepend string for replace is now " << this->prepend_string << std::endl;
         epos = strstr(bpos, ".");
         if (!epos) {
             std::cout << "Error replacement variable is empty" << std::endl;
             return(0);
         }
-//        std::cout << "Replacement variable list is " << epos << std::endl;
 
         if (strncmp(bpos, "nlri", strlen("nlri")) == 0) {
             this->replacement_list_type = NLRI;
@@ -748,8 +722,6 @@ namespace template_cfg {
 
         this->replacement_var = it->second;
         read += epos - bpos + 2;
-//        cout << "Created replacement var list type " << this->replacement_list_type << ", var is " << this->replacement_var << std::endl;
-//        cout << "replacement read is " << read << endl;
 
         return(read);
     }

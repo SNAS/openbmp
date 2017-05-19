@@ -519,6 +519,11 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
             mbus_ptr->update_unicastPrefix(rib_list, update.attrs, update.peer, update.router,
                                                     mbus_ptr->UNICAST_PREFIX_ACTION_ADD, it->second);
         rib_list.clear();
+
+        /*
+         * Record the RIB seq number for calculating RIB dump rate in BMPReader
+         */
+        template_map->ribSeq = it->second.seq;
     }
 
     if (ls_node_list.size() > 0) {
@@ -631,6 +636,11 @@ void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Templ
         if (it != template_map->template_map.end())
             mbus_ptr->update_unicastPrefix(rib_list, update.attrs, update.peer, update.router,
                                                     mbus_ptr->UNICAST_PREFIX_ACTION_DEL, it->second);
+        /*
+         * Record the RIB seq number for calculating RIB dump rate in BMPReader
+         */
+        template_map->ribSeq = it->second.seq;
+
     }
 
     if (ls_node_list.size() > 0) {

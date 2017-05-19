@@ -153,7 +153,7 @@ namespace template_cfg {
          * \param [in] template_filename     template filename
          ***********************************************************************/
         bool load(const char *template_filename);
-
+        uint64_t ribSeq;
 
     private:
         bool debug;                             ///< debug flag to indicate debugging

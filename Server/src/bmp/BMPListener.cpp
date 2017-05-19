@@ -50,12 +50,22 @@ BMPListener::BMPListener(Logger *logPtr, Config *config) {
 
     svr_addr.sin_family      = PF_INET;
     svr_addr.sin_port        = htons(cfg->bmp_port);
-    svr_addr.sin_addr.s_addr = INADDR_ANY;
+
+    if(cfg->bind_ipv4.length()) {
+        inet_pton(AF_INET, cfg->bind_ipv4.c_str(), &(svr_addr.sin_addr.s_addr));
+    } else {
+        svr_addr.sin_addr.s_addr = INADDR_ANY;
+    }
 
     svr_addrv6.sin6_family   = AF_INET6;
     svr_addrv6.sin6_port     = htons(cfg->bmp_port);
     svr_addrv6.sin6_scope_id = 0;
-    svr_addrv6.sin6_addr     = in6addr_any;
+
+    if(cfg->bind_ipv6.length()) {
+        inet_pton(AF_INET6, cfg->bind_ipv6.c_str(), &(svr_addrv6.sin6_addr));
+    } else {
+        svr_addrv6.sin6_addr = in6addr_any;
+    }
 
     // Open listening sockets
     open_socket(cfg->svr_ipv4, cfg->svr_ipv6);
@@ -121,7 +131,6 @@ void BMPListener::open_socket(bool ipv4, bool ipv6) {
 
         // Bind to the address/port
         if (::bind(sockv6, (struct sockaddr *) &svr_addrv6, sizeof(svr_addrv6)) < 0) {
-            perror("bind to ipv6");
             close(sockv6);
             throw "ERROR: Cannot bind to IPv6 address and port";
         }
@@ -194,6 +203,8 @@ bool BMPListener::wait_and_accept_connection(ClientInfo &c, int timeout) {
 
             else // IPv6
                 accept_connection(c, false);
+		
+	    gettimeofday(&c.startTime, NULL);	// Stores the start time for client	
 
             return true;
         }
@@ -216,7 +227,7 @@ bool BMPListener::wait_and_accept_connection(ClientInfo &c, int timeout) {
 void BMPListener::accept_connection(ClientInfo &c, bool isIPv4) {
     socklen_t c_addr_len = sizeof(c.c_addr);         // the client info length
     socklen_t s_addr_len = sizeof(c.s_addr);         // the client info length
-
+    c.initRec=false;				     // To indicate INIT message not received
     int sock = isIPv4 ? this->sock : this->sockv6;
 
     sockaddr_in *v4_addr = (sockaddr_in *) &c.c_addr;
@@ -271,10 +282,9 @@ void BMPListener::accept_connection(ClientInfo &c, bool isIPv4) {
     if (setsockopt(c.c_sock, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0) {
         LOG_NOTICE("%s: sock=%d: Unable to enable tcp keepalives", c.c_ip, c.c_sock);
     }
-
+    
     hashRouter(c);
 }
-
 
 /**
  * Generate BMP router HASH

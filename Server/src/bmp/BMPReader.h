@@ -45,6 +45,7 @@ public:
         string peerAddr;                                        ///< Peer Address in string format
         string routerAddr;                                      ///< BMP Router address
         string peer_hash_str;                                   ///< peer hash string used in BGP update hashes
+	    bool endOfRIB;						///< Indicates if End-Of-RIB marker is received
     };
 
 
@@ -71,6 +72,15 @@ public:
     bool ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, Template_map *template_map);
 
     /**
+     * Checks if End-of-RIB is reached for all peers by checking the rate of RIB dumps
+     *
+     * \param [in]  timeStamp   stores the time the message was received  
+	\param [in]  ribSeq	unicast prefix sequence 
+     * \return true if RIB dump rate is below 85% of the initial rate for 3 seconds
+     */
+    bool checkRIBdumpRate(uint32_t timeStamp, int ribSeq);
+
+    /**
      * Read messages from BMP stream in a loop
      *
      * \param [in]  run         Reference to bool to indicate if loop should continue or not
@@ -95,6 +105,12 @@ private:
     Config      *cfg;                       ///< Config pointer
     bool        debug;                      ///< debug flag to indicate debugging
     u_char      router_hash_id[16];         ///< Router hash ID
+
+    bool 	hasPrevRIBdumpTime;	    ///< True if first RIB dump has been received
+    bool        isBelowThresholdDumpRate;   ///< True if RIB dump rate is below 15% of initial rate 
+    int32_t 	prevRIBdumpTime;            ///< Stores the time the previous message was received
+    int32_t 	maxRIBdumpRate;             ///< Stores the maximum RIB dump rate
+    int32_t     belowThresholdInitTime;     ///< Stores the time when the RIB dump rate has dropped below threshold
 
     /**
      * Persistent peer info map, Key is the peer_hash_id.
