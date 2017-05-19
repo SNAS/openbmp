@@ -109,6 +109,7 @@ public:
         bool        isPrePolicy;            ///< True if the routes are pre-policy, false if not
         bool        isAdjIn;                ///< True if the routes are Adj-Rib-In, false if not
         bool        isIPv4;                 ///< true if peer is IPv4 or false if IPv6
+        bool        isTwoOctet;             ///< Indicates if peer is using 2 octet encoding
         uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC
         uint32_t    timestamp_us;           ///< Timestamp microseconds
     };

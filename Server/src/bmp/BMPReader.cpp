@@ -144,6 +144,10 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
 
             if (bmp_type != parseBMP::TYPE_PEER_UP)
                 mbus_ptr->update_Peer(p_entry, NULL, NULL, mbus_ptr->PEER_ACTION_FIRST);     // add the peer entry
+
+            if (not peer_info_map[peer_info_key].using_2_octet_asn and p_entry.isTwoOctet) {
+                peer_info_map[peer_info_key].using_2_octet_asn = true;
+            }
         }
 
         /*

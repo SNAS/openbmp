@@ -1311,6 +1311,16 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
                 strncat(igp_router_id, "]", 1);
             }
 
+            inet_ntop(PF_INET, link.remote_igp_router_id, remote_igp_router_id, sizeof(remote_igp_router_id));
+
+            if ((uint32_t) *(link.remote_igp_router_id+4) != 0) {
+                bzero(dr, sizeof(dr));
+                inet_ntop(PF_INET, link.remote_igp_router_id+4, dr, sizeof(dr));
+                strncat(remote_igp_router_id, "[", 1);
+                strncat(remote_igp_router_id, dr, sizeof(dr));
+                strncat(remote_igp_router_id, "]", 1);
+            }
+
             inet_ntop(PF_INET, link.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
 
         } else if (!strcmp(link.protocol, "IS-IS_L1") or !strcmp(link.protocol, "IS-IS_L2")) {

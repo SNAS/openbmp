@@ -538,45 +538,6 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
     if (path_len < 4) // Nothing to parse if length doesn't include at least one asn
         return;
 
-    /*
-     * Per draft-ietf-grow-bmp, UPDATES must be sent as 4-octet, but this requires the
-     *    UPDATE to be modified. In draft 14 a new peer header flag indicates size, but
-     *    not all implementations support this draft yet.
-     *
-     *    IOS XE/XR does not modify the UPDATE and therefore a peers
-     *    that is using 2-octet ASN's will not be parsed correctly.  Global instance var
-     *    four_octet_asn is used to check if the OPEN cap sent/recv 4-octet or not. A compliant
-     *    BMP implementation will still use 4-octet even if the peer is 2-octet, so a check is
-     *    needed to see if the as path is encoded using 4 or 2 octet. This check is only done
-     *    once.
-     *
-     *    This is temporary and can be removed after all implementations are complete with bmp draft 14 or greater.
-     */
-    if (not peer_info->checked_asn_octet_length and not four_octet_asn)
-    {
-        /*
-         * Loop through each path segment
-         */
-        u_char *d_ptr = data;
-        while (path_len > 0) {
-            d_ptr++; // seg_type
-            seg_len = *d_ptr++;
-
-            path_len -= 2 + (seg_len * 4);
-
-            if (path_len >= 0)
-                d_ptr += seg_len * 4;
-        }
-
-        if (path_len != 0) {
-            LOG_INFO("%s: rtr=%s: Using 2-octet ASN path parsing", peer_addr.c_str(), router_addr.c_str());
-            peer_info->using_2_octet_asn = true;
-        }
-
-        peer_info->checked_asn_octet_length = true;         // No more checking needed
-        path_len = attr_len;                                // Put the path length back to starting value
-    }
-
     // Define the octet size by known/detected size
     char asn_octet_size = (peer_info->using_2_octet_asn and not four_octet_asn) ? 2 : 4;
 
@@ -601,10 +562,12 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
 
             LOG_NOTICE("%s: rtr=%s: Could not parse the AS PATH due to update message buffer being too short when using ASN octet size %d",
                        peer_addr.c_str(), router_addr.c_str(), asn_octet_size);
-            LOG_NOTICE("%s: rtr=%s: switching encoding size to 2-octet due to parsing failure",
+            LOG_NOTICE("%s: rtr=%s: switching encoding size to 2-octet",
                        peer_addr.c_str(), router_addr.c_str());
 
             peer_info->using_2_octet_asn = true;
+            parseAttr_AsPath(attr_len, data, attrs);
+            return;
         }
 
         // The rest of the data is the as path sequence, in blocks of 2 or 4 bytes

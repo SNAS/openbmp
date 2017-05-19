@@ -388,7 +388,14 @@ void parseBMP::parsePeerHdr(int sock) {
         SELF_DEBUG("sock=%d : Msg is for Adj-RIB-Out", sock);
         p_entry->isPrePolicy = false;
         p_entry->isAdjIn = false;
-    } else if (p_hdr.peer_flags & 0x40) { // L flag of 1 means this is post-policy of Adj-RIB-In
+    }
+
+    if (p_hdr.peer_flags & 0x20) { // A flag of 1 means 2-octet encoding
+        SELF_DEBUG("sock=%d : Msg is 2-octet encoded", sock);
+        p_entry->isTwoOctet = true;
+    }
+
+    if (p_hdr.peer_flags & 0x40) { // L flag of 1 means this is post-policy of Adj-RIB-In
         SELF_DEBUG("sock=%d : Msg is for POST-POLICY Adj-RIB-In", sock);
         p_entry->isPrePolicy = false;
         p_entry->isAdjIn = true;
