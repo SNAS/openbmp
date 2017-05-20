@@ -181,6 +181,11 @@ void msgBus_kafka::connect() {
         LOG_ERR("Failed to configure log.connection.close=false: %s.", errstr.c_str());
     }
 
+    value = "true";
+    if (conf->set("api.version.request", value, errstr) != RdKafka::Conf::CONF_OK) {
+        LOG_ERR("Failed to configure api.version.request=true: %s.", errstr.c_str());
+    }
+
     // TODO: Add config for address family - default is any
     /*value = "v4";
     if (conf->set("broker.address.family", value, errstr) != RdKafka::Conf::CONF_OK) {
@@ -196,7 +201,7 @@ void msgBus_kafka::connect() {
     }
 
     // Batch message max wait time (in ms)
-    value = "500";
+    value = "100";
     if (conf->set("queue.buffering.max.ms", value, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure queue.buffering.max.ms for kafka: %s.", errstr.c_str());
         throw "ERROR: Failed to configure kafka queue.buffer.max.ms";
@@ -313,6 +318,7 @@ void msgBus_kafka::connect() {
         LOG_ERR("Failed to configure kafka delivery report callback: %s", errstr.c_str());
         throw "ERROR: Failed to configure kafka delivery report callback";
     }
+
 
 
     // Create producer and connect

@@ -40,6 +40,11 @@ UpdateMsg::UpdateMsg(Logger *logPtr, std::string peerAddr, std::string routerAdd
     this->peer_addr = peerAddr;
     this->router_addr = routerAddr;
 
+// BELOW check is not needed, but it's here as a reminder
+//    if (peer_info->using_2_octet_asn)
+//        four_octet_asn = false;
+//    else
+
     four_octet_asn = peer_info->recv_four_octet_asn and peer_info->sent_four_octet_asn;
 }
 
@@ -538,7 +543,11 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
     if (path_len < 4) // Nothing to parse if length doesn't include at least one asn
         return;
 
-    // Define the octet size by known/detected size
+    /*
+     * We first must try to parse using four octet since the RFC says that the peer header
+     *     defines the encoding and not the capabilities.  four_octet_asn represents
+     *     the capabilities only.
+     */
     char asn_octet_size = (peer_info->using_2_octet_asn and not four_octet_asn) ? 2 : 4;
 
     /*
@@ -562,11 +571,15 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
 
             LOG_NOTICE("%s: rtr=%s: Could not parse the AS PATH due to update message buffer being too short when using ASN octet size %d",
                        peer_addr.c_str(), router_addr.c_str(), asn_octet_size);
-            LOG_NOTICE("%s: rtr=%s: switching encoding size to 2-octet",
-                       peer_addr.c_str(), router_addr.c_str());
 
-            peer_info->using_2_octet_asn = true;
-            parseAttr_AsPath(attr_len, data, attrs);
+            if (not peer_info->using_2_octet_asn) {
+                LOG_NOTICE("%s: rtr=%s: switching encoding size to 2-octet",
+                           peer_addr.c_str(), router_addr.c_str());
+
+                peer_info->using_2_octet_asn = true;
+
+                parseAttr_AsPath(attr_len, data, attrs);
+            }
             return;
         }
 
