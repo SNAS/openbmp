@@ -538,7 +538,9 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
 
     u_char      seg_type;
     u_char      seg_len;
-    uint32_t    seg_asn;
+    uint32_t    seg_asn = 0;
+
+    u_char *data_ptr = data;
 
     if (path_len < 4) // Nothing to parse if length doesn't include at least one asn
         return;
@@ -578,7 +580,7 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
 
                 peer_info->using_2_octet_asn = true;
 
-                parseAttr_AsPath(attr_len, data, attrs);
+                parseAttr_AsPath(attr_len, data_ptr, attrs);
             }
             return;
         }
@@ -611,27 +613,35 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
      */
     attrs[ATTR_TYPE_AS_PATH] = decoded_path;
 
-    std::ostringstream numString;
-    numString << as_path_cnt;
-    attrs[ATTR_TYPE_INTERNAL_AS_COUNT] = numString.str();
+    {
+        std::ostringstream numString;
+        numString << as_path_cnt;
+        attrs[ATTR_TYPE_INTERNAL_AS_COUNT] = numString.str();
+    }
 
     /*
      * Get the last ASN and update the attributes map
      */
-    int spos = -1;
-    int epos = decoded_path.size() - 1;
-    for (int i=epos; i >= 0; i--) {
-        if (spos < 0 and decoded_path[i] >= '0' and decoded_path[i] <= '9') {
-           epos = i; spos = i;
+    {
+        std::ostringstream numString;
+        numString << seg_asn;
+        attrs[ATTR_TYPE_INTERNAL_AS_ORIGIN] = numString.str();
+    }
 
-        } else if (decoded_path[i] >= '0' and decoded_path[i] <= '9')
-           spos = i;
-        else if (spos >= 0)
-           break;
-     }
-
-     if (spos >= 0)   // positive only if found
-         attrs[ATTR_TYPE_INTERNAL_AS_ORIGIN] = decoded_path.substr(spos, (epos - spos) + 1);
+//    int spos = -1;
+//    int epos = decoded_path.size() - 1;
+//    for (int i=epos; i >= 0; i--) {
+//        if (spos < 0 and decoded_path[i] >= '0' and decoded_path[i] <= '9') {
+//           epos = i; spos = i;
+//
+//        } else if (decoded_path[i] >= '0' and decoded_path[i] <= '9')
+//           spos = i;
+//        else if (spos >= 0)
+//           break;
+//     }
+//
+//     if (spos >= 0)   // positive only if found
+//        attrs[ATTR_TYPE_INTERNAL_AS_ORIGIN] = decoded_path.substr(spos, (epos - spos) + 1);
 }
 
 } /* namespace bgp_msg */

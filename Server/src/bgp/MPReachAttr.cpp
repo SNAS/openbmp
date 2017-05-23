@@ -441,7 +441,7 @@ inline uint16_t MPReachAttr::decodeLabel(u_char *data, uint16_t len, std::string
         convert << label.decode.value;
         labels.append(convert.str());
 
-        printf("label data = %x\n", label.data);
+        //printf("label data = %x\n", label.data);
         if (label.decode.bos == 1 or label.data == 0x80000000 /* withdrawn label as 32bits instead of 24 */
                 or label.data == 0 /* l3vpn seems to use zero instead of rfc3107 suggested value */) {
             break;               // Reached EoS
