@@ -1,0 +1,353 @@
+base_attributes:
+  format: tsv
+  schema:
+    header:
+      - header.action
+      - header.sequenceNumber
+      - attr.baseAttributeHash
+      - router.routerHashId
+      - router.routerIp
+      - peer.peerHashId
+      - peer.peerAddr
+      - peer.peerAs
+      - peer.peerTimestamp
+      - attr.origin
+      - attr.asPath
+      - attr.asPathSize
+      - attr.asOrigin
+      - attr.nextHop
+      - attr.med
+      - attr.localPref
+      - attr.aggregator
+      - attr.communities
+      - attr.extendedCommunities
+      - attr.clusterList
+      - attr.atomicAggregate
+      - attr.nextHopIsIpv4
+      - attr.originator
+
+unicast_prefix:
+  format: tsv
+  schema:
+    loop:
+      - header.action
+      - header.sequenceNumber
+      - nlri.nlriHash
+      - router.routerHashId
+      - router.routerIp
+      - attr.baseAttributeHash
+      - peer.peerHashId
+      - peer.peerAddr
+      - peer.peerAs
+      - peer.peerTimestamp
+      - nlri.prefix
+      - nlri.prefixLength
+      - nlri.isIpv4
+      - attr.origin
+      - attr.asPath
+      - attr.asPathSize
+      - attr.asOrigin
+      - attr.nextHop
+      - attr.med
+      - attr.localPref
+      - attr.aggregator
+      - attr.communities
+      - attr.extendedCommunities
+      - attr.clusterList
+      - attr.atomicAggregate
+      - attr.nextHopIsIpv4
+      - attr.originator
+      - nlri.pathId
+      - nlri.labels
+      - peer.peerIsPrepolicy
+      - peer.peerIsAdjin
+
+ls_nodes:
+  format: tsv
+  schema:
+    loop:
+      - header.action
+      - header.sequenceNumber
+      - nlri.linkstateLocalNodeHash
+      - attr.baseAttributeHash
+      - router.routerHashId
+      - router.routerIp
+      - peer.peerHashId
+      - peer.peerAddr
+      - peer.peerAs
+      - peer.peerTimestamp
+      - nlri.linkstateIgpRouterIdLocal
+      - attr.linkstateLocalRouterId
+      - nlri.linkstateRoutingId
+      - nlri.linkstateBgpLsIdLocal
+      - attr.linkstateMtId
+      - nlri.linkstateOspfAreaIdLocal
+      - attr.linkstateIsisAreaId
+      - nlri.linkstateProtocol
+      - attr.linkstateFlags
+      - attr.asPath
+      - attr.localPref
+      - attr.med
+      - attr.nextHop
+      - attr.linkstateNodeName
+      - peer.peerIsPrepolicy
+      - peer.peerIsAdjin
+      - attr.linkstateSrCapabilitiesTlv
+
+ls_links:
+  format: tsv
+  schema:
+    loop:
+      - header.action
+      - header.sequenceNumber
+      - nlri.linkstateLinkHash
+      - attr.baseAttributeHash
+      - router.routerHashId
+      - router.routerIp
+      - peer.peerHashId
+      - peer.peerAddr
+      - peer.peerAs
+      - peer.peerTimestamp
+      - nlri.linkstateIgpRouterIdLocal
+      - attr.linkstateLocalRouterId
+      - nlri.linkstateRoutingId
+      - nlri.linkstateBgpLsIdLocal
+      - nlri.linkstateOspfAreaIdLocal
+      - attr.linkstateIsisAreaId
+      - nlri.linkstateProtocol
+      - attr.asPath
+      - attr.localPref
+      - attr.med
+      - attr.nextHop
+      - nlri.linkstateMtId
+      - nlri.linkstateLinkLocalId
+      - nlri.linkstateLinkRemoteId
+      - nlri.linkstateInterfaceAddr
+      - nlri.linkstateNeighborAddr
+      - attr.linkstateIgpMetric
+      - attr.linkstateAdminGroup
+      - attr.linkstateMaxLinkBw
+      - attr.linkstateMaxReservedBw
+      - attr.linkstateUnreservedBw
+      - attr.linkstateTeDefaultMetric
+      - attr.linkstateProtectionType
+      - attr.linkstateMplsProtoMask
+      - attr.linkstateSrlg
+      - attr.linkstateLinkName
+      - nlri.linkstateRemoteNodeHash
+      - nlri.linkstateLocalNodeHash
+      - nlri.linkstateIgpRouterIdRemote
+      - attr.linkstateRemoteRouterId
+      - nlri.linkstateAsnLocal
+      - nlri.linkstateAsnRemote
+      - attr.linkstatePeerEpeNodeSid
+      - peer.peerIsPrepolicy
+      - peer.peerIsAdjin
+      - attr.linkstateAdjacencySid
+
+ls_prefixes:
+  format: tsv
+  schema:
+    loop:
+      - header.action
+      - header.sequenceNumber
+      - nlri.linkstatePrefixHash
+      - attr.baseAttributeHash
+      - router.routerHashId
+      - router.routerIp
+      - peer.peerHashId
+      - peer.peerAddr
+      - peer.peerAs
+      - peer.peerTimestamp
+      - nlri.linkstateIgpRouterIdLocal
+      - attr.linkstateLocalRouterId
+      - nlri.linkstateRoutingId
+      - nlri.linkstateBgpLsIdLocal
+      - nlri.linkstateOspfAreaIdLocal
+      - attr.linkstateIsisAreaId
+      - nlri.linkstateProtocol
+      - attr.asPath
+      - attr.localPref
+      - attr.med
+      - attr.nextHop
+      - nlri.linkstateLocalNodeHash
+      - nlri.linkstateMtId
+      - nlri.linkstateOspfRouteType
+      - attr.linkstatePrefixIgpFlags
+      - attr.linkstateRouteTag
+      - attr.linkstatExtendedTag
+      - attr.linkstateOspfForwardingAddr
+      - attr.linkstatePrefixMetric
+      - nlri.linkstateIpReachPrefix
+      - nlri.linkstateIpReachPrefixLength
+      - peer.peerIsPrepolicy
+      - peer.peerIsAdjin
+      - attr.linkstatePrefixSid
+
+l3vpn:
+  format: tsv
+  schema:
+    loop:
+      - header.action
+      - header.sequenceNumber
+      - nlri.nlriHash
+      - router.routerHashId
+      - router.routerIp
+      - attr.baseAttributeHash
+      - peer.peerHashId
+      - peer.peerAddr
+      - peer.peerAs
+      - peer.peerTimestamp
+      - nlri.prefix
+      - nlri.prefixLength
+      - nlri.isIpv4
+      - attr.origin
+      - attr.asPath
+      - attr.asPathSize
+      - attr.asOrigin
+      - attr.nextHop
+      - attr.med
+      - attr.localPref
+      - attr.aggregator
+      - attr.communities
+      - attr.extendedCommunities
+      - attr.clusterList
+      - attr.atomicAggregate
+      - attr.nextHopIsIpv4
+      - attr.originator
+      - nlri.pathId
+      - nlri.labels
+      - peer.peerIsPrepolicy
+      - peer.peerIsAdjin
+      - nlri.vpnRd
+      - nlri.vpnRdType
+
+evpn:
+  format: tsv
+  schema:
+    loop:
+      - header.action
+      - header.sequenceNumber
+      - nlri.nlriHash
+      - router.routerHashId
+      - router.routerIp
+      - attr.baseAttributeHash
+      - peer.peerHashId
+      - peer.peerAddr
+      - peer.peerAs
+      - peer.peerTimestamp
+      - attr.origin
+      - attr.asPath
+      - attr.asPathSize
+      - attr.asOrigin
+      - attr.nextHop
+      - attr.med
+      - attr.localPref
+      - attr.aggregator
+      - attr.communities
+      - attr.extendedCommunities
+      - attr.clusterList
+      - attr.atomicAggregate
+      - attr.nextHopIsIpv4
+      - attr.originator
+      - nlri.pathId
+      - peer.peerIsPrepolicy
+      - peer.peerIsAdjin
+      - nlri.vpnRd
+      - nlri.vpnRdType
+      - nlri.evpnOriginatingRouterIpLen
+      - nlri.evpnOriginatingRouterIp
+      - nlri.evpnEthernetTagIdHex
+      - nlri.evpnEthernetSegmentId
+      - nlri.evpnMacLen
+      - nlri.evpnMac
+      - nlri.evpnIpLen
+      - nlri.evpnIp
+      - nlri.evpnMplsLabel1
+      - nlri.evpnMplsLabel2
+
+peer:
+  format: tsv
+  schema:
+    header:
+      - header.action
+      - header.sequenceNumber
+      - peer.peerHashId
+      - router.routerHashId
+      - peer.peerName
+      - peer.peerBgpId
+      - router.routerIp
+      - peer.peerTimestamp
+      - peer.peerAs
+      - peer.peerAddr
+      - peer.peerRd
+      - peer.peerRemotePort
+      - peer.peerLocalAsn
+      - peer.peerLocalIp
+      - peer.peerLocalPort
+      - peer.peerLocalBgpId
+      - peer.peerInfoData
+      - peer.peerSentCap
+      - peer.peerRecvCap
+      - peer.peerRemoteHoldTime
+      - peer.peerLocalHoldTime
+      - peer.peerBmpReason
+      - peer.peerBgpErrCode
+      - peer.peerBgpErrSubcode
+      - peer.peerErrorText
+      - peer.peerIsL3vpn
+      - peer.peerIsPrepolicy
+      - peer.peerIsIpv4
+
+router:
+  format: tsv
+  schema:
+    header:
+      - header.action
+      - header.sequenceNumber
+      - router.routerName
+      - router.routerHashId
+      - router.routerIp
+      - router.routerDescr
+      - router.routerTermReasonCode
+      - router.routerTermReasonText
+      - router.routerInitiateData
+      - router.routerTermData
+      - router.routerTimestamp
+      - router.routerBgpId
+
+collector:
+  format: tsv
+  schema:
+    header:
+      - header.action
+      - header.sequenceNumber
+      - collector.collectorAdminId
+      - collector.collectorHashId
+      - collector.collectorRouters
+      - collector.collectorRouterCount
+      - collector.collectorTimestamp
+
+bmp_stat:
+  format: tsv
+  schema:
+    header:
+      - header.action
+      - header.sequenceNumber
+      - router.routerHashId
+      - router.routerIp
+      - peer.peerHashId
+      - peer.peerAddr
+      - peer.peerAs
+      - peer.peerTimestamp
+      - stats.statsPrefixesRej
+      - stats.statsKnownDupPrefixes
+      - stats.statsKnownDupWithdraws
+      - stats.statsInvalidClusterList
+      - stats.statsInvalidAsPathLoop
+      - stats.statsInvalidOriginatorId
+      - stats.statsInvalidAsConfedLoop
+      - stats.statsRoutesAdjIn
+      - stats.statsRoutesLocRib
+
+

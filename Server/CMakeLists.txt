@@ -104,15 +104,13 @@ set (SRC_FILES
 	src/bgp/parseBGP.cpp
 	src/bgp/NotificationMsg.cpp
 	src/bgp/OpenMsg.cpp
-	src/bgp/UpdateMsg.cpp
-	src/bgp/MPReachAttr.cpp
-	src/bgp/MPUnReachAttr.cpp
-    src/bgp/ExtCommunity.cpp
     src/bgp/AddPathDataContainer.cpp
-    src/bgp/EVPN.cpp
-    src/bgp/linkstate/MPLinkState.cpp
-    src/bgp/linkstate/MPLinkStateAttr.cpp
-    )
+    src/parseBgpLib.cpp
+    src/parseBgpLibExtCommunity.cpp
+    src/parseBgpLibMpReach.cpp
+    src/parseBgpLibMpUnReach.cpp
+    src/parseBgpLibMpLinkstate.cpp
+    src/parseBgpLibMpLinkstateAttr.cpp src/parseBgpLibMpEvpn.h src/parseBgpLibMpEvpn.cpp src/template_cfg.h src/template_cfg.cpp)
 
 # Disable warnings
 add_definitions ("-Wno-unused-result")

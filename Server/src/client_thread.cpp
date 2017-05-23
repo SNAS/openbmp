@@ -18,7 +18,6 @@
 #include "BMPReader.h"
 #include "Logger.h"
 
-
 #include <cxxabi.h>
 #include <poll.h>
 
@@ -99,7 +98,7 @@ void *ClientThread(void *arg) {
         bool bmp_run = true;
         //cInfo.bmp_reader_thread = new std::thread([&] {rBMP.readerThreadLoop(bmp_run,cInfo.client,
         cInfo.bmp_reader_thread = new std::thread(&BMPReader::readerThreadLoop, &rBMP, std::ref(bmp_run), cInfo.client,
-                                                                             (MsgBusInterface *)cInfo.mbus );
+                                                                             (MsgBusInterface *)cInfo.mbus, std::ref(thr->template_filename));
 
         // Variables to handle circular buffer
         sock_buf = new unsigned char[thr->cfg->bmp_buffer_size];

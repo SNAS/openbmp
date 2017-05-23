@@ -1,32 +1,29 @@
 /*
- * Copyright (c) 2013-2016 Cisco Systems, Inc. and others.  All rights reserved.
+ * Copyright (c) 2014-2015 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * Copyright (c) 2014 Sungard Availability Services and others.  All rights reserved.
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  *
  */
-#ifndef MPUNREACHATTR_H_
-#define MPUNREACHATTR_H_
+#ifndef PARSE_BGP_LIB_MPUNREACH_H_
+#define PARSE_BGP_LIB_MPUNREACH_H_
 
-#include "bgp_common.h"
-#include "Logger.h"
+#include "parseBgpLib.h"
+#include "parseBgpLibMpReach.h"
 #include <list>
 #include <string>
 
-#include "AddPathDataContainer.h"
-#include "MPReachAttr.h"
-#include "BMPReader.h"
-
-namespace bgp_msg {
-
+namespace parse_bgp_lib {
 /**
- * \class   MPUnReachAttr
- *
- * \brief   BGP attribute MP_UNREACH parser
- * \details This class parses MP_UNREACH attributes.
- *          It can be extended to create attributes messages.
- */
+* \class   MPUnReachAttr
+*
+* \brief   BGP attribute MP_UNREACH parser
+* \details This class parses MP_UNREACH attributes.
+*          It can be extended to create attributes messages.
+*/
 class MPUnReachAttr {
 public:
 
@@ -45,13 +42,11 @@ public:
      *
      * \details Handles bgp MP_UNREACH attributes
      *
+     * \param [in]      parser                  Pointer to the BGP update parser
      * \param [in]     logPtr                   Pointer to existing Logger for app logging
-     * \param [in]     pperAddr                 Printed form of peer address used for logging
-     * \param [in]     peer_info                Persistent Peer info pointer
      * \param [in]     enable_debug             Debug true to enable, false to disable
      */
-    MPUnReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info,
-                  bool enable_debug=false);
+    MPUnReachAttr(parseBgpLib *parser, Logger *logPtr, bool enable_debug=false);
 
     virtual ~MPUnReachAttr();
 
@@ -64,16 +59,15 @@ public:
      *
      * \param [in]   attr_len       Length of the attribute data
      * \param [in]   data           Pointer to the attribute data
-     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+     * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      *
      */
-    void parseUnReachNlriAttr(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data);
+    void parseUnReachNlriAttr(int attr_len, u_char *data, parseBgpLib::parsed_update &update);
 
 private:
     bool                    debug;              ///< debug flag to indicate debugging
     Logger                  *logger;            ///< Logging class pointer
-    std::string             peer_addr;          ///< Printed form of the peer address for logging
-    BMPReader::peer_info    *peer_info;         ///< Persistent Peer info pointer
+    parseBgpLib             *caller;                /// BGP Update class pointer
 
     /**
      * MP UnReach NLRI parse based on AFI
@@ -82,9 +76,9 @@ private:
      *          the specific SAFI method will be performed to further parse the message.
      *
      * \param [in]   nlri           Reference to parsed UnReach NLRI struct
-     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+     * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      */
-    void parseAfi(mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
+    void parseAfi(mp_unreach_nlri &nlri, parseBgpLib::parsed_update &update);
 
     /**
      * MP Reach NLRI parse for BGP_AFI_IPV4 & BGP_AFI_IPV6
@@ -93,11 +87,11 @@ private:
      *
      * \param [in]   isIPv4         True false to indicate if IPv4 or IPv6
      * \param [in]   nlri           Reference to parsed UnReach NLRI struct
-     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+     * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      */
-    void parseAfi_IPv4IPv6(bool isIPv4, mp_unreach_nlri &nlri, UpdateMsg::parsed_update_data &parsed_data);
+    void parseAfi_IPv4IPv6(bool isIPv4, mp_unreach_nlri &nlri, parseBgpLib::parsed_update &update);
 };
 
-} /* namespace bgp_msg */
+} /* namespace parse_bgp_lib */
 
-#endif /* MPUNREACHATTR_H_ */
+#endif /* PARSE_BGP_LIB_MPUNREACH_H_ */

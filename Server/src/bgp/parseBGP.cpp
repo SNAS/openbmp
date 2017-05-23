@@ -19,7 +19,6 @@
 #include <list>
 #include <memory>
 #include <arpa/inet.h>
-#include <bgp/linkstate/MPLinkStateAttr.h>
 
 #include <sstream>
 #include <algorithm>
@@ -27,10 +26,13 @@
 #include "MsgBusInterface.hpp"
 #include "NotificationMsg.h"
 #include "OpenMsg.h"
-#include "UpdateMsg.h"
 #include "bgp_common.h"
 
+#include "template_cfg.h"
+#include "parseBgpLib.h"
+
 using namespace std;
+
 
 /**
  * Constructor for class -
@@ -48,7 +50,7 @@ using namespace std;
  * \param [in,out] peer_info   Persistent peer information
  */
 parseBGP::parseBGP(Logger *logPtr, MsgBusInterface *mbus_ptr, MsgBusInterface::obj_bgp_peer *peer_entry, string routerAddr,
-                   BMPReader::peer_info *peer_info) {
+                   BMPReader::peer_info *peer_info, parse_bgp_lib::parseBgpLib *parseBgp) {
     debug = false;
 
     logger = logPtr;
@@ -66,6 +68,8 @@ parseBGP::parseBGP(Logger *logPtr, MsgBusInterface *mbus_ptr, MsgBusInterface::o
     p_info = peer_info;
 
     router_addr = routerAddr;
+
+    parser = parseBgp;
 }
 
 /**
@@ -84,21 +88,15 @@ parseBGP::~parseBGP() {
  *
  * \returns True if error, false if no error.
  */
-bool parseBGP::handleUpdate(u_char *data, size_t size) {
-    bgp_msg::UpdateMsg::parsed_update_data parsed_data;
+bool parseBGP::handleUpdate(u_char *data, size_t size, Template_map *template_map, parse_bgp_lib::parseBgpLib::parsed_update &update) {
     int read_size = 0;
 
     if (parseBgpHeader(data, size) == BGP_MSG_UPDATE) {
         data += BGP_MSG_HDR_LEN;
 
-        /*
-         * Parse the update message - stored results will be in parsed_data
-         */
-        bgp_msg::UpdateMsg uMsg(logger, p_entry->peer_addr, router_addr, p_info, debug);
-
-        if ((read_size=uMsg.parseUpdateMsg(data, data_bytes_remaining, parsed_data)) != (size - BGP_MSG_HDR_LEN)) {
+        if ((read_size=parser->parseBgpUpdate(data, data_bytes_remaining, update)) != (size - BGP_MSG_HDR_LEN)) {
             LOG_NOTICE("%s: rtr=%s: Failed to parse the update message, read %d expected %d", p_entry->peer_addr,
-                        router_addr.c_str(), read_size, (size - read_size));
+                       router_addr.c_str(), read_size, (size - read_size));
             return true;
         }
 
@@ -107,8 +105,9 @@ bool parseBGP::handleUpdate(u_char *data, size_t size) {
         /*
          * Update the DB with the update data
          */
-        UpdateDB(parsed_data);
-    }
+        UpdateDB(update, template_map);
+
+      }
 
     return false;
 }
@@ -126,7 +125,8 @@ bool parseBGP::handleUpdate(u_char *data, size_t size) {
  *
  * \returns True if error, false if no error.
  */
-bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_down_event &down_event) {
+bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_down_event &down_event,
+                               parse_bgp_lib::parseBgpLib::parsed_update &update) {
     bool        rval;
 
     // Process the BGP message normally
@@ -153,6 +153,30 @@ bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_p
         throw "ERROR: Invalid BGP MSG for BMP down event, expected NOTIFICATION message.";
     }
 
+    /*
+     * Fill the peer map for templating purposes
+     */
+    std::ostringstream numString;
+    numString << down_event.bmp_reason;
+
+    update.peer[parse_bgp_lib::LIB_PEER_BMP_REASON].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_BMP_REASON];
+    update.peer[parse_bgp_lib::LIB_PEER_BMP_REASON].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << down_event.bgp_err_code;
+
+    update.peer[parse_bgp_lib::LIB_PEER_BGP_ERR_CODE].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_BGP_ERR_CODE];
+    update.peer[parse_bgp_lib::LIB_PEER_BGP_ERR_CODE].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << down_event.bgp_err_subcode;
+
+    update.peer[parse_bgp_lib::LIB_PEER_BGP_ERR_SUBCODE].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_BGP_ERR_SUBCODE];
+    update.peer[parse_bgp_lib::LIB_PEER_BGP_ERR_SUBCODE].value.push_back(numString.str());
+
+    update.peer[parse_bgp_lib::LIB_PEER_ERROR_TEXT].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_ERROR_TEXT];
+    update.peer[parse_bgp_lib::LIB_PEER_ERROR_TEXT].value.push_back(down_event.error_text);
+
     return rval;
 }
 
@@ -167,7 +191,8 @@ bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_p
  *
  * \returns True if error, false if no error.
  */
-bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event) {
+bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event,
+                             parse_bgp_lib::parseBgpLib::parsed_update &update) {
     bgp_msg::OpenMsg    oMsg(logger, p_entry->peer_addr, this->p_info, debug);
     list <string>       cap_list;
     string              local_bgp_id, remote_bgp_id;
@@ -263,6 +288,57 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
         throw "ERROR: Invalid BGP MSG for BMP Received OPEN message, expected OPEN message.";
     }
 
+    /*
+     * Fill the peer map for templating purposes
+     */
+    update.peer[parse_bgp_lib::LIB_PEER_INFO_DATA].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_INFO_DATA];
+    update.peer[parse_bgp_lib::LIB_PEER_INFO_DATA].value.push_back(up_event->info_data);
+
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_IP].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_IP];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_IP].value.push_back(up_event->local_ip);
+
+    std::ostringstream numString;
+    numString << up_event->local_port;
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_PORT].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_PORT];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_PORT].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << up_event->local_asn;
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_ASN].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_ASN];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_ASN].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << up_event->local_hold_time;
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_HOLD_TIME].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_HOLD_TIME];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_HOLD_TIME].value.push_back(numString.str());
+
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_BGP_ID].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_LOCAL_BGP_ID];
+    update.peer[parse_bgp_lib::LIB_PEER_LOCAL_BGP_ID].value.push_back(up_event->local_bgp_id);
+
+    numString.str(std::string());
+    numString << up_event->remote_port;
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_PORT].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_REMOTE_PORT];
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_PORT].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << up_event->remote_asn;
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_ASN].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_REMOTE_ASN];
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_ASN].value.push_back(numString.str());
+
+    numString.str(std::string());
+    numString << up_event->remote_hold_time;
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_HOLD_TIME].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_REMOTE_HOLD_TIME];
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_HOLD_TIME].value.push_back(numString.str());
+
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_BGP_ID].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_REMOTE_BGP_ID];
+    update.peer[parse_bgp_lib::LIB_PEER_REMOTE_BGP_ID].value.push_back(up_event->remote_bgp_id);
+
+    update.peer[parse_bgp_lib::LIB_PEER_SENT_CAP].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_SENT_CAP];
+    update.peer[parse_bgp_lib::LIB_PEER_SENT_CAP].value.push_back(up_event->sent_cap);
+
+    update.peer[parse_bgp_lib::LIB_PEER_RECV_CAP].name = parse_bgp_lib::parse_bgp_lib_peer_names[parse_bgp_lib::LIB_PEER_RECV_CAP];
+    update.peer[parse_bgp_lib::LIB_PEER_RECV_CAP].value.push_back(up_event->recv_cap);
+
     return false;
 }
 
@@ -340,594 +416,271 @@ u_char parseBGP::parseBgpHeader(u_char *data, size_t size) {
  *
  * \param  parsed_data          Reference to the parsed update data
  */
-void parseBGP::UpdateDB(bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
+void parseBGP::UpdateDB(parse_bgp_lib::parseBgpLib::parsed_update &update, Template_map *template_map) {
+    vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> rib_list;
+    vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> ls_node_list;
+    vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> ls_link_list;
+    vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> ls_prefix_list;
+    vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> l3vpn_list;
+    vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> evpn_list;
+
     /*
      * Update the path attributes
      */
-    UpdateDBAttrs(parsed_data.attrs);
+    std::map<parse_bgp_lib::BGP_LIB_ATTRS, parse_bgp_lib::parseBgpLib::parse_bgp_lib_data>::iterator it = update.attrs.find(parse_bgp_lib::LIB_ATTR_NEXT_HOP);
+    if (it != update.attrs.end()) {
+        SELF_DEBUG("%s: adding attributes to message bus", p_entry->peer_addr);
+        bool nexthop_isIPv4 =  (update.attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP].value.front().find_first_of(':') ==  string::npos) ? true : false;
+        size_t as_path_size = update.attrs[parse_bgp_lib::LIB_ATTR_AS_PATH].value.size();
 
-    /*
-     * Update the bgp-ls data
-     */
-    UpdateDbBgpLs(false, parsed_data.ls, parsed_data.ls_attrs);
-    UpdateDbBgpLs(true, parsed_data.ls_withdrawn, parsed_data.ls_attrs);
+        std::ostringstream numString;
+        numString << nexthop_isIPv4;
 
-    /*
-     * Update the advertised prefixes (both ipv4 and ipv6)
-     */
-    UpdateDBAdvPrefixes(parsed_data.advertised, parsed_data.attrs);
+        update.attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4];
+        update.attrs[parse_bgp_lib::LIB_ATTR_NEXT_HOP_ISIPV4].value.push_back(numString.str());
 
-    UpdateDBL3Vpn(false,parsed_data.vpn, parsed_data.attrs);
-    UpdateDBL3Vpn(true,parsed_data.vpn_withdrawn, parsed_data.attrs);
+        numString.str(std::string());
+        numString << as_path_size;
 
-    UpdateDBeVPN(false, parsed_data.evpn, parsed_data.attrs);
-    UpdateDBeVPN(true, parsed_data.evpn_withdrawn, parsed_data.attrs);
+        update.attrs[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE].name = parse_bgp_lib::parse_bgp_lib_attr_names[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE];
+        update.attrs[parse_bgp_lib::LIB_ATTR_AS_PATH_SIZE].value.push_back(numString.str());
 
-    /*
-     * Update withdraws (both ipv4 and ipv6)
-     */
-    UpdateDBWdrawnPrefixes(parsed_data.withdrawn);
-
-}
-
-/**
- * Update the Database path attributes
- *
- * \details This method will update the database for the supplied path attributes
- *
- * \param  attrs            Reference to the parsed attributes map
- */
-void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
-
-    /*
-     * Setup the record
-     */
-    base_attr.as_path                  = (string)attrs[bgp_msg::ATTR_TYPE_AS_PATH];
-    base_attr.cluster_list             = (string)attrs[bgp_msg::ATTR_TYPE_CLUSTER_LIST];
-    base_attr.community_list           = (string)attrs[bgp_msg::ATTR_TYPE_COMMUNITIES];
-    base_attr.ext_community_list       = (string)attrs[bgp_msg::ATTR_TYPE_EXT_COMMUNITY];
-
-    base_attr.atomic_agg               = ((string)attrs[bgp_msg::ATTR_TYPE_ATOMIC_AGGREGATE]).compare("1") == 0 ? true : false;
-
-    if (((string)attrs[bgp_msg::ATTR_TYPE_LOCAL_PREF]).length() > 0)
-        base_attr.local_pref = std::stoul(((string)attrs[bgp_msg::ATTR_TYPE_LOCAL_PREF]));
-    else
-        base_attr.local_pref = 0;
-
-    if (((string)attrs[bgp_msg::ATTR_TYPE_MED]).length() > 0)
-        base_attr.med = std::stoul(((string)attrs[bgp_msg::ATTR_TYPE_MED]));
-    else
-        base_attr.med = 0;
-
-    if (((string)attrs[bgp_msg::ATTR_TYPE_INTERNAL_AS_COUNT]).length() > 0)
-        base_attr.as_path_count = std::stoi(((string)attrs[bgp_msg::ATTR_TYPE_INTERNAL_AS_COUNT]));
-    else
-        base_attr.as_path_count = 0;
-
-    if (((string)attrs[bgp_msg::ATTR_TYPE_INTERNAL_AS_ORIGIN]).length() > 0)
-        base_attr.origin_as = std::stoul(((string)attrs[bgp_msg::ATTR_TYPE_INTERNAL_AS_ORIGIN]));
-    else
-        base_attr.origin_as = 0;
-
-    if (((string)attrs[bgp_msg::ATTR_TYPE_ORIGINATOR_ID]).length() > 0)
-        strncpy(base_attr.originator_id, ((string)attrs[bgp_msg::ATTR_TYPE_ORIGINATOR_ID]).c_str(), sizeof(base_attr.originator_id));
-    else
-        bzero(base_attr.originator_id, sizeof(base_attr.originator_id));
-
-    if ( ((string)attrs[bgp_msg::ATTR_TYPE_NEXT_HOP]).find_first_of(':') ==  string::npos)
-        base_attr.nexthop_isIPv4 = true;
-    else // is IPv6
-        base_attr.nexthop_isIPv4 = false;
-
-    if ( ((string)attrs[bgp_msg::ATTR_TYPE_AGGEGATOR]).length() > 0)
-        strncpy(base_attr.aggregator, ((string)attrs[bgp_msg::ATTR_TYPE_AGGEGATOR]).c_str(), sizeof(base_attr.aggregator));
-    else
-        bzero(base_attr.aggregator, sizeof(base_attr.aggregator));
-
-    if ( ((string)attrs[bgp_msg::ATTR_TYPE_ORIGIN]).length() > 0)
-            strncpy(base_attr.origin, ((string)attrs[bgp_msg::ATTR_TYPE_ORIGIN]).c_str(), sizeof(base_attr.origin));
-    else
-        bzero(base_attr.origin, sizeof(base_attr.origin));
-
-    if ( ((string)attrs[bgp_msg::ATTR_TYPE_NEXT_HOP]).length() > 0)
-        strncpy(base_attr.next_hop, ((string)attrs[bgp_msg::ATTR_TYPE_NEXT_HOP]).c_str(), sizeof(base_attr.next_hop));
-
-    else {
-        // Skip adding path attributes if next hop is missing
+        // Update the DB entry
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::BASE_ATTRIBUTES);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_baseAttribute(update.attrs, update.peer, update.router,
+                                                    mbus_ptr->BASE_ATTR_ACTION_ADD, it->second);
+    } else {
         SELF_DEBUG("%s: no next-hop, must be unreach; not sending attributes to message bus", p_entry->peer_addr);
-        bzero(base_attr.next_hop, sizeof(base_attr.next_hop));
-        bzero(path_hash_id, sizeof(path_hash_id));
-        return;
     }
 
-    SELF_DEBUG("%s: adding attributes to message bus", p_entry->peer_addr);
-
-    // Update the DB entry
-    mbus_ptr->update_baseAttribute(*p_entry, base_attr, mbus_ptr->BASE_ATTR_ACTION_ADD);
-
-    // Update the class instance variable path_hash_id
-    memcpy(path_hash_id, base_attr.hash_id, sizeof(path_hash_id));
-}
-
-/**
- * Update the Database advertised l3vpn 
- *
- * \details This method will update the database for the supplied advertised prefixes
- *
- * \param [in] remove          True if the records should be deleted, false if they are to be added/updated
- * \param [in] prefixes        Reference to the list<vpn_tuple> of advertised vpns
- * \param [in] attrs           Reference to the parsed attributes map
- */
-void parseBGP::UpdateDBL3Vpn(bool remove, std::list<bgp::vpn_tuple> &prefixes,
-                             bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
-    vector<MsgBusInterface::obj_vpn> rib_list;
-    MsgBusInterface::obj_vpn         rib_entry;
-    uint32_t                         value_32bit;
-    uint64_t                         value_64bit;
-
-    /*
-     * Loop through all vpn and add/update them in the DB
-     */
-    for (std::list<bgp::vpn_tuple>::iterator it = prefixes.begin();
-                                                it != prefixes.end();
-                                                it++) {
-        bgp::vpn_tuple &tuple = (*it);
-
-        memcpy(rib_entry.path_attr_hash_id, path_hash_id, sizeof(rib_entry.path_attr_hash_id));
-        memcpy(rib_entry.peer_hash_id, p_entry->hash_id, sizeof(rib_entry.peer_hash_id));
-
-        rib_entry.rd_type = tuple.rd_type;
-        rib_entry.rd_assigned_number = tuple.rd_assigned_number;
-        rib_entry.rd_administrator_subfield = tuple.rd_administrator_subfield;
-
-        strncpy(rib_entry.prefix, tuple.prefix.c_str(), sizeof(rib_entry.prefix));
-        
-        rib_entry.prefix_len = tuple.len;
-
-        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
-        
-        rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
-
-        memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
-
-        // Add the ending IP for the prefix based on bits
-        if (rib_entry.isIPv4) {
-            if (tuple.len < 32) {
-                memcpy(&value_32bit, tuple.prefix_bin, 4);
-                bgp::SWAP_BYTES(&value_32bit);
-
-                value_32bit |= 0xFFFFFFFF >> tuple.len;
-                bgp::SWAP_BYTES(&value_32bit);
-                memcpy(rib_entry.prefix_bcast_bin, &value_32bit, 4);
-
-            } else
-                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
-
-        } else {
-            if (tuple.len < 128) {
-                if (tuple.len >= 64) {
-                    // High order bytes are left alone
-                    memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, 8);
-
-                    // Low order bytes are updated
-                    memcpy(&value_64bit, &tuple.prefix_bin[8], 8);
-                    bgp::SWAP_BYTES(&value_64bit);
-
-                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> (tuple.len - 64);
-                    bgp::SWAP_BYTES(&value_64bit);
-                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
-
-                } else {
-                    // Low order types are all ones
-                    value_64bit = 0xFFFFFFFFFFFFFFFF;
-                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
-
-                    // High order bypes are updated
-                    memcpy(&value_64bit, tuple.prefix_bin, 8);
-                    bgp::SWAP_BYTES(&value_64bit);
-
-                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> tuple.len;
-                    bgp::SWAP_BYTES(&value_64bit);
-                    memcpy(rib_entry.prefix_bcast_bin, &value_64bit, 8);
+    for (std::list<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri>::iterator it = update.nlri_list.begin();
+         it != update.nlri_list.end(); it++) {
+        parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri advertise_nlri = *it;
+        switch (advertise_nlri.afi) {
+            case parse_bgp_lib::BGP_AFI_IPV4 :
+            case parse_bgp_lib::BGP_AFI_IPV6 : {
+                switch (advertise_nlri.safi) {
+                    case parse_bgp_lib::BGP_SAFI_UNICAST :
+                    case parse_bgp_lib::BGP_SAFI_NLRI_LABEL : {
+                        SELF_DEBUG("%s: Adding prefix=%s len=%s", p_entry->peer_addr,
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_PREFIX].value.front().c_str(),
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_PREFIX_LENGTH].value.front().c_str());
+                        rib_list.insert(rib_list.end(), advertise_nlri);
+                        break;
+                    }
+                    case parse_bgp_lib::BGP_SAFI_MPLS : {
+                        SELF_DEBUG("%s: Adding vpn=%s len=%d", p_entry->peer_addr,
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_PREFIX].value.front().c_str(),
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_PREFIX_LENGTH].value.front().c_str());
+                        l3vpn_list.insert(l3vpn_list.end(), advertise_nlri);
+                        break;
+                    }
                 }
-            } else
-                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
+                break;
+            }
+            case parse_bgp_lib::BGP_AFI_BGPLS : {
+                switch (advertise_nlri.type) {
+                    case parse_bgp_lib::LIB_NLRI_TYPE_LS_NODE : {
+                        ls_node_list.insert(ls_node_list.end(), advertise_nlri);
+                        break;
+                    }
+                    case parse_bgp_lib::LIB_NLRI_TYPE_LS_LINK : {
+                        ls_link_list.insert(ls_link_list.end(), advertise_nlri);
+                        break;
+                    }
+                    case parse_bgp_lib::LIB_NLRI_TYPE_LS_PREFIX : {
+                        ls_prefix_list.insert(ls_prefix_list.end(), advertise_nlri);
+                        break;
+                    }
+                }
+                break;
+            }
+            case parse_bgp_lib::BGP_AFI_L2VPN : {
+                switch (advertise_nlri.safi) {
+                    case parse_bgp_lib::BGP_SAFI_EVPN : {
+                        SELF_DEBUG("%s: Adding evpn mac=%s ip=%s", p_entry->peer_addr,
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC].value.size() ?
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC].value.front().c_str() : string("0").c_str(),
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP].value.size() ?
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP].value.front().c_str() : string("0").c_str());
+                        evpn_list.insert(evpn_list.end(), advertise_nlri);
+                        break;
+                    }
+                }
+                break;
+            }
         }
-
-        rib_entry.path_id = tuple.path_id;
-        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
-
-        SELF_DEBUG("%s: %s vpn=%s len=%d", p_entry->peer_addr, remove ? "removing" : "adding",
-                   rib_entry.prefix, rib_entry.prefix_len);
-
-        // Add entry to the list
-        rib_list.insert(rib_list.end(), rib_entry);
     }
 
     if (rib_list.size() > 0) {
-        mbus_ptr->update_L3Vpn(*p_entry, rib_list, &base_attr,
-                             remove ? mbus_ptr->VPN_ACTION_DEL : mbus_ptr->VPN_ACTION_ADD);
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::UNICAST_PREFIX);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_unicastPrefix(rib_list, update.attrs, update.peer, update.router,
+                                                    mbus_ptr->UNICAST_PREFIX_ACTION_ADD, it->second);
+        rib_list.clear();
+
+        /*
+         * Record the RIB seq number for calculating RIB dump rate in BMPReader
+         */
+        template_map->ribSeq = it->second.seq;
     }
 
-    rib_list.clear();
-    prefixes.clear();
-}
-
-/**
- * Updates for either advertised or withdrawn Evpn NLRI's
- *
- * \param [in] remove          True if the records should be deleted, false if they are to be added/updated
- * \param [in] nlris           Reference to the list<evpn_tuple>
- * \param [in] attrs           Reference to the parsed attributes map
- */
-void parseBGP::UpdateDBeVPN(bool remove, std::list<bgp::evpn_tuple> &nlris,
-                           bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
-
-    vector<MsgBusInterface::obj_evpn> rib_list;
-    MsgBusInterface::obj_evpn         rib_entry;
-
-    /*
-     * Loop through all vpn and add/update them in the DB
-     */
-    for (std::list<bgp::evpn_tuple>::iterator it = nlris.begin();
-         it != nlris.end();
-         it++) {
-        bgp::evpn_tuple &tuple = (*it);
-
-        memcpy(rib_entry.path_attr_hash_id, path_hash_id, sizeof(rib_entry.path_attr_hash_id));
-        memcpy(rib_entry.peer_hash_id, p_entry->hash_id, sizeof(rib_entry.peer_hash_id));
-
-        rib_entry.rd_type = tuple.rd_type;
-        rib_entry.rd_assigned_number = tuple.rd_assigned_number;
-        rib_entry.rd_administrator_subfield = tuple.rd_administrator_subfield;
-
-        strcpy(rib_entry.ethernet_tag_id_hex, tuple.ethernet_tag_id_hex.c_str());
-        rib_entry.mpls_label_1 = tuple.mpls_label_1;
-        rib_entry.mac_len = tuple.mac_len;
-        strcpy(rib_entry.mac, tuple.mac.c_str());
-        rib_entry.ip_len = tuple.ip_len;
-        strcpy(rib_entry.ip, tuple.ip.c_str());
-        rib_entry.mpls_label_2 = tuple.mpls_label_2;
-        rib_entry.originating_router_ip_len = tuple.originating_router_ip_len;
-        strcpy(rib_entry.originating_router_ip, tuple.originating_router_ip.c_str());
-        strcpy(rib_entry.ethernet_segment_identifier, tuple.ethernet_segment_identifier.c_str());
-
-
-        rib_entry.path_id = tuple.path_id;
-
-        SELF_DEBUG("%s: %s evpn mac=%s ip=%s", p_entry->peer_addr,
-                   remove ? "removing" : "adding", rib_entry.mac, rib_entry.ip);
-
-        // Add entry to the list
-        rib_list.insert(rib_list.end(), rib_entry);
+    if (ls_node_list.size() > 0) {
+        SELF_DEBUG("%s: Adding BGP-LS: Nodes %d", p_entry->peer_addr, ls_node_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_NODES);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_LsNode(ls_node_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->LS_ACTION_ADD, it->second);
+        ls_node_list.clear();
     }
 
-    // Update the DB
-    if (rib_list.size() > 0)
-        mbus_ptr->update_eVPN(*p_entry, rib_list, &base_attr,
-                              remove ? mbus_ptr->VPN_ACTION_DEL : mbus_ptr->VPN_ACTION_ADD);
+    if (ls_link_list.size() > 0) {
+        SELF_DEBUG("%s: Adding BGP-LS: Links %d", p_entry->peer_addr, ls_link_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_LINKS);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_LsLink(ls_link_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->LS_ACTION_ADD, it->second);
+        ls_link_list.clear();
+    }
 
-    rib_list.clear();
-    nlris.clear();
-}
+    if (ls_prefix_list.size() > 0) {
+        SELF_DEBUG("%s: Adding BGP-LS: Prefixes %d", p_entry->peer_addr, ls_prefix_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_PREFIXES);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_LsPrefix(ls_prefix_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->LS_ACTION_ADD, it->second);
+        ls_prefix_list.clear();
+    }
+
+    if (l3vpn_list.size() > 0) {
+        SELF_DEBUG("%s: Adding VPN: Prefixes %d", p_entry->peer_addr, l3vpn_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::L3_VPN);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_L3Vpn(l3vpn_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->VPN_ACTION_ADD, it->second);
+        l3vpn_list.clear();
+    }
+
+    if (evpn_list.size() > 0) {
+        SELF_DEBUG("%s: Adding evpn: Prefixes %d", p_entry->peer_addr, evpn_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::EVPN);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_eVpn(evpn_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->VPN_ACTION_ADD, it->second);
+        evpn_list.clear();
+    }
 
 
-/**
- * Update the Database advertised prefixes
- *
- * \details This method will update the database for the supplied advertised prefixes
- *
- * \param  adv_prefixes         Reference to the list<prefix_tuple> of advertised prefixes
- * \param  attrs            Reference to the parsed attributes map
- */
-void parseBGP::UpdateDBAdvPrefixes(std::list<bgp::prefix_tuple> &adv_prefixes,
-                                   bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
-    vector<MsgBusInterface::obj_rib> rib_list;
-    MsgBusInterface::obj_rib         rib_entry;
-    uint32_t                         value_32bit;
-    uint64_t                         value_64bit;
-
-    /*
-     * Loop through all prefixes and add/update them in the DB
-     */
-    for (std::list<bgp::prefix_tuple>::iterator it = adv_prefixes.begin();
-                                                it != adv_prefixes.end();
-                                                it++) {
-        bgp::prefix_tuple &tuple = (*it);
-
-        memcpy(rib_entry.path_attr_hash_id, path_hash_id, sizeof(rib_entry.path_attr_hash_id));
-        memcpy(rib_entry.peer_hash_id, p_entry->hash_id, sizeof(rib_entry.peer_hash_id));
-
-        strncpy(rib_entry.prefix, tuple.prefix.c_str(), sizeof(rib_entry.prefix));
-
-        rib_entry.prefix_len     = tuple.len;
-
-        rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
-
-        memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
-
-        // Add the ending IP for the prefix based on bits
-        if (rib_entry.isIPv4) {
-            if (tuple.len < 32) {
-                memcpy(&value_32bit, tuple.prefix_bin, 4);
-                bgp::SWAP_BYTES(&value_32bit);
-
-                value_32bit |= 0xFFFFFFFF >> tuple.len;
-                bgp::SWAP_BYTES(&value_32bit);
-                memcpy(rib_entry.prefix_bcast_bin, &value_32bit, 4);
-
-            } else
-                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
-
-        } else {
-            if (tuple.len < 128) {
-                if (tuple.len >= 64) {
-                    // High order bytes are left alone
-                    memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, 8);
-
-                    // Low order bytes are updated
-                    memcpy(&value_64bit, &tuple.prefix_bin[8], 8);
-                    bgp::SWAP_BYTES(&value_64bit);
-
-                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> (tuple.len - 64);
-                    bgp::SWAP_BYTES(&value_64bit);
-                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
-
-                } else {
-                    // Low order types are all ones
-                    value_64bit = 0xFFFFFFFFFFFFFFFF;
-                    memcpy(&rib_entry.prefix_bcast_bin[8], &value_64bit, 8);
-
-                    // High order bypes are updated
-                    memcpy(&value_64bit, tuple.prefix_bin, 8);
-                    bgp::SWAP_BYTES(&value_64bit);
-
-                    value_64bit |= 0xFFFFFFFFFFFFFFFF >> tuple.len;
-                    bgp::SWAP_BYTES(&value_64bit);
-                    memcpy(rib_entry.prefix_bcast_bin, &value_64bit, 8);
+    for (std::list<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri>::iterator it = update.withdrawn_nlri_list.begin();
+         it != update.withdrawn_nlri_list.end(); it++) {
+        parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri advertise_nlri = *it;
+        switch (advertise_nlri.afi) {
+            case parse_bgp_lib::BGP_AFI_IPV4 :
+            case parse_bgp_lib::BGP_AFI_IPV6 : {
+                switch (advertise_nlri.safi) {
+                    case parse_bgp_lib::BGP_SAFI_UNICAST :
+                    case parse_bgp_lib::BGP_SAFI_NLRI_LABEL : {
+                        SELF_DEBUG("%s: Removing prefix=%s len=%s", p_entry->peer_addr,
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_PREFIX].value.front().c_str(),
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_PREFIX_LENGTH].value.front().c_str());
+                        rib_list.insert(rib_list.end(), advertise_nlri);
+                        break;
+                    }
+                    case parse_bgp_lib::BGP_SAFI_MPLS : {
+                        SELF_DEBUG("%s: Removing vpn=%s len=%d", p_entry->peer_addr,
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_PREFIX].value.front().c_str(),
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_PREFIX_LENGTH].value.front().c_str());
+                        l3vpn_list.insert(l3vpn_list.end(), advertise_nlri);
+                        break;
+                    }
                 }
-            } else
-                memcpy(rib_entry.prefix_bcast_bin, tuple.prefix_bin, sizeof(tuple.prefix_bin));
-        }
-
-        rib_entry.path_id = tuple.path_id;
-        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
-
-        SELF_DEBUG("%s: Adding prefix=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
-
-        // Add entry to the list
-        rib_list.insert(rib_list.end(), rib_entry);
-    }
-
-    // Update the DB
-    if (rib_list.size() > 0)
-        mbus_ptr->update_unicastPrefix(*p_entry, rib_list, &base_attr, mbus_ptr->UNICAST_PREFIX_ACTION_ADD);
-
-    rib_list.clear();
-    adv_prefixes.clear();
-}
-
-/**
- * Update the Database withdrawn prefixes
- *
- * \details This method will update the database for the supplied advertised prefixes
- *
- * \param  wdrawn_prefixes         Reference to the list<prefix_tuple> of withdrawn prefixes
- */
-void parseBGP::UpdateDBWdrawnPrefixes(std::list<bgp::prefix_tuple> &wdrawn_prefixes) {
-    vector<MsgBusInterface::obj_rib> rib_list;
-    MsgBusInterface::obj_rib         rib_entry;
-
-    /*
-     * Loop through all prefixes and add/update them in the DB
-     */
-    for (std::list<bgp::prefix_tuple>::iterator it = wdrawn_prefixes.begin();
-                                                it != wdrawn_prefixes.end();
-                                                it++) {
-
-        bgp::prefix_tuple &tuple = (*it);
-        memcpy(rib_entry.path_attr_hash_id, path_hash_id, sizeof(rib_entry.path_attr_hash_id));
-        memcpy(rib_entry.peer_hash_id, p_entry->hash_id, sizeof(rib_entry.peer_hash_id));
-        strncpy(rib_entry.prefix, tuple.prefix.c_str(), sizeof(rib_entry.prefix));
-
-        rib_entry.prefix_len     = tuple.len;
-
-        rib_entry.isIPv4 = tuple.isIPv4 ? 1 : 0;
-
-        memcpy(rib_entry.prefix_bin, tuple.prefix_bin, sizeof(rib_entry.prefix_bin));
-
-        rib_entry.path_id = tuple.path_id;
-        snprintf(rib_entry.labels, sizeof(rib_entry.labels), "%s", tuple.labels.c_str());
-
-        SELF_DEBUG("%s: Removing prefix=%s len=%d", p_entry->peer_addr, rib_entry.prefix, rib_entry.prefix_len);
-
-        // Add entry to the list
-        rib_list.insert(rib_list.end(), rib_entry);
-    }
-
-    // Update the DB
-    if (rib_list.size() > 0)
-        mbus_ptr->update_unicastPrefix(*p_entry, rib_list, NULL, mbus_ptr->UNICAST_PREFIX_ACTION_DEL);
-
-    rib_list.clear();
-    wdrawn_prefixes.clear();
-}
-
-/**
- * Update the Database for bgp-ls
- *
- * \details This method will update the database for the BGP-LS information
- *
- * \note    MUST BE called after adding the attributes since the path_hash_id must be set first.
- *
- * \param [in] remove      True if the records should be deleted, false if they are to be added/updated
- * \param [in] ls_data     Reference to the parsed link state nlri information
- * \param [in] ls_attrs    Reference to the parsed link state attribute information
- */
-void parseBGP::UpdateDbBgpLs(bool remove, bgp_msg::UpdateMsg::parsed_data_ls ls_data,
-                             bgp_msg::UpdateMsg::parsed_ls_attrs_map &ls_attrs) {
-    /*
-     * Update table entry with attributes based on NLRI
-     */
-    if (ls_data.nodes.size() > 0) {
-        SELF_DEBUG("%s: Updating BGP-LS: Nodes %d", p_entry->peer_addr, ls_data.nodes.size());
-
-        // Merge attributes to each table entry
-        for (list<MsgBusInterface::obj_ls_node>::iterator it = ls_data.nodes.begin();
-                it != ls_data.nodes.end(); it++) {
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_NAME) != ls_attrs.end())
-                memcpy((*it).name, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_NAME].data(), sizeof((*it).name));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL) != ls_attrs.end())
-                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL].data(), 4);
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL) != ls_attrs.end()) {
-                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL].data(), 16);
-                (*it).isIPv4 = false;
+                break;
             }
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID) != ls_attrs.end()) {
-                strncpy((char *)&(*it).mt_id, (char *)ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID].data(),
-                       strlen((char *)ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_MT_ID].data()) + 1);
+            case parse_bgp_lib::BGP_AFI_BGPLS : {
+                switch (advertise_nlri.type) {
+                    case parse_bgp_lib::LIB_NLRI_TYPE_LS_NODE : {
+                        ls_node_list.insert(ls_node_list.end(), advertise_nlri);
+                        break;
+                    }
+                    case parse_bgp_lib::LIB_NLRI_TYPE_LS_LINK : {
+                        ls_link_list.insert(ls_link_list.end(), advertise_nlri);
+                        break;
+                    }
+                    case parse_bgp_lib::LIB_NLRI_TYPE_LS_PREFIX : {
+                        ls_prefix_list.insert(ls_prefix_list.end(), advertise_nlri);
+                        break;
+                    }
+                }
+                break;
             }
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_FLAG) != ls_attrs.end())
-                memcpy((*it).flags, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_FLAG].data(), sizeof((*it).flags));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID) != ls_attrs.end())
-                memcpy((*it).isis_area_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID].data(), sizeof((*it).isis_area_id));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_SR_CAPABILITIES) != ls_attrs.end()) {
-                memcpy((*it).sr_capabilities_tlv, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_SR_CAPABILITIES].data(), sizeof((*it).sr_capabilities_tlv));
+            case parse_bgp_lib::BGP_AFI_L2VPN : {
+                switch (advertise_nlri.safi) {
+                    case parse_bgp_lib::BGP_SAFI_EVPN : {
+                        SELF_DEBUG("%s: Removing evpn mac=%s ip=%s", p_entry->peer_addr,
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC].value.size() ?
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_MAC].value.front().c_str() : string("0").c_str(),
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP].value.size() ?
+                                   advertise_nlri.nlri[parse_bgp_lib::LIB_NLRI_EVPN_IP].value.front().c_str() : string("0").c_str());
+                        evpn_list.insert(evpn_list.end(), advertise_nlri);
+                        break;
+                    }
+                }
+                break;
             }
         }
-
-        if (remove)
-            mbus_ptr->update_LsNode(*p_entry, base_attr, ls_data.nodes, mbus_ptr->LS_ACTION_DEL);
-        else
-            mbus_ptr->update_LsNode(*p_entry, base_attr, ls_data.nodes, mbus_ptr->LS_ACTION_ADD);
     }
 
-    if (ls_data.links.size() > 0) {
-        SELF_DEBUG("%s: Updating BGP-LS: Links %d ", p_entry->peer_addr, ls_data.links.size());
+    if (rib_list.size() > 0) {
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::UNICAST_PREFIX);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_unicastPrefix(rib_list, update.attrs, update.peer, update.router,
+                                                    mbus_ptr->UNICAST_PREFIX_ACTION_DEL, it->second);
+        /*
+         * Record the RIB seq number for calculating RIB dump rate in BMPReader
+         */
+        template_map->ribSeq = it->second.seq;
 
-        // Merge attributes to each table entry
-        for (list<MsgBusInterface::obj_ls_link>::iterator it = ls_data.links.begin();
-             it != ls_data.links.end(); it++) {
-
-            if (not (*it).isIPv4 and ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL) != ls_attrs.end())
-                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL].data(), 16);
-
-            else if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL) != ls_attrs.end()) {
-                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL].data(), 4);
-                (*it).isIPv4 = true;
-            }
-
-            if (not (*it).isIPv4 and ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_IPV6_ROUTER_ID_REMOTE) != ls_attrs.end())
-                memcpy((*it).remote_router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_IPV6_ROUTER_ID_REMOTE].data(), 16);
-
-            else if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_IPV4_ROUTER_ID_REMOTE) != ls_attrs.end()) {
-                memcpy((*it).remote_router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_IPV4_ROUTER_ID_REMOTE].data(), 4);
-                //(*it).isIPv4 = true; // only set for local rid
-            }
-
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID) != ls_attrs.end())
-                memcpy((*it).isis_area_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID].data(), sizeof((*it).isis_area_id));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_ADMIN_GROUP) != ls_attrs.end())
-                memcpy(&(*it).admin_group, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_ADMIN_GROUP].data(), sizeof((*it).admin_group));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_LINK_BW) != ls_attrs.end())
-                memcpy(&(*it).max_link_bw, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_LINK_BW].data(),
-                       sizeof((*it).max_link_bw));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_RESV_BW) != ls_attrs.end())
-                memcpy(&(*it).max_resv_bw, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_MAX_RESV_BW].data(), sizeof((*it).max_resv_bw));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_UNRESV_BW) != ls_attrs.end())
-                memcpy(&(*it).unreserved_bw, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_UNRESV_BW].data(), sizeof((*it).unreserved_bw));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_TE_DEF_METRIC) != ls_attrs.end())
-                memcpy(&(*it).te_def_metric, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_TE_DEF_METRIC].data(), sizeof((*it).te_def_metric));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PROTECTION_TYPE) != ls_attrs.end())
-                memcpy((*it).protection_type, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PROTECTION_TYPE].data(), sizeof((*it).protection_type));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_MPLS_PROTO_MASK) != ls_attrs.end())
-                memcpy((*it).mpls_proto_mask, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_MPLS_PROTO_MASK].data(), sizeof((*it).mpls_proto_mask));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_IGP_METRIC) != ls_attrs.end())
-                memcpy(&(*it).igp_metric, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_IGP_METRIC].data(), sizeof((*it).igp_metric));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_SRLG) != ls_attrs.end())
-                memcpy((*it).srlg, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_SRLG].data(), sizeof((*it).srlg));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME) != ls_attrs.end())
-                memcpy((*it).name, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_NAME].data(), sizeof((*it).name));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_EPE_NODE_SID) != ls_attrs.end())
-                memcpy((*it).peer_node_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_PEER_EPE_NODE_SID].data(), sizeof((*it).peer_node_sid));
-                
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_LINK_ADJACENCY_SID) != ls_attrs.end())
-                memcpy((*it).peer_adj_sid, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_LINK_ADJACENCY_SID].data(), sizeof((*it).peer_adj_sid));
-        }
-
-        if (remove)
-            mbus_ptr->update_LsLink(*p_entry, base_attr, ls_data.links, mbus_ptr->LS_ACTION_DEL);
-        else
-            mbus_ptr->update_LsLink(*p_entry, base_attr, ls_data.links, mbus_ptr->LS_ACTION_ADD);
     }
 
-    if (ls_data.prefixes.size() > 0) {
-        SELF_DEBUG("%s: Updating BGP-LS: Prefixes %d ", p_entry->peer_addr, ls_data.prefixes.size());
-
-        // Merge attributes to each table entry
-        for (list<MsgBusInterface::obj_ls_prefix>::iterator it = ls_data.prefixes.begin();
-             it != ls_data.prefixes.end(); it++) {
-
-            if (not (*it).isIPv4 and ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL) != ls_attrs.end())
-                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV6_ROUTER_ID_LOCAL].data(), 16);
-
-            else if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL) != ls_attrs.end()) {
-                memcpy((*it).router_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_IPV4_ROUTER_ID_LOCAL].data(), 4);
-                (*it).isIPv4 = true;
-            }
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID) != ls_attrs.end())
-                memcpy((*it).isis_area_id, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_NODE_ISIS_AREA_ID].data(), sizeof((*it).isis_area_id));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_IGP_FLAGS) != ls_attrs.end())
-                memcpy((*it).igp_flags, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_IGP_FLAGS].data(), sizeof((*it).igp_flags));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_ROUTE_TAG) != ls_attrs.end())
-                memcpy(&(*it).route_tag, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_ROUTE_TAG].data(), sizeof((*it).route_tag));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_EXTEND_TAG) != ls_attrs.end())
-                memcpy(&(*it).ext_route_tag, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_EXTEND_TAG].data(), sizeof((*it).ext_route_tag));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_PREFIX_METRIC) != ls_attrs.end())
-                memcpy(&(*it).metric, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_PREFIX_METRIC].data(), sizeof((*it).metric));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_OSPF_FWD_ADDR) != ls_attrs.end())
-                memcpy((*it).ospf_fwd_addr, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_OSPF_FWD_ADDR].data(), sizeof((*it).ospf_fwd_addr));
-
-            if (ls_attrs.find(bgp_msg::MPLinkStateAttr::ATTR_PREFIX_SID) != ls_attrs.end())
-                memcpy((*it).sid_tlv, ls_attrs[bgp_msg::MPLinkStateAttr::ATTR_PREFIX_SID].data(), sizeof((*it).sid_tlv));
-        }
-
-        if (remove)
-            mbus_ptr->update_LsPrefix(*p_entry, base_attr, ls_data.prefixes, mbus_ptr->LS_ACTION_DEL);
-        else
-            mbus_ptr->update_LsPrefix(*p_entry, base_attr, ls_data.prefixes, mbus_ptr->LS_ACTION_ADD);
+    if (ls_node_list.size() > 0) {
+        SELF_DEBUG("%s: Removing BGP-LS: Nodes %d", p_entry->peer_addr, ls_node_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_NODES);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_LsNode(ls_node_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->LS_ACTION_DEL, it->second);
     }
 
-    // Data stored, no longer needed, purge it
-    ls_attrs.clear();
-    ls_data.prefixes.clear();
-    ls_data.links.clear();
-    ls_data.nodes.clear();
+    if (ls_link_list.size() > 0) {
+        SELF_DEBUG("%s: Removing BGP-LS: Links %d", p_entry->peer_addr, ls_link_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_LINKS);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_LsLink(ls_link_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->LS_ACTION_DEL, it->second);
+    }
+
+    if (ls_prefix_list.size() > 0) {
+        SELF_DEBUG("%s: Removing BGP-LS: Prefixes %d", p_entry->peer_addr, ls_prefix_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::LS_PREFIXES);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_LsPrefix(ls_prefix_list, update.attrs, update.peer, update.router,
+                                               mbus_ptr->LS_ACTION_DEL, it->second);
+    }
+    if (l3vpn_list.size() > 0) {
+        SELF_DEBUG("%s: Removing VPN: Prefixes %d", p_entry->peer_addr, l3vpn_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::L3_VPN);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_L3Vpn(l3vpn_list, update.attrs, update.peer, update.router,
+                                             mbus_ptr->VPN_ACTION_DEL, it->second);
+    }
+
+    if (evpn_list.size() > 0) {
+        SELF_DEBUG("%s: Removing evpn: Prefixes %d", p_entry->peer_addr, evpn_list.size());
+        std::map<template_cfg::TEMPLATE_TOPICS, template_cfg::Template_cfg>::iterator it = template_map->template_map.find(template_cfg::EVPN);
+        if (it != template_map->template_map.end())
+            mbus_ptr->update_eVpn(evpn_list, update.attrs, update.peer, update.router,
+                                            mbus_ptr->VPN_ACTION_DEL, it->second);
+    }
 }
 
 

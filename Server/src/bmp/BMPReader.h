@@ -11,14 +11,15 @@
 #define BMPREADER_H_
 
 #include "BMPListener.h"
-#include "BMPReader.h"
 #include "AddPathDataContainer.h"
-#include "MsgBusInterface.hpp"
 #include "Logger.h"
 #include "Config.h"
 
 #include <map>
 #include <memory>
+
+class MsgBusInterface;
+class Template_map;
 
 /**
  * \class   BMPReader
@@ -41,7 +42,10 @@ public:
         bool checked_asn_octet_length;                          ///< Indicates if the ASN octet length has been checked or not
         AddPathDataContainer add_path_capability;               ///< Stores data about Add Path capability
         string peer_group;                                      ///< Peer group name of defined
-	bool endOfRIB;						///< Indicates if End-Of-RIB marker is received
+        string peerAddr;                                        ///< Peer Address in string format
+        string routerAddr;                                      ///< BMP Router address
+        string peer_hash_str;                                   ///< peer hash string used in BGP update hashes
+	    bool endOfRIB;						///< Indicates if End-Of-RIB marker is received
     };
 
 
@@ -65,7 +69,7 @@ public:
      * \param [in]  mbus_ptr     The database pointer referencer - DB should be already initialized
      * \return true if more to read, false if the connection is done/closed
      */
-    bool ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr);
+    bool ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, Template_map *template_map);
 
     /**
      * Checks if End-of-RIB is reached for all peers by checking the rate of RIB dumps
@@ -87,30 +91,7 @@ public:
      *
      * \throw (char const *str) message indicate error
      */
-    void readerThreadLoop(bool &run, BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr);
-
-    /**
-     * disconnect/close bmp stream
-     *
-     * Closes the BMP stream and disconnects router as needed
-     *
-     * \param [in]  client      Client information pointer
-     * \param [in]  mbus_ptr     The database pointer referencer - DB should be already initialized
-     * \param [in]  reason_code The reason code for closing the stream/feed
-     * \param [in]  reason_text String detailing the reason for close
-     *
-     */
-    void disconnect(BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, int reason_code, char const *reason_text);
-
-/**
-     * Calling BMP router HASH
-     *
-     * \param [in,out] client   Refernce to client info used to generate the hash.
-     * \param [in,out] r_object To store the hashed ID in router object.
-     * \return r_object.hash_id and clienr.hash_id will be updated with the generated hash
-     */
-
-    void hashRouter(BMPListener::ClientInfo *client, MsgBusInterface::obj_router &r_entry);
+    void readerThreadLoop(bool &run, BMPListener::ClientInfo *client, MsgBusInterface *mbus_ptr, std::string &template_filename);
 
     // Debug methods
     void enableDebug();
@@ -130,6 +111,7 @@ private:
     int32_t 	prevRIBdumpTime;            ///< Stores the time the previous message was received
     int32_t 	maxRIBdumpRate;             ///< Stores the maximum RIB dump rate
     int32_t     belowThresholdInitTime;     ///< Stores the time when the RIB dump rate has dropped below threshold
+
     /**
      * Persistent peer info map, Key is the peer_hash_id.
      */

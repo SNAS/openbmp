@@ -20,6 +20,7 @@
 #include <string>
 
 #include <poll.h>
+#include "parseBgpLib.h"
 #include <MsgBusInterface.hpp>
 
 #include "BMPListener.h"

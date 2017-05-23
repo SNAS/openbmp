@@ -23,6 +23,7 @@ struct ThreadMgmt {
     BMPListener::ClientInfo client;
     Config *cfg;
     Logger *log;
+    std::string template_filename;
     bool running;                       // true if running, zero if not running
     bool baselineTimeout;		        // true if past the baseline time of the router
 };

@@ -55,29 +55,68 @@ public:
      * abstract methods implemented
      * See MsgBusInterface.hpp for method details
      */
-    void update_Collector(struct obj_collector &c_obj, collector_action_code action_code);
-    void update_Router(struct obj_router &r_entry, router_action_code code);
-    void update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_peer_down_event *down, peer_action_code code);
-    void update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr, base_attr_action_code code);
-    void update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib, obj_path_attr *attr, unicast_prefix_action_code code);
-    void add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats);
-
-    void update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_node> &nodes,
-                     ls_action_code code);
-    void update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_link> &links,
-                     ls_action_code code);
-    void update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
-                      ls_action_code code);
-    
-    void update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr, vpn_action_code code);
-
-    void update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn, obj_path_attr *attr, vpn_action_code code);
-
     void send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data, size_t data_len);
+
+    virtual void update_unicastPrefix(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                               parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                               parse_bgp_lib::parseBgpLib::router_map &router,
+                                               unicast_prefix_action_code code, template_cfg::Template_cfg &template_container);
+
+    void update_LsNode(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
+                                parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                parse_bgp_lib::parseBgpLib::router_map &router,
+                                ls_action_code code, template_cfg::Template_cfg &template_container);
+
+    virtual void update_LsLink(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
+                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      parse_bgp_lib::parseBgpLib::router_map &router,
+                                      ls_action_code code, template_cfg::Template_cfg &template_container);
+
+     virtual void update_LsPrefix(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
+                                          parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                          parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                          parse_bgp_lib::parseBgpLib::router_map &router,
+                                           ls_action_code code, template_cfg::Template_cfg &template_container);
+
+    void update_L3Vpn(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3Vpn_list,
+                               parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                               parse_bgp_lib::parseBgpLib::peer_map &peer,
+                               parse_bgp_lib::parseBgpLib::router_map &router,
+                               vpn_action_code code, template_cfg::Template_cfg &template_container);
+
+    void update_eVpn(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &eVpn_list,
+                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      parse_bgp_lib::parseBgpLib::router_map &router,
+                                      vpn_action_code code, template_cfg::Template_cfg &template_container);
+
+   void update_baseAttribute(parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      parse_bgp_lib::parseBgpLib::router_map &router,
+                                      base_attr_action_code code, template_cfg::Template_cfg &template_container);
+
+    void update_Router(parse_bgp_lib::parseBgpLib::router_map &router,
+                                router_action_code code, template_cfg::Template_cfg &template_container);
+
+    void update_Collector(parse_bgp_lib::parseBgpLib::collector_map &collector,
+                                           collector_action_code action_code, template_cfg::Template_cfg &template_container);
+
+    void update_Peer(parse_bgp_lib::parseBgpLib::router_map &router, parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      peer_action_code code, template_cfg::Template_cfg &template_container);
+
+    void add_StatReport(parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                         parse_bgp_lib::parseBgpLib::router_map &router,
+                                         parse_bgp_lib::parseBgpLib::stat_map stats, template_cfg::Template_cfg &template_container);
+
 
     // Debug methods
     void enableDebug();
     void disableDebug();
+
+    Template_map *template_map;
 
 private:
     char            *prep_buf;                  ///< Large working buffer for message preparation
@@ -86,18 +125,6 @@ private:
     Logger          *logger;                    ///< Logging class pointer
 
     std::string     collector_hash;             ///< collector hash string value
-
-    uint64_t        router_seq;                 ///< Router add/del sequence
-    uint64_t        collector_seq;              ///< Collector add/del sequence
-    uint64_t        peer_seq ;                  ///< Peer add/del sequence
-    uint64_t        base_attr_seq;              ///< Base attribute sequence
-    uint64_t        unicast_prefix_seq;         ///< Unicast prefix sequence
-    uint64_t        bmp_stat_seq;               ///< BMP stats sequence
-    uint64_t        ls_node_seq;                ///< LS node sequence
-    uint64_t        ls_link_seq;                ///< LS link sequence
-    uint64_t        ls_prefix_seq;              ///< LS prefix sequence
-    uint64_t        l3vpn_seq;                  ///< l3vpn sequence
-    uint64_t        evpn_seq;                   ///< evpn sequence
 
     Config          *cfg;                       ///< Pointer to config instance
 

@@ -6,30 +6,29 @@
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
- * 
+ *
  */
 
 #include <sstream>
 #include <iostream>
 #include <arpa/inet.h>
 
-#include "UpdateMsg.h"
-#include "ExtCommunity.h"
+#include "parseBgpLib.h"
+#include "parseBgpLibExtCommunity.h"
 
-namespace bgp_msg {
+namespace parse_bgp_lib {
     /**
      * Constructor for class
      *
      * \details Handles bgp Extended Communities
      *
      * \param [in]     logPtr       Pointer to existing Logger for app logging
-     * \param [in]     pperAddr     Printed form of peer address used for logging
      * \param [in]     enable_debug Debug true to enable, false to disable
      */
-    ExtCommunity::ExtCommunity(Logger *logPtr, std::string peerAddr, bool enable_debug) {
+    ExtCommunity::ExtCommunity(parseBgpLib *parse_lib, Logger *logPtr, bool enable_debug) {
         logger = logPtr;
         debug = enable_debug;
-        peer_addr = peerAddr;
+        caller = parse_lib;
     }
 
     ExtCommunity::~ExtCommunity() {
@@ -45,16 +44,16 @@ namespace bgp_msg {
      *
      * \param [in]   attr_len       Length of the attribute data
      * \param [in]   data           Pointer to the attribute data
-     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+     * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      *
      */
-    void ExtCommunity::parseExtCommunities(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
+    void ExtCommunity::parseExtCommunities(int attr_len, u_char *data, parse_bgp_lib::parseBgpLib::parsed_update &update) {
 
         std::string decodeStr = "";
         extcomm_hdr ec_hdr;
 
         if ( (attr_len % 8) ) {
-            LOG_NOTICE("%s: Parsing extended community len=%d is invalid, expecting divisible by 8", peer_addr.c_str(), attr_len);
+            LOG_NOTICE("%sParsing extended community len=%d is invalid, expecting divisible by 8", caller->debug_prepend_string.c_str(), attr_len);
             return;
         }
 
@@ -72,52 +71,45 @@ namespace bgp_msg {
              */
             switch (ec_hdr.high_type << 2 >> 2) {
                 case EXT_TYPE_IPV4 :
-                    decodeStr.append(decodeType_common(ec_hdr, true, true));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_common(ec_hdr, true, true));
                     break;
 
                 case EXT_TYPE_2OCTET_AS :
-                    decodeStr.append(decodeType_common(ec_hdr));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_common(ec_hdr));
                     break;
 
                 case EXT_TYPE_4OCTET_AS :
-                    decodeStr.append(decodeType_common(ec_hdr, true));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_common(ec_hdr, true));
                     break;
 
                 case EXT_TYPE_GENERIC :
-                    decodeStr.append(decodeType_Generic(ec_hdr));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_Generic(ec_hdr));
                     break;
 
                 case EXT_TYPE_GENERIC_4OCTET_AS :
-                    decodeStr.append(decodeType_Generic(ec_hdr, true));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_Generic(ec_hdr, true));
                     break;
 
                 case EXT_TYPE_GENERIC_IPV4 :
-                    decodeStr.append(decodeType_Generic(ec_hdr, true, true));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_Generic(ec_hdr, true, true));
                     break;
 
                 case EXT_TYPE_OPAQUE :
-                    decodeStr.append(decodeType_Opaque(ec_hdr));
+                    update.attrs[LIB_ATTR_EXT_COMMUNITY].value.push_back(decodeType_Opaque(ec_hdr));
                     break;
 
-                case EXT_TYPE_EVPN :
-                    decodeStr.append(decodeType_EVPN(ec_hdr));
-                    break;
-
+                case EXT_TYPE_EVPN      : // TODO: Implement
                 case EXT_TYPE_QOS_MARK  : // TODO: Implement
                 case EXT_TYPE_FLOW_SPEC : // TODO: Implement
                 case EXT_TYPE_COS_CAP   : // TODO: Implement
                 default:
-                    LOG_INFO("%s: Extended community type %d,%d is not yet supported", peer_addr.c_str(),
-                            ec_hdr.high_type, ec_hdr.low_type);
+                    LOG_INFO("%sExtended community type %d,%d is not yet supported", caller->debug_prepend_string.c_str(),
+                             ec_hdr.high_type, ec_hdr.low_type);
             }
 
             // Move data pointer to next entry
             data += 8;
-            if ((i + 8) < attr_len)
-                decodeStr.append(" ");
         }
-
-        parsed_data.attrs[ATTR_TYPE_EXT_COMMUNITY] = decodeStr;
     }
 
     /**
@@ -147,12 +139,12 @@ namespace bgp_msg {
             memcpy(&val_32b, ec_hdr.value, 4);
             memcpy(&val_16b, ec_hdr.value + 4, 2);
 
-            bgp::SWAP_BYTES(&val_16b);
+            parse_bgp_lib::SWAP_BYTES(&val_16b);
 
             if (isGlobalIPv4) {
                 inet_ntop(AF_INET, &val_32b, ipv4_char, sizeof(ipv4_char));
             } else
-                bgp::SWAP_BYTES(&val_32b);
+                parse_bgp_lib::SWAP_BYTES(&val_32b);
 
         } else {
             // Two-byte global field
@@ -160,8 +152,8 @@ namespace bgp_msg {
             memcpy(&val_32b, ec_hdr.value + 2, 4);
 
             // Chagne to host order
-            bgp::SWAP_BYTES(&val_16b);
-            bgp::SWAP_BYTES(&val_32b);
+            parse_bgp_lib::SWAP_BYTES(&val_16b);
+            parse_bgp_lib::SWAP_BYTES(&val_32b);
         }
 
         /*
@@ -282,68 +274,9 @@ namespace bgp_msg {
                 break;
 
             default :
-                LOG_INFO("%s: Extended community common type %d subtype = %d is not yet supported", peer_addr.c_str(),
-                        ec_hdr.high_type, ec_hdr.low_type);
+                LOG_INFO("%sExtended community common type %d subtype = %d is not yet supported", caller->debug_prepend_string.c_str(),
+                         ec_hdr.high_type, ec_hdr.low_type);
                 break;
-        }
-
-        return val_ss.str();
-    }
-
-    /**
-     * Decode EVPN subtypes
-     *
-     * \details
-     *      Converts to human readable form.
-     *
-     * \param [in]   ec_hdr          Reference to the extended community header
-     *
-     * \return  Decoded string value
-     */
-    std::string ExtCommunity::decodeType_EVPN(const extcomm_hdr &ec_hdr) {
-        std::stringstream   val_ss;
-        uint32_t            val_32b;
-
-        switch(ec_hdr.low_type) {
-            case EXT_EVPN_MAC_MOBILITY: {
-                val_ss << "mac_mob_flags=";
-                u_char flags = ec_hdr.value[0];
-
-                val_ss << flags;
-
-                memcpy(&val_32b, ec_hdr.value + 2, 4);
-                bgp::SWAP_BYTES(&val_32b);
-
-                val_ss << " mac_mob_seq_num=";
-                val_ss << val_32b;
-                break;
-            }
-            case EXT_EVPN_MPLS_LABEL: {
-                val_ss << "esi_label_flags=";
-                u_char flags = ec_hdr.value[0];
-
-                val_ss << flags;
-
-                memcpy(&val_32b, ec_hdr.value + 3, 3);
-                bgp::SWAP_BYTES(&val_32b);
-                val_32b = val_32b >> 8;
-
-                val_ss << " esi_label=";
-                val_ss << val_32b;
-                break;
-            }
-            case EXT_EVPN_ES_IMPORT: {
-                val_ss << "es_import=" << bgp::parse_mac(ec_hdr.value);
-                break;
-            }
-            case EXT_EVPN_ROUTER_MAC: {
-                val_ss << "router_mac=" << bgp::parse_mac(ec_hdr.value);
-                break;
-            }
-            default: {
-                LOG_INFO("Extended community eVPN subtype is not implemented %d", ec_hdr.low_type);
-                break;
-            }
         }
 
         return val_ss.str();
@@ -369,7 +302,7 @@ namespace bgp_msg {
                 u_char poi = ec_hdr.value[0];  // Point of Insertion
                 u_char cid = ec_hdr.value[1];  // Community-ID
                 memcpy(&val_32b, ec_hdr.value + 2, 4);
-                bgp::SWAP_BYTES(&val_32b);
+                parse_bgp_lib::SWAP_BYTES(&val_32b);
 
                 val_ss << "cost=";
 
@@ -402,7 +335,7 @@ namespace bgp_msg {
 
             case EXT_OPAQUE_OSPF_ROUTE_TYPE: {
                 memcpy(&val_32b, ec_hdr.value, 4);
-                bgp::SWAP_BYTES(&val_32b);
+                parse_bgp_lib::SWAP_BYTES(&val_32b);
 
                 val_ss << "ospf-rt=area-" << val_32b << ":";
 
@@ -434,7 +367,7 @@ namespace bgp_msg {
 
             case EXT_OPAQUE_COLOR :
                 memcpy(&val_32b, ec_hdr.value + 2, 4);
-                bgp::SWAP_BYTES(&val_32b);
+                parse_bgp_lib::SWAP_BYTES(&val_32b);
 
                 val_ss << "color=" << val_32b;
                 break;
@@ -477,12 +410,12 @@ namespace bgp_msg {
             memcpy(&val_32b, ec_hdr.value, 4);
             memcpy(&val_16b, ec_hdr.value + 4, 2);
 
-            bgp::SWAP_BYTES(&val_16b);
+            parse_bgp_lib::SWAP_BYTES(&val_16b);
 
             if (isGlobalIPv4) {
                 inet_ntop(AF_INET, &val_32b, ipv4_char, sizeof(ipv4_char));
             } else
-                bgp::SWAP_BYTES(&val_32b);
+                parse_bgp_lib::SWAP_BYTES(&val_32b);
 
         } else {
             // Two-byte global field
@@ -490,23 +423,23 @@ namespace bgp_msg {
             memcpy(&val_32b, ec_hdr.value + 2, 4);
 
             // Chagne to host order
-            bgp::SWAP_BYTES(&val_16b);
-            bgp::SWAP_BYTES(&val_32b);
+            parse_bgp_lib::SWAP_BYTES(&val_16b);
+            parse_bgp_lib::SWAP_BYTES(&val_32b);
         }
 
         switch (ec_hdr.low_type) {
             case EXT_GENERIC_OSPF_ROUTE_TYPE :  // deprecated
             case EXT_GENERIC_OSPF_ROUTER_ID :   // deprecated
             case EXT_GENERIC_OSPF_DOM_ID :      // deprecated
-                LOG_INFO("%s: Ignoring deprecated extended community %d/%d", peer_addr.c_str(),
-                        ec_hdr.high_type, ec_hdr.low_type);
+                LOG_INFO("%sIgnoring deprecated extended community %d/%d", caller->debug_prepend_string.c_str(),
+                         ec_hdr.high_type, ec_hdr.low_type);
                 break;
 
             case EXT_GENERIC_LAYER2_INFO : {    // rfc4761
                 u_char encap_type    = ec_hdr.value[0];
                 u_char ctrl_flags   = ec_hdr.value[1];
                 memcpy(&val_16b, ec_hdr.value + 2, 2);          // Layer 2 MTU
-                bgp::SWAP_BYTES(&val_16b);
+                parse_bgp_lib::SWAP_BYTES(&val_16b);
 
                 val_ss << "l2info=";
 
@@ -576,17 +509,18 @@ namespace bgp_msg {
      *
      * \param [in]   attr_len       Length of the attribute data
      * \param [in]   data           Pointer to the attribute data
-     * \param [out]  parsed_data    Reference to parsed_update_data; will be updated with all parsed data
+     * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
      *
      */
-    void ExtCommunity::parsev6ExtCommunities(int attr_len, u_char *data, bgp_msg::UpdateMsg::parsed_update_data &parsed_data) {
+    void ExtCommunity::parsev6ExtCommunities(int attr_len, u_char *data, parse_bgp_lib::parseBgpLib::parsed_update &update) {
         std::string decodeStr = "";
         extcomm_hdr ec_hdr;
 
-        LOG_INFO("%s: Parsing IPv6 extended community len=%d", peer_addr.c_str(), attr_len);
+        LOG_INFO("%sParsing IPv6 extended community len=%d", caller->debug_prepend_string.c_str(), attr_len);
 
         if ( (attr_len % 20) ) {
-            LOG_NOTICE("%s: Parsing IPv6 extended community len=%d is invalid, expecting divisible by 20", peer_addr.c_str(), attr_len);
+            LOG_NOTICE("%sParsing IPv6 extended community len=%d is invalid, expecting divisible by 20", caller->debug_prepend_string.c_str(),
+                       attr_len);
             return;
         }
 
@@ -604,12 +538,12 @@ namespace bgp_msg {
              */
             switch (ec_hdr.high_type << 2 >> 2) {
                 case 0 :  // Currently IPv6 specific uses this type field
-                    decodeStr.append(decodeType_IPv6Specific(ec_hdr));
+                    update.attrs[LIB_ATTR_IPV6_EXT_COMMUNITY].value.push_back(decodeType_IPv6Specific(ec_hdr));
                     break;
 
                 default :
-                    LOG_NOTICE("%s: Unexpected type for IPv6 %d,%d", peer_addr.c_str(),
-                            ec_hdr.high_type, ec_hdr.low_type);
+                    LOG_NOTICE("%sUnexpected type for IPv6 %d,%d", caller->debug_prepend_string.c_str(),
+                               ec_hdr.high_type, ec_hdr.low_type);
                     break;
             }
         }
@@ -638,7 +572,7 @@ namespace bgp_msg {
             return "";
 
         memcpy(&val_16b, ec_hdr.value + 16, 2);
-        bgp::SWAP_BYTES(&val_16b);
+        parse_bgp_lib::SWAP_BYTES(&val_16b);
 
         switch (ec_hdr.low_type) {
 
@@ -651,7 +585,7 @@ namespace bgp_msg {
                 break;
 
             case EXT_IPV6_CISCO_VPN_ID :
-                    val_ss << "vpn-id=" << ipv6_char << ":0x" << std::hex << val_16b;
+                val_ss << "vpn-id=" << ipv6_char << ":0x" << std::hex << val_16b;
 
                 break;
 
@@ -666,8 +600,8 @@ namespace bgp_msg {
                 break;
 
             default :
-                LOG_INFO("%s: Extended community ipv6 specific type %d subtype = %d is not yet supported", peer_addr.c_str(),
-                        ec_hdr.high_type, ec_hdr.low_type);
+                LOG_INFO("%sExtended community ipv6 specific type %d subtype = %d is not yet supported", caller->debug_prepend_string.c_str(),
+                         ec_hdr.high_type, ec_hdr.low_type);
                 break;
         }
 

@@ -79,7 +79,7 @@ ssize_t parseBMP::Recv(int sockfd, void *buf, size_t len, int flags) {
  *
  * \throws (const char *) on error.   String will detail error message.
  */
-char parseBMP::handleMessage(int sock) {
+char parseBMP::handleMessage(int sock, void *parse_bgp_lib_peer_buf) {
     unsigned char ver;
     ssize_t bytes_read;
 
@@ -96,7 +96,7 @@ char parseBMP::handleMessage(int sock) {
 
     // check the version
     if (ver == 3) { // draft-ietf-grow-bmp-04 - 07
-        parseBMPv3(sock);
+        parseBMPv3(sock, parse_bgp_lib_peer_buf);
     }
 
     // Handle the older versions
@@ -285,7 +285,7 @@ void parseBMP::parseBMPv2(int sock) {
  *
  * \param [in]  sock        Socket to read the message from
  */
-void parseBMP::parseBMPv3(int sock) {
+void parseBMP::parseBMPv3(int sock, void *parse_bgp_lib_peer_buf) {
     struct common_hdr_v3 c_hdr = { 0 };
 
     SELF_DEBUG("Parsing BMP version 3 (rfc7854)");
@@ -311,24 +311,24 @@ void parseBMP::parseBMPv3(int sock) {
     switch (c_hdr.type) {
         case TYPE_ROUTE_MON: // Route monitoring
             SELF_DEBUG("BMP MSG : route monitor");
-            parsePeerHdr(sock);
+            parsePeerHdr(sock, parse_bgp_lib_peer_buf);
             break;
 
         case TYPE_STATS_REPORT: // Statistics Report
             SELF_DEBUG("BMP MSG : stats report");
-            parsePeerHdr(sock);
+            parsePeerHdr(sock, parse_bgp_lib_peer_buf);
             break;
 
         case TYPE_PEER_UP: // Peer Up notification
         {
             SELF_DEBUG("BMP MSG : peer up");
-            parsePeerHdr(sock);
+            parsePeerHdr(sock, parse_bgp_lib_peer_buf);
 
             break;
         }
         case TYPE_PEER_DOWN: // Peer down notification
             SELF_DEBUG("BMP MSG : peer down");
-            parsePeerHdr(sock);
+            parsePeerHdr(sock, parse_bgp_lib_peer_buf);
             break;
 
         case TYPE_INIT_MSG:
@@ -348,7 +348,7 @@ void parseBMP::parseBMPv3(int sock) {
  *
  * \param [in]  sock        Socket to read the message from
  */
-void parseBMP::parsePeerHdr(int sock) {
+void parseBMP::parsePeerHdr(int sock, void *parse_bgp_lib_peer_buf) {
     peer_hdr_v3 p_hdr = {0};
     int i;
 
@@ -359,6 +359,11 @@ void parseBMP::parsePeerHdr(int sock) {
         LOG_ERR("sock=%d: Couldn't read all bytes, read %d bytes",
                 sock, i);
     }
+
+    /*
+     * Make a copy of the peer hdr for parsing lib
+     */
+    memcpy(parse_bgp_lib_peer_buf, &p_hdr, sizeof(peer_hdr_v3));
 
     // Adjust the common header length to remove the peer header (as it's been read)
     bmp_len -= BMP_PEER_HDR_LEN;
@@ -728,7 +733,8 @@ bool parseBMP::handleStatsReport(int sock, MsgBusInterface::obj_stats_report &st
  * \param [in]     sock        Socket to read the init message from
  * \param [in/out] r_entry     Already defined router entry reference (will be updated)
  */
-void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
+void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry,
+                             void *parse_bgp_lib_bmp_data, size_t &parse_bgp_lib_data_len) {
     init_msg_v3 initMsg;
     char infoBuf[sizeof(r_entry.initiate_data)];
     int infoLen;
@@ -736,6 +742,8 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
 // Buffer the init message for parsing
     bufferBMPMessage(sock);
 
+    memcpy(parse_bgp_lib_bmp_data, bmp_data, bmp_data_len);
+    parse_bgp_lib_data_len = bmp_data_len;
     u_char *bufPtr = bmp_data;
 
     /*
@@ -810,13 +818,16 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
  * \param [in]     sock        Socket to read the term message from
  * \param [in/out] r_entry     Already defined router entry reference (will be updated)
  */
-void parseBMP::handleTermMsg(int sock, MsgBusInterface::obj_router &r_entry) {
+void parseBMP::handleTermMsg(int sock, MsgBusInterface::obj_router &r_entry,
+                             void *parse_bgp_lib_bmp_data, size_t &parse_bgp_lib_data_len) {
     term_msg_v3 termMsg;
     char infoBuf[sizeof(r_entry.term_data)];
     int infoLen;
 
     // Buffer the init message for parsing
     bufferBMPMessage(sock);
+    memcpy(parse_bgp_lib_bmp_data, bmp_data, bmp_data_len);
+    parse_bgp_lib_data_len = bmp_data_len;
 
     u_char *bufPtr = bmp_data;
 

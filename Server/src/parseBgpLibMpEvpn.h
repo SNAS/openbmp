@@ -1,17 +1,25 @@
-#ifndef _OPENBMP_EVPN_H_
-#define _OPENBMP_EVPN_H_
+/*
+ * Copyright (c) 2014-2015 Cisco Systems, Inc. and others.  All rights reserved.
+ *
+ * Copyright (c) 2014 Sungard Availability Services and others.  All rights reserved.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v1.0 which accompanies this distribution,
+ * and is available at http://www.eclipse.org/legal/epl-v10.html
+ *
+ */
+#ifndef PARSE_BGP_LIB_MPEVPN_H_
+#define PARSE_BGP_LIB_MPEVPN_H_
 
+#include "parseBgpLib.h"
 #include <cstdint>
 #include <cinttypes>
 #include <sys/types.h>
 
-#include "MPReachAttr.h"
-#include "MPUnReachAttr.h"
-#include "Logger.h"
-#include "MsgBusInterface.hpp"
+#include "parseBgpLibMpReach.h"
+#include "parseBgpLibMpUnReach.h"
 
-namespace bgp_msg {
-
+namespace parse_bgp_lib {
     class EVPN {
 
     public:
@@ -29,13 +37,11 @@ namespace bgp_msg {
          * \details Handles bgp Extended Communities
          *
          * \param [in]     logPtr       Pointer to existing Logger for app logging
-         * \param [in]     peerAddr     Printed form of peer address used for logging
          * \param [in]     isUnreach    True if MP UNREACH, false if MP REACH
-         * \param [out]    parsed_data  Reference to parsed_update_data; will be updated with all parsed data
+         * \param [out]  parsed_update  Reference to parsed_update; will be updated with all parsed data
          * \param [in]     enable_debug Debug true to enable, false to disable
          */
-        EVPN(Logger *logPtr, std::string peerAddr, bool isUnreach,
-                   UpdateMsg::parsed_update_data *parsed_data, bool enable_debug);
+        EVPN(parseBgpLib *parse_lib, Logger *logPtr, bool isUnreach, std::list<parseBgpLib::parse_bgp_lib_nlri> *nlri_list, bool enable_debug);
         virtual ~EVPN();
 
         /**
@@ -45,11 +51,9 @@ namespace bgp_msg {
          *      Will parse the Segment Identifier. Based on https://tools.ietf.org/html/rfc7432#section-5
          *
          * \param [in/out]  data_pointer  Pointer to the beginning of Route Distinguisher
-         * \param [out]     rd_type                    Reference to RD type.
-         * \param [out]     rd_assigned_number         Reference to Assigned Number subfield
-         * \param [out]     rd_administrator_subfield  Reference to Administrator subfield
+         * \param [out]  parsed_nlri    Parsed NLRI to be filled
          */
-        void parseEthernetSegmentIdentifier(u_char *data_pointer, std::string *parsed_data);
+        void parseEthernetSegmentIdentifier(u_char *data_pointer, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri);
 
         /**
          * Parse Route Distinguisher
@@ -58,12 +62,9 @@ namespace bgp_msg {
          *      Will parse the Route Distinguisher. Based on https://tools.ietf.org/html/rfc4364#section-4.2
          *
          * \param [in/out]  data_pointer  Pointer to the beginning of Route Distinguisher
-         * \param [out]     rd_type                    Reference to RD type.
-         * \param [out]     rd_assigned_number         Reference to Assigned Number subfield
-         * \param [out]     rd_administrator_subfield  Reference to Administrator subfield
+         * \param [out]  parsed_nlri    Parsed NLRI to be filled
          */
-        static void parseRouteDistinguisher(u_char *data_pointer, uint8_t *rd_type, std::string *rd_assigned_number,
-                                       std::string *rd_administrator_subfield);
+        static void parseRouteDistinguisher(u_char *data_pointer, parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri &parsed_nlri);
 
         /**
          * Parse all EVPN nlri's
@@ -81,15 +82,11 @@ namespace bgp_msg {
     private:
         bool             debug;                           ///< debug flag to indicate debugging
         Logger           *logger;                         ///< Logging class pointer
-        std::string      peer_addr;                       ///< Printed form of the peer address for logging
-        bool             isUnreach;                       ///< True if MP UNREACH, false if MP REACH
 
-        UpdateMsg::parsed_update_data *parsed_data;       ///< Parsed data structure
-
+        std::list<parseBgpLib::parse_bgp_lib_nlri> *nlri_list;
+        parseBgpLib             *caller;                /// BGP Update class pointer
 
     };
 
 }
-
-
-#endif //_OPENBMP_EVPN_H_
+#endif //PARSE_BGP_LIB_MPEVPN_H_

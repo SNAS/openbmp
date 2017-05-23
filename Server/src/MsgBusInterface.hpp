@@ -19,6 +19,9 @@
 #include <ctime>
 #include <sys/time.h>
 
+#include "parseBgpLib.h"
+#include "template_cfg.h"
+
 /**
  * \class   MsgBusInterface
  *
@@ -36,7 +39,6 @@ public:
      * Msg data schema
      * ---------------------------------------------------------------------------
      */
-    uint64_t        ribSeq;         ///< RIB Message Seq
 
     /**
      * OBJECT: collector
@@ -158,100 +160,9 @@ public:
         PEER_ACTION_DOWN
     };
 
-    /**
-     * OBJECT: path_attrs
-     *
-     * Prefix Path attributes table schema
-     */
-    struct obj_path_attr {
-
-        /**
-         * Path hash
-         */
-        u_char      hash_id[16];
-        char        origin[16];             ///< bgp origin as string name
-
-        /**
-         * as_path.
-         */
-        std::string as_path;
-
-        uint16_t    as_path_count;          ///< Count of AS PATH's in the path (includes all in AS-SET)
-
-        uint32_t    origin_as;              ///< Origin ASN
-        bool        nexthop_isIPv4;         ///< True if IPv4, false if IPv6
-        char        next_hop[40];           ///< Next-hop IP in printed form
-        char        aggregator[40];         ///< Aggregator IP in printed form
-        bool        atomic_agg;             ///< 0=false, 1=true for atomic_aggregate
-
-        uint32_t    med;                    ///< bgp MED
-        uint32_t    local_pref;             ///< bgp local pref
-
-        /**
-         * standard community list.
-         */
-        std::string community_list;
-
-        /**
-         * extended community list.
-         */
-        std::string  ext_community_list;
-
-        /**
-         * cluster list.
-         */
-        std::string cluster_list;
-
-        char        originator_id[16];      ///< Originator ID in printed form
-    };
-
     /// Base attribute action codes
     enum base_attr_action_code {
         BASE_ATTR_ACTION_ADD=0
-    };
-
-    /**
-     * OBJECT: rib
-     *
-     * Prefix rib table schema
-     */
-    struct obj_rib {
-        u_char      hash_id[16];            ///< hash of attr hash prefix, and prefix len
-        u_char      path_attr_hash_id[16];  ///< path attrs hash_id
-        u_char      peer_hash_id[16];       ///< BGP peer hash ID, need it here for withdraw routes support
-        u_char      isIPv4;                 ///< 0 if IPv6, 1 if IPv4
-        char        prefix[46];             ///< IPv4/IPv6 prefix in printed form
-        u_char      prefix_len;             ///< Length of prefix in bits
-        uint8_t     prefix_bin[16];         ///< Prefix in binary form
-        uint8_t     prefix_bcast_bin[16];   ///< Broadcast address/last address in binary form
-        uint32_t    path_id;                ///< Add path ID - zero if not used
-        char        labels[255];            ///< Labels delimited by comma
-    };
-
-    /// Rib extended with Route Distinguisher
-    struct obj_route_distinguisher {
-        std::string     rd_administrator_subfield;
-        std::string     rd_assigned_number;
-        uint8_t         rd_type;
-    };
-    
-    /// Rib extended with vpn specific fields
-    struct obj_vpn: obj_rib, obj_route_distinguisher {
-        // inherit
-    };
-
-    /// Rib extended with evpn specific fields
-    struct obj_evpn: obj_rib, obj_route_distinguisher {
-        uint8_t     originating_router_ip_len;
-        char        originating_router_ip[46];
-        char        ethernet_segment_identifier[255];
-        char        ethernet_tag_id_hex[16];
-        uint8_t     mac_len;
-        char        mac[255];
-        uint8_t     ip_len;
-        char        ip[46];
-        int         mpls_label_1;
-        int         mpls_label_2;
     };
 
     /// Unicast prefix action codes
@@ -283,112 +194,10 @@ public:
         uint64_t        routes_loc_rib;         ///< type=8 number of routes in loc-rib
     };
 
-    /**
-     * OBJECT: ls_node
-     *
-     * BGP-LS Node table schema
-     */
-    struct obj_ls_node {
-        u_char      hash_id[16];                ///< hash id for the entry
-        uint64_t    id;                         ///< Routing universe identifier
-        bool        isIPv4;                     ///< True if interface/neighbor is IPv4, false otherwise
-        uint32_t    asn;                        ///< BGP ASN
-        uint32_t    bgp_ls_id;                  ///< BGP-LS Identifier
-        uint8_t     igp_router_id[8];           ///< IGP router ID
-        uint8_t     ospf_area_Id[4];            ///< OSPF area ID
-        char        protocol[32];               ///< String representation of the protocol name
-        uint8_t     router_id[16];              ///< IPv4 or IPv6 router ID
-        uint8_t     isis_area_id[9];            ///< IS-IS area ID
-        char        flags[32];                  ///< String representation of the flag bits
-        char        name[255];                  ///< Name of router
-        char        mt_id[255];                 ///< Multi-Topology ID
-        char        sr_capabilities_tlv[255];   ///< SR Capabilities TLV
-    };
-
     /// LS action code (node, link, and prefix)
     enum ls_action_code {
         LS_ACTION_ADD=0,
         LS_ACTION_DEL
-    };
-
-    /**
-     * OBJECT: ls_link
-     *
-     * BGP-LS Link table schema
-     */
-    struct obj_ls_link {
-        u_char      hash_id[16];                ///< hash id for the entry
-        uint64_t    id;                         ///< Routing universe identifier
-        uint32_t    mt_id;                      ///< Multi-Topology ID
-
-        uint32_t    bgp_ls_id;                  ///< BGP-LS Identifier
-        uint8_t     igp_router_id[8];           ///< IGP router ID (local)
-        uint8_t     remote_igp_router_id[8];    ///< IGP router ID (remote)
-        uint8_t     ospf_area_Id[4];            ///< OSPF area ID
-        uint8_t     router_id[16];              ///< IPv4 or IPv6 router ID (local)
-        uint8_t     remote_router_id[16];       ///< IPv4 or IPv6 router ID (remote)
-
-        uint32_t    local_node_asn;             ///< Local node asn
-        uint32_t    remote_node_asn;            ///< Remote node asn
-        uint32_t    local_bgp_router_id;        ///< Local BGP router id (draft-ietf-idr-bgpls-segment-routing-epe)
-        uint32_t    remote_bgp_router_id;       ///< Remote BGP router id (draft-ietf-idr-bgpls-segment-routing-epe)
-
-        uint8_t     isis_area_id[9];            ///< IS-IS area ID
-
-        char        protocol[32];               ///< String representation of the protocol name
-        uint8_t     intf_addr[16];              ///< Interface binary address
-        uint8_t     nei_addr[16];               ///< Neighbor binary address
-        uint32_t    local_link_id;              ///< Local Link ID (IS-IS)
-        uint32_t    remote_link_id;             ///< Remote Link ID (IS-IS)
-        bool        isIPv4;                     ///< True if interface/neighbor is IPv4, false otherwise
-        u_char      local_node_hash_id[16];     ///< Local node hash ID
-        u_char      remote_node_hash_id[16];    ///< Remove node hash ID
-        uint32_t    admin_group;                ///< Admin group
-        uint32_t    max_link_bw;                ///< Maximum link bandwidth
-        uint32_t    max_resv_bw;                ///< Maximum reserved bandwidth
-        char        unreserved_bw[100];         ///< string for unreserved bandwidth, a set of 8 uint32_t values
-
-        uint32_t    te_def_metric;              ///< Default TE metric
-        char        protection_type[60];        ///< String representation for the protection types
-        char        mpls_proto_mask[32];        ///< Either LDP or RSVP-TE
-        uint32_t    igp_metric;                 ///< IGP metric
-        char        srlg[128];                  ///< String representation of the shared risk link group values
-        char        name[255];                  ///< Name of router
-        char        peer_node_sid[128];         ///< Peer node side (draft-ietf-idr-bgpls-segment-routing-epe)
-        char        peer_adj_sid[128];          ///< Peer Adjency Segment Identifier
-    };
-
-    /**
-     * OBJECT: ls_prefix
-     *
-     * BGP-LS Prefix table schema
-     */
-    struct obj_ls_prefix {
-        u_char      hash_id[16];            ///< hash for the entry
-        uint64_t    id;                     ///< Routing universe identifier
-        char        protocol[32];           ///< String representation of the protocol name
-
-        uint32_t    bgp_ls_id;              ///< BGP-LS Identifier
-        uint8_t     igp_router_id[8];       ///< IGP router ID
-        uint8_t     ospf_area_Id[4];        ///< OSPF area ID
-        uint8_t     router_id[16];          ///< IPv4 or IPv6 router ID
-        uint8_t     isis_area_id[9];        ///< IS-IS area ID
-        uint8_t     intf_addr[16];          ///< Interface binary address
-        uint8_t     nei_addr[16];           ///< Neighbor binary address
-
-        u_char      local_node_hash_id[16]; ///< Local node hash ID
-        uint32_t    mt_id;                  ///< Multi-Topology ID
-        uint32_t    metric;                 ///< Prefix metric
-        bool        isIPv4;                 ///< True if interface/neighbor is IPv4, false otherwise
-        u_char      prefix_len;             ///< Length of prefix in bits
-        char        ospf_route_type[32];    ///< String representation of the OSPF route type
-        uint8_t     prefix_bin[16];         ///< Prefix in binary form
-        uint8_t     prefix_bcast_bin[16];   ///< Broadcast address/last address in binary form
-        char        igp_flags[32];          ///< String representation of the IGP flags
-        uint32_t    route_tag;              ///< Route tag
-        uint64_t    ext_route_tag;          ///< Extended route tag
-        uint8_t     ospf_fwd_addr[16];      ///< IPv4/IPv6 OSPF forwarding address
-        char        sid_tlv[128];           ///< Prefix-SID TLV
     };
 
     /* ---------------------------------------------------------------------------
@@ -398,24 +207,27 @@ public:
     virtual ~MsgBusInterface() { };
 
     /*****************************************************************//**
-     * \brief       Add/Update/del a collector object
+     * \brief       Add/Update a collector object templated
      *
-     * \details     Will generate a message for a new/updated collector.
+     * \details     Will generate a message for a new/updated collector based on template.
      *
-     * \param[in,out]   collector       Collector object
+     * \param[in,out]   collector       Router object
+     * \param[in]       code            Action code for collector update
+     * \param[in]       template Template
      *
-     * \returns     collector.hash_id will be updated based on the supplied data.
-     */
-    virtual void update_Collector(struct obj_collector &c_obj, collector_action_code action_code) = 0;
+    *****************************************************************/
+    virtual void update_Collector(parse_bgp_lib::parseBgpLib::collector_map &collector,
+                                        collector_action_code action_code, template_cfg::Template_cfg &template_container) = 0;
 
     /*****************************************************************//**
-     * \brief       Add/Update a router object
+     * \brief       Add/Update a router object templated
      *
      * \details     Will generate a message to add a new router or update an existing
      *              router.
      *
      * \param[in,out]   router          Router object
      * \param[in]       code            Action code for router update
+     * \param[in]       template Template
      *
      * \returns     The router.hash_id will be updated based on the
      *              supplied data.
@@ -423,45 +235,47 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_Router(struct obj_router &r_object, router_action_code code) = 0;
+    virtual void update_Router(parse_bgp_lib::parseBgpLib::router_map &router,
+                               router_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
     /*****************************************************************//**
-     * \brief       Add/Update a BGP peer object
+     * \brief       Add/Update a peer object templated
      *
-     * \details     Will generate a message to add a new BGP peer
+     * \details     Will generate a message to add a new router or update an existing
+     *              router.
      *
-     * \param[in,out] peer            BGP peer object
-     * \param[in]     peer_up_event   Peer up event struct (null if not used)
-     * \param[in]     peer_down_event Peer down event struct (null if not used)
-     * \param[in]     code            Action code for router update
+     * \param[in,out]   peer          Peer object
+     * \param[in]       code            Action code for router update
+     * \param[in]       template Template
      *
-     * \returns     The peer.hash_id will be updated based on the
-     *              supplied data.
-     *
-     * \note        Caller must free any allocated memory, which is
-     *              safe to do so when this method returns.
-     ****************************************************************/
-    virtual void update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_peer_down_event *down, peer_action_code code) = 0;
-
-    /*****************************************************************//**
-     * \brief       Add/Update base path attributes
-     *
-     * \details     Will generate a message to add a new path object.
-     *
-     * \param[in]       peer      Peer object
-     * \param[in,out]   attr      Path attribute object
-     * \param[in]       code      Base attribute action code
-     *
-     * \returns     The path.hash_id will be updated based on the
+     * \returns     The router.hash_id will be updated based on the
      *              supplied data.
      *
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr, base_attr_action_code code) = 0;
+    virtual void update_Peer(parse_bgp_lib::parseBgpLib::router_map &router,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      peer_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
 
     /*****************************************************************//**
-     * \brief       Add/Update RIB objects
+     * \brief       Add/Update  base path attributes templated
+     *
+     * \details     Will generate a message to add/update BGP-LS nodes.
+     *
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
+     *****************************************************************/
+    virtual void update_baseAttribute(parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                      parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                      parse_bgp_lib::parseBgpLib::router_map &router,
+                                       base_attr_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+    /*****************************************************************//**
+     * \brief       Add/Update RIB objects templated
      *
      * \details     Will generate a message to add new RIB prefixes
      *
@@ -469,6 +283,7 @@ public:
      * \param[in,out]   rib     List of one or more RIB entries
      * \param[in]       attr    Path attribute object (can be null if n/a)
      * \param[in]       code    Unicast prefix action code
+     * \param[in]       template Template
      *
      * \returns     The rib.hash_id will be updated based on the
      *              supplied data for each object.
@@ -476,103 +291,109 @@ public:
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib> &rib, obj_path_attr *attr,
-                                      unicast_prefix_action_code code) = 0;
-
-     /*****************************************************************//**
-     * \brief       Add/Update vpn objects
-     *
-     * \details     Will generate a message to add new vpn objects
-     *
-     * \param[in]       peer    Peer object
-     * \param[in,out]   rib     List of one or more RIB entries
-     * \param[in]       attr    Path attribute object (can be null if n/a)
-     * \param[in]       code    Vpn action code
-     *
-     * \returns     The vpn.hash_id will be updated based on the
-     *              supplied data for each object.
-     * 
-     * \note        Caller must free any allocated memory, which is
-     *              safe to do so when this method returns.
-     *****************************************************************/
-    virtual void update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn, obj_path_attr *attr,
-                            vpn_action_code code) = 0;
+    virtual void update_unicastPrefix(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &rib_list,
+                                      parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                               parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                               parse_bgp_lib::parseBgpLib::router_map &router,
+                                               unicast_prefix_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
     /*****************************************************************//**
-     * \brief       Add/Update evpn objects
+     * \brief       Add Stats object templated
      *
-     * \details     Will generate a message to add new evpn objects
+     * \details     Will generate a message to add new RIB prefixes
      *
      * \param[in]       peer    Peer object
-     * \param[in,out]   rib     List of one or more RIB entries
-     * \param[in]       attr    Path attribute object (can be null if n/a)
-     * \param[in]       code    Vpn action code
-     *
-     * \returns     The vpn.hash_id will be updated based on the
-     *              supplied data for each object.
+     * \param[in]       router  Router object
+     * \param[in]       stats   Stats object
+     * \param[in]       template Template
      *
      * \note        Caller must free any allocated memory, which is
      *              safe to do so when this method returns.
      *****************************************************************/
-    virtual void update_eVPN(obj_bgp_peer &peer, std::vector<obj_evpn> &vpn, obj_path_attr *attr,
-                            vpn_action_code code) = 0;
+    virtual void add_StatReport(parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                         parse_bgp_lib::parseBgpLib::router_map &router,
+                                         parse_bgp_lib::parseBgpLib::stat_map stats, template_cfg::Template_cfg &template_container) = 0;
 
-    /*****************************************************************//**
-     * \brief       Add a stats report object
-     *
-     * \details     Will generate a message to add a new stats report object.
-     *
-     * \param[in,out]   stats      Stats report object
-     *****************************************************************/
-    virtual void add_StatReport(obj_bgp_peer &peer, obj_stats_report &stats) = 0;
-
-    /*****************************************************************//**
-     * \brief       Add/Update BGP-LS nodes
+ /*****************************************************************//**
+     * \brief       Add/Update BGP-LS nodes templated
      *
      * \details     Will generate a message to add/update BGP-LS nodes.
      *
      * \param[in]   peer       Peer object
-     * \param[in]   attr       Path attribute object
      * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
      * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr,
-                                std::list<MsgBusInterface::obj_ls_node> &nodes,
-                                ls_action_code code) = 0;
+    virtual void update_LsNode(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_node_list,
+                                        parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                        parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                        parse_bgp_lib::parseBgpLib::router_map &router,
+                                        ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
     /*****************************************************************//**
-     * \brief       Add/Update BGP-LS links
+     * \brief       Add/Update BGP-LS links templated
      *
-     * \details     Will generate a message to add/update BGP-LS links.
+     * \details     Will generate a message to add/update BGP-LS nodes.
      *
      * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
      * \param[in]   attr       Path attribute object
-     * \param[in]   links      List of one or more link tables
      * \param[in]   code       Linkstate action code
-     *
-     * \returns     The hash_id will be updated based on the
-     *              supplied data for each object.
      *****************************************************************/
-    virtual void update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr,
-                             std::list<MsgBusInterface::obj_ls_link> &links,
-                             ls_action_code code) = 0;
+    virtual void update_LsLink(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_link_list,
+                                        parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                        parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                        parse_bgp_lib::parseBgpLib::router_map &router,
+                                        ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
     /*****************************************************************//**
-     * \brief       Add/Update BGP-LS prefixes
+     * \brief       Add/Update BGP-LS prefixes templated
      *
-     * \details     Will generate a message to add/update BGP-LS prefixes.
+     * \details     Will generate a message to add/update BGP-LS nodes.
      *
-     * \param[in]      peer       Peer object
-     * \param[in]      attr       Path attribute object
-     * \param[in/out]  prefixes   List of one or more node tables
-     * \param[in]      code       Linkstate action code
-     *
-     * \returns     The hash_id will be updated based on the
-     *              supplied data for each object.
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
      *****************************************************************/
-    virtual void update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr,
-                                std::list<MsgBusInterface::obj_ls_prefix> &prefixes,
-                                ls_action_code code) = 0;
+    virtual void update_LsPrefix(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &ls_prefix_list,
+                                        parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                        parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                        parse_bgp_lib::parseBgpLib::router_map &router,
+                                        ls_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+    /*****************************************************************//**
+     * \brief       Add/Update L3 VPN templated
+     *
+     * \details     Will generate a message to add/update BGP-LS nodes.
+     *
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
+     *****************************************************************/
+    virtual void update_L3Vpn(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &l3Vpn_list,
+                                          parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                          parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                          parse_bgp_lib::parseBgpLib::router_map &router,
+                                          vpn_action_code code, template_cfg::Template_cfg &template_container) = 0;
+
+
+    /*****************************************************************//**
+     * \brief       Add/Update  eVPN templated
+     *
+     * \details     Will generate a message to add/update BGP-LS nodes.
+     *
+     * \param[in]   peer       Peer object
+     * \param[in]   nodes      List of one or more node tables
+     * \param[in]   attr       Path attribute object
+     * \param[in]   code       Linkstate action code
+     *****************************************************************/
+    virtual void update_eVpn(std::vector<parse_bgp_lib::parseBgpLib::parse_bgp_lib_nlri> &eVpn_list,
+                                       parse_bgp_lib::parseBgpLib::attr_map &attrs,
+                                       parse_bgp_lib::parseBgpLib::peer_map &peer,
+                                       parse_bgp_lib::parseBgpLib::router_map &router,
+                                       vpn_action_code code, template_cfg::Template_cfg &template_container) = 0;
 
     /*****************************************************************//**
      * \brief       Send BMP packet
@@ -651,10 +472,41 @@ public:
         ts_str.append(buf);
     }
 
+    Template_map *template_map;
+
 protected:
 
 private:
 
 };
+
+/**
+ * \brief       Simple concatanation function
+ *
+ * \details     Converts a string array to a concatanated string
+ *              printing or storing in the DB.
+ *
+ * \param[in]   lib_data      nlri or attr map value
+ */
+static std::string map_string(std::list<std::string> &lib_data) {
+    string s = "";
+
+    if (lib_data.empty())
+        return s;
+
+    if (lib_data.size() <= 1)
+        return lib_data.front();
+    std::list<std::string>::iterator last_value = lib_data.end();
+    last_value--;
+
+    for (std::list<std::string>::iterator it = lib_data.begin(); it != lib_data.end(); it++) {
+        s += *it;
+        if (it != last_value) {
+            s += std::string(", ");
+        }
+    }
+    return s;
+}
+
 
 #endif

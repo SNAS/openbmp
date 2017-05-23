@@ -33,6 +33,7 @@ public:
     #define MSGBUS_TOPIC_BMP_STAT               "openbmp.parsed.bmp_stat"
     #define MSGBUS_TOPIC_BMP_RAW                "openbmp.bmp_raw"
 
+
     /**
      * MSGBUS_TOPIC_VAR_* defines the topic var/key for the topic maps.
      *      This matches the config topic var name, which is the map key.
@@ -49,7 +50,6 @@ public:
     #define MSGBUS_TOPIC_VAR_LS_PREFIX          "ls_prefix"
     #define MSGBUS_TOPIC_VAR_BMP_STAT           "bmp_stat"
     #define MSGBUS_TOPIC_VAR_BMP_RAW            "bmp_raw"
-
 
     /*********************************************************************//**
      * Constructor for class
