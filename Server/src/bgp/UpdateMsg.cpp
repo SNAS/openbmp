@@ -275,8 +275,10 @@ void UpdateMsg::parseAttributes(u_char *data, uint16_t len, parsed_update_data &
             memcpy(&attr_len, data, 2); data += 2; read_size += 2;
             bgp::SWAP_BYTES(&attr_len);
 
-        } else
-            attr_len = *data++; read_size++;
+        } else {
+            attr_len = *data++;
+            read_size++;
+        }
 
         SELF_DEBUG("%s: rtr=%s: attribute type = %d len_sz = %d",
                 peer_addr.c_str(), router_addr.c_str(), attr_type, attr_len);
