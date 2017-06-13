@@ -170,17 +170,14 @@ namespace template_cfg {
                                          parse_bgp_lib::parseBgpLib::header_map &header,
                                          parse_bgp_lib::parseBgpLib::stat_map &stats) {
 
-        char buf2[80000] = {0}; // Second working buffer
-
         size_t  remaining_len = max_buf_length, written = 0;
         std::string replace_string;
 
-        strncpy(buf2, this->prepend_string.c_str(), this->prepend_string.length());
         written = this->prepend_string.length();
         if ((remaining_len - written) <= 0) {
             return (max_buf_length - remaining_len);
         }
-        strncpy(buf, buf2, written);
+        strncpy(buf, this->prepend_string.c_str(), written);
         buf += written; remaining_len -= written;
 
         switch (this->replacement_list_type) {
@@ -216,12 +213,11 @@ namespace template_cfg {
                 break;
         }
 
-        strncpy(buf2, replace_string.c_str(), replace_string.length());
         written = replace_string.length();
         if ((remaining_len - written) <= 0) {
             return (max_buf_length - remaining_len);
         }
-        strncpy(buf, buf2, written);
+        strncpy(buf, replace_string.c_str(), written);
         remaining_len -= written;
 
         return (max_buf_length - remaining_len);
@@ -236,27 +232,23 @@ namespace template_cfg {
                                       parse_bgp_lib::parseBgpLib::header_map &header,
                                       parse_bgp_lib::parseBgpLib::stat_map &stats, uint64_t &sequence) {
 
-        char buf2[80000] = {0}; // Second working buffer
-
         size_t  remaining_len = max_buf_length, written = 0;
 
-        strncpy(buf2, this->prepend_string.c_str(), this->prepend_string.length());
         written = this->prepend_string.length();
         if ((remaining_len - written) <= 0) {
             return (max_buf_length - remaining_len);
         }
-        strncpy(buf, buf2, written);
+        strncpy(buf, this->prepend_string.c_str(), written);
         buf += written; remaining_len -= written;
 
         for (size_t i = 0; i < rib_list.size(); i++) {
             if ((i != 0) and (this->format == template_cfg::RAW)) {
                 //TODO: change this to a {{#more, ', '}} type object
-                strncpy(buf2, ",", strlen(","));
                 written = strlen(",");
                 if ((remaining_len - written) <= 0) {
                     return (max_buf_length - remaining_len);
                 }
-                strncpy(buf, buf2, written);
+                strncpy(buf, ",", written);
                 buf += written; remaining_len -= written;
             }
 
@@ -274,12 +266,11 @@ namespace template_cfg {
                     case template_cfg::REPLACE : {
                         if ((it->replacement_list_type == template_cfg::HEADER) and
                                 (it->replacement_var == parse_bgp_lib::LIB_HEADER_SEQUENCE_NUMBER)) {
-                            strncpy(buf2, it->prepend_string.c_str(), it->prepend_string.length());
                             written = it->prepend_string.length();
                             if ((remaining_len - written) <= 0) {
                                 return (max_buf_length - remaining_len);
                             }
-                            strncpy(buf, buf2, written);
+                            strncpy(buf, it->prepend_string.c_str(), written);
                             buf += written; remaining_len -= written;
 
                             written = snprintf(buf, remaining_len, "%" PRIu64, sequence);
@@ -298,12 +289,11 @@ namespace template_cfg {
                         break;
                     }
                     case template_cfg::END : {
-                        strncpy(buf2, it->prepend_string.c_str(), it->prepend_string.length());
                         written = it->prepend_string.length();
                         if ((remaining_len - written) <= 0) {
                             return (max_buf_length - remaining_len);
                         }
-                        strncpy(buf, buf2, written);
+                        strncpy(buf, it->prepend_string.c_str(), written);
                         buf+= written; remaining_len -= written;
                     }
                     default:
@@ -325,17 +315,14 @@ namespace template_cfg {
                                            parse_bgp_lib::parseBgpLib::header_map &header,
                                            parse_bgp_lib::parseBgpLib::stat_map &stats) {
 
-        char buf2[80000] = {0}; // Second working buffer
-
         size_t  remaining_len = max_buf_length, written = 0;
         bool noLoop = true;
 
-        strncpy(buf2, this->prepend_string.c_str(), this->prepend_string.length());
         written = this->prepend_string.length();
         if ((remaining_len - written) <= 0) {
             return (max_buf_length - remaining_len);
         }
-        strncpy(buf, buf2, written);
+        strncpy(buf, this->prepend_string.c_str(), written);
         buf += written; remaining_len -= written;
 
         for (std::list<template_cfg::Template_cfg>::iterator it = this->template_children.begin();
@@ -362,12 +349,11 @@ namespace template_cfg {
                     }
                     if ((it->replacement_list_type == template_cfg::HEADER) and
                         (it->replacement_var == parse_bgp_lib::LIB_HEADER_SEQUENCE_NUMBER)) {
-                        strncpy(buf2, it->prepend_string.c_str(), it->prepend_string.length());
                         written = it->prepend_string.length();
                         if ((remaining_len - written) <= 0) {
                             return (max_buf_length - remaining_len);
                         }
-                        strncpy(buf, buf2, written);
+                        strncpy(buf, it->prepend_string.c_str(), written);
                         buf += written; remaining_len -= written;
 
                         written = snprintf(buf, remaining_len, "%" PRIu64, seq);
@@ -387,12 +373,11 @@ namespace template_cfg {
                     break;
                 }
                 case template_cfg:: END : {
-                    strncpy(buf2, it->prepend_string.c_str(), it->prepend_string.length());
                     written = it->prepend_string.length();
                     if ((remaining_len - written) <= 0) {
                         return (max_buf_length - remaining_len);
                     }
-                    strncpy(buf, buf2, written);
+                    strncpy(buf, it->prepend_string.c_str(), written);
                     buf+= written; remaining_len -= written;
                 }
                 default:
