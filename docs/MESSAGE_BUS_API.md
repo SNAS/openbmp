@@ -1,11 +1,12 @@
 # Message Bus API Specficiation
 
-> #### Current Version 1.4
+> #### Current Version 1.6
 
 
-## Version Diff
+## Version Changes
 
-### Diff from 1.5 to 1.3
+
+### Changes in 1.5
 
 * **evpn**
     * Added EVPN object - Implementation of https://tools.ietf.org/html/rfc7432
@@ -13,7 +14,7 @@
 * **l3vpn**
     * Added L3VPN object - Implementation of https://tools.ietf.org/html/rfc4364
 
-### Diff from 1.4 to 1.2
+### Changes in 1.4
 
 * **ls_node**
     * Added **field 27** - Segment Routing Capabilities TLV
@@ -24,7 +25,7 @@
 * **ls_prefix**
     * Added **field 34** - Prefix-SID TLV
 
-### Diff from 1.3 to 1.2
+### Changes in 1.3
 
 * **unicast_prefix**
     * Added **field 30** - Flag indicating if unicast BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
@@ -43,7 +44,7 @@
     * Added **field 33** - Flag indicating if LS prefix BGP prefix is Adj-RIB-In or Adj-RIB-Out
 
 
-### Diff from 1.2 to 1.1
+### Changes in 1.2
 
 * **ls_link**
     * Added **field 39** - printed form of the Remote IGP router Id (varies in size depending on protocol)
@@ -56,7 +57,7 @@
     * Added **field 12** - Printed form of the router local BGP ID (IP address)
     
 
-### Diff from 1.0 to 1.1
+### Changes in 1.1
 
 * **unicast_prefix** 
 
@@ -459,7 +460,7 @@ One or more link-state prefixes.
 30 | isPrePolicy | Bool | 1 | Indicates if unicast BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 31 | isAdjIn | Bool | 1 | Indicates if unicast BGP prefix is Adj-RIB-In or Adj-RIB-Out
 32 | Route Distinguisher | String | 255 | VPN Route Distinguisher following https://tools.ietf.org/html/rfc4364#section-4.2
-33 | Route Distinguisher | Int | 1 | Indicates type of Route Distinguisher
+33 | RD Type | Int | 1 | Indicates type of Route Distinguisher per https://tools.ietf.org/html/rfc4364#section-4.2
 
 ### Object: <font color="blue">evpn</font> (openbmp.parsed.evpn)
 
