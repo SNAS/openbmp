@@ -121,9 +121,9 @@ public:
      * \param [in]     data             Pointer to the raw BGP message header
      * \param [in]     size             length of the data buffer (used to prevent overrun)
      *
-     * \returns True if error, false if no error.
+     * \returns size of data read from buffer, zero if error
      */
-    bool handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event);
+    int handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event);
 
     /*
      * Debug methods

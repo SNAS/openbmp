@@ -100,6 +100,7 @@ public:
     struct obj_bgp_peer {
         u_char      hash_id[16];            ///< hash of router hash_id, peer_rd, peer_addr, and peer_bgp_id
         u_char      router_hash_id[16];     ///< Router hash ID
+        u_char      table_name[255];        ///< Table/VRF name (Info TLV=3)
 
         char        peer_rd[32];            ///< Peer distinguisher ID (string/printed format)
         char        peer_addr[46];          ///< Peer IP address in printed form
@@ -108,6 +109,8 @@ public:
         bool        isL3VPN;                ///< true if peer is L3VPN, otherwise it is Global
         bool        isPrePolicy;            ///< True if the routes are pre-policy, false if not
         bool        isAdjIn;                ///< True if the routes are Adj-Rib-In, false if not
+        bool        isLocRib;               ///< True if local RIB
+        bool        isLocRibFiltered;       ///< True if the local rib is filtered
         bool        isIPv4;                 ///< true if peer is IPv4 or false if IPv6
         bool        isTwoOctet;             ///< Indicates if peer is using 2 octet encoding
         uint32_t    timestamp_secs;         ///< Timestamp in seconds since EPOC

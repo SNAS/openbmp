@@ -344,6 +344,69 @@ void parseBMP::parseBMPv3(int sock) {
 }
 
 /**
+ * Parse BMP peer header flags by peer type
+ *
+ *  This method will update the instance variable "p_entry"
+ *
+ * \param [in] peer_type         peer type from peer header
+ * \param [in] peer_flags        flags from peer header
+ *
+ */
+void parseBMP::parsePeerFlags(u_char peer_type, u_char peer_flags) {
+
+    switch (peer_type) {
+        case 3: // Local RIB (draft-ietf-grow-bmp-local-rib)
+            p_entry->isLocRib = true;
+
+            if (peer_flags & 0x80) {  // Indicates if the local-rib is filtered
+                p_entry->isLocRibFiltered = true;
+            }
+
+            break;
+
+        default:
+            p_entry->isLocRib = false;
+
+            if (peer_flags & 0x80) { // V flag of 1 means this is IPv6
+                p_entry->isIPv4 = false;
+
+            } else {
+                p_entry->isIPv4 = true;
+            }
+
+            if (peer_flags & 0x10) { // O flag of 1 means this is Adj-Rib-Out
+                SELF_DEBUG("Msg is for Adj-RIB-Out");
+                p_entry->isAdjIn = false;
+            }
+
+            if (peer_flags & 0x20) { // A flag of 1 means 2-octet encoding
+                SELF_DEBUG("Msg is 2-octet encoded");
+                p_entry->isTwoOctet = true;
+            }
+
+            if (peer_flags & 0x40) { // L flag of 1 means this is post-policy of Adj-RIB-In
+                SELF_DEBUG("Msg is for POST-POLICY Adj-RIB-In");
+                p_entry->isPrePolicy = false;
+            } else {
+                SELF_DEBUG("Msg is for PRE-POLICY Adj-RIB-In");
+                p_entry->isPrePolicy = true;
+                p_entry->isAdjIn = true;
+            }
+
+            // Is peer type L3VPN peer or global instance
+            if (peer_type == 1) // L3VPN
+                p_entry->isL3VPN = 1;
+
+            else
+                // Global Instance
+                p_entry->isL3VPN = 0;
+
+            break;
+    }
+
+}
+
+/**
  * Parse the v3 peer header
  *
  * \param [in]  sock        Socket to read the message from
@@ -366,44 +429,23 @@ void parseBMP::parsePeerHdr(int sock) {
     SELF_DEBUG("parsePeerHdr: sock=%d : Peer Type is %d", sock,
                p_hdr.peer_type);
 
-    if (p_hdr.peer_flags & 0x80) { // V flag of 1 means this is IPv6
-        p_entry->isIPv4 = false;
+    parsePeerFlags(p_hdr.peer_type, p_hdr.peer_flags);
 
-        inet_ntop(AF_INET6, p_hdr.peer_addr, peer_addr, sizeof(peer_addr));
-
-        SELF_DEBUG("sock=%d : Peer address is IPv6 %s", sock,
-                   peer_addr);
-
-    } else {
-        p_entry->isIPv4 = true;
-
+    if (p_entry->isIPv4) {
         snprintf(peer_addr, sizeof(peer_addr), "%d.%d.%d.%d",
                  p_hdr.peer_addr[12], p_hdr.peer_addr[13], p_hdr.peer_addr[14],
                  p_hdr.peer_addr[15]);
         SELF_DEBUG("sock=%d : Peer address is IPv4 %s", sock,
                    peer_addr);
+
+    }
+    else {
+        inet_ntop(AF_INET6, p_hdr.peer_addr, peer_addr, sizeof(peer_addr));
+
+        SELF_DEBUG("sock=%d : Peer address is IPv6 %s", sock,
+                   peer_addr);
     }
 
-    if (p_hdr.peer_flags & 0x10) { // O flag of 1 means this is Adj-Rib-Out
-        SELF_DEBUG("sock=%d : Msg is for Adj-RIB-Out", sock);
-        p_entry->isPrePolicy = false;
-        p_entry->isAdjIn = false;
-    }
-
-    if (p_hdr.peer_flags & 0x20) { // A flag of 1 means 2-octet encoding
-        SELF_DEBUG("sock=%d : Msg is 2-octet encoded", sock);
-        p_entry->isTwoOctet = true;
-    }
-
-    if (p_hdr.peer_flags & 0x40) { // L flag of 1 means this is post-policy of Adj-RIB-In
-        SELF_DEBUG("sock=%d : Msg is for POST-POLICY Adj-RIB-In", sock);
-        p_entry->isPrePolicy = false;
-        p_entry->isAdjIn = true;
-    } else {
-        SELF_DEBUG("sock=%d : Msg is for PRE-POLICY Adj-RIB-In", sock);
-        p_entry->isPrePolicy = true;
-        p_entry->isAdjIn = true;
-    }
 
     // convert the BMP byte messages to human readable strings
     snprintf(peer_as, sizeof(peer_as), "0x%04x%04x",
@@ -462,14 +504,6 @@ void parseBMP::parsePeerHdr(int sock) {
         p_entry->timestamp_us = tv.tv_usec;
     }
 
-
-    // Is peer type L3VPN peer or global instance
-    if (p_hdr.peer_type == 1) // L3VPN
-        p_entry->isL3VPN = 1;
-
-    else
-        // Global Instance
-        p_entry->isL3VPN = 0;
 
     SELF_DEBUG("sock=%d : Peer Address = %s", sock, peer_addr);
     SELF_DEBUG("sock=%d : Peer AS = (%x-%x)%x:%x", sock,
@@ -542,6 +576,62 @@ void parseBMP::bufferBMPMessage(int sock) {
 
 }
 
+/**
+ * Parse the peer UP informational data
+ *
+ * \details Updates the peer struct info items
+ *
+ * \param [in] data         Data pointer to info, should start at start of info TLV
+ * \param [in] len          Length of info TLV data to read
+ */
+void parseBMP::parsePeerUpInfo(u_char *data, int len) {
+    info_tlv_msg info;
+    char infoBuf[255];
+    int infoLen;
+    u_char *bufPtr = data;
+
+    /*
+     * Loop through the info TLV's (in buffer) and parse each TLV
+     */
+    for (int i = 0; i < len; i += BMP_INFO_TLV_HDR_LEN) {
+
+        memcpy(&info, bufPtr, BMP_INFO_TLV_HDR_LEN);
+        info.info = NULL;
+        bgp::SWAP_BYTES(&info.len);
+        bgp::SWAP_BYTES(&info.type);
+
+        bufPtr += BMP_INFO_TLV_HDR_LEN;                // Move pointer past the info header
+
+        SELF_DEBUG("Peer info message type %hu and length %hu parsed", info.type, info.len);
+
+        if (info.len > 0) {
+            infoLen = sizeof(infoBuf) < info.len ? sizeof(infoBuf) : info.len;
+            bzero(infoBuf, sizeof(infoBuf));
+            memcpy(infoBuf, bufPtr, infoLen);
+            bufPtr += infoLen;                     // Move pointer past the info data
+            i += infoLen;                          // Update the counter past the info data
+
+            info.info = infoBuf;
+
+        }
+
+        /*
+         * Save the data based on info type
+         */
+        switch (info.type) {
+            case INFO_TLV_PEER_VRF_TABLE :
+                infoLen = sizeof(p_entry->table_name) < (info.len - 1) ? (sizeof(p_entry->table_name) - 1)
+                                                                       : info.len;
+                memcpy(p_entry->table_name, info.info, infoLen);
+                LOG_INFO("Peer table/vrf name %hu = %s", info.type, p_entry->table_name);
+
+                break;
+
+            default:
+                LOG_NOTICE("Peer info message type %hu is not implemented", info.type);
+        }
+    }
+}
 
 /**
  * Parse the v3 peer up BMP header
@@ -554,6 +644,8 @@ void parseBMP::bufferBMPMessage(int sock) {
  * \returns true if successfully parsed the bmp peer up header, false otherwise
  */
 bool parseBMP::parsePeerUpEventHdr(int sock, MsgBusInterface::obj_peer_up_event &up_event) {
+
+
     unsigned char local_addr[16];
     bool isParseGood = true;
     int bytes_read = 0;
@@ -596,12 +688,16 @@ bool parseBMP::parsePeerUpEventHdr(int sock, MsgBusInterface::obj_peer_up_event 
     // Update bytes read
     bmp_len -= bytes_read;
 
-    // Validate parse is still good, if not read the remaining bytes of the message so that the next msg will work
+
+    // Buffer the remaining data for BMP message
+    bufferBMPMessage(sock);
+
+    // Validate if still good
     if (isParseGood == false) {
         LOG_NOTICE("%s: PEER UP header failed to be parsed, read only %d bytes of the header",
-                peer_addr, bytes_read);
+                   peer_addr, bytes_read);
 
-        // Msg is invalid - Buffer and ignore
+        // Buffer the remaining data for BMP message
         bufferBMPMessage(sock);
     }
 
@@ -736,11 +832,12 @@ bool parseBMP::handleStatsReport(int sock, MsgBusInterface::obj_stats_report &st
  * \param [in/out] r_entry     Already defined router entry reference (will be updated)
  */
 void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
-    init_msg_v3 initMsg;
+    info_tlv_msg info;
     char infoBuf[sizeof(r_entry.initiate_data)];
     int infoLen;
     r_entry.hash_type=0;    
-// Buffer the init message for parsing
+
+    // Buffer the init message for parsing
     bufferBMPMessage(sock);
 
     u_char *bufPtr = bmp_data;
@@ -748,65 +845,65 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
     /*
      * Loop through the init message (in buffer) to parse each TLV
      */
-    for (int i=0; i < bmp_data_len; i += BMP_INIT_MSG_LEN) {
-        memcpy(&initMsg, bufPtr, BMP_INIT_MSG_LEN);
-        initMsg.info = NULL;
-        bgp::SWAP_BYTES(&initMsg.len);
-        bgp::SWAP_BYTES(&initMsg.type);
+    for (int i=0; i < bmp_data_len; i += BMP_INFO_TLV_HDR_LEN) {
+        memcpy(&info, bufPtr, BMP_INFO_TLV_HDR_LEN);
+        info.info = NULL;
+        bgp::SWAP_BYTES(&info.len);
+        bgp::SWAP_BYTES(&info.type);
 
-        bufPtr += BMP_INIT_MSG_LEN;                // Move pointer past the info header
+        bufPtr += BMP_INFO_TLV_HDR_LEN;                // Move pointer past the info header
 
         // TODO: Change to SELF_DEBUG after IOS supports INIT messages correctly
-        LOG_INFO("Init message type %hu and length %hu parsed", initMsg.type, initMsg.len);
+        LOG_INFO("Init message type %hu and length %hu parsed", info.type, info.len);
 
-        if (initMsg.len > 0) {
-            infoLen = sizeof(infoBuf) < initMsg.len ? sizeof(infoBuf) : initMsg.len;
+        if (info.len > 0) {
+            infoLen = sizeof(infoBuf) < info.len ? sizeof(infoBuf) : info.len;
             bzero(infoBuf, sizeof(infoBuf));
             memcpy(infoBuf, bufPtr, infoLen);
             bufPtr += infoLen;                     // Move pointer past the info data
             i += infoLen;                          // Update the counter past the info data
 
-            initMsg.info = infoBuf;
+            info.info = infoBuf;
 
         }
 
         /*
          * Save the data based on info type
          */
-        switch (initMsg.type) {
+        switch (info.type) {
             case INIT_TYPE_FREE_FORM_STRING :
-                infoLen = sizeof(r_entry.initiate_data) < (initMsg.len - 1) ? (sizeof(r_entry.initiate_data) - 1) : initMsg.len;
-                memcpy(r_entry.initiate_data, initMsg.info, infoLen);
-                LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.initiate_data);
+                infoLen = sizeof(r_entry.initiate_data) < (info.len - 1) ? (sizeof(r_entry.initiate_data) - 1) : info.len;
+                memcpy(r_entry.initiate_data, info.info, infoLen);
+                LOG_INFO("Init message type %hu = %s", info.type, r_entry.initiate_data);
 
                 break;
 
             case INIT_TYPE_SYSNAME :
-                infoLen = sizeof(r_entry.name) < (initMsg.len - 1) ? (sizeof(r_entry.name) - 1) : initMsg.len;
-                strncpy((char *)r_entry.name, initMsg.info, infoLen);
-                LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.name);
+                infoLen = sizeof(r_entry.name) < (info.len - 1) ? (sizeof(r_entry.name) - 1) : info.len;
+                strncpy((char *)r_entry.name, info.info, infoLen);
+                LOG_INFO("Init message type %hu = %s", info.type, r_entry.name);
 		if(r_entry.hash_type<2)	//Here we will check if bgp_id is not received, then we will update the hash_type
 			r_entry.hash_type=1;
 	           break;
 
             case INIT_TYPE_SYSDESCR :
-                infoLen = sizeof(r_entry.descr) < (initMsg.len - 1) ? (sizeof(r_entry.descr) - 1) : initMsg.len;
-                strncpy((char *)r_entry.descr, initMsg.info, infoLen);
-                LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.descr);
+                infoLen = sizeof(r_entry.descr) < (info.len - 1) ? (sizeof(r_entry.descr) - 1) : info.len;
+                strncpy((char *)r_entry.descr, info.info, infoLen);
+                LOG_INFO("Init message type %hu = %s", info.type, r_entry.descr);
                 break;
 
             case INIT_TYPE_ROUTER_BGP_ID:
-                if (initMsg.len != sizeof(in_addr_t)) {
+                if (info.len != sizeof(in_addr_t)) {
                     LOG_NOTICE("Init message type BGP ID not of IPv4 addr length");
                     break;
                 }
-                inet_ntop(AF_INET, initMsg.info, r_entry.bgp_id, sizeof(r_entry.bgp_id));
-                LOG_INFO("Init message type %hu = %s", initMsg.type, r_entry.bgp_id);
+                inet_ntop(AF_INET, info.info, r_entry.bgp_id, sizeof(r_entry.bgp_id));
+                LOG_INFO("Init message type %hu = %s", info.type, r_entry.bgp_id);
                 r_entry.hash_type=2;  //This value stores the hash_type if BGPid is present 
 		break;
 
             default:
-                LOG_NOTICE("Init message type %hu is unexpected per rfc7854", initMsg.type);
+                LOG_NOTICE("Init message type %hu is unexpected per rfc7854", info.type);
         }
     }
 }

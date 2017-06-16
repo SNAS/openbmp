@@ -630,20 +630,6 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
         attrs[ATTR_TYPE_INTERNAL_AS_ORIGIN] = numString.str();
     }
 
-//    int spos = -1;
-//    int epos = decoded_path.size() - 1;
-//    for (int i=epos; i >= 0; i--) {
-//        if (spos < 0 and decoded_path[i] >= '0' and decoded_path[i] <= '9') {
-//           epos = i; spos = i;
-//
-//        } else if (decoded_path[i] >= '0' and decoded_path[i] <= '9')
-//           spos = i;
-//        else if (spos >= 0)
-//           break;
-//     }
-//
-//     if (spos >= 0)   // positive only if found
-//        attrs[ATTR_TYPE_INTERNAL_AS_ORIGIN] = decoded_path.substr(spos, (epos - spos) + 1);
 }
 
 } /* namespace bgp_msg */

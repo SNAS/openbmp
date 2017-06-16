@@ -21,7 +21,7 @@
 #define BMP_HDRv3_LEN 5             ///< BMP v3 header length, not counting the version
 #define BMP_HDRv1v2_LEN 43
 #define BMP_PEER_HDR_LEN 42         ///< BMP peer header length
-#define BMP_INIT_MSG_LEN 4          ///< BMP init message header length, does not count the info field
+#define BMP_INFO_TLV_HDR_LEN 4          ///< BMP init message header length, does not count the info field
 #define BMP_TERM_MSG_LEN 4          ///< BMP term message header length, does not count the info field
 #define BMP_PEER_UP_HDR_LEN 20      ///< BMP peer up event header size not including the recv/sent open param message
 #define BMP_PACKET_BUF_SIZE 68000   ///< Size of the BMP packet buffer (memory)
@@ -49,7 +49,12 @@ public:
                      STATS_NUM_ROUTES_ADJ_RIB_IN, STATS_NUM_ROUTES_LOC_RIB };
 
      /**
-      * BMP Initiation Message Types
+      * BMP Peer Information TLV's
+      */
+     enum BMP_PEER_INFO_TYPES { INFO_TLV_PEER_VRF_TABLE=3 };
+
+     /**
+      * BMP Initiation Info TLV Message Types
       */
      enum BMP_INIT_TYPES { INIT_TYPE_FREE_FORM_STRING=0, INIT_TYPE_SYSDESCR, INIT_TYPE_SYSNAME,
                            INIT_TYPE_ROUTER_BGP_ID=65531 };
@@ -101,9 +106,9 @@ public:
 
 
      /**
-     * BMP initiation message
+     * BMP Info TLV
      */
-     struct init_msg_v3 {
+     struct info_tlv_msg {
          uint16_t        type;              ///< 2 bytes - Information type
          uint16_t        len;               ///< 2 bytes - Length of the information that follows
 
@@ -268,6 +273,16 @@ public:
      */
     uint32_t getBMPLength();
 
+    /**
+     * Parse the peer UP informational data
+     *
+     * \details Updates the peer struct info items
+     *
+     * \param [in] data         Data pointer to info, should start at start of info TLV
+     * \param [in] len          Length of info TLV data to read
+     */
+    void parsePeerUpInfo(u_char *data, int len);
+
     // Debug methods
     void enableDebug();
     void disableDebug();
@@ -314,6 +329,17 @@ private:
      * \param [in]  sock        Socket to read the message from
      */
     void parsePeerHdr(int sock);
+
+    /**
+     * Parse BMP peer header flags by peer type
+     *
+     *  This method will update the instance variable "p_entry"
+     *
+     * \param [in] peer_type         peer type from peer header
+     * \param [in] peer_flags        flags from peer header
+     *
+     */
+    void parsePeerFlags(u_char peer_type, u_char peer_flags);
 
 };
 

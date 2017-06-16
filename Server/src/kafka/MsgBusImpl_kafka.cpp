@@ -612,10 +612,10 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
     switch (code) {
         case PEER_ACTION_FIRST :
             snprintf(buf, sizeof(buf),
-                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t%d\t%d\t%d\n",
+                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t%d\t%d\t%d\t%d\t%d\t%s\n",
                      action.c_str(), peer_seq, p_hash_str.c_str(), r_hash_str.c_str(), hostname.c_str(),
                      peer.peer_bgp_id,router_ip.c_str(), ts.c_str(), peer.peer_as, peer.peer_addr,peer.peer_rd,
-                     peer.isL3VPN, peer.isPrePolicy, peer.isIPv4);
+                     peer.isL3VPN, peer.isPrePolicy, peer.isIPv4, peer.isLocRib, peer.isLocRibFiltered, peer.table_name);
             action.assign("first");
             break;
 
@@ -631,15 +631,14 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
 
             snprintf(buf, sizeof(buf),
                      "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%" PRIu16 "\t%" PRIu32 "\t%s\t%" PRIu16
-                             "\t%s\t%s\t%s\t%s\t%" PRIu16 "\t%" PRIu16 "\t\t\t\t\t%d\t%d\t%d\n",
+                             "\t%s\t%s\t%s\t%s\t%" PRIu16 "\t%" PRIu16 "\t\t\t\t\t%d\t%d\t%d\t%d\t%d\t%s\n",
                      action.c_str(), peer_seq, p_hash_str.c_str(), r_hash_str.c_str(), hostname.c_str(),
                      peer.peer_bgp_id, router_ip.c_str(), ts.c_str(), peer.peer_as, peer.peer_addr, peer.peer_rd,
 
                     /* Peer UP specific fields */
                      up->remote_port, up->local_asn, up->local_ip, up->local_port, up->local_bgp_id, infoData.c_str(), up->sent_cap,
                      up->recv_cap, up->remote_hold_time, up->local_hold_time,
-
-            peer.isL3VPN, peer.isPrePolicy, peer.isIPv4);
+                     peer.isL3VPN, peer.isPrePolicy, peer.isIPv4, peer.isLocRib, peer.isLocRibFiltered, peer.table_name);
 
             skip_if_in_cache = false;
             action.assign("up");
@@ -650,14 +649,14 @@ void msgBus_kafka::update_Peer(obj_bgp_peer &peer, obj_peer_up_event *up, obj_pe
                 return;
 
             snprintf(buf, sizeof(buf),
-                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t\t\t\t\t\t\t\t\t\t\t%d\t%d\t%d\t%s\t%d\t%d\t%d\n",
+                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t\t\t\t\t\t\t\t\t\t\t%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t\n",
                      action.c_str(), peer_seq, p_hash_str.c_str(), r_hash_str.c_str(), hostname.c_str(),
                      peer.peer_bgp_id, router_ip.c_str(), ts.c_str(), peer.peer_as, peer.peer_addr, peer.peer_rd,
 
                      /* Peer DOWN specific fields */
                      down->bmp_reason, down->bgp_err_code, down->bgp_err_subcode, down->error_text,
 
-                     peer.isL3VPN, peer.isPrePolicy, peer.isIPv4);
+                     peer.isL3VPN, peer.isPrePolicy, peer.isIPv4, peer.isLocRib, peer.isLocRibFiltered);
 
             skip_if_in_cache = false;
             action.assign("down");

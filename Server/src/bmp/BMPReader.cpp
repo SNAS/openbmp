@@ -232,10 +232,16 @@ bool BMPReader::ReadIncomingMsg(BMPListener::ClientInfo *client, MsgBusInterface
                        pBGP->enableDebug();
 
                     // Parse the BGP sent/received open messages
-                    pBGP->handleUpEvent(pBMP->bmp_data, pBMP->bmp_data_len, &up_event);
+                    int read = pBGP->handleUpEvent(pBMP->bmp_data, pBMP->bmp_data_len, &up_event);
 
-                    // Free the bgp parser
+                                        // Free the bgp parser
                     delete pBGP;
+
+                    // Read info TLV data
+                    if (((int)pBMP->bmp_data_len - read) > 0) {
+                        SELF_DEBUG("%s: PEER UP has info data, parsing %d bytes", p_entry.peer_addr, pBMP->bmp_data_len - read);
+                        pBMP->parsePeerUpInfo(pBMP->bmp_data + read, (int)pBMP->bmp_data_len - read);
+                    }
 
                     // Add the up event to the DB
                     mbus_ptr->update_Peer(p_entry, &up_event, NULL, mbus_ptr->PEER_ACTION_UP);

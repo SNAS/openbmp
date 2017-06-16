@@ -37,7 +37,7 @@
 class msgBus_kafka: public MsgBusInterface {
 public:
     #define MSGBUS_WORKING_BUF_SIZE         1800000
-    #define MSGBUS_API_VERSION              "1.5"
+    #define MSGBUS_API_VERSION              "1.6"
 
     /******************************************************************//**
      * \brief This function will initialize and connect to Kafka.

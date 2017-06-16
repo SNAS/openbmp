@@ -1,10 +1,17 @@
-# Message Bus API Specficiation
+# Message Bus API Specification
 
 > #### Current Version 1.6
 
 
 ## Version Changes
 
+### Changes in 1.6
+* **peer**
+    * Added three new fields per [draft-ietf-grow-bmp-loc-rib](https://tools.ietf.org/html/draft-ietf-grow-bmp-local-rib-00): 
+       * **isLocRib**  - Boolean to indicate if the peer is for local RIB 
+       * **isLocRibFiltered** - Boolean to indicate if local rib is filtered in some way
+       * **tableName** - Peer table/VRF name. This is the name of the table/vrf for the RD.  This is 
+       only in PEER UP.
 
 ### Changes in 1.5
 
@@ -199,6 +206,9 @@ One or more BGP peers.
 26 | isL3VPN | Bool | 1 | Indicates if the peer is an L3VPN peer or not
 27 | isPrePolicy | Bool | 1 | Indicates if the peer will convey pre-policy (true) information or post-policy (false)
 28 | isIPv4 | Bool | 1 | Indicates if the peer is IPv4 or IPv6
+29 | isLocRib | Bool | 1 | Indicates true if the peer is for Local RIB (draft-ietf-grow-bmp-loc-rib)
+30 | isLocRibFiltered | Bool | 1 | Indicates true if the Local RIB is filtered in some way (draft-ietf-grow-bmp-loc-rib)
+31 | \*Table Name | String | 255 | The VRF/Table name the peer belongs to or is convey data for (e.g. RD VRF name)
 
 
 \* *Only available in PEER_UP (action=up), other actions will set these fields to null/empty*

@@ -165,17 +165,19 @@ bool parseBGP::handleDownEvent(u_char *data, size_t size, MsgBusInterface::obj_p
  * \param [in]     data             Pointer to the raw BGP message header
  * \param [in]     size             length of the data buffer (used to prevent overrun)
  *
- * \returns True if error, false if no error.
+ * \returns size of data read from buffer, zero if error
  */
-bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event) {
+int parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_peer_up_event *up_event) {
     bgp_msg::OpenMsg    oMsg(logger, p_entry->peer_addr, this->p_info, debug);
     list <string>       cap_list;
     string              local_bgp_id, remote_bgp_id;
     size_t              read_size;
+    int                 total_read_size = 0;
 
     p_info->recv_four_octet_asn = false;
     p_info->sent_four_octet_asn = false;
     p_info->using_2_octet_asn = false;
+
 
 
     /*
@@ -186,6 +188,8 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
 
         read_size = oMsg.parseOpenMsg(data, data_bytes_remaining, true, up_event->local_asn, up_event->local_hold_time,
                                       local_bgp_id, cap_list);
+
+        total_read_size = common_hdr.len;
 
         if (!read_size) {
             LOG_ERR("%s: rtr=%s: Failed to read sent open message",  p_entry->peer_addr, router_addr.c_str());
@@ -230,6 +234,8 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
         read_size = oMsg.parseOpenMsg(data, data_bytes_remaining, false, up_event->remote_asn,
                                       up_event->remote_hold_time, remote_bgp_id, cap_list);
 
+        total_read_size += common_hdr.len;
+
         if (!read_size) {
             LOG_ERR("%s: rtr=%s: Failed to read sent open message", p_entry->peer_addr, router_addr.c_str());
             throw "Failed to read open message";
@@ -263,7 +269,7 @@ bool parseBGP::handleUpEvent(u_char *data, size_t size, MsgBusInterface::obj_pee
         throw "ERROR: Invalid BGP MSG for BMP Received OPEN message, expected OPEN message.";
     }
 
-    return false;
+    return total_read_size;
 }
 
 /**
