@@ -536,9 +536,9 @@ void Config::parseKafka(const YAML::Node &node) {
             compression = node["compression.codec"].as<std::string>();
 
             if (compression != "none" && compression != "snappy" && 
-                compression != "gzip")
+                compression != "gzip" && compression != "lz4")
                throw "invalid value for compression, should be one of none,"
-			" gzip or snappy";
+			" gzip, snappy, or lz4";
             if (debug_general)
                    std::cout << "   Config: Compression : " << 
                                 compression << std::endl;

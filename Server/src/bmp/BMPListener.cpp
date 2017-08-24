@@ -174,7 +174,7 @@ bool BMPListener::wait_and_accept_connection(ClientInfo &c, int timeout) {
     // Check if the listening socket has a new connection
     if (poll(pfd, fds_cnt + 1, timeout)) {
 
-        for (int i = 0; i <= fds_cnt; i++) {
+        for (int i = 0; i < fds_cnt; i++) {
             if (pfd[i].revents & POLLHUP or pfd[i].revents & POLLERR) {
                 LOG_WARN("sock=%d: received POLLHUP/POLLHERR while accepting", pfd[i].fd);
                 cur_sock = pfd[i].fd;

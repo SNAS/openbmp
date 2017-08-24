@@ -194,15 +194,15 @@ void msgBus_kafka::connect() {
 
 
     // Batch message number
-    value = "1000";
+    value = "100";
     if (conf->set("batch.num.messages", value, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure batch.num.messages for kafka: %s.", errstr.c_str());
         throw "ERROR: Failed to configure kafka batch.num.messages";
     }
 
     // Batch message max wait time (in ms)
-    value = "100";
-    if (conf->set("queue.buffering.max.ms", value, errstr) != RdKafka::Conf::CONF_OK) {
+    q_buf_max_ms << cfg->q_buf_max_ms;
+    if (conf->set("queue.buffering.max.ms", q_buf_max_ms.str(), errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure queue.buffering.max.ms for kafka: %s.", errstr.c_str());
         throw "ERROR: Failed to configure kafka queue.buffer.max.ms";
     }
@@ -1616,9 +1616,13 @@ void msgBus_kafka::enableDebug() {
     string value = "all";
     string errstr;
 
+    disconnect();
+
     if (conf->set("debug", value, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to enable debug on kafka producer confg: %s", errstr.c_str());
     }
+
+    connect();
 
     debug = true;
 
