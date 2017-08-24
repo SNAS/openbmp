@@ -395,6 +395,10 @@ void Config::parseKafka(const YAML::Node &node) {
                 throw "invalid transmit max bytes , should be "
 		"in range 1000 - 1000000000";
 
+           // Below corrects older configs to use 1M instead of 200MB.
+           if (tx_max_bytes == 200000000)
+               tx_max_bytes = 1000000;
+
             if (debug_general)
                 std::cout << "   Config: transmit max bytes : " << tx_max_bytes 
 		 << std::endl;
