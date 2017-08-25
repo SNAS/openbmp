@@ -271,16 +271,6 @@ void msgBus_kafka::connect() {
        throw "ERROR: Failed to configure max messages in buffer ";
     } 
     
-    // Maximum time, in milliseconds, for buffering data on the producer queue 
-    q_buf_max_ms << cfg->q_buf_max_ms;
-    if (conf->set("queue.buffering.max.ms", q_buf_max_ms.str(), 
-                             errstr) != RdKafka::Conf::CONF_OK) 
-    {
-       LOG_ERR("Failed to configure max time to wait for buffering for kafka: %s",
-                               errstr.c_str());
-       throw "ERROR: Failed to configure max time for buffering ";
-    } 
-    
     // How many times to retry sending a failing MessageSet
     msg_send_max_retry << cfg->msg_send_max_retry;
     if (conf->set("message.send.max.retries", msg_send_max_retry.str(), 
