@@ -397,7 +397,7 @@ namespace bgp_msg {
             }
 
             case EXT_OPAQUE_CP_ORF:
-                val_ss << "cp-orf=" << val_16b << ":" << val_32b;
+                val_ss << "cp-orf";
                 break;
 
             case EXT_OPAQUE_OSPF_ROUTE_TYPE: {
