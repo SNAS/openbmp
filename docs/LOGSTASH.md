@@ -15,7 +15,7 @@ With logstash, you can easily get a variety of [possible outputs](https://www.el
 ```
 input{
 	kafka{
-		bootstrap_servers=>"localhost:2181"
+		bootstrap_servers=>"localhost:9092"
 		topics=>"openbmp.parsed.collector"
 		group_id=>"cra-logstash"
 		codec=>plain
@@ -25,7 +25,7 @@ input{
 		}
 	}
 	kafka{
-		bootstrap_servers=>"localhost:2181"
+		bootstrap_servers=>"localhost:9092"
 		topics=>"openbmp.parsed.router"
 		group_id=>"cra-logstash"
 		codec=>plain
@@ -35,7 +35,7 @@ input{
 		}
 	}
 	kafka{
-		bootstrap_servers=>"localhost:2181"
+		bootstrap_servers=>"localhost:9092"
 		topics=>"openbmp.parsed.peer"
 		group_id=>"cra-logstash"
 		codec=>plain
@@ -45,7 +45,7 @@ input{
 		}
 	}
 	kafka{
-		bootstrap_servers=>"localhost:2181"
+		bootstrap_servers=>"localhost:9092"
 		topics=>"openbmp.parsed.bmp_stat"
 		group_id=>"cra-logstash"
 		codec=>plain
@@ -55,7 +55,7 @@ input{
 		}
 	}
 	kafka{
-		bootstrap_servers=>"localhost:2181"
+		bootstrap_servers=>"localhost:9092"
 		topics=>"openbmp.parsed.base_attribute"
 		group_id=>"cra-logstash"
 		codec=>plain
@@ -65,7 +65,7 @@ input{
 		}
 	}
 	kafka{
-		bootstrap_servers=>"localhost:2181"
+		bootstrap_servers=>"localhost:9092"
 		topics=>"openbmp.parsed.unicast_prefix"
 		group_id=>"cra-logstash"
 		codec=>plain
@@ -75,7 +75,7 @@ input{
 		}
 	}
 	kafka{
-		bootstrap_servers=>"localhost:2181"
+		bootstrap_servers=>"localhost:9092"
 		topics=>"openbmp.parsed.ls_node"
 		group_id=>"cra-logstash"
 		codec=>plain
@@ -85,7 +85,7 @@ input{
 		}
 	}
 	kafka{
-		bootstrap_servers=>"localhost:2181"
+		bootstrap_servers=>"localhost:9092"
 		topics=>"openbmp.parsed.ls_link"
 		group_id=>"cra-logstash"
 		codec=>plain
@@ -95,7 +95,7 @@ input{
 		}
 	}
 	kafka{
-		bootstrap_servers=>"localhost:2181"
+		bootstrap_servers=>"localhost:9092"
 		topics=>"openbmp.parsed.ls_prefix"
 		group_id=>"cra-logstash"
 		codec=>plain
