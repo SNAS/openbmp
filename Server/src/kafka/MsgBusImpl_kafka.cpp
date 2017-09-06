@@ -270,7 +270,7 @@ void msgBus_kafka::connect() {
                                errstr.c_str());
        throw "ERROR: Failed to configure max messages in buffer ";
     } 
-    
+
     // How many times to retry sending a failing MessageSet
     msg_send_max_retry << cfg->msg_send_max_retry;
     if (conf->set("message.send.max.retries", msg_send_max_retry.str(), 
@@ -374,8 +374,8 @@ void msgBus_kafka::produce(const char *topic_var, char *msg, size_t msg_size, in
     }
 
     char headers[256];
-    len = snprintf(headers, sizeof(headers), "V: %s\nC_HASH_ID: %s\nL: %lu\nR: %d\n\n",
-            MSGBUS_API_VERSION, collector_hash.c_str(), msg_size, rows);
+    len = snprintf(headers, sizeof(headers), "V: %s\nC_HASH_ID: %s\nT: %s\nL: %lu\nR: %d\n\n",
+            MSGBUS_API_VERSION, collector_hash.c_str(), topic_var, msg_size, rows);
 
     memcpy(producer_buf, headers, len);
     memcpy(producer_buf+len, msg, msg_size);

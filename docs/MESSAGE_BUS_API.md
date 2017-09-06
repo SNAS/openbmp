@@ -12,6 +12,9 @@
        * **isLocRibFiltered** - Boolean to indicate if local rib is filtered in some way
        * **tableName** - Peer table/VRF name. This is the name of the table/vrf for the RD.  This is 
        only in PEER UP.
+       
+* Message Headers
+    * **T** header with the value of **message object type** has been added
 
 ### Changes in 1.5
 
@@ -120,8 +123,9 @@ Message API: Parsed Data
 
 Header | Value | Description
 --------|-------|-------------
-**V**| 1.3 | Schema version, currently 1.3
+**V**| 1.6 | Schema version
 **C\_HASH\_ID** | hash string | Collector Hash Id
+**T** | enum | Defined in [KafkaTopicSelector.h](https://github.com/OpenBMP/openbmp/blob/master/Server/src/kafka/KafkaTopicSelector.h) as \[ 'collector', 'router', 'peer', 'base\_attribute', 'unicast\_prefix', 'l3vpn', 'evpn', 'ls\_link', 'ls\_node', 'ls\_prefix', 'bmp\_stat', 'bmp\_raw' \]
 **L** | length | Length of the data in bytes
 **R** | count | Number of records in TSV data
 
