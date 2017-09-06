@@ -471,11 +471,9 @@ namespace bgp_msg {
                     value_32bit = 0;
                     memcpy(&value_32bit, data, len);
                     bgp::SWAP_BYTES(&value_32bit, len);
+                    memcpy(parsed_data->ls_attrs[ATTR_LINK_IGP_METRIC].data(), &value_32bit, 4);
+                    SELF_DEBUG("%s: bgp-ls: parsed link IGP metric attribute: metric = %u", peer_addr.c_str(), value_32bit);
                 }
-
-                memcpy(parsed_data->ls_attrs[ATTR_LINK_IGP_METRIC].data(), &value_32bit, 4);
-
-                SELF_DEBUG("%s: bgp-ls: parsed link IGP metric attribute: metric = %u", peer_addr.c_str(), value_32bit);
                 break;
 
             case ATTR_LINK_IPV4_ROUTER_ID_REMOTE:
