@@ -15,8 +15,8 @@ With logstash, you can easily get a variety of [possible outputs](https://www.el
 ```
 input{
 	kafka{
-		zk_connect=>"localhost:2181"
-		topic_id=>"openbmp.parsed.collector"
+		bootstrap_servers=>"localhost:9092"
+		topics=>"openbmp.parsed.collector"
 		group_id=>"cra-logstash"
 		codec=>plain
 		add_field=>{
@@ -25,8 +25,8 @@ input{
 		}
 	}
 	kafka{
-		zk_connect=>"localhost:2181"
-		topic_id=>"openbmp.parsed.router"
+		bootstrap_servers=>"localhost:9092"
+		topics=>"openbmp.parsed.router"
 		group_id=>"cra-logstash"
 		codec=>plain
 		add_field=>{
@@ -35,8 +35,8 @@ input{
 		}
 	}
 	kafka{
-		zk_connect=>"localhost:2181"
-		topic_id=>"openbmp.parsed.peer"
+		bootstrap_servers=>"localhost:9092"
+		topics=>"openbmp.parsed.peer"
 		group_id=>"cra-logstash"
 		codec=>plain
 		add_field=>{
@@ -45,8 +45,8 @@ input{
 		}
 	}
 	kafka{
-		zk_connect=>"localhost:2181"
-		topic_id=>"openbmp.parsed.bmp_stat"
+		bootstrap_servers=>"localhost:9092"
+		topics=>"openbmp.parsed.bmp_stat"
 		group_id=>"cra-logstash"
 		codec=>plain
 		add_field=>{
@@ -55,8 +55,8 @@ input{
 		}
 	}
 	kafka{
-		zk_connect=>"localhost:2181"
-		topic_id=>"openbmp.parsed.base_attribute"
+		bootstrap_servers=>"localhost:9092"
+		topics=>"openbmp.parsed.base_attribute"
 		group_id=>"cra-logstash"
 		codec=>plain
 		add_field=>{
@@ -65,8 +65,8 @@ input{
 		}
 	}
 	kafka{
-		zk_connect=>"localhost:2181"
-		topic_id=>"openbmp.parsed.unicast_prefix"
+		bootstrap_servers=>"localhost:9092"
+		topics=>"openbmp.parsed.unicast_prefix"
 		group_id=>"cra-logstash"
 		codec=>plain
 		add_field=>{
@@ -75,8 +75,8 @@ input{
 		}
 	}
 	kafka{
-		zk_connect=>"localhost:2181"
-		topic_id=>"openbmp.parsed.ls_node"
+		bootstrap_servers=>"localhost:9092"
+		topics=>"openbmp.parsed.ls_node"
 		group_id=>"cra-logstash"
 		codec=>plain
 		add_field=>{
@@ -85,8 +85,8 @@ input{
 		}
 	}
 	kafka{
-		zk_connect=>"localhost:2181"
-		topic_id=>"openbmp.parsed.ls_link"
+		bootstrap_servers=>"localhost:9092"
+		topics=>"openbmp.parsed.ls_link"
 		group_id=>"cra-logstash"
 		codec=>plain
 		add_field=>{
@@ -95,8 +95,8 @@ input{
 		}
 	}
 	kafka{
-		zk_connect=>"localhost:2181"
-		topic_id=>"openbmp.parsed.ls_prefix"
+		bootstrap_servers=>"localhost:9092"
+		topics=>"openbmp.parsed.ls_prefix"
 		group_id=>"cra-logstash"
 		codec=>plain
 		add_field=>{
