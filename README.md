@@ -35,7 +35,7 @@ IPv4 | IPv4 Unicast routing table information
 IPv6 | IPv6 Unicast routing table information
 bgp-ls| [RFC7752](https://tools.ietf.org/html/rfc7752)
 Extended Communities | Roughly all of them
-VPNv4 | L3VPN routing information (within VRF) - *coming soon*
+VPNv4 | L3VPN routing information (within VRF)
 
 So much more...
 

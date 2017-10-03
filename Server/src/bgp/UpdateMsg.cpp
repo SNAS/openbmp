@@ -11,6 +11,7 @@
 #include <string>
 #include <cstring>
 #include <sstream>
+
 #include <arpa/inet.h>
 
 #include "ExtCommunity.h"
@@ -544,15 +545,15 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
 
     u_char *data_ptr = data;
 
-    if (path_len < 4) // Nothing to parse if length doesn't include at least one asn
-        return;
-
     /*
      * We first must try to parse using four octet since the RFC says that the peer header
      *     defines the encoding and not the capabilities.  four_octet_asn represents
      *     the capabilities only.
      */
-    char asn_octet_size = (peer_info->using_2_octet_asn and not four_octet_asn) ? 2 : 4;
+    char asn_octet_size = (peer_info->using_2_octet_asn /* and not four_octet_asn */) ? 2 : 4;
+
+    if (path_len < asn_octet_size) // Nothing to parse if length doesn't include at least one asn
+        return;
 
     /*
      * Loop through each path segment
