@@ -409,9 +409,11 @@ void BMPReader::disconnect(BMPListener::ClientInfo *client, MsgBusInterface *mbu
 void BMPReader::hashRouter(BMPListener::ClientInfo *client,MsgBusInterface::obj_router &r_object ) {
     char *hash_val;
     if(r_object.hash_type==2)
-          hash_val=r_object.bgp_id;
+        hash_val=r_object.bgp_id;
     else if(r_object.hash_type==1)
-          hash_val=(char *)r_object.name;
+        hash_val=(char *)r_object.name;
+    else // assume type 0
+        hash_val=(char *)r_object.ip_addr;
 
     string c_hash_str;
     MsgBusInterface::hash_toStr(cfg->c_hash_id, c_hash_str);
