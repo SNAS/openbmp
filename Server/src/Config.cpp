@@ -702,7 +702,7 @@ void Config::parseMapping(const YAML::Node &node) {
                             if (cur_node["asn"][i].Type() == YAML::NodeType::Scalar) {
                                 try {
                                     uint32_t asn = cur_node["asn"][i].as<std::uint32_t>();
-                                    match_peer_group_by_asn[name].push_back(cur_node["asn"][i].as<std::uint32_t>());
+                                    match_peer_group_by_asn[name].push_back(asn);
                                 } catch (YAML::TypedBadConversion<std::string> err) {
                                     printWarning(
                                             "mapping.groups.peer_group.asn int parse error. ASN must be uint32: ",

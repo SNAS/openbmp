@@ -314,7 +314,6 @@ RdKafka::Topic * KafkaTopicSelector::initTopic(const std::string &topic_var,
                                                uint32_t peer_asn) {
     std::string errstr;
     char uint32_str[12];
-    topic_flags tflags;
 
     // Get the actual topic name based on var
     std::string topic_name = this->cfg->topic_names_map[topic_var];

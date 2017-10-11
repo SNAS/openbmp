@@ -361,7 +361,6 @@ namespace bgp_msg {
      */
     std::string ExtCommunity::decodeType_Opaque(const extcomm_hdr &ec_hdr) {
         std::stringstream   val_ss;
-        uint16_t            val_16b;
         uint32_t            val_32b;
 
         switch(ec_hdr.low_type) {
