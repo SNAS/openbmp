@@ -568,7 +568,7 @@ int main(int argc, char **argv) {
     // Make sure we have the required ARGS
     if (strlen(cfg.admin_id) <= 0) {
         cout << "ERROR: Missing required 'admin ID', use -c <config> or -a <string> to set the collector admin ID" << endl;
-        return true;
+        return 2;
     }
 
     try {
