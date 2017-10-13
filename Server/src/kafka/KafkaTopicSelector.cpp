@@ -85,6 +85,17 @@ RdKafka::Topic * KafkaTopicSelector::getTopic(const std::string &topic_var,
 }
 
 /*********************************************************************//**
+ * Check if a topic is enabled
+ *
+ * \param [in]  topic_var       MSGBUS_TOPIC_VAR_<name>
+ *
+ * \return bool true if the topic is enabled, false otherwise
+***********************************************************************/
+bool KafkaTopicSelector::topicEnabled(const std::string &topic_var) {
+    return this->cfg->topic_names_map[topic_var].length() > 0;
+}
+
+/*********************************************************************//**
  * Lookup peer group
  *
  * \param [in]  hostname        hostname/fqdn of the peer

@@ -81,6 +81,15 @@ public:
                               uint32_t peer_asn);
 
     /*********************************************************************//**
+     * Check if a topic is enabled
+     *
+     * \param [in]  topic_var       MSGBUS_TOPIC_VAR_<name>
+     *
+     * \return bool true if the topic is enabled, false otherwise
+     ***********************************************************************/
+    bool topicEnabled(const std::string &topic_var);
+
+    /*********************************************************************//**
      * Lookup router group
      *
      * \param [in]  hostname          hostname/fqdn of the router
