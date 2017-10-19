@@ -232,8 +232,6 @@ void BMPListener::accept_connection(ClientInfo &c, bool isIPv4) {
     sockaddr_in *v4_addr = (sockaddr_in *) &c.c_addr;
     sockaddr_in6 *v6_addr = (sockaddr_in6 *) &c.c_addr;
 
-    uint8_t addr_fam = isIPv4 ? PF_INET : PF_INET6;
-
     bzero(c.c_ip, sizeof(c.s_ip));
     bzero(c.c_ip, sizeof(c.c_ip));
 

@@ -1165,9 +1165,9 @@ void msgBus_kafka::update_LsNode(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 
             if ((uint32_t) *(node.igp_router_id+4) != 0) {
                 inet_ntop(PF_INET, node.igp_router_id+4, dr, sizeof(dr));
-                strncat(igp_router_id, "[", 1);
-                strncat(igp_router_id, dr, sizeof(dr));
-                strncat(igp_router_id, "]", 1);
+                strncat(igp_router_id, "[", sizeof(igp_router_id) - strlen(igp_router_id) - 1);
+                strncat(igp_router_id, dr, sizeof(igp_router_id) - strlen(igp_router_id) - 1);
+                strncat(igp_router_id, "]", sizeof(igp_router_id) - strlen(igp_router_id) - 1);
                 LOG_INFO("igp router id includes DR: %s %s", igp_router_id, dr);
             }
 
@@ -1301,9 +1301,9 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
 
             if ((uint32_t) *(link.igp_router_id+4) != 0) {
                 inet_ntop(PF_INET, link.igp_router_id+4, dr, sizeof(dr));
-                strncat(igp_router_id, "[", 1);
-                strncat(igp_router_id, dr, sizeof(dr));
-                strncat(igp_router_id, "]", 1);
+                strncat(igp_router_id, "[", sizeof(igp_router_id) - strlen(igp_router_id) - 1);
+                strncat(igp_router_id, dr, sizeof(igp_router_id) - strlen(igp_router_id) - 1);
+                strncat(igp_router_id, "]", sizeof(igp_router_id) - strlen(igp_router_id) - 1);
             }
 
             inet_ntop(PF_INET, link.remote_igp_router_id, remote_igp_router_id, sizeof(remote_igp_router_id));
@@ -1311,9 +1311,9 @@ void msgBus_kafka::update_LsLink(obj_bgp_peer &peer, obj_path_attr &attr, std::l
             if ((uint32_t) *(link.remote_igp_router_id+4) != 0) {
                 bzero(dr, sizeof(dr));
                 inet_ntop(PF_INET, link.remote_igp_router_id+4, dr, sizeof(dr));
-                strncat(remote_igp_router_id, "[", 1);
-                strncat(remote_igp_router_id, dr, sizeof(dr));
-                strncat(remote_igp_router_id, "]", 1);
+                strncat(remote_igp_router_id, "[", sizeof(remote_igp_router_id) - strlen(remote_igp_router_id) - 1);
+                strncat(remote_igp_router_id, dr, sizeof(remote_igp_router_id) - strlen(remote_igp_router_id) - 1);
+                strncat(remote_igp_router_id, "]", sizeof(remote_igp_router_id) - strlen(remote_igp_router_id) - 1);
             }
 
             inet_ntop(PF_INET, link.ospf_area_Id, ospf_area_id, sizeof(ospf_area_id));
@@ -1473,9 +1473,9 @@ void msgBus_kafka::update_LsPrefix(obj_bgp_peer &peer, obj_path_attr &attr, std:
 
             if ((uint32_t) *(prefix.igp_router_id+4) != 0) {
                 inet_ntop(PF_INET, prefix.igp_router_id+4, dr, sizeof(dr));
-                strncat(igp_router_id, "[", 1);
-                strncat(igp_router_id, dr, sizeof(dr));
-                strncat(igp_router_id, "]", 1);
+                strncat(igp_router_id, "[", sizeof(igp_router_id) - strlen(igp_router_id) - 1);
+                strncat(igp_router_id, dr, sizeof(igp_router_id) - strlen(igp_router_id) - 1);
+                strncat(igp_router_id, "]", sizeof(igp_router_id) - strlen(igp_router_id) - 1);
             }
 
 

@@ -27,7 +27,7 @@ namespace bgp_msg {
  * \param [in]     enable_debug             Debug true to enable, false to disable
  */
 MPUnReachAttr::MPUnReachAttr(Logger *logPtr, std::string peerAddr, BMPReader::peer_info *peer_info, bool enable_debug)
-        : logger{logPtr}, debug{enable_debug}{
+        : debug{enable_debug}, logger{logPtr} {
     this->peer_addr = peerAddr;
     this->peer_info = peer_info;
 }

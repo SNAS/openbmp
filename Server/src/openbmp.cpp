@@ -418,7 +418,6 @@ void runServer(Config &cfg) {
         // allocate and start a new bmp server
         BMPListener *bmp_svr = new BMPListener(logger, &cfg);
 
-        BMPListener::ClientInfo client;
         collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_STARTED);
         last_heartbeat_time = time(NULL);
 
@@ -524,7 +523,6 @@ void runServer(Config &cfg) {
 
                         // Send heartbeat if needed
                         if ( (time(NULL) - last_heartbeat_time) >= cfg.heartbeat_interval) {
-                            BMPListener::ClientInfo client;
                             collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_HEARTBEAT);
                             last_heartbeat_time = time(NULL);
                         }
@@ -570,7 +568,7 @@ int main(int argc, char **argv) {
     // Make sure we have the required ARGS
     if (strlen(cfg.admin_id) <= 0) {
         cout << "ERROR: Missing required 'admin ID', use -c <config> or -a <string> to set the collector admin ID" << endl;
-        return true;
+        return 2;
     }
 
     try {
