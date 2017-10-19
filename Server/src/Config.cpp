@@ -592,9 +592,13 @@ void Config::parseTopics(const YAML::Node &node) {
         for (YAML::const_iterator it = node["names"].begin(); it != node["names"].end(); ++it) {
             try {
                 // Only add topic names that are initialized, otherwise ignore them
-                if (topic_names_map.find(it->first.as<std::string>()) != topic_names_map.end())
-                    topic_names_map[it->first.as<std::string>()] = it->second.as<std::string>();
-                else if (debug_general)
+                if (topic_names_map.find(it->first.as<std::string>()) != topic_names_map.end()) {
+                    if (it->second.Type() == YAML::NodeType::Null) {
+                        topic_names_map[it->first.as<std::string>()] = "";
+                    } else {
+                        topic_names_map[it->first.as<std::string>()] = it->second.as<std::string>();
+                    }
+                } else if (debug_general)
                     std::cout << "   Ignore: '" << it->first.as<std::string>()
                               << "' is not a valid topic name entry" << std::endl;
 

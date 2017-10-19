@@ -373,6 +373,11 @@ void msgBus_kafka::produce(const char *topic_var, char *msg, size_t msg_size, in
         sleep(1);
     }
 
+    // if topic is disabled, don't bother producing the message
+    // TODO: it would be more efficient to move this check to the top of the various update_* methods, but I'm not sure which parts of these methods have side-effects that need to be preserved.
+    if (!topicSel->topicEnabled(topic_var))
+        return;
+
     char headers[256];
     len = snprintf(headers, sizeof(headers), "V: %s\nC_HASH_ID: %s\nT: %s\nL: %lu\nR: %d\n\n",
             MSGBUS_API_VERSION, collector_hash.c_str(), topic_var, msg_size, rows);
@@ -1544,6 +1549,10 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data
 
         sleep(2);
     }
+
+    // if topic is disabled, don't bother producing the message
+    if (!topicSel->topicEnabled(MSGBUS_TOPIC_VAR_BMP_RAW))
+        return;
 
     char headers[256];
     size_t hdr_len = snprintf(headers, sizeof(headers), "V: %s\nC_HASH_ID: %s\nR_HASH: %s\nR_IP: %s\nL: %lu\n\n",
