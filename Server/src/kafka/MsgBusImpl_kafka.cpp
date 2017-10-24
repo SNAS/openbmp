@@ -221,6 +221,30 @@ void msgBus_kafka::connect() {
         throw "ERROR: Failed to configure kafka broker list";
     }
 
+    // security protocol
+    if (conf->set("security.protocol", cfg->kafka_sec_prot, errstr) != RdKafka::Conf::CONF_OK) {
+        LOG_ERR("Failed to configure security protocol for kafka: %s", errstr.c_str());
+        throw "ERROR: Failed to configure kafka security protocol";
+    }
+
+    // ssl certificate location
+    if (conf->set("ssl.certificate.location", cfg->kafka_ssl_cert_loc, errstr) != RdKafka::Conf::CONF_OK) {
+        LOG_ERR("Failed to configure ssl certificate location for kafka: %s", errstr.c_str());
+        throw "ERROR: Failed to configure kafka ssl certificate location";
+    }
+
+    // ssl key location
+    if (conf->set("ssl.key.location", cfg->kafka_ssl_key_loc, errstr) != RdKafka::Conf::CONF_OK) {
+        LOG_ERR("Failed to configure ssl key location for kafka: %s", errstr.c_str());
+        throw "ERROR: Failed to configure kafka ssl key location";
+    }
+
+    // ssl ca location
+    if (conf->set("ssl.ca.location", cfg->kafka_ssl_ca_loc, errstr) != RdKafka::Conf::CONF_OK) {
+        LOG_ERR("Failed to configure ssl ca location for kafka: %s", errstr.c_str());
+        throw "ERROR: Failed to configure kafka ssl ca location";
+    }
+
     // Maximum transmit byte size
     tx_bytes << cfg->tx_max_bytes;
     if (conf->set("message.max.bytes", tx_bytes.str(), 
