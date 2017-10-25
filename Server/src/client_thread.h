@@ -35,6 +35,8 @@ struct ClientThreadInfo {
     std::thread *bmp_reader_thread;
     int bmp_write_end_sock;
 
+    bool closing;                      // Indicates if client is closing normally (set when socket is disconnected)
+
 };
 
 /**

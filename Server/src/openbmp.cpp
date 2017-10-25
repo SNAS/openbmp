@@ -155,14 +155,19 @@ void signal_handler(int signum)
         case SIGCHLD : // Handle the child cleanup
 
             for (size_t i=0; i < thr_list.size(); i++) {
-                pthread_cancel(thr_list.at(i)->thr);
-                thr_list.at(i)->running = false;
-                pthread_join(thr_list.at(i)->thr, NULL);
+                if (thr_list.at(i)->running) {
+                    pthread_cancel(thr_list.at(i)->thr);
+                    thr_list.at(i)->running = false;
+                    pthread_join(thr_list.at(i)->thr, NULL);
+                }
             }
 
             thr_list.clear();
 
+            LOG_INFO("Done closing all active BMP connections");
+
             run = false;
+            exit(0);
             break;
 
         default:
@@ -474,8 +479,8 @@ void runServer(Config &cfg) {
             /*
              * Create a new client thread if we aren't at the max number of active sessions
              */
-	    if(concurrent_routers < cfg.max_concurrent_routers)
-	    {
+            if(concurrent_routers < cfg.max_concurrent_routers)
+            {
                 if (active_connections <= MAX_THREADS) {
                     ThreadMgmt *thr = new ThreadMgmt;
                     thr->cfg = &cfg;
@@ -517,8 +522,8 @@ void runServer(Config &cfg) {
                                              MsgBusInterface::COLLECTOR_ACTION_CHANGE);
 
                         last_heartbeat_time = time(NULL);
-                    }
-                    else {
+
+                    } else {
                         delete thr;
 
                         // Send heartbeat if needed
@@ -531,11 +536,12 @@ void runServer(Config &cfg) {
                     }
 
                 } else {
-	    	    LOG_WARN("Reached max number of threads, cannot accept new BMP connections at this time. ");
-		    sleep (1);
+                    LOG_WARN("Reached max number of threads, cannot accept new BMP connections at this time. ");
+                    sleep (1);
+                }
 	        }
 	    }
-	}
+
         collector_update_msg(kafka, cfg, MsgBusInterface::COLLECTOR_ACTION_STOPPED);
         delete kafka;
 

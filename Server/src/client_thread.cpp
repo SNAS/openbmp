@@ -31,21 +31,36 @@ void ClientThread_cancel(void *arg) {
     ClientThreadInfo *cInfo = static_cast<ClientThreadInfo *>(arg);
     Logger *logger = cInfo->log;
 
-    LOG_INFO("Thread terminating due to cancel request.");
+    if (not cInfo->closing) {
+        cInfo->closing = true;
 
-    LOG_INFO("Closing client connection to %s:%s", cInfo->client->c_ip, cInfo->client->c_port);
-    shutdown(cInfo->client->c_sock, SHUT_RDWR);
-    close (cInfo->client->c_sock);
+        LOG_INFO("Thread terminating due to cancel request.");
 
-    close (cInfo->client->pipe_sock);
-    close (cInfo->bmp_write_end_sock);
-    cInfo->bmp_reader_thread->join();
+        LOG_INFO("Closing client connection to %s:%s", cInfo->client->c_ip, cInfo->client->c_port);
 
-    delete cInfo->bmp_reader_thread;
-    cInfo->bmp_reader_thread = NULL;
+        if (cInfo->client->c_sock) {
+            shutdown(cInfo->client->c_sock, SHUT_RDWR);
+            close(cInfo->client->c_sock);
+        }
 
-    delete cInfo->mbus;
-    cInfo->mbus = NULL;
+        usleep(50000);
+
+        close(cInfo->client->pipe_sock);
+        close(cInfo->bmp_write_end_sock);
+
+        if (cInfo->bmp_reader_thread->joinable())
+            cInfo->bmp_reader_thread->join();
+
+        if (cInfo->bmp_reader_thread != NULL) {
+            delete cInfo->bmp_reader_thread;
+            cInfo->bmp_reader_thread = NULL;
+        }
+
+        if (cInfo->mbus != NULL) {
+            delete cInfo->mbus;
+            cInfo->mbus = NULL;
+        }
+    }
 }
 
 /**
@@ -66,6 +81,7 @@ void *ClientThread(void *arg) {
     cInfo.mbus = NULL;
     cInfo.client = &thr->client;
     cInfo.log = thr->log;
+    cInfo.closing = false;
 
     int sock_fds[2];
     pollfd pfd;
@@ -226,7 +242,6 @@ void *ClientThread(void *arg) {
         LOG_INFO("%s: %s - Thread for sock [%d] ended", cInfo.client->c_ip, str, cInfo.client->c_sock);
         close(sock_fds[0]);
         close(sock_fds[1]);
-
 #ifndef __APPLE__
     } catch (abi::__forced_unwind&) {
         close(sock_fds[0]);
@@ -241,22 +256,31 @@ void *ClientThread(void *arg) {
     }
 
     if (sock_buf != NULL)
-        delete [] sock_buf;
+        delete[] sock_buf;
 
     pthread_cleanup_pop(0);
 
-    // Close/shutdown message bus so that it sends a term message
-    if (cInfo.bmp_reader_thread != NULL and cInfo.bmp_reader_thread->joinable())
-        cInfo.bmp_reader_thread->join();
-
-    if (cInfo.bmp_reader_thread != NULL)
-        delete cInfo.bmp_reader_thread;
-
-    if (cInfo.mbus != NULL)
-        delete cInfo.mbus;
-
     // Indicate that we are no longer running
     thr->running = false;
+
+    if (not cInfo.closing) {
+        cInfo.closing = true;
+
+        // Close/shutdown message bus so that it sends a term message
+        if (cInfo.bmp_reader_thread != NULL and cInfo.bmp_reader_thread->joinable())
+            cInfo.bmp_reader_thread->join();
+
+        if (cInfo.bmp_reader_thread != NULL) {
+            delete cInfo.bmp_reader_thread;
+            cInfo.bmp_reader_thread = NULL;
+        }
+
+
+        if (cInfo.mbus != NULL) {
+            delete cInfo.mbus;
+            cInfo.mbus = NULL;
+        }
+    }
 
     // Exit the thread
     pthread_exit(NULL);

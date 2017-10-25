@@ -395,6 +395,7 @@ void BMPReader::disconnect(BMPListener::ClientInfo *client, MsgBusInterface *mbu
     mbus_ptr->update_Router(r_object, mbus_ptr->ROUTER_ACTION_TERM);
 
     close(client->c_sock);
+    client->c_sock = 0;
 }
 
 
