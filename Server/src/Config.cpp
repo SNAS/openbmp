@@ -41,6 +41,10 @@ Config::Config() {
     bind_ipv6           = "";
     heartbeat_interval  = 60 * 5;        // Default is 5 minutes
     kafka_brokers       = "localhost:9092";
+    kafka_sec_prot      = "ssl";
+    kafka_ssl_cert_loc  = "/etc/ssl/certs/kafka_client.pem";
+    kafka_ssl_key_loc   = "/etc/ssl/certs/kafka_client.key";
+    kafka_ssl_ca_loc    = "/etc/ssl/certs/kafka_firehose_ca.pem";
     tx_max_bytes        = 1000000;
     rx_max_bytes        = 100000000;
     session_timeout     = 30000;	// Default is 30 seconds
@@ -388,6 +392,53 @@ void Config::parseKafka(const YAML::Node &node) {
         }
     }
 
+    if (node["security.protocol"]  &&
+        node["security.protocol"].Type() == YAML::NodeType::Scalar) {
+        try {
+            kafka_sec_prot = node["security.protocol"].as<std::string>();
+            if (kafka_sec_prot != "plaintext" && kafka_sec_prot != "ssl" &&
+                kafka_sec_prot != "sasl_plaintext" && kafka_sec_prot != "sasl_ssl" && kafka_sec_prot != "none")
+               throw "invalid value for kafka tls security.protocol, should be one of none,"
+                        " plaintext, ssl, sasl_plaintext or sasl_ssl";
+            if (debug_general)
+                   std::cout << "   Config: Security Protocol : " <<
+                                kafka_sec_prot << std::endl;
+        } catch (YAML::TypedBadConversion<std::string> err) {
+                printWarning("security protocol is not of type string",
+                                node["security.protocol"]);
+        }
+    }
+
+    if (node["ssl.certificate.location"]  &&
+        node["ssl.certificate.location"].Type() == YAML::NodeType::Scalar) {
+        try {
+            kafka_ssl_cert_loc = node["ssl.certificate.location"].as<std::string>();
+        } catch (YAML::TypedBadConversion<std::string> err) {
+                printWarning("SSL certification location is not of type string",
+                                node["ssl.certificate.location"]);
+        }
+    }
+
+    if (node["ssl.key.location"]  &&
+        node["ssl.key.location"].Type() == YAML::NodeType::Scalar) {
+        try {
+            kafka_ssl_key_loc = node["ssl.key.location"].as<std::string>();
+        } catch (YAML::TypedBadConversion<std::string> err) {
+                printWarning("SSL key location is not of type string",
+                                node["ssl.key.location"]);
+        }
+    }
+
+    if (node["ssl.ca.location"]  &&
+        node["ssl.ca.location"].Type() == YAML::NodeType::Scalar) {
+        try {
+            kafka_ssl_ca_loc = node["ssl.ca.location"].as<std::string>();
+        } catch (YAML::TypedBadConversion<std::string> err) {
+                printWarning("SSL ca location is not of type string",
+                                node["ssl.ca.location"]);
+        }
+    }
+
     if (node["message.max.bytes"] && node["message.max.bytes"].Type() == YAML::NodeType::Scalar) {
        try {
             tx_max_bytes = node["message.max.bytes"].as<int>();
@@ -612,16 +663,11 @@ void Config::parseTopics(const YAML::Node &node) {
         for (YAML::const_iterator it = node["names"].begin(); it != node["names"].end(); ++it) {
             try {
                 // Only add topic names that are initialized, otherwise ignore them
-                if (topic_names_map.find(it->first.as<std::string>()) != topic_names_map.end()) {
-                    if (it->second.Type() == YAML::NodeType::Null) {
-                        topic_names_map[it->first.as<std::string>()] = "";
-                    } else {
-                        topic_names_map[it->first.as<std::string>()] = it->second.as<std::string>();
-                    }
-                } else if (debug_general)
+                if (topic_names_map.find(it->first.as<std::string>()) != topic_names_map.end())
+                    topic_names_map[it->first.as<std::string>()] = it->second.as<std::string>();
+                else if (debug_general)
                     std::cout << "   Ignore: '" << it->first.as<std::string>()
                               << "' is not a valid topic name entry" << std::endl;
-
 
             } catch (YAML::TypedBadConversion<std::string> err) {
                 printWarning("kafka.topics.names error in map.  Make sure to define var: <string value>", it->second);

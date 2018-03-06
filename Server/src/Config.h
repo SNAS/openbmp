@@ -34,6 +34,11 @@ public:
     char        admin_id[64];             ///< Admin ID
 
     std::string kafka_brokers;            ///< metadata.broker.list
+    std::string kafka_sec_prot;           ///< Kafka Secure Protocol to use: plaintext, ssl, sasl_plaintext, sasl_ssl
+    std::string kafka_ssl_cert_loc;       ///< Kafka SSL Cert Location to use: filepath
+    std::string kafka_ssl_key_loc;        ///< Kafka SSL Key Location to use: filepath
+    std::string kafka_ssl_ca_loc;         ///< Kafka SSL CA Location to use: filepath
+
     uint16_t    bmp_port;                 ///< BMP listening port
     std::string bind_ipv4;                ///< IP to listen on for IPv4
     std::string bind_ipv6;                ///< IP to listen on for IPv6
