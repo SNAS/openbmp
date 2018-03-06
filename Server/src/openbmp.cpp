@@ -122,7 +122,7 @@ void daemonize() {
 
     // Write PID to PID file if requested
     if (pid_filename != NULL) {
-        //pid_t pid = getpid();
+        pid_t pid = getpid();
         ofstream pfile(pid_filename);
 
         if (pfile.is_open()) {
