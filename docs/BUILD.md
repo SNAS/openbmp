@@ -30,8 +30,11 @@ See [yaml-cpp](https://github.com/jbeder/yaml-cpp) for detailed instructions on 
 git clone https://github.com/jbeder/yaml-cpp.git
 cd yaml-cpp
 
-# IF on CentOS6/RHEL6, use the following command to checkout release 0.5.3
-#git checkout release-0.5.3
+
+# git checkout yaml-cpp-0.6.2
+
+# If on Centos6 
+# git checkout yaml-cpp-0.5.3
 
 # IF on CentOS6/RHEL6 - you might run into an issue about date_time boost lib. This issue
 #    is specific to cmake on centos6/rhel6.   If you run into this issue, you can
