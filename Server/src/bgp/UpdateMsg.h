@@ -54,6 +54,8 @@ enum UPDATE_ATTR_TYPES {
 
             ATTR_TYPE_BGP_LS=29,                    // BGP LS attribute draft-ietf-idr-ls-distribution
 
+            ATTR_TYPE_LARGE_COMMUNITY=32,
+
             ATTR_TYPE_BGP_LINK_STATE_OLD=99,        // BGP link state Older
             ATTR_TYPE_BGP_ATTRIBUTE_SET=128,
 

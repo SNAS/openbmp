@@ -163,7 +163,7 @@ void msgBus_kafka::connect() {
     string errstr;
     string value;
     std::ostringstream rx_bytes, tx_bytes, sess_timeout, socket_timeout;
-    std::ostringstream q_buf_max_msgs, q_buf_max_ms, 
+    std::ostringstream q_buf_max_msgs, q_buf_max_kbytes, q_buf_max_ms,
 		msg_send_max_retry, retry_backoff_ms;
 
     disconnect();
@@ -269,7 +269,18 @@ void msgBus_kafka::connect() {
        LOG_ERR("Failed to configure max messages in buffer for kafka: %s",
                                errstr.c_str());
        throw "ERROR: Failed to configure max messages in buffer ";
-    } 
+    }
+
+    // Maximum number of messages allowed on the producer queue
+    q_buf_max_kbytes << cfg->q_buf_max_kbytes;
+    if (conf->set("queue.buffering.max.kbytes", q_buf_max_kbytes.str(),
+                  errstr) != RdKafka::Conf::CONF_OK)
+    {
+        LOG_ERR("Failed to configure max kbytes in buffer for kafka: %s",
+                errstr.c_str());
+        throw "ERROR: Failed to configure max kbytes in buffer ";
+    }
+
 
     // How many times to retry sending a failing MessageSet
     msg_send_max_retry << cfg->msg_send_max_retry;
@@ -302,13 +313,14 @@ void msgBus_kafka::connect() {
     }
 
     // Register delivery report callback
+    /*
     delivery_callback = new KafkaDeliveryReportCallback();
 
     if (conf->set("dr_cb", delivery_callback, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure kafka delivery report callback: %s", errstr.c_str());
         throw "ERROR: Failed to configure kafka delivery report callback";
     }
-
+    */
 
 
     // Create producer and connect
@@ -395,8 +407,10 @@ void msgBus_kafka::produce(const char *topic_var, char *msg, size_t msg_size, in
                                                     RdKafka::Producer::RK_MSG_COPY,
                                                     producer_buf, msg_size + len,
                                                     (const std::string *) &key, NULL);
-        if (resp != RdKafka::ERR_NO_ERROR)
+        if (resp != RdKafka::ERR_NO_ERROR) {
             LOG_ERR("rtr=%s: Failed to produce message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
+            producer->poll(100);
+        }
     } else {
         LOG_NOTICE("rtr=%s: failed to produce message because topic couldn't be found: topic=%s key=%s, msg size = %lu", router_ip.c_str(),
                    topic_var, key.c_str(), msg_size);
@@ -718,12 +732,12 @@ void msgBus_kafka::update_baseAttribute(obj_bgp_peer &peer, obj_path_attr &attr,
     buf_len =
             snprintf(prep_buf, MSGBUS_WORKING_BUF_SIZE,
                      "add\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%s\t%" PRIu16 "\t%" PRIu32
-                             "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\n",
+                             "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\n",
                      base_attr_seq, path_hash_str.c_str(), r_hash_str.c_str(), router_ip.c_str(), p_hash_str.c_str(),
                      peer.peer_addr,peer.peer_as, ts.c_str(),
                      attr.origin, attr.as_path.c_str(), attr.as_path_count, attr.origin_as, attr.next_hop, attr.med,
                      attr.local_pref, attr.aggregator, attr.community_list.c_str(), attr.ext_community_list.c_str(), attr.cluster_list.c_str(),
-                     attr.atomic_agg, attr.nexthop_isIPv4, attr.originator_id);
+                     attr.atomic_agg, attr.nexthop_isIPv4, attr.originator_id,attr.large_community_list.c_str());
 
     produce(MSGBUS_TOPIC_VAR_BASE_ATTRIBUTE, prep_buf, buf_len, 1, p_hash_str, &peer_list[p_hash_str], peer.peer_as);
 
@@ -805,7 +819,7 @@ void msgBus_kafka::update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "add\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
                                             "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
-                                            "\t%s\t%d\t%d\t%s:%s\t%d\n",
+                                            "\t%s\t%d\t%d\t%s:%s\t%d\t%s\n",
                                     l3vpn_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), vpn[i].prefix, vpn[i].prefix_len,
@@ -815,7 +829,8 @@ void msgBus_kafka::update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
                                     attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
                                     attr->atomic_agg, attr->nexthop_isIPv4,
                                     attr->originator_id, vpn[i].path_id, vpn[i].labels, peer.isPrePolicy, peer.isAdjIn,
-                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type);
+                                    vpn[i].rd_administrator_subfield.c_str(), vpn[i].rd_assigned_number.c_str(), vpn[i].rd_type,
+                                    attr->large_community_list.c_str());
 
                 break;
 
@@ -823,7 +838,7 @@ void msgBus_kafka::update_L3Vpn(obj_bgp_peer &peer, std::vector<obj_vpn> &vpn,
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "del\t%" PRIu64 "\t%s\t%s\t%s\t\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t\t\t"
                                             "\t\t\t\t\t\t\t\t\t\t\t\t%" PRIu32
-                                            "\t%s\t%d\t%d\t%s:%s\t%d\n",
+                                            "\t%s\t%d\t%d\t%s:%s\t%d\t\n",
                                     l3vpn_seq, vpn_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), vpn[i].prefix, vpn[i].prefix_len,
@@ -1039,7 +1054,7 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t%s\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t%s\t%s\t%" PRIu16
                                             "\t%" PRIu32 "\t%s\t%" PRIu32 "\t%" PRIu32 "\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%" PRIu32
-                                            "\t%s\t%d\t%d\n",
+                                            "\t%s\t%d\t%d\t%s\n",
                                     action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(),path_hash_str.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
@@ -1048,13 +1063,14 @@ void msgBus_kafka::update_unicastPrefix(obj_bgp_peer &peer, std::vector<obj_rib>
                                     attr->aggregator,
                                     attr->community_list.c_str(), attr->ext_community_list.c_str(), attr->cluster_list.c_str(),
                                     attr->atomic_agg, attr->nexthop_isIPv4,
-                                    attr->originator_id, rib[i].path_id, rib[i].labels, peer.isPrePolicy, peer.isAdjIn);
+                                    attr->originator_id, rib[i].path_id, rib[i].labels, peer.isPrePolicy, peer.isAdjIn,
+                                    attr->large_community_list.c_str());
                 break;
 
             case UNICAST_PREFIX_ACTION_DEL:
                 buf_len += snprintf(buf2, sizeof(buf2),
                                     "%s\t%" PRIu64 "\t%s\t%s\t%s\t\t%s\t%s\t%" PRIu32 "\t%s\t%s\t%d\t%d\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t%" PRIu32
-                                            "\t%s\t%d\t%d\n",
+                                            "\t%s\t%d\t%d\t\n",
                                     action.c_str(), unicast_prefix_seq, rib_hash_str.c_str(), r_hash_str.c_str(),
                                     router_ip.c_str(), p_hash_str.c_str(),
                                     peer.peer_addr, peer.peer_as, ts.c_str(), rib[i].prefix, rib[i].prefix_len,
@@ -1571,8 +1587,10 @@ void msgBus_kafka::send_bmp_raw(u_char *r_hash, obj_bgp_peer &peer, u_char *data
                                                     producer_buf, data_len + hdr_len,
                                                     (const std::string *)&r_hash_str, NULL);
 
-        if (resp != RdKafka::ERR_NO_ERROR)
+        if (resp != RdKafka::ERR_NO_ERROR) {
             LOG_ERR("rtr=%s: Failed to produce bmp raw message: %s", router_ip.c_str(), RdKafka::err2str(resp).c_str());
+            producer->poll(100);
+        }
     }
     else {
         SELF_DEBUG("rtr=%s: failed to produce bmp raw message because topic couldn't be found: topic=%s key=%s, msg size = %lu",

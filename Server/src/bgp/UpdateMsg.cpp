@@ -477,6 +477,45 @@ void UpdateMsg::parseAttrData(u_char attr_type, uint16_t attr_len, u_char *data,
             break;
         }
 
+        case ATTR_TYPE_LARGE_COMMUNITY: {
+            // RFC8092
+            if (attr_len >= 12) {
+                for (int i = 0; i < attr_len; i += 12) {
+                    std::ostringstream numString;
+
+                    // Add space between entries
+                    if (i)
+                        decodeStr.append(" ");
+
+                    // Global Administrator
+                    memcpy(&value32bit, data, 4);
+                    data += 4;
+                    bgp::SWAP_BYTES(&value32bit);
+                    numString << value32bit;
+                    numString << ":";
+
+                    // Local Data Part 1
+                    memcpy(&value32bit, data, 4);
+                    data += 4;
+                    bgp::SWAP_BYTES(&value32bit);
+                    numString << value32bit;
+                    numString << ":";
+
+                    // Local Data Part 2
+                    memcpy(&value32bit, data, 4);
+                    data += 4;
+                    bgp::SWAP_BYTES(&value32bit);
+                    numString << value32bit;
+
+                    decodeStr.append(numString.str());
+                }
+
+                parsed_data.attrs[ATTR_TYPE_LARGE_COMMUNITY] = decodeStr;
+            }
+
+            break;
+        }
+
         default:
             LOG_INFO("%s: rtr=%s: attribute type %d is not yet implemented or intentionally ignored, skipping for now.",
                     peer_addr.c_str(), router_addr.c_str(), attr_type);
@@ -574,8 +613,8 @@ void UpdateMsg::parseAttr_AsPath(uint16_t attr_len, u_char *data, parsed_attrs_m
 
         if ((seg_len * asn_octet_size) > path_len){
 
-            LOG_NOTICE("%s: rtr=%s: Could not parse the AS PATH due to update message buffer being too short when using ASN octet size %d",
-                       peer_addr.c_str(), router_addr.c_str(), asn_octet_size);
+            LOG_NOTICE("%s: rtr=%s: Could not parse the AS PATH due to update message buffer being too short when using ASN octet size %d (%d > %d)",
+                       peer_addr.c_str(), router_addr.c_str(), asn_octet_size, (seg_len * asn_octet_size), path_len);
 
             if (not peer_info->using_2_octet_asn) {
                 LOG_NOTICE("%s: rtr=%s: switching encoding size to 2-octet",

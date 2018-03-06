@@ -1,9 +1,16 @@
 # Message Bus API Specification
 
-> #### Current Version 1.6
+> #### Current Version 1.7
 
 
 ## Version Changes
+
+### Changes in 1.7
+    * Added BGP Large Communities support (RFC8092)
+        * **base_attribute** field 24 added
+        * **unicast_prefixes** field 32 added
+        * **l3vpn** field 34 added
+        * **evpn** field 40 added
 
 ### Changes in 1.6
 * **peer**
@@ -271,6 +278,7 @@ One or more attribute sets (does not include the NLRI's)
 21 | isAtomicAgg | Bool | 1 | Indicates if the aggregate is atomic
 22 | isNextHopIPv4 | Bool | 1 | Indicates if the next hop address is IPv4 or not
 23 | Originator Id | String | 46 | Originator ID in printed form (IP)
+24 | Large Community List | String | 8K | String from of large communities
 
 ### Object: <font color="blue">unicast\_prefix</font> (openbmp.parsed.unicast\_prefix)
 One or more IPv4/IPv6 unicast prefixes.
@@ -308,6 +316,7 @@ One or more IPv4/IPv6 unicast prefixes.
 29 | Labels | String | 255 | Comma delimited list of 32bit unsigned values that represent the received labels.
 30 | isPrePolicy | Bool | 1 | Indicates if unicast BGP prefix is Pre-Policy Adj-RIB-In or Post-Policy Adj-RIB-In
 31 | isAdjIn | Bool | 1 | Indicates if unicast BGP prefix is Adj-RIB-In or Adj-RIB-Out
+32 | Large Community List | String | 8K | String from of large communities
 
 
 
@@ -475,6 +484,8 @@ One or more link-state prefixes.
 31 | isAdjIn | Bool | 1 | Indicates if unicast BGP prefix is Adj-RIB-In or Adj-RIB-Out
 32 | Route Distinguisher | String | 255 | VPN Route Distinguisher following https://tools.ietf.org/html/rfc4364#section-4.2
 33 | RD Type | Int | 1 | Indicates type of Route Distinguisher per https://tools.ietf.org/html/rfc4364#section-4.2
+34 | Large Community List | String | 8K | String from of large communities
+
 
 ### Object: <font color="blue">evpn</font> (openbmp.parsed.evpn)
 
@@ -519,6 +530,8 @@ One or more link-state prefixes.
 37 | Ip | String | 46 | IP Address: https://tools.ietf.org/html/rfc7432#section-7.2
 38 | MPLS Label 1 | Int | 1 | MPLS Label 1: https://tools.ietf.org/html/rfc7432#section-7.2
 39 | MPLS Label 2 | Int | 1 | MPLS Label 2: https://tools.ietf.org/html/rfc7432#section-7.2
+40 | Large Community List | String | 8K | String from of large communities
+
 
 Message API: BMP RAW Data
 ------------------------------------

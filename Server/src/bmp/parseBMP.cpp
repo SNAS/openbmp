@@ -494,7 +494,11 @@ void parseBMP::parsePeerHdr(int sock) {
 
     if (p_hdr.ts_secs != 0) {
         p_entry->timestamp_secs = p_hdr.ts_secs;
-        p_entry->timestamp_us = p_hdr.ts_usecs;
+
+        if (p_hdr.ts_usecs < 1000000)
+            p_entry->timestamp_us = p_hdr.ts_usecs;
+        else
+            p_entry->timestamp_us = p_hdr.ts_usecs % 1000000;
 
     } else {
         timeval tv;
@@ -866,6 +870,10 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
             info.info = infoBuf;
 
         }
+        else {
+            // ignore info lengths of zero
+            continue;
+        }
 
         /*
          * Save the data based on info type
@@ -882,9 +890,11 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
                 infoLen = sizeof(r_entry.name) < (info.len - 1) ? (sizeof(r_entry.name) - 1) : info.len;
                 strncpy((char *)r_entry.name, info.info, infoLen);
                 LOG_INFO("Init message type %hu = %s", info.type, r_entry.name);
-		if(r_entry.hash_type<2)	//Here we will check if bgp_id is not received, then we will update the hash_type
-			r_entry.hash_type=1;
-	           break;
+
+                if(r_entry.hash_type<2)	//Here we will check if bgp_id is not received, then we will update the hash_type
+                    r_entry.hash_type=1;
+
+                break;
 
             case INIT_TYPE_SYSDESCR :
                 infoLen = sizeof(r_entry.descr) < (info.len - 1) ? (sizeof(r_entry.descr) - 1) : info.len;
@@ -899,8 +909,9 @@ void parseBMP::handleInitMsg(int sock, MsgBusInterface::obj_router &r_entry) {
                 }
                 inet_ntop(AF_INET, info.info, r_entry.bgp_id, sizeof(r_entry.bgp_id));
                 LOG_INFO("Init message type %hu = %s", info.type, r_entry.bgp_id);
-                r_entry.hash_type=2;  //This value stores the hash_type if BGPid is present 
-		break;
+                r_entry.hash_type=2;  //This value stores the hash_type if BGPid is present
+
+                break;
 
             default:
                 LOG_NOTICE("Init message type %hu is unexpected per rfc7854", info.type);

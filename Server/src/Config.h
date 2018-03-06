@@ -52,7 +52,8 @@ public:
     int 	rx_max_bytes;            ///< Maximum receive  message size
     int 	session_timeout;         ///< Client session timeout
     int 	socket_timeout;          ///< Network requests timeout
-    int         q_buf_max_msgs;          ///< Max msgs allowed in producer queue
+    int         q_buf_max_msgs;      ///< Max msgs allowed in producer queue
+    int         q_buf_max_kbytes;    ///< Max kbytes allowed in producer queue
     int         q_buf_max_ms;		 ///< Max time for buffering msgs in queue
     int         msg_send_max_retry;      ///< No. of times to resend failed msgs
     int         retry_backoff_ms;        ///< Backoff time before resending msgs  

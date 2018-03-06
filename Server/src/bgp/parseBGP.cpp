@@ -332,7 +332,7 @@ u_char parseBGP::parseBgpHeader(u_char *data, size_t size) {
             break;
 
         default :
-            LOG_WARN("%s: rtr=%s: Unsupported BGP message type = %d", p_entry->peer_addr, router_addr.c_str(), common_hdr.type);
+            SELF_DEBUG("%s: rtr=%s: Unsupported BGP message type = %d", p_entry->peer_addr, router_addr.c_str(), common_hdr.type);
             break;
     }
 
@@ -392,6 +392,7 @@ void parseBGP::UpdateDBAttrs(bgp_msg::UpdateMsg::parsed_attrs_map &attrs) {
     base_attr.cluster_list             = (string)attrs[bgp_msg::ATTR_TYPE_CLUSTER_LIST];
     base_attr.community_list           = (string)attrs[bgp_msg::ATTR_TYPE_COMMUNITIES];
     base_attr.ext_community_list       = (string)attrs[bgp_msg::ATTR_TYPE_EXT_COMMUNITY];
+    base_attr.large_community_list     = (string)attrs[bgp_msg::ATTR_TYPE_LARGE_COMMUNITY];
 
     base_attr.atomic_agg               = ((string)attrs[bgp_msg::ATTR_TYPE_ATOMIC_AGGREGATE]).compare("1") == 0 ? true : false;
 

@@ -44,8 +44,9 @@ Config::Config() {
     tx_max_bytes        = 1000000;
     rx_max_bytes        = 100000000;
     session_timeout     = 30000;	// Default is 30 seconds
-    socket_timeout	= 60000; 	// Default is 60 seconds
-    q_buf_max_msgs      = 100000;   
+    socket_timeout	    = 60000; 	// Default is 60 seconds
+    q_buf_max_msgs      = 100000;
+    q_buf_max_kbytes    = 1048576;
     q_buf_max_ms        = 1000;         // Default is 1 sec
     msg_send_max_retry  = 2;
     retry_backoff_ms    = 100;
@@ -479,6 +480,25 @@ void Config::parseKafka(const YAML::Node &node) {
 				node["queue.buffering.max.messages"]);
         }
     }
+
+    if (node["queue.buffering.max.kbytes"]  &&
+        node["queue.buffering.max.kbytes"].Type() == YAML::NodeType::Scalar) {
+        try {
+            q_buf_max_kbytes = node["queue.buffering.max.kbytes"].as<int>();
+
+            if (q_buf_max_kbytes < 1 || q_buf_max_kbytes > 2097151)
+                throw "invalid receive max bytes , should be "
+                        "in range 1 - 2097151";
+            if (debug_general)
+                std::cout << "   Config: queue buffering max kbytes: " <<
+                          q_buf_max_kbytes << std::endl;
+
+        } catch (YAML::TypedBadConversion<int> err) {
+            printWarning("q_buf_max_kbytes is not of type int",
+                         node["queue.buffering.max.kbytes"]);
+        }
+    }
+
 
     if (node["queue.buffering.max.ms"]  && 
         node["queue.buffering.max.ms"].Type() == YAML::NodeType::Scalar) {

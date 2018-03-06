@@ -202,6 +202,12 @@ public:
         std::string  ext_community_list;
 
         /**
+         * large community list
+         */
+        std::string  large_community_list;
+
+
+        /**
          * cluster list.
          */
         std::string cluster_list;
