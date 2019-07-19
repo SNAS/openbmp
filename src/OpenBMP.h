@@ -6,7 +6,14 @@
 
 class OpenBMP {
 public:
+    OpenBMP();
     Config config;
+    void start();
+    void stop();
+    int get_num_of_active_connections();
+private:
+    void accept_bmp_connection();
+    void create_worker(OpenBMP obmp);
 };
 
 
