@@ -1,8 +1,6 @@
 #include "Worker.h"
 
-Worker::Worker(OpenBMP obmp, int tcp_fd) {
-
-}
+Worker::Worker(OpenBMP* obmp) {}
 
 double Worker::rib_dump_rate() {}
 void Worker::start() {}
