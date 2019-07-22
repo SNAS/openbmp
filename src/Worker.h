@@ -1,9 +1,9 @@
 #ifndef OPENBMP_WORKER_H
 #define OPENBMP_WORKER_H
 
-class OpenBMP;  // forward declaration
 #include "Encapsulator.h"
-#include "OpenBMP.h"
+
+class OpenBMP;  // forward declaration
 
 class Worker {
 public:
@@ -12,7 +12,7 @@ public:
     void stop();
     double rib_dump_rate();
 private:
-    OpenBMP* obmp;
+    OpenBMP* obmp_main;
     Encapsulator encapsulator;
     int tcp_fd;
     int reader_fd;

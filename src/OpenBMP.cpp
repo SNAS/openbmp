@@ -1,11 +1,13 @@
+#include <iostream>
 #include "OpenBMP.h"
-
 
 using namespace std;
 
-OpenBMP::OpenBMP() {
-    Config cfg;
+OpenBMP::OpenBMP() {}
 
+void OpenBMP::test() {
+    Worker w1 = Worker(this);
+    workers.emplace_back(w1);
 }
 
 void OpenBMP::start() {}

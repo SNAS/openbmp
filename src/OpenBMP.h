@@ -1,7 +1,6 @@
 #ifndef OPENBMP_OPENBMP_H
 #define OPENBMP_OPENBMP_H
 
-class Worker; // forward declaration
 #include "Config.h"
 #include "Worker.h"
 #include "Logger.h"
@@ -9,18 +8,20 @@ class Worker; // forward declaration
 
 #include <list>
 
-using namespace std;
+class Worker; // forward declaration to void the cross referencing issue between OpenBMP.h and Worker.h
 
 class OpenBMP {
 public:
     OpenBMP();
     Config config;
     MessageBus message_bus;
-    list<Worker> workers;
+    std::list<Worker> workers;
 
     void start();
     void stop();
     int get_num_of_active_connections();
+
+    void test();
 
 private:
     /****************************************************/

@@ -4,6 +4,11 @@
 
 #include <cstdint>
 
+struct {
+
+
+} encap_msg;
+
 class Encapsulator {
 public:
     Encapsulator();
