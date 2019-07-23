@@ -143,8 +143,6 @@ private:
      * \throws const char * with the error message
      ***********************************************************************/
     Logger(const char *log_filename, const char *debug_filename);
-    //Logger(Logger const&){};             // copy constructor is private
-    //Logger& operator=(Logger const&){};  // assignment operator is private
 
     static Logger* singleton_instance;
 

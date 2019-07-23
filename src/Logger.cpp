@@ -18,10 +18,16 @@
 
 #include "Logger.h"
 
+using namespace std;
+
 Logger* Logger::singleton_instance = nullptr;
 
 Logger* Logger::get_logger()
 {
+    if (!singleton_instance){
+        cout << "initialize logger before calling this function." << endl;
+        exit(1);
+    }
     return singleton_instance;
 }
 

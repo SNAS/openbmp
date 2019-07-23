@@ -25,18 +25,15 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_COMPILER_IS_GNUCXX)
     endif ()
 endif ()
 
-# find openssl
-find_package( OpenSSL 1)
+# Find openssl
+find_package(OpenSSL 1)
 if (OPENSSL_FOUND)
     include_directories(${OPENSSL_INCLUDE_DIR})
-    set (SSL_LIBS ${OPENSSL_LIBRARIES} sasl2)
-else()
-    set(SSL_LIBS )
-endif()
+    set(SSL_LIBS ${OPENSSL_LIBRARIES} sasl2)
+else ()
+    set(SSL_LIBS)
+endif ()
 
-
-
-# Find and set the env for the mysql c++ connector
 set(HINT_ROOT_DIR
         "${HINT_ROOT_DIR}"
         CACHE
@@ -95,18 +92,18 @@ find_library(LIBRT_LIBRARY
         lib)
 
 if (NOT LIBRDKAFKA_INCLUDE_DIR OR NOT LIBRDKAFKA_LIBRARY OR NOT LIBRDKAFKA_CPP_LIBRARY)
-    Message (FATAL_ERROR "Librdkafka was not found, cannot proceed.  Visit https://github.com/edenhill/librdkafka for details on how to install it.")
+    Message(FATAL_ERROR "Librdkafka was not found, cannot proceed.  Visit https://github.com/edenhill/librdkafka for details on how to install it.")
     #else ()
     #	Message ("lib = " ${LIBRDKAFKA_LIBRARY})
-endif()
+endif ()
 
 if (NOT LIBYAML_CPP_INCLUDE_DIR OR NOT LIBYAML_CPP_LIBRARY)
-    Message (FATAL_ERROR "Libyaml-cpp was not found, cannot proceed.  Visit https://github.com/jbeder/yaml-cpp for install details.")
-endif()
+    Message(FATAL_ERROR "Libyaml-cpp was not found, cannot proceed.  Visit https://github.com/jbeder/yaml-cpp for install details.")
+endif ()
 
 if (NOT LIBRT_LIBRARY AND NOT MACOSX)
-    Message (FATAL_ERROR "librt was not found, cannot proceed.")
-endif()
+    Message(FATAL_ERROR "librt was not found, cannot proceed.")
+endif ()
 
 # Update the include dir
 include_directories(${LIBRDKAFKA_INCLUDE_DIR} ${LIBYAML_CPP_INCLUDE_DIR} src/)
@@ -116,8 +113,7 @@ include_directories(${LIBRDKAFKA_INCLUDE_DIR} ${LIBYAML_CPP_INCLUDE_DIR} src/)
 # add_definitions ("-Wno-unused-result")
 
 # Set the libs to link
-set (LIBS ${LIBYAML_CPP_LIBRARY} ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z ${SSL_LIBS} dl pthread)
-
+set(LIBS ${LIBYAML_CPP_LIBRARY} ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z ${SSL_LIBS} dl pthread)
 
 
 ##############################################
@@ -145,20 +141,17 @@ if (LIBRT_LIBRARY)
 endif ()
 
 
-
 ##############################################
 ################ TEST CASES ##################
 ##############################################
 
 ############# Message Bus Tests ##############
 set(MSGBUS_FILES
-        tests/message_bus_test.cpp
-        tests/message_bus_test.h
+        test/message_bus_test.cpp
         src/MessageBus.cpp
-        src/MessageBus.h
         )
 
-# Message bus tests executable
+# Message bus test executable
 add_executable(msgbus_test ${MSGBUS_FILES})
 # Link the binary
 target_link_libraries(msgbus_test ${LIBS})
