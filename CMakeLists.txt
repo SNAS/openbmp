@@ -109,7 +109,7 @@ if (NOT LIBRT_LIBRARY AND NOT MACOSX)
 endif()
 
 # Update the include dir
-include_directories(${LIBRDKAFKA_INCLUDE_DIR} ${LIBYAML_CPP_INCLUDE_DIR} src/ src/bmp src/bgp src/bgp/linkstate src/kafka)
+include_directories(${LIBRDKAFKA_INCLUDE_DIR} ${LIBYAML_CPP_INCLUDE_DIR} src/)
 #link_directories(${LIBRDKAFKA_LIBRARY})
 
 
@@ -128,7 +128,7 @@ set(MAIN_FILES
 # add_definitions ("-Wno-unused-result")
 
 # Set the libs to link
-set (LIBS pthread ${LIBYAML_CPP_LIBRARY} ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z ${SSL_LIBS} dl)
+set (LIBS ${LIBYAML_CPP_LIBRARY} ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z ${SSL_LIBS} dl pthread)
 
 
 ##############################################

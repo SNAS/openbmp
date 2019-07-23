@@ -2,7 +2,7 @@
 #define OPENBMP_MESSAGEBUS_H
 
 #include <librdkafka/rdkafkacpp.h>
-#include <thread>
+#include <librdkafka/rdkafka.h>
 
 
 class MessageBus {

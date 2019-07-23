@@ -1,10 +1,7 @@
 #include "MessageBus.h"
-#include <librdkafka/rdkafkacpp.h>
-#include <thread>
-#include <librdkafka/rdkafka.h>
 
 MessageBus::MessageBus() {
-    // conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
+    conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
 
     if (producer == NULL) {
         // TODO: call logger here
@@ -25,7 +22,7 @@ void MessageBus::connect() {
     std::string errstr;
 
     // try to connect to kafka server
-    // producer = RdKafka::Producer::create(conf, errstr);
+    producer = RdKafka::Producer::create(conf, errstr);
 }
 
 void MessageBus::disconnect() {
