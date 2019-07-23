@@ -112,6 +112,17 @@ endif()
 include_directories(${LIBRDKAFKA_INCLUDE_DIR} ${LIBYAML_CPP_INCLUDE_DIR} src/)
 #link_directories(${LIBRDKAFKA_LIBRARY})
 
+# Disable warnings
+# add_definitions ("-Wno-unused-result")
+
+# Set the libs to link
+set (LIBS ${LIBYAML_CPP_LIBRARY} ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z ${SSL_LIBS} dl pthread)
+
+
+
+##############################################
+############## MAIN PROGRAM ##################
+##############################################
 
 set(MAIN_FILES
         src/Main.cpp
@@ -124,16 +135,6 @@ set(MAIN_FILES
         src/Config.cpp
         )
 
-# Disable warnings
-# add_definitions ("-Wno-unused-result")
-
-# Set the libs to link
-set (LIBS ${LIBYAML_CPP_LIBRARY} ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z ${SSL_LIBS} dl pthread)
-
-
-##############################################
-######### MAIN PROGRAM EXECUTABLE ############
-##############################################
 add_executable(openbmp_main ${MAIN_FILES})
 
 # Link the binary
@@ -142,6 +143,7 @@ target_link_libraries(openbmp_main ${LIBS})
 if (LIBRT_LIBRARY)
     target_link_libraries(openbmp_main ${LIBRT_LIBRARY})
 endif ()
+
 
 
 ##############################################
