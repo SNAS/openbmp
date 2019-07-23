@@ -2,7 +2,6 @@
 #include "CLI.h"
 #include <iostream>
 #include <csignal>
-#include <cstring>
 
 using namespace std;
 

@@ -1,5 +1,6 @@
 #include "CLI.h"
 #include <iostream>
+#include <cstring>
 
 using namespace std;
 
