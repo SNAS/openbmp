@@ -12,13 +12,17 @@ class Worker; // forward declaration to void the cross referencing issue between
 
 class OpenBMP {
 public:
-    OpenBMP();
-    Config config;
-    MessageBus message_bus;
+    OpenBMP(Config *);
+
+    Config *config;
+    Logger *logger;
+    MessageBus *message_bus;
     std::list<Worker> workers;
 
     void start();
+
     void stop();
+
     int get_num_of_active_connections();
 
     void test();
@@ -28,10 +32,15 @@ private:
     /* Functions to accept new bmp connection() */
     /****************************************************/
     void accept_bmp_connection();
+
     void can_accept_bmp_connection();
+
     bool below_max_cpu_utilization_threshold();
+
     bool did_not_affect_rib_dump_rate();
-    void create_worker(OpenBMP* obmp);
+
+    void create_worker(OpenBMP *obmp);
+
     void remove_dead_workers();
 
 };

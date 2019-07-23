@@ -5,6 +5,7 @@
 #include <yaml-cpp/yaml.h>
 
 
+using namespace std;
 class Config {
 public:
     /* Constructor */
@@ -25,10 +26,10 @@ public:
     u_char c_hash_id[16];            ///< Collector Hash ID (raw format)
     char admin_id[64];             ///< Admin ID
 
-    std::string kafka_brokers;            ///< metadata.broker.list
+    string kafka_brokers;            ///< metadata.broker.list
     uint16_t bmp_port;                 ///< BMP listening port
-    std::string bind_ipv4;                ///< IP to listen on for IPv4
-    std::string bind_ipv6;                ///< IP to listen on for IPv6
+    string bind_ipv4;                ///< IP to listen on for IPv4
+    string bind_ipv6;                ///< IP to listen on for IPv6
 
     int bmp_ring_buffer_size;          ///< BMP buffer size in bytes (min is 2M max is 128M)
     bool svr_ipv4;                 ///< Indicates if server should listen for IPv4 connections
@@ -47,12 +48,12 @@ public:
     int q_buf_max_ms;         ///< Max time for buffering msgs in queue
     int msg_send_max_retry;      ///< No. of times to resend failed msgs
     int retry_backoff_ms;        ///< Backoff time before resending msgs
-    std::string compression;         ///< Compression to use :none, gzip, snappy
+    string compression;         ///< Compression to use :none, gzip, snappy
     int max_concurrent_routers;  ///<Maximum allowed routers that can connect
     int initial_router_time;     ///<Initial time in allowing another concurrent router
 
 private:
-    void print_warning(std::string msg, const YAML::Node &node);
+    void print_warning(string msg, const YAML::Node &node);
     void parse_base(const YAML::Node &node);
     void parse_debug(const YAML::Node &node);
     void parse_kafka(const YAML::Node &node);

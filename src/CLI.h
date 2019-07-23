@@ -10,7 +10,7 @@
 
 class CLI {
 public:
-    static bool ReadCmdArgs(int argc, char **argv, Config &cfg);
+    static bool ReadCmdArgs(int argc, char **argv, Config *cfg);
 private:
     static void Usage(char *prog);
 };
