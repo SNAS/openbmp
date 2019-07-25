@@ -1,17 +1,27 @@
 #include <iostream>
 #include <poll.h>
 #include <unistd.h>
+#include <openssl/md5.h>
 
 #include "OpenBMP.h"
+
 
 using namespace std;
 
 OpenBMP::OpenBMP(Config *c) {
+    // set up config
     config = c;
+    // set up logger
     logger = Logger::get_logger();
-    // Initialize message bus after the logger is initialized.
+    // set up message bus after the logger is initialized.
     message_bus = MessageBus::init(config);
 
+    // set server running status
+    server_running = false;
+
+    /*
+     * set up server socket related variables
+     */
     sock = 0;
     sockv6 = 0;
     debug = false;
@@ -45,10 +55,14 @@ void OpenBMP::test() {
 }
 
 void OpenBMP::start() {
+    server_running = true;
     open_socket(config->svr_ipv4, config->svr_ipv6);
+
 }
 
-void OpenBMP::stop() {}
+void OpenBMP::stop() {
+    server_running = false;
+}
 
 /**
  * Opens server (v4 or 6) listening socket(s)

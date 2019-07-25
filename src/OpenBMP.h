@@ -25,8 +25,8 @@ public:
 
     int          sock;                           ///< Listening socket (ipv4)
     int          sockv6;                         ///< IPv6 listening socket
-    sockaddr_in  svr_addr;                       ///< Server v4 address
-    sockaddr_in6 svr_addrv6;                     ///< Server v6 address
+    sockaddr_in  svr_addr{};                       ///< Server v4 address
+    sockaddr_in6 svr_addrv6{};                     ///< Server v6 address
 
     void start();
 
@@ -37,6 +37,7 @@ public:
     void test();
 
 private:
+    bool server_running;
     bool debug; ///< debug flag to indicate debugging
     /****************************************************/
     /* Functions to accept new bmp connection() */

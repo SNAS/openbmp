@@ -53,6 +53,8 @@ void Config::load(const char *config_filename) {
                     if (key == "base")
                         parse_base(node);
                     else if (key == "debug")
+                        // TODO: we need to make sure parse_debug() is called first,
+                        //  otherwise some debug messages will not print.
                         parse_debug(node);
                     else if (key == "kafka")
                         parse_kafka(node);
@@ -114,13 +116,16 @@ void Config::parse_base(const YAML::Node &node) {
             value = node["collector_id"].as<std::string>();
 
             if (value == "hostname") {
-                gethostname(collector_id, sizeof(collector_id));
+                gethostname((char *) collector_id, sizeof(collector_id));
             } else {
-                std::strncpy(collector_id, value.c_str(), sizeof(collector_id));
+                std::strncpy((char *)collector_id, value.c_str(), sizeof(collector_id));
             }
 
-            if (debug_general)
+            MD5(collector_id, strlen((char*) collector_id), collector_hash_id);
+            if (debug_general) {
                 std::cout << "   Config: collector id : " << collector_id << std::endl;
+                std::cout << "   Config: collector hash id : " << collector_hash_id << std::endl;
+            }
 
         } catch (YAML::TypedBadConversion<std::string> err) {
             print_warning("admin_id is not of type string", node["admin_id"]);

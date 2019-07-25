@@ -4,6 +4,7 @@
 #include <string>
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
+#include <openssl/md5.h>
 
 
 using namespace std;
@@ -23,8 +24,8 @@ public:
     const char *debug_filename = nullptr;               // Debug file to log messages to
     const char *pid_filename = nullptr;                 // PID file to record the daemon pid
 
-    u_char collector_hash_id[16];      // Collector Hash ID (raw format)
-    char collector_id[64];             // Collector ID
+    unsigned char collector_hash_id[MD5_DIGEST_LENGTH];  // Collector Hash ID (raw format), 16 bytes
+    unsigned char collector_id[64];             // Collector ID
 
     string kafka_brokers;            // metadata.broker.list
     uint16_t bmp_port;               // BMP listening port
