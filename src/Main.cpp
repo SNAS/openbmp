@@ -7,11 +7,13 @@
 
 using namespace std;
 
-// global pointers
-static Config *config;
+// Global pointers
+// needs logger to make logger macros (defined in Logger.h) work, e.g., LOG_NOTICE.
 static Logger *logger;
+// needs obmp object global so the signal handler can call stop() in obmp.
 static OpenBMP *obmp;
 
+// needs it to shutdown the program properly
 void signal_handler(int signum) {
     LOG_NOTICE("Caught signal %d", signum);
 
@@ -35,12 +37,14 @@ void signal_handler(int signum) {
 }
 
 int main(int argc, char **argv) {
-    config = new Config;
+    auto *config = new Config();
+
+    // Process cli args
     if (CLI::ReadCmdArgs(argc, argv, config)) {
         return 1;
     }
 
-    // Read config from file is -c is used in CLI.
+    // Load config file
     if (config->cfg_filename != nullptr) {
         try {
             config->load(config->cfg_filename);
@@ -50,14 +54,13 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Initialize singleton logger
+    // Initialize singleton Logger
     try {
         logger = Logger::init(config->log_filename, config->debug_filename);
     } catch (char const *str) {
         cout << "Failed to open log file for read/write : " << str << endl;
         return 2;
     }
-
 
     // Setup the signal handlers
     struct sigaction sigact{};
@@ -76,11 +79,11 @@ int main(int argc, char **argv) {
 
 
     // Finally, we initialize OpenBMP and start the service.
-    obmp = new OpenBMP(config);
-    obmp->start();
-    obmp->test();
-    cout << "num of workers: " << obmp->workers.size() << endl;
-    sleep(10);
+//obmp = new OpenBMP(config);
+//obmp->start();
+//obmp->test();
+//cout << "num of workers: " << obmp->workers.size() << endl;
+    sleep(5);
     return 0;
 }
 

@@ -52,8 +52,6 @@ void MessageBus::send(uint8_t *encapsulated_msg, int msg_len) {
                               nullptr, 0, /* Key */
                               0, /* Timestamp (defaults to now) */
                               nullptr, /* Message headers, if any */
-                                /* Per-message opaque value passed to
-                                 * delivery report */
                               nullptr);
     if (resp != RdKafka::ERR_NO_ERROR) {
         std::cerr << "% Produce failed: " <<
