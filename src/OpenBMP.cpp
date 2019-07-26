@@ -26,7 +26,7 @@ OpenBMP::OpenBMP(Config *c) {
     sockv6 = 0;
     debug = false;
 
-    if (config->debug_bmp)
+    if (config->debug_collector)
         debug = true;
 
     svr_addr.sin_family      = PF_INET;

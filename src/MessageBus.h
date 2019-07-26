@@ -48,7 +48,7 @@ private:
     string topic = "bmp_raw";
 
     // RdKafka variables
-    RdKafka::Conf *conf;
+    RdKafka::Conf *producer_config;
     RdKafka::Producer *producer; // Kafka Producer instance
 
 

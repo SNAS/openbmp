@@ -29,13 +29,13 @@ MessageBus *MessageBus::init(Config *c) {
 MessageBus::MessageBus(Config *c) {
     logger = Logger::get_logger();
     config = c;
-    conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
+    producer_config = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
     connect();
 }
 
 MessageBus::~MessageBus() {
     disconnect();
-    delete conf;
+    delete producer_config;
 }
 
 void MessageBus::send(uint8_t *encapsulated_msg, int msg_len) {
@@ -70,137 +70,40 @@ void MessageBus::connect() {
     disconnect();
 
     /*
- * Configure Kafka Producer (https://kafka.apache.org/08/configuration.html)
- */
+     * Configure Kafka Producer (https://kafka.apache.org/08/configuration.html)
+     */
     //TODO: Add config options to change these settings
 
     // Disable logging of connection close/idle timeouts caused by Kafka 0.9.x (connections.max.idle.ms)
     //    See https://github.com/edenhill/librdkafka/issues/437 for more details.
     // TODO: change this when librdkafka has better handling of the idle disconnects
     value = "false";
-    if (conf->set("log.connection.close", value, errstr) != RdKafka::Conf::CONF_OK) {
+    if (producer_config->set("log.connection.close", value, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure log.connection.close=false: %s.", errstr.c_str());
     }
 
     value = "true";
-    if (conf->set("api.version.request", value, errstr) != RdKafka::Conf::CONF_OK) {
+    if (producer_config->set("api.version.request", value, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure api.version.request=true: %s.", errstr.c_str());
     }
 
     // TODO: Add config for address family - default is any
     /*value = "v4";
-    if (conf->set("broker.address.family", value, errstr) != RdKafka::Conf::CONF_OK) {
+    if (producer_config->set("broker.address.family", value, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure broker.address.family: %s.", errstr.c_str());
     }*/
 
-
-    // Batch message number
-    value = "100";
-    if (conf->set("batch.num.messages", value, errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure batch.num.messages for kafka: %s.", errstr.c_str());
-        throw "ERROR: Failed to configure kafka batch.num.messages";
-    }
-
-    // Batch message max wait time (in ms)
-    q_buf_max_ms << config->q_buf_max_ms;
-    if (conf->set("queue.buffering.max.ms", q_buf_max_ms.str(), errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure queue.buffering.max.ms for kafka: %s.", errstr.c_str());
-        throw "ERROR: Failed to configure kafka queue.buffer.max.ms";
-    }
-
-
-    // compression
-    value = config->compression;
-    if (conf->set("compression.codec", value, errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure %s compression for kafka: %s.", value.c_str(), errstr.c_str());
-        throw "ERROR: Failed to configure kafka compression";
-    }
-
-    // broker list
-    if (conf->set("metadata.broker.list", config->kafka_brokers, errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure broker list for kafka: %s", errstr.c_str());
-        throw "ERROR: Failed to configure kafka broker list";
-    }
-
-    // Maximum transmit byte size
-    tx_bytes << config->tx_max_bytes;
-    if (conf->set("message.max.bytes", tx_bytes.str(),
-                  errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure transmit max message size for kafka: %s",
-                errstr.c_str());
-        throw "ERROR: Failed to configure transmit max message size";
-    }
-
-    // Maximum receive byte size
-    rx_bytes << config->rx_max_bytes;
-    if (conf->set("receive.message.max.bytes", rx_bytes.str(),
-                  errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure receive max message size for kafka: %s",
-                errstr.c_str());
-        throw "ERROR: Failed to configure receive max message size";
-    }
-
-    // Client group session and failure detection timeout
-    sess_timeout << config->session_timeout;
-    if (conf->set("session.timeout.ms", sess_timeout.str(),
-                  errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure session timeout for kafka: %s",
-                errstr.c_str());
-        throw "ERROR: Failed to configure session timeout ";
-    }
-
-    // Timeout for network requests
-    socket_timeout << config->socket_timeout;
-    if (conf->set("socket.timeout.ms", socket_timeout.str(),
-                  errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure socket timeout for kafka: %s",
-                errstr.c_str());
-        throw "ERROR: Failed to configure socket timeout ";
-    }
-
-    // Maximum number of messages allowed on the producer queue
-    q_buf_max_msgs << config->q_buf_max_msgs;
-    if (conf->set("queue.buffering.max.messages", q_buf_max_msgs.str(),
-                  errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure max messages in buffer for kafka: %s",
-                errstr.c_str());
-        throw "ERROR: Failed to configure max messages in buffer ";
-    }
-
-    // Maximum number of messages allowed on the producer queue
-    q_buf_max_kbytes << config->q_buf_max_kbytes;
-    if (conf->set("queue.buffering.max.kbytes", q_buf_max_kbytes.str(),
-                  errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure max kbytes in buffer for kafka: %s",
-                errstr.c_str());
-        throw "ERROR: Failed to configure max kbytes in buffer ";
-    }
-
-
-    // How many times to retry sending a failing MessageSet
-    msg_send_max_retry << config->msg_send_max_retry;
-    if (conf->set("message.send.max.retries", msg_send_max_retry.str(),
-                  errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure max retries for sending "
-                "failed message for kafka: %s",
-                errstr.c_str());
-        throw "ERROR: Failed to configure max retries for sending failed message";
-    }
-
-    // Backoff time in ms before retrying a message send
-    retry_backoff_ms << config->retry_backoff_ms;
-    if (conf->set("retry.backoff.ms", retry_backoff_ms.str(),
-                  errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure backoff time before retrying to send"
-                "failed message for kafka: %s",
-                errstr.c_str());
-        throw "ERROR: Failed to configure backoff time before resending"
-              " failed messages ";
+    // pass librdkafka configs from the config file to producer producer_config
+    for (auto & it : config->librdkafka_passthrough_configs) {
+        if (producer_config->set(it.first, it.second, errstr) != RdKafka::Conf::CONF_OK) {
+            LOG_ERR("Failed to configure kafka producer.");
+            throw "ERROR: Failed to configure kafka producer";
+        }
     }
 
     // Register event callback
     //event_callback = new KafkaEventCallback(&isConnected, logger);
-    //if (conf->set("event_cb", event_callback, errstr) != RdKafka::Conf::CONF_OK) {
+    //if (producer_config->set("event_cb", event_callback, errstr) != RdKafka::Conf::CONF_OK) {
     //    LOG_ERR("Failed to configure kafka event callback: %s", errstr.c_str());
     //    throw "ERROR: Failed to configure kafka event callback";
     //}
@@ -208,15 +111,14 @@ void MessageBus::connect() {
     // Register delivery report callback
     /*
     delivery_callback = new KafkaDeliveryReportCallback();
-    if (conf->set("dr_cb", delivery_callback, errstr) != RdKafka::Conf::CONF_OK) {
+    if (producer_config->set("dr_cb", delivery_callback, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure kafka delivery report callback: %s", errstr.c_str());
         throw "ERROR: Failed to configure kafka delivery report callback";
     }
     */
 
-
     // Create producer and connect
-    producer = RdKafka::Producer::create(conf, errstr);
+    producer = RdKafka::Producer::create(producer_config, errstr);
     if (producer == nullptr) {
         LOG_ERR("Failed to create producer: %s", errstr.c_str());
         throw "ERROR: Failed to create producer";

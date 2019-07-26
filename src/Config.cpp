@@ -6,33 +6,24 @@ Config::Config() {
     // Initialize the defaults
     daemon = true;
     bmp_port = 5000;
-    debug_general = false;
-    debug_bmp = false;
-    debug_msgbus = false;
+    debug_all = false;
+    debug_collector = false;
+    debug_worker = false;
+    debug_encapsulator = false;
+    debug_message_bus = false;
     bmp_ring_buffer_size = 15 * 1024 * 1024; // 15MB
     svr_ipv6 = false;
     svr_ipv4 = true;
     bind_ipv4 = "";
     bind_ipv6 = "";
-    kafka_brokers = "localhost:9092";
-    tx_max_bytes = 1000000;
-    rx_max_bytes = 100000000;
-    session_timeout = 30000;    // Default is 30 seconds
-    socket_timeout = 60000;    // Default is 60 seconds
-    q_buf_max_msgs = 100000;
-    q_buf_max_kbytes = 1048576;
-    q_buf_max_ms = 1000;         // Default is 1 sec
-    msg_send_max_retry = 2;
-    retry_backoff_ms = 100;
-    compression = "snappy";
-    memset(collector_id, 0, sizeof(collector_id));
+    gethostname((char *) collector_name, sizeof(collector_name));
+    max_cpu_utilization = .8;
 
-    // Initialize three topics that OpenBMP V2 produces
-    // We initialize the default values here
-    // Users can change the values from the config file
-    topic_names_map["collector"] = "openbmp.collector";
-    topic_names_map["router"] = "openbmp.router";
-    topic_names_map["bmp_raw"] = "openbmp.bmp_raw";
+    // Initialize default values for topic templates that OpenBMP V2 uses
+    // Users can/should change these values from the openbmp config file
+    topic_name_template["collector"] = "openbmp.collector";
+    topic_name_template["router"] = "openbmp.router";
+    topic_name_template["bmp_raw"] = "openbmp.bmp_raw";
 }
 
 void Config::load(const char *config_filename) {
@@ -45,6 +36,15 @@ void Config::load(const char *config_filename) {
          * Iterate through the root node objects - We expect only maps at the root level, skip others
          */
         if (root.Type() == YAML::NodeType::Map) {
+            // we first load debug variables if it exists
+            for (auto it: root) {
+                const std::string &key = it.first.Scalar();
+                if (key == "debug") {
+                    const YAML::Node &node = it.second;
+                    parse_debug(node);
+                }
+            }
+            // we then load other variables from the root of the config file
             for (YAML::const_iterator it = root.begin(); it != root.end(); ++it) {
                 const YAML::Node &node = it->second;
                 const std::string &key = it->first.Scalar();
@@ -52,22 +52,17 @@ void Config::load(const char *config_filename) {
                 if (node.Type() == YAML::NodeType::Map) {
                     if (key == "base")
                         parse_base(node);
-                    else if (key == "debug")
-                        // TODO: we need to make sure parse_debug() is called first,
-                        //  otherwise some debug messages will not print.
-                        parse_debug(node);
-                    else if (key == "kafka")
-                        parse_kafka(node);
-                    else if (debug_general)
+                    else if (key == "librdkafka_config")
+                        parse_librdkafka_config(node);
+                    else if (debug_all)
                         std::cout << "   Config: Key " << key << " Type " << node.Type() << std::endl;
                 }
                 else {
-                    print_warning("configuration should only have maps at the root/base level found", node);
+                    print_warning("configuration file should only have maps at the root level", node);
                 }
             }
         } else {
-            print_warning("configuration should only have maps at the root/base level found", root);
-
+            print_warning("configuration file should only have maps at the root level", root);
         }
 
     } catch (YAML::BadFile err) {
@@ -111,19 +106,19 @@ void Config::print_warning(std::string msg, const YAML::Node &node) {
 void Config::parse_base(const YAML::Node &node) {
     std::string value;
 
-    if (node["collector_id"]) {
+    if (node["collector_name"]) {
         try {
-            value = node["collector_id"].as<std::string>();
+            value = node["collector_name"].as<std::string>();
 
             if (value == "hostname") {
-                gethostname((char *) collector_id, sizeof(collector_id));
+                gethostname((char *) collector_name, sizeof(collector_name));
             } else {
-                std::strncpy((char *)collector_id, value.c_str(), sizeof(collector_id));
+                std::strncpy((char *)collector_name, value.c_str(), sizeof(collector_name));
             }
 
-            MD5(collector_id, strlen((char*) collector_id), collector_hash_id);
-            if (debug_general) {
-                std::cout << "   Config: collector id : " << collector_id << std::endl;
+            MD5(collector_name, strlen((char*) collector_name), collector_hash_id);
+            if (debug_all) {
+                std::cout << "   Config: collector id : " << collector_name << std::endl;
                 std::cout << "   Config: collector hash id : " << collector_hash_id << std::endl;
             }
 
@@ -139,7 +134,7 @@ void Config::parse_base(const YAML::Node &node) {
             if (bmp_port < 25 || bmp_port > 65535)
                 throw "invalid listen_port, not within range of 25 - 65535)";
 
-            if (debug_general)
+            if (debug_all)
                 std::cout << "   Config: bmp_port: " << bmp_port << std::endl;
 
         } catch (YAML::TypedBadConversion<uint16_t> err) {
@@ -150,14 +145,14 @@ void Config::parse_base(const YAML::Node &node) {
     if (node["listen_ipv4"]) {
         bind_ipv4 = node["listen_ipv4"].as<std::string>();
 
-        if (debug_general)
+        if (debug_all)
             std::cout << "   Config: listen_ipv4: " << bind_ipv4 << "\n";
     }
 
     if (node["listen_ipv6"]) {
         bind_ipv6 = node["listen_ipv6"].as<std::string>();
 
-        if (debug_general)
+        if (debug_all)
             std::cout << "   Config: listen_ipv6: " << bind_ipv6 << "\n";
     }
 
@@ -175,7 +170,7 @@ void Config::parse_base(const YAML::Node &node) {
                 svr_ipv4 = true;
             }
 
-            if (debug_general)
+            if (debug_all)
                 std::cout <<  "   Config: listen_mode is " << value << std::endl;
 
         } catch (YAML::TypedBadConversion<std::string> err) {
@@ -193,7 +188,7 @@ void Config::parse_base(const YAML::Node &node) {
 
             bmp_ring_buffer_size *= 1024 * 1024;  // MB to bytes
 
-            if (debug_general)
+            if (debug_all)
                 std::cout << "   Config: bmp buffer: " << bmp_ring_buffer_size << std::endl;
 
         } catch (YAML::TypedBadConversion<int> err) {
@@ -208,7 +203,7 @@ void Config::parse_base(const YAML::Node &node) {
             if (max_cpu_utilization < 0.0 || max_cpu_utilization > 1.0)
                 throw "invalid max cpu utilization, not within range of (0, 1))";
 
-            if (debug_general)
+            if (debug_all)
                 std::cout << "   Config: max cpu utilization: " << max_cpu_utilization << std::endl;
 
         } catch (YAML::TypedBadConversion<float> err) {
@@ -220,7 +215,7 @@ void Config::parse_base(const YAML::Node &node) {
         try {
             daemon = node["daemon"].as<bool>();
 
-            if (debug_general)
+            if (debug_all)
                 std::cout << "   Config: daemon: " << daemon << std::endl;
 
         } catch (YAML::TypedBadConversion<bool> err) {
@@ -231,287 +226,82 @@ void Config::parse_base(const YAML::Node &node) {
 }
 
 void Config::parse_debug(const YAML::Node &node) {
-    if (!debug_general and node["general"]) {
+    if (!debug_all and node["all"]) {
         try {
-            debug_general = node["general"].as<bool>();
+            debug_all = node["all"].as<bool>();
 
-            if (debug_general)
-                std::cout << "   Config: debug general : " << debug_general << std::endl;
+            if (debug_all)
+                std::cout << "   Config: debug all : " << debug_all << std::endl;
 
         } catch (YAML::TypedBadConversion<bool> err) {
-            print_warning("debug.general is not of type boolean", node["general"]);
+            print_warning("debug.all is not of type boolean", node["general"]);
         }
     }
 
-    if (!debug_bmp and node["bmp"]) {
+    if (!debug_collector and node["collector"]) {
         try {
-            debug_bmp = node["bmp"].as<bool>();
+            debug_collector = node["collector"].as<bool>();
 
-            if (debug_general)
-                std::cout << "   Config: debug bmp : " << debug_bmp << std::endl;
+            if (debug_all)
+                std::cout << "   Config: debug collector : " << debug_collector << std::endl;
 
         } catch (YAML::TypedBadConversion<bool> err) {
-            print_warning("debug.bmp is not of type boolean", node["bmp"]);
+            print_warning("debug.collector is not of type boolean", node["bmp"]);
         }
     }
 
-    if (!debug_msgbus and node["msgbus"]) {
+    if (!debug_worker and node["worker"]) {
         try {
-            debug_msgbus = node["msgbus"].as<bool>();
+            debug_worker = node["worker"].as<bool>();
 
-            if (debug_general)
-                std::cout << "   Config: debug msgbus : " << debug_msgbus << std::endl;
+            if (debug_all)
+                std::cout << "   Config: debug worker : " << debug_worker << std::endl;
 
         } catch (YAML::TypedBadConversion<bool> err) {
-            print_warning("debug.msgbus is not of type boolean", node["msgbus"]);
+            print_warning("debug.worker is not of type boolean", node["bmp"]);
+        }
+    }
+
+    if (!debug_encapsulator and node["encapsulator"]) {
+        try {
+            debug_encapsulator = node["encapsulator"].as<bool>();
+
+            if (debug_encapsulator)
+                std::cout << "   Config: debug encapsulator : " << debug_encapsulator << std::endl;
+
+        } catch (YAML::TypedBadConversion<bool> err) {
+            print_warning("debug.encapsulator is not of type boolean", node["bmp"]);
+        }
+    }
+
+    if (!debug_message_bus and node["message_bus"]) {
+        try {
+            debug_message_bus = node["message_bus"].as<bool>();
+
+            if (debug_all)
+                std::cout << "   Config: debug message bus : " << debug_message_bus << std::endl;
+
+        } catch (YAML::TypedBadConversion<bool> err) {
+            print_warning("debug.message_bus is not of type boolean", node["message_bus"]);
         }
     }
 
 }
 
-void Config::parse_kafka(const YAML::Node &node) {
-    std::string value;
-
-    if (node["brokers"] && node["brokers"].Type() == YAML::NodeType::Sequence) {
-        kafka_brokers.clear();
-
-        for (std::size_t i = 0; i < node["brokers"].size(); i++) {
-            value = node["brokers"][i].Scalar();
-
-            if (!value.empty()) {
-                if (!kafka_brokers.empty())
-                    kafka_brokers.append(",");
-
-                kafka_brokers.append(value);
-            }
-
-            if (debug_general)
-                std::cout << "   Config: kafka.brokers = " << kafka_brokers << "\n";
-        }
-    }
-
-    if (node["message.max.bytes"] && node["message.max.bytes"].Type() == YAML::NodeType::Scalar) {
-        try {
-            tx_max_bytes = node["message.max.bytes"].as<int>();
-
-            if (tx_max_bytes < 1000 || tx_max_bytes > 1000000000)
-                throw "invalid transmit max bytes , should be "
-                      "in range 1000 - 1000000000";
-
-            // Below corrects older configs to use 1M instead of 200MB.
-            if (tx_max_bytes == 200000000)
-                tx_max_bytes = 1000000;
-
-            if (debug_general)
-                std::cout << "   Config: transmit max bytes : " << tx_max_bytes
-                          << std::endl;
-
-        } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("message.max.bytes is not of type int",
-                         node["message.max.bytes"]);
-        }
-    }
-
-    if (node["receive.message.max.bytes"]  && node["receive.message.max.bytes"].Type() == YAML::NodeType::Scalar) {
-        try {
-            rx_max_bytes = node["receive.message.max.bytes"].as<int>();
-
-            if (rx_max_bytes < 1000 || rx_max_bytes > 1000000000)
-                throw "invalid receive max bytes , should be "
-                      "in range 1000 - 1000000000";
-            if (debug_general)
-                std::cout << "   Config: receive max bytes : " << rx_max_bytes
-                          << std::endl;
-
-        } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("receive.message.max.bytes is not of type int",
-                         node["receive.message.max.bytes"]);
-        }
-    }
-
-    if (node["session.timeout.ms"]  &&
-        node["session.timeout.ms"].Type() == YAML::NodeType::Scalar) {
-        try {
-            session_timeout = node["session.timeout.ms"].as<int>();
-
-            if (session_timeout < 1 || session_timeout > 3600000)
-                throw "invalid receive max bytes , should be "
-                      "in range 1 - 3600000";
-            if (debug_general)
-                std::cout << "   Config: session timeout in ms: " << session_timeout
-                          << std::endl;
-
-        } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("session_timeout is not of type int",
-                         node["session.timeout.ms"]);
-        }
-    }
-
-    if (node["socket.timeout.ms"]  &&
-        node["socket.timeout.ms"].Type() == YAML::NodeType::Scalar) {
-        try {
-            socket_timeout = node["socket.timeout.ms"].as<int>();
-
-            if (socket_timeout < 10 || socket_timeout > 300000)
-                throw "invalid receive max bytes , should be "
-                      "in range 10 - 300000";
-            if (debug_general)
-                std::cout << "   Config: socket timeout in ms: " << socket_timeout
-                          << std::endl;
-
-        } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("socket_timeout is not of type int",
-                         node["socket.timeout.ms"]);
-        }
-    }
-
-    if (node["queue.buffering.max.messages"]  &&
-        node["queue.buffering.max.messages"].Type() == YAML::NodeType::Scalar) {
-        try {
-            q_buf_max_msgs = node["queue.buffering.max.messages"].as<int>();
-
-            if (q_buf_max_msgs < 1 || q_buf_max_msgs > 10000000)
-                throw "invalid receive max bytes , should be "
-                      "in range 1 - 10000000";
-            if (debug_general)
-                std::cout << "   Config: queue buffering max messages: " <<
-                          q_buf_max_msgs << std::endl;
-
-        } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("q_buf_max_msgs is not of type int",
-                         node["queue.buffering.max.messages"]);
-        }
-    }
-
-    if (node["queue.buffering.max.kbytes"]  &&
-        node["queue.buffering.max.kbytes"].Type() == YAML::NodeType::Scalar) {
-        try {
-            q_buf_max_kbytes = node["queue.buffering.max.kbytes"].as<int>();
-
-            if (q_buf_max_kbytes < 1 || q_buf_max_kbytes > 2097151)
-                throw "invalid receive max bytes , should be "
-                      "in range 1 - 2097151";
-            if (debug_general)
-                std::cout << "   Config: queue buffering max kbytes: " <<
-                          q_buf_max_kbytes << std::endl;
-
-        } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("q_buf_max_kbytes is not of type int",
-                         node["queue.buffering.max.kbytes"]);
-        }
-    }
-
-
-    if (node["queue.buffering.max.ms"]  &&
-        node["queue.buffering.max.ms"].Type() == YAML::NodeType::Scalar) {
-        try {
-            q_buf_max_ms = node["queue.buffering.max.ms"].as<int>();
-
-            if (q_buf_max_ms < 1 || q_buf_max_ms > 900000)
-                throw "invalid receive max bytes , should be "
-                      "in range 1 - 900000";
-            if (debug_general)
-                std::cout << "   Config: queue buffering max time in ms: " <<
-                          q_buf_max_ms << std::endl;
-
-        } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("q_buf_max_ms is not of type int",
-                         node["queue.buffering.max.ms"]);
-        }
-    }
-
-    if (node["message.send.max.retries"]  &&
-        node["message.send.max.retries"].Type() == YAML::NodeType::Scalar) {
-        try {
-            msg_send_max_retry = node["message.send.max.retries"].as<int>();
-
-            if (msg_send_max_retry < 0 || msg_send_max_retry > 10000000)
-                throw "invalid receive max bytes , should be "
-                      "in range 1 - 10000000";
-            if (debug_general)
-                std::cout << "   Config: max message send retry: " <<
-                          msg_send_max_retry << std::endl;
-
-        } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("msg_send_max_retry is not of type int",
-                         node["message.send.max.retries"]);
-        }
-    }
-
-    if (node["retry.backoff.ms"]  &&
-        node["retry.backoff.ms"].Type() == YAML::NodeType::Scalar) {
-        try {
-            retry_backoff_ms = node["retry.backoff.ms"].as<int>();
-
-            if (retry_backoff_ms < 1 || retry_backoff_ms > 300000)
-                throw "invalid receive max bytes , should be "
-                      "in range 1 - 300000";
-            if (debug_general)
-                std::cout << "   Config: backoff time before resending failed message in ms: " <<
-                          retry_backoff_ms << std::endl;
-
-        } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("retry_backoff_ms is not of type int",
-                         node["retry.backoff.ms"]);
-        }
-    }
-
-    if (node["compression.codec"]  &&
-        node["compression.codec"].Type() == YAML::NodeType::Scalar) {
-        try {
-            compression = node["compression.codec"].as<std::string>();
-
-            if (compression != "none" && compression != "snappy" &&
-                compression != "gzip" && compression != "lz4")
-                throw "invalid value for compression, should be one of none,"
-                      " gzip, snappy, or lz4";
-            if (debug_general)
-                std::cout << "   Config: Compression : " <<
-                          compression << std::endl;
-
-        } catch (YAML::TypedBadConversion<std::string> err) {
-            print_warning("Compression is not of type string",
-                         node["compression.codec"]);
-        }
-    }
-
-    if (node["topics"] && node["topics"].Type() == YAML::NodeType::Map) {
-        parse_kafka_topics(node["topics"]);
-    }
-
-}
-
-void Config::parse_kafka_topics(const YAML::Node &node) {
+void Config::parse_librdkafka_config(const YAML::Node &node) {
     if (node and node.Type() == YAML::NodeType::Map) {
         for (auto it: node) {
             try {
-                // Only add topic names that are initialized, otherwise ignore them
-                if (topic_names_map.find(it.first.as<std::string>()) != topic_names_map.end()) {
-                    if (it.second.Type() == YAML::NodeType::Null) {
-                        // why do we set value as an empty string?
-                        topic_names_map[it.first.as<std::string>()] = "";
-                    } else {
-                        topic_names_map[it.first.as<std::string>()] = it.second.as<std::string>();
-                    }
-                } else if (debug_general)
-                    std::cout << "   Ignore: '" << it.first.as<std::string>()
-                              << "' is not a valid topic name entry" << std::endl;
-
+                librdkafka_passthrough_configs[it.first.as<std::string>()] = it.second.as<std::string>();
             } catch (YAML::TypedBadConversion<std::string> err) {
                 print_warning("kafka.topics.names error in map.  Make sure to define var: <string value>", it.second);
             }
         }
-
-        if (debug_general) {
-            for (auto & it : topic_names_map) {
-                std::cout << "   Config: kafka.topics: " << it.first << " = " << it.second << std::endl;
-            }
-        }
     }
 
-    if (debug_general) {
-        for (auto & it : topic_names_map) {
-            std::cout << "   Config: postsub: kafka.topics.names: " << it.first << " = " << it.second << std::endl;
+    if (debug_all) {
+        for (auto & it : librdkafka_passthrough_configs) {
+            std::cout << "   Config: librdkafka.passthrough.config: " << it.first << " = " << it.second << std::endl;
         }
     }
 }
