@@ -47,7 +47,7 @@ public:
     /*
      * kafka topic names
      */
-    std::map<std::string, std::string> topic_name_template;
+    std::map<std::string, std::string> topic_name_templates;
 
     /*
      * librdkafka passthrough configurations

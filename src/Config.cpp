@@ -21,9 +21,9 @@ Config::Config() {
 
     // Initialize default values for topic templates that OpenBMP V2 uses
     // Users can/should change these values from the openbmp config file
-    topic_name_template["collector"] = "openbmp.collector";
-    topic_name_template["router"] = "openbmp.router";
-    topic_name_template["bmp_raw"] = "openbmp.bmp_raw";
+    topic_name_templates["collector"] = "openbmp.collector";
+    topic_name_templates["router"] = "openbmp.router";
+    topic_name_templates["bmp_raw"] = "openbmp.bmp_raw";
 }
 
 void Config::load(const char *config_filename) {
@@ -118,7 +118,7 @@ void Config::parse_base(const YAML::Node &node) {
 
             MD5(collector_name, strlen((char*) collector_name), collector_hash_id);
             if (debug_all) {
-                std::cout << "   Config: collector id : " << collector_name << std::endl;
+                std::cout << "   Config: collector name : " << collector_name << std::endl;
                 std::cout << "   Config: collector hash id : " << collector_hash_id << std::endl;
             }
 
@@ -181,7 +181,6 @@ void Config::parse_base(const YAML::Node &node) {
     if (node["bmp_ring_buffer_size"]) {
         try {
             bmp_ring_buffer_size = node["bmp_ring_buffer_size"].as<int>();
-            cout << "buffer: " << bmp_ring_buffer_size << endl;
 
             if (bmp_ring_buffer_size < 2 || bmp_ring_buffer_size > 384)
                 throw "invalid router buffer size, not within range of 2 - 384)";
@@ -304,4 +303,8 @@ void Config::parse_librdkafka_config(const YAML::Node &node) {
             std::cout << "   Config: librdkafka.passthrough.config: " << it.first << " = " << it.second << std::endl;
         }
     }
+}
+
+void Config::parse_kafka_topic_template(const YAML::Node &node) {
+
 }

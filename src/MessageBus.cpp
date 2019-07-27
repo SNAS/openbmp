@@ -11,9 +11,9 @@ using namespace std;
 /*************************************/
 MessageBus *MessageBus::singleton_instance = nullptr;
 
-MessageBus *MessageBus::get_msg_bus() {
+MessageBus *MessageBus::get_message_bus() {
     if (!singleton_instance) {
-        cout << "initialize message bus before calling get_msg_bus()." << endl;
+        cout << "initialize message bus before calling get_message_bus()." << endl;
         exit(1);
     }
     return singleton_instance;
@@ -38,7 +38,7 @@ MessageBus::~MessageBus() {
     delete producer_config;
 }
 
-void MessageBus::send(uint8_t *encapsulated_msg, int msg_len) {
+void MessageBus::send(std::string topic, uint8_t *encapsulated_msg, int msg_len) {
     while (!is_connected) {
         LOG_WARN("Not connected to Kafka, attempting to reconnect");
         connect();

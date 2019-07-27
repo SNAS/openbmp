@@ -17,7 +17,7 @@ public:
     static MessageBus *init(Config *);
 
     // get msg bus
-    static MessageBus *get_msg_bus();
+    static MessageBus *get_message_bus();
 
     // delete methods that cause problems to the singleton
     MessageBus(MessageBus const &) = delete;
@@ -28,7 +28,7 @@ public:
     ~MessageBus();
 
     // send openbmp msg to kafka
-    void send(uint8_t *encapsulated_msg, int msg_len);
+    void send(std::string topic, uint8_t *encapsulated_msg, int msg_len);
 
     void connect();
 
@@ -45,7 +45,6 @@ private:
 
     // indicates if it has connected to Kafka server
     bool is_connected;
-    string topic = "bmp_raw";
 
     // RdKafka variables
     RdKafka::Conf *producer_config;
