@@ -11,8 +11,16 @@ using namespace std;
 
 class Config {
 public:
-    /* Constructor */
-    Config();
+    /*********************************************************************//**
+     * Singleton class
+     ***********************************************************************/
+    // initialize singleton logger
+    static Config* init();
+    // get logger
+    static Config* get_config();
+    // delete methods that cause problems to the singleton
+    Config(Config const&) = delete;
+    void operator=(Config const&)  = delete;
 
     /* Method to load variables from a config file */
     void load(const char *config_filename);
@@ -55,6 +63,10 @@ public:
     std::map<std::string, std::string> librdkafka_passthrough_configs;
 
 private:
+    /* private constructor */
+    Config();
+    static Config* singleton_instance;
+
     static void print_warning(string msg, const YAML::Node &node);
 
     /*

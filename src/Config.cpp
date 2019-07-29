@@ -2,6 +2,22 @@
 #include <iostream>
 #include "Config.h"
 
+Config* Config::singleton_instance = nullptr;
+
+Config *Config::init() {
+    if (!singleton_instance)
+        singleton_instance = new Config();
+    return singleton_instance;
+}
+
+Config *Config::get_config() {
+    if (!singleton_instance){
+        cout << "initialize config before calling this function." << endl;
+        exit(1);
+    }
+    return singleton_instance;
+}
+
 Config::Config() {
     // Initialize the defaults
     daemon = true;
@@ -308,3 +324,4 @@ void Config::parse_librdkafka_config(const YAML::Node &node) {
 void Config::parse_kafka_topic_template(const YAML::Node &node) {
 
 }
+
