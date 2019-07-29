@@ -8,16 +8,16 @@
 
 using namespace std;
 
-OpenBMP::OpenBMP(Config *c) {
+OpenBMP::OpenBMP() {
     // set up config
-    config = c;
+    config = Config::get_config();
     // set up logger
     logger = Logger::get_logger();
     // set up message bus after the logger is initialized.
-    message_bus = MessageBus::init(config);
+    message_bus = MessageBus::init();
 
     // set server running status
-    server_running = false;
+    running = false;
 
     /*
      * set up server socket related variables
@@ -50,18 +50,21 @@ OpenBMP::OpenBMP(Config *c) {
 }
 
 void OpenBMP::test() {
-    Worker w1 = Worker(this);
+    Worker w1 = Worker();
     workers.emplace_back(w1);
 }
 
 void OpenBMP::start() {
-    server_running = true;
+    running = true;
     open_socket(config->svr_ipv4, config->svr_ipv6);
+    while (running) {
+        remove_dead_workers();
 
+    }
 }
 
 void OpenBMP::stop() {
-    server_running = false;
+    running = false;
 }
 
 /**
@@ -125,7 +128,7 @@ int OpenBMP::get_num_of_active_connections() {}
 
 void OpenBMP::accept_bmp_connection() {}
 
-void OpenBMP::create_worker(OpenBMP *obmp) {}
+void OpenBMP::create_worker() {}
 
 bool OpenBMP::can_accept_bmp_connection() {
     return below_max_cpu_utilization_threshold() & did_not_affect_rib_dump_rate();
@@ -139,6 +142,10 @@ bool OpenBMP::below_max_cpu_utilization_threshold() {
 bool OpenBMP::did_not_affect_rib_dump_rate() {
     // TODO: implement conditions to accept new connections here.
     return true;
+}
+
+void OpenBMP::remove_dead_workers() {
+
 }
 
 
