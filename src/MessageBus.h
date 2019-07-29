@@ -14,7 +14,7 @@ public:
      * we only need one global instance
      ***********************************************************************/
     // initialize singleton MessageBus
-    static MessageBus *init(Config *);
+    static MessageBus *init();
 
     // get msg bus
     static MessageBus *get_message_bus();
@@ -39,7 +39,7 @@ private:
     Config *config;
 
     // private constructor for singleton design
-    explicit MessageBus(Config *c);
+    explicit MessageBus();
 
     static MessageBus *singleton_instance;
 

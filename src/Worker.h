@@ -7,14 +7,19 @@ class OpenBMP;  // forward declaration
 
 class Worker {
 public:
-    Worker(OpenBMP* obmp);
+    Worker();
     void start();
     void stop();
+    bool is_running();
     double rib_dump_rate();
 private:
-    OpenBMP* obmp_main;
     Encapsulator encapsulator;
+
+    bool running;
+
     int tcp_fd;
+
+    int sock_fds[2];
     int reader_fd;
     int writer_fd;
 };

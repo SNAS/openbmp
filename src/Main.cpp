@@ -37,7 +37,7 @@ void signal_handler(int signum) {
 }
 
 int main(int argc, char **argv) {
-    auto *config = new Config();
+    auto *config = Config::init();
 
     // Process cli args
     if (CLI::ReadCmdArgs(argc, argv, config)) {
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 
 
     // Finally, we initialize OpenBMP and start the service.
-//obmp = new OpenBMP(config);
+    obmp = new OpenBMP();
 //obmp->start();
 //obmp->test();
 //cout << "num of workers: " << obmp->workers.size() << endl;

@@ -16,7 +16,7 @@ class Worker; // forward declaration to void the cross referencing issue between
 
 class OpenBMP {
 public:
-    OpenBMP(Config *);
+    OpenBMP();
 
     Config *config;
     Logger *logger;
@@ -37,7 +37,7 @@ public:
     void test();
 
 private:
-    bool server_running;
+    bool running;
     bool debug; ///< debug flag to indicate debugging
     /****************************************************/
     /* Functions to accept new bmp connection() */
@@ -52,7 +52,7 @@ private:
 
     bool did_not_affect_rib_dump_rate();
 
-    void create_worker(OpenBMP *obmp);
+    void create_worker();
 
     void remove_dead_workers();
 

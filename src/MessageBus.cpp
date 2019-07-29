@@ -19,17 +19,19 @@ MessageBus *MessageBus::get_message_bus() {
     return singleton_instance;
 };
 
-MessageBus *MessageBus::init(Config *c) {
+MessageBus *MessageBus::init() {
     if (!singleton_instance)   // Only allow one instance of class to be generated.
-        singleton_instance = new MessageBus(c);
+        singleton_instance = new MessageBus();
     return singleton_instance;
 }
 
 // private constructor
-MessageBus::MessageBus(Config *c) {
+MessageBus::MessageBus() {
     logger = Logger::get_logger();
-    config = c;
+    config = Config::get_config();
     producer_config = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
+    is_connected = false;
+    producer = nullptr;
     connect();
 }
 
