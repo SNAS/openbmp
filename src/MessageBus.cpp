@@ -32,7 +32,6 @@ MessageBus::MessageBus() {
     producer_config = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
     is_connected = false;
     producer = nullptr;
-    connect();
 }
 
 MessageBus::~MessageBus() {

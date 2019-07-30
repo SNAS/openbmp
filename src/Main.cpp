@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 
     // Finally, we initialize OpenBMP and start the service.
     obmp = new OpenBMP();
-//obmp->start();
+    obmp->start();
 //obmp->test();
 //cout << "num of workers: " << obmp->workers.size() << endl;
     sleep(5);

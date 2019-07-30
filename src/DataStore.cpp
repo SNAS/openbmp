@@ -47,8 +47,8 @@ void DataStore::save_data() {
 
             if (bytes_read <= 0) {
                 throw "bad tcp connection.";
-//                close(sock_fds[0]);
-//                close(sock_fds[1]);
+//                close(worker_to_data_store_sock_pair_fd[0]);
+//                close(worker_to_data_store_sock_pair_fd[1]);
 //                close(cInfo.client->c_sock);
             }
             else {

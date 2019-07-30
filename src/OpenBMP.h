@@ -10,7 +10,7 @@
 #include "Logger.h"
 #include "MessageBus.h"
 
-#include <list>
+#include <vector>
 
 class Worker; // forward declaration to void the cross referencing issue between OpenBMP.h and Worker.h
 
@@ -21,39 +21,50 @@ public:
     Config *config;
     Logger *logger;
     MessageBus *message_bus;
-    std::list<Worker> workers;
+    std::vector<Worker*> workers;
 
-    int          sock;                           ///< Listening socket (ipv4)
-    int          sockv6;                         ///< IPv6 listening socket
-    sockaddr_in  svr_addr{};                       ///< Server v4 address
-    sockaddr_in6 svr_addrv6{};                     ///< Server v6 address
+    /*******************************************************
+     *  openbmp server connection-related variables
+     *******************************************************/
+    int sock;  // collector listening socket (v4)
+    int sock_v6;  // collector listening socket (v6)
+    sockaddr_in  collector_addr;  // collector v4 address
+    sockaddr_in6 collector_addr_v6;  // collector v6 address
 
-    void start();
+    /**********************************
+     *  public functions of openbmp
+     **********************************/
+    void start();  // start the server
 
-    void stop();
+    void stop(); // stop openbmp server
 
     int get_num_of_active_connections();
 
     void test();
 
 private:
-    bool running;
-    bool debug; ///< debug flag to indicate debugging
-    /****************************************************/
-    /* Functions to accept new bmp connection() */
-    /****************************************************/
-    void open_socket(bool ipv4, bool ipv6);
+    bool running; // collector running status.
+    bool debug; // whether the collector should print debug messages.
 
-    void accept_bmp_connection();
+    /****************************************************
+     * Functions to accept new bmp connections
+    *****************************************************/
+    // create tcp socket so the collector can accept connection from bmp routers.
+    void open_server_socket(bool ipv4, bool ipv6);
 
+    // checks for any bmp connection, if it finds one, it hands over the connection to a worker.
+    void find_bmp_connection(Worker *worker);
+
+    // checks if the collector can still handle more bmp connections.
     bool can_accept_bmp_connection();
 
+    // used by can_accept_bmp_connection()
     bool below_max_cpu_utilization_threshold();
 
+    // used by can_accept_bmp_connection()
     bool did_not_affect_rib_dump_rate();
 
-    void create_worker();
-
+    // remove workers that has stopped working.
     void remove_dead_workers();
 
 };
