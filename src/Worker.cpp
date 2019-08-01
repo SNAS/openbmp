@@ -39,17 +39,27 @@ double Worker::rib_dump_rate() {
 void Worker::start(int active_tcp_socket, bool is_ipv4_socket) {
     // save the type of tcp socket
     this->is_ipv4_connection = is_ipv4_socket;
+
     // establish tcp connection with bmp router
     establish_connection_with_bmp_router(active_tcp_socket);
 
+    // create and start data_store
+
+    // change worker status to RUNNING
     status = WORKER_STATUS_RUNNING;
-    // create data_store thread
 
     // worker now consumes pipe socket to parse bmp msgs
+    // note that datastore is in charge of pumping data to the pipe socket
     while (status == WORKER_STATUS_RUNNING) {
         // TODO
         sleep(1);
     }
+
+
+    // stop data_store
+
+    // disconnect with the bmp router normally
+
 }
 
 // set running flag to false
@@ -72,11 +82,9 @@ bool Worker::has_stopped() {
 
 void Worker::establish_connection_with_bmp_router(int active_tcp_socket) {
     // accept the pending client request, or block till one exists
-    socklen_t bmp_router_addr_len = sizeof(bmp_router_addr);    // the bmp info length
-
-    if ((bmp_router_tcp_fd = accept(active_tcp_socket,
-                                    (struct sockaddr *) &bmp_router_addr, &bmp_router_addr_len)) < 0) {
-
+    socklen_t bmp_router_addr_len = sizeof(bmp_router_addr);
+    bmp_router_tcp_fd = accept(active_tcp_socket, (struct sockaddr *) &bmp_router_addr, &bmp_router_addr_len);
+    if (bmp_router_tcp_fd < 0) {
         std::string error = "Server accept connection: ";
         if (errno != EINTR)
             error += strerror(errno);
@@ -85,7 +93,6 @@ void Worker::establish_connection_with_bmp_router(int active_tcp_socket) {
 
         throw error.c_str();
     }
-
 
     if (debug) {
         char c_ip[46];
@@ -107,6 +114,5 @@ void Worker::establish_connection_with_bmp_router(int active_tcp_socket) {
     if (setsockopt(bmp_router_tcp_fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0) {
         LOG_NOTICE("%s: sock=%d: Unable to enable tcp keepalive");
     }
-
 }
 

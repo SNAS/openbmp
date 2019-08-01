@@ -1,8 +1,9 @@
 #include <cstring>
 #include <iostream>
+#include <arpa/inet.h>
 #include "Config.h"
 
-Config* Config::singleton_instance = nullptr;
+Config *Config::singleton_instance = nullptr;
 
 Config *Config::init() {
     if (!singleton_instance)
@@ -11,7 +12,7 @@ Config *Config::init() {
 }
 
 Config *Config::get_config() {
-    if (!singleton_instance){
+    if (!singleton_instance) {
         cout << "initialize config before calling this function." << endl;
         exit(1);
     }
@@ -37,9 +38,9 @@ Config::Config() {
 
     // Initialize default values for topic templates that OpenBMP V2 uses
     // Users can/should change these values from the openbmp config file
-    topic_name_templates["collector"] = "openbmp.collector";
-    topic_name_templates["router"] = "openbmp.router";
-    topic_name_templates["bmp_raw"] = "openbmp.bmp_raw";
+    topic_template_collector = "openbmp.collector";
+    topic_template_router = "openbmp.router";
+    topic_template_bmp_raw = "openbmp.bmp_raw";
 }
 
 void Config::load(const char *config_filename) {
@@ -70,10 +71,13 @@ void Config::load(const char *config_filename) {
                         parse_base(node);
                     else if (key == "librdkafka_config")
                         parse_librdkafka_config(node);
+                    else if (key == "kafka_topic_template")
+                        parse_kafka_topic_template(node);
+                    else if (key == "grouping")
+                        parse_grouping(node);
                     else if (debug_all)
                         std::cout << "   Config: Key " << key << " Type " << node.Type() << std::endl;
-                }
-                else {
+                } else {
                     print_warning("configuration file should only have maps at the root level", node);
                 }
             }
@@ -116,7 +120,7 @@ void Config::print_warning(std::string msg, const YAML::Node &node) {
             type = "Unknown";
             break;
     }
-    std::cout << "WARN: " << msg << " : " << type << " = " << node.Scalar() << std::endl ;
+    std::cout << "WARN: " << msg << " : " << type << " = " << node.Scalar() << std::endl;
 }
 
 void Config::parse_base(const YAML::Node &node) {
@@ -129,10 +133,10 @@ void Config::parse_base(const YAML::Node &node) {
             if (value == "hostname") {
                 gethostname((char *) collector_name, sizeof(collector_name));
             } else {
-                std::strncpy((char *)collector_name, value.c_str(), sizeof(collector_name));
+                std::strncpy((char *) collector_name, value.c_str(), sizeof(collector_name));
             }
 
-            MD5(collector_name, strlen((char*) collector_name), collector_hash_id);
+            MD5(collector_name, strlen((char *) collector_name), collector_hash_id);
             if (debug_all) {
                 std::cout << "   Config: collector name : " << collector_name << std::endl;
                 std::cout << "   Config: collector hash id : " << collector_hash_id << std::endl;
@@ -187,7 +191,7 @@ void Config::parse_base(const YAML::Node &node) {
             }
 
             if (debug_all)
-                std::cout <<  "   Config: listen_mode is " << value << std::endl;
+                std::cout << "   Config: listen_mode is " << value << std::endl;
 
         } catch (YAML::TypedBadConversion<std::string> err) {
             print_warning("listen_mode is not of type string", node["listen_mode"]);
@@ -315,13 +319,220 @@ void Config::parse_librdkafka_config(const YAML::Node &node) {
     }
 
     if (debug_all) {
-        for (auto & it : librdkafka_passthrough_configs) {
+        for (auto &it : librdkafka_passthrough_configs) {
             std::cout << "   Config: librdkafka.passthrough.config: " << it.first << " = " << it.second << std::endl;
         }
     }
 }
 
 void Config::parse_kafka_topic_template(const YAML::Node &node) {
+    std::string value;
+    if (node["collector"]) {
+        try {
+            value = node["collector"].as<std::string>();
+            topic_template_collector = value;
 
+            if (debug_all)
+                std::cout << "   Config: collector topic template is " << value << std::endl;
+
+        } catch (YAML::TypedBadConversion<std::string> err) {
+            print_warning("collector is not of type string", node["collector"]);
+        }
+    }
+
+    if (node["bmp_raw"]) {
+        try {
+            value = node["bmp_raw"].as<std::string>();
+            topic_template_bmp_raw = value;
+
+            if (debug_all)
+                std::cout << "   Config: bmp_raw topic template is " << value << std::endl;
+
+        } catch (YAML::TypedBadConversion<std::string> err) {
+            print_warning("bmp_raw is not of type string", node["bmp_raw"]);
+        }
+    }
+
+    if (node["router"]) {
+        try {
+            value = node["router"].as<std::string>();
+            topic_template_router = value;
+
+            if (debug_all)
+                std::cout << "   Config: router topic template is " << value << std::endl;
+
+        } catch (YAML::TypedBadConversion<std::string> err) {
+            print_warning("router is not of type string", node["router"]);
+        }
+    }
 }
 
+void Config::parse_grouping(const YAML::Node &node) {
+    if (node["router_group"] and node["router_group"].Type() == YAML::NodeType::Sequence) {
+        std::string name;
+
+        for (auto it: node["router_group"]) {
+            if (it.Type() == YAML::NodeType::Map) {
+                const YAML::Node &cur_node = it;
+
+                name = cur_node["name"].as<std::string>();
+
+                if (debug_all)
+                    std::cout << "   Config: mappings.groups.router_group name = " << name << std::endl;
+
+                if (debug_all) std::cout << "   Config: getting regexp_hostname list" << std::endl;
+                if (cur_node["regexp_hostname"] and
+                    cur_node["regexp_hostname"].Type() == YAML::NodeType::Sequence) {
+                    parse_regexp_list(cur_node["regexp_hostname"], name, match_router_group_by_name);
+                } else if (cur_node["regexp_hostname"])
+                    throw "Invalid mapping.groups.router_group.regexp_hostname, should be of type list/sequence";
+
+                if (debug_all) std::cout << "   Config: getting prefix_range list" << std::endl;
+                if (cur_node["prefix_range"] and cur_node["prefix_range"].Type() == YAML::NodeType::Sequence) {
+                    parse_prefix_list(cur_node["prefix_range"], name, match_router_group_by_ip);
+                } else if (cur_node["prefix_range"])
+                    throw "Invalid mapping.groups.router_group.prefix_range, should be of type list/sequence";
+            }
+        }
+    }
+
+    if (node["peer_group"] and node["peer_group"].Type() == YAML::NodeType::Sequence) {
+
+        std::string name;
+        for (auto it: node["peer_group"]) {
+
+            if (it.Type() == YAML::NodeType::Map) {
+                const YAML::Node &cur_node = it;
+                name = cur_node["name"].as<std::string>();
+
+                if (debug_all)
+                    std::cout << "   Config: mappings.groups.peer_group name = " << name << std::endl;
+
+                if (debug_all) std::cout << "   Config: getting regexp_hostname list" << std::endl;
+                if (cur_node["regexp_hostname"] and
+                    cur_node["regexp_hostname"].Type() == YAML::NodeType::Sequence) {
+                    parse_regexp_list(cur_node["regexp_hostname"], name, match_peer_group_by_name);
+                } else if (cur_node["regexp_hostname"])
+                    throw "Invalid mapping.groups.peer_group.regexp_hostname, should be of type list/sequence";
+
+
+                if (debug_all) std::cout << "   Config: getting prefix_range list" << std::endl;
+                if (cur_node["prefix_range"] and cur_node["prefix_range"].Type() == YAML::NodeType::Sequence) {
+                    parse_prefix_list(cur_node["prefix_range"], name, match_peer_group_by_ip);
+                } else if (cur_node["prefix_range"])
+                    throw "Invalid mapping.groups.peer_group.prefix_range, should be of type list/sequence";
+
+                if (debug_all) std::cout << "   Config: getting asn list" << std::endl;
+
+                if (cur_node["asn"] and cur_node["asn"].Type() == YAML::NodeType::Sequence) {
+                    for (auto it: cur_node["asn"]) {
+                        if (it.Type() == YAML::NodeType::Scalar) {
+                            try {
+                                uint32_t asn = it.as<std::uint32_t>();
+                                match_peer_group_by_asn[name].push_back(asn);
+                            } catch (YAML::TypedBadConversion<std::string> err) {
+                                print_warning(
+                                        "mapping.groups.peer_group.asn int parse error. ASN must be uint32: ", it);
+                            }
+                        }
+                    }
+                } else if (cur_node["asn"])
+                    throw "Invalid mapping.groups.peer_group.asn, should be of type list/sequence";
+            }
+        }
+    }
+}
+
+
+/**
+ * Parse matching regexp list and update the provided map with compiled expressions
+ *
+ * \param [in]  node     regex list node - should be of type sequence
+ * \param [in]  name     group name, used as the map key
+ * \param [out] map      Reference to the map that will be updated with the compiled expressions
+ */
+void Config::parse_regexp_list(const YAML::Node &node, string name,
+                               map<string, list<match_type_regex>> &map) {
+
+    match_type_regex value;
+
+    for (std::size_t i = 0; i < node.size(); i++) {
+        if (node[i].Type() == YAML::NodeType::Scalar) {
+
+            try {
+                value.regexp = boost::xpressive::sregex::compile(
+                        node[i].as<std::string>(),
+                        boost::xpressive::regex_constants::icase
+                        | boost::xpressive::regex_constants::not_dot_newline
+                        | boost::xpressive::regex_constants::optimize
+                        | boost::xpressive::regex_constants::nosubs
+                );
+                map[name].push_back(value);
+
+            } catch (boost::exception_detail::clone_impl<boost::xpressive::regex_error> err) {
+                throw "Invalid regular expression pattern";
+            }
+            if (debug_all)
+                std::cout << "   Config: compiled regexp hostname: " << node[i].as<std::string>() << std::endl;
+        }
+    }
+}
+
+/**
+ * Parse matching prefix_range list and update the provided map with compiled expressions
+ *
+ * \param [in]  node     prefix_range list node - should be of type sequence
+ * \param [in]  name     group name, used as the map key
+ * \param [out] map      Reference to the map that will be updated with ip addresses
+ */
+void Config::parse_prefix_list(const YAML::Node &node, string name,
+                               map<string, list<match_type_ip>> &map) {
+
+    match_type_ip value;
+    char *prefix_full;
+    char *prefix, *bits;
+
+    for (std::size_t i = 0; i < node.size(); i++) {
+        bzero(value.prefix, sizeof(value.prefix));
+
+        if (node[i].Type() == YAML::NodeType::Scalar) {
+
+            // Split the prefix/bits
+            prefix_full = strdup(node[i].as<std::string>().c_str());
+
+            if (debug_all)
+                std::cout << "   Config: parsing prefix range entry: " << prefix_full << std::endl;
+
+            prefix = strtok(prefix_full, "/");
+            bits = strtok(NULL, "/");
+
+            if (prefix == NULL or bits == NULL)
+                throw "Missing prefix range bits value";
+
+            value.bits = atoi(bits);
+
+            if (node[i].as<std::string>().find_first_of(".") != std::string::npos) {
+                value.is_ipv4 = true;
+
+                if (value.bits < 1 or value.bits > 32)
+                    throw "Invalid prefix range bits value, must be 1 - 32";
+            } else {
+                value.is_ipv4 = false;
+
+                if (value.bits < 1 or value.bits > 128)
+                    throw "Invalid prefix range bits value, must be 1 - 128";
+            }
+
+            // add the inet address
+            inet_pton((value.is_ipv4 ? AF_INET : AF_INET6), prefix, &value.prefix);
+
+            map[name].push_back(value);
+
+            if (debug_all)
+                printf("   Config: added prefix: %s %s/%d\n", (value.is_ipv4 ? "IPv4" : "IPv6"), prefix,
+                       value.bits);
+
+            free(prefix_full);          // free strdup
+        }
+    }
+}

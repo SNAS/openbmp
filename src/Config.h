@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
 #include <openssl/md5.h>
+#include <boost/xpressive/xpressive.hpp>
+#include <boost/exception/all.hpp>
 
 
 using namespace std;
@@ -53,14 +55,41 @@ public:
     bool debug_message_bus;
 
     /*
-     * kafka topic names
+     * kafka topic templates
      */
-    std::map<std::string, std::string> topic_name_templates;
+    string topic_template_collector;
+    string topic_template_router;
+    string topic_template_bmp_raw;
+
+    /**
+     * matching structs and maps
+     */
+    struct match_type_regex {
+        boost::xpressive::sregex  regexp;    ///< Compiled regular expression
+    };
+
+    struct match_type_ip {
+        bool        is_ipv4;                                     ///< Indicates if IPv4 or IPv6
+        uint32_t    prefix[4]  __attribute__ ((aligned));       ///< IP/network prefix to match (host bits are zeroed)
+        uint8_t     bits;                                       ///< bits to match
+    };
+
+    /*
+     * router_group and peer_group match conditions
+     * the match conditions are defined in the openbmp.conf
+     * peer-related information will require bmp peer header parsing
+     */
+    map<string, list<match_type_regex>> match_router_group_by_name;
+    map<string, list<match_type_ip>> match_router_group_by_ip;
+    map<string, list<match_type_regex>> match_peer_group_by_name;
+    map<string, list<match_type_ip>> match_peer_group_by_ip;
+    map<string, list<uint32_t>> match_peer_group_by_asn;
 
     /*
      * librdkafka passthrough configurations
      */
-    std::map<std::string, std::string> librdkafka_passthrough_configs;
+    map<string, string> librdkafka_passthrough_configs;
+
 
 private:
     /* private constructor */
@@ -79,6 +108,14 @@ private:
     void parse_librdkafka_config(const YAML::Node &node);
 
     void parse_kafka_topic_template(const YAML::Node &node);
+
+    void parse_grouping(const YAML::Node &node);
+
+    void parse_prefix_list(const YAML::Node &node, string name,
+                                   map<string, list<match_type_ip>> &map);
+
+    void parse_regexp_list(const YAML::Node &node, string name,
+                                   map<string, list<match_type_regex>> &map);
 
 };
 

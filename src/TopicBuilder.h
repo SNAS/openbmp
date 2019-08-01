@@ -7,6 +7,8 @@
 
 #include <string>
 
+using namespace std;
+
 /*
 Build kafka topic string based on topic template.
 The constructor will read each topic template and build a list of variables it needs to implement the topic.
@@ -18,9 +20,22 @@ If the leaf node does not exist, we create new node(s) to complete the search tr
 class TopicBuilder {
 public:
     TopicBuilder();
-    std::string get_topic();
+    string get_topic();
+
+private:
+    // check topic template to see if grouping is required
+    bool require_router_grouping;
+    bool require_peer_grouping;
 
 };
 
+class CollectorTopicConfig {
+};
+
+class RouterTopicConfig {
+};
+
+class BMPTopicConfig {
+};
 
 #endif //OPENBMP_TOPICBUILDER_H
