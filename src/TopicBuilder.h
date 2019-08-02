@@ -6,6 +6,7 @@
 #define OPENBMP_TOPICBUILDER_H
 
 #include <string>
+#include "Config.h"
 
 using namespace std;
 
@@ -17,16 +18,23 @@ To build a topic, it searches the list of variables in order in topic_tree, and 
 If the leaf node does not exist, we create new node(s) to complete the search tree,
  and insert the completed topic string to the leaf node.
 */
+
+
 class TopicBuilder {
 public:
     TopicBuilder();
     string get_topic();
 
 private:
-    // check topic template to see if grouping is required
+    Config *config;
+    // whether grouping is required
+    // grouping incurs extra parsing cost
     bool require_router_grouping;
     bool require_peer_grouping;
 
+    // if there is a router group match, we save it
+    // otherwise, it should be null.
+    string router_group;
 };
 
 class CollectorTopicConfig {

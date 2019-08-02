@@ -4,18 +4,21 @@
 #include "Encapsulator.h"
 #include "Logger.h"
 #include "Config.h"
+#include "TopicBuilder.h"
+#include "SockBuffer.h"
 
 class OpenBMP;  // forward declaration
 
 #define WORKER_STATUS_WAITING 1
 #define WORKER_STATUS_RUNNING 2
 #define WORKER_STATUS_STOPPED 3
+#define BMP_MSG_BUF_SIZE 68000
 
 class Worker {
 public:
     Worker();
     // worker start function starts with a socket with pending bmp request
-    void start(int active_tcp_socket, bool is_ipv4_socket);
+    void start(int obmp_server_tcp_socket, bool is_ipv4_socket);
     // stop function set worker status to STOPPED
     void stop();
     // return if worker is processing bmp data
@@ -25,34 +28,34 @@ public:
     // return if worker has been stopped for whatever reason
     bool has_stopped();
     double rib_dump_rate();
+
 private:
+    /*************************************
+     * Worker's dependencies
+     *************************************/
     Encapsulator encapsulator;
+    TopicBuilder topic_builder;
+    SockBuffer sock_buffer;
     Config *config;
     Logger *logger;
+    // libparsebgp bmp_parser;  // TODO: we need to add the to-be-updated libparsebgp here.
 
-    bool debug; // debug flag
-
+    // debug flag
+    bool debug;
     // worker status: WORKER_STATUS_WAITING | WORKER_STATUS_RUNNING | WORKER_STATUS_STOPPED
     int status;
 
-    sockaddr_storage bmp_router_addr; // bmp router address info
+    // Worker's read fd
+    //  sockbuffer saves bmp router's data to its ringbuffer,
+    //  it then pushes bmp data via a pipe socket.
+    //  this is the other end of the socket.
+    int read_fd;
 
-    // creates a pipe sock (PF_LOCAL) between the worker and datastore.
-    int worker_to_data_store_sock_pair_fd[2];
-    // worker will read from reader_fd.
-    int reader_fd;
-    // datastore will push data to writer_fd.
-    int writer_fd;
-
-    // tcp socket that connects to the bmp router of this worker.
-    // datastore reads messages from this socket.
-    int bmp_router_tcp_fd;
-    // remember if this socket is ip v4 or v6 socket.
-    bool is_ipv4_connection;
-
-    // called by Worker::start(), it establish connection requested by a bmp router
-    // (hopefully is requested by a bmp router)
-    void establish_connection_with_bmp_router(int active_tcp_socket);
+    /**********************************
+     * Worker's helper functions
+     **********************************/
+    // to process bmp messages
+    void work();
 };
 
 #endif //OPENBMP_WORKER_H

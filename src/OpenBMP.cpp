@@ -98,7 +98,7 @@ void OpenBMP::start() {
     for (auto worker: workers) worker->stop();
     // disconnect message bus
     message_bus->disconnect();
-    // close socket? probably don't need to
+    // close sockets?
 }
 
 void OpenBMP::stop() {

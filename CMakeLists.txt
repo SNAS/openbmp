@@ -135,7 +135,7 @@ set(MAIN_FILES
         src/Logger.cpp
         src/Encapsulator.cpp
         src/Config.cpp
-        src/DataStore.cpp
+        src/SockBuffer.cpp
         src/TopicBuilder.cpp)
 
 add_executable(openbmp_main ${MAIN_FILES})

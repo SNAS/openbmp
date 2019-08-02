@@ -2,7 +2,7 @@
 #define OPENBMP_ENCAPSULATOR_H
 
 
-#include <stdint.h>
+#include <cstdint>
 
 #define MIN_BIN_HDR_SIZE 40;
 #define MAX_BGP_MSG_SIZE 4096;

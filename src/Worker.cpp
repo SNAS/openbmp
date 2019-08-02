@@ -1,61 +1,36 @@
 #include <iostream>
 #include <unistd.h>
-#include <sys/socket.h>
 #include <cstring>
-#include <netinet/in.h>
 #include <arpa/inet.h>
 #include "Worker.h"
 
 Worker::Worker() {
     // get config instance
     config = Config::get_config();
-
     // set default status to waiting
     status = WORKER_STATUS_WAITING;
-
     // set debug flag
     debug = (config->debug_worker | config->debug_all);
-
     // get logger instance
     logger = Logger::get_logger();
-
-    // dummy value init for bmp router connection type
-    is_ipv4_connection = true;
-
-    // creates a pipe sock (PF_LOCAL) between the worker and datastore
-    socketpair(PF_LOCAL, SOCK_STREAM, 0, worker_to_data_store_sock_pair_fd);
-
-    // worker will read from reader_fd
-    reader_fd = worker_to_data_store_sock_pair_fd[0];
-
-    // datastore will push data to writer_fd
-    writer_fd = worker_to_data_store_sock_pair_fd[1];
 }
 
 double Worker::rib_dump_rate() {
     std::cout << "rib dump rate is not implemented yet." << std::endl;
 }
 
-void Worker::start(int active_tcp_socket, bool is_ipv4_socket) {
-    // save the type of tcp socket
-    this->is_ipv4_connection = is_ipv4_socket;
-
-    // establish tcp connection with bmp router
-    establish_connection_with_bmp_router(active_tcp_socket);
-
-    // create and start data_store
+void Worker::start(int obmp_server_tcp_socket, bool is_ipv4_socket) {
+    // start SockBuffer, set read_fd
+    sock_buffer.start(obmp_server_tcp_socket, is_ipv4_socket);
 
     // change worker status to RUNNING
     status = WORKER_STATUS_RUNNING;
 
-    // worker now consumes pipe socket to parse bmp msgs
-    // note that datastore is in charge of pumping data to the pipe socket
-    while (status == WORKER_STATUS_RUNNING) {
-        // TODO
-        sleep(1);
-    }
+    /* worker now consumes bmp data from pipe socket (read_fd) to parse bmp msgs.
+     * work() is a blocking operation */
+    work();
 
-
+    /* the worker has been notified to stop working, time to clean up. */
     // stop data_store
 
     // disconnect with the bmp router normally
@@ -80,39 +55,41 @@ bool Worker::has_stopped() {
     return status == WORKER_STATUS_STOPPED;
 }
 
-void Worker::establish_connection_with_bmp_router(int active_tcp_socket) {
-    // accept the pending client request, or block till one exists
-    socklen_t bmp_router_addr_len = sizeof(bmp_router_addr);
-    bmp_router_tcp_fd = accept(active_tcp_socket, (struct sockaddr *) &bmp_router_addr, &bmp_router_addr_len);
-    if (bmp_router_tcp_fd < 0) {
-        std::string error = "Server accept connection: ";
-        if (errno != EINTR)
-            error += strerror(errno);
-        else
-            error += "Exiting normally per user request to stop server";
 
-        throw error.c_str();
-    }
+void Worker::work() {
+    /* each iteration populates:
+     * 1) a raw bmp message with its length.
+     * 2) variables required to build a corresponding openbmp kafka topic
+     *  and a custom binary header that encapsulates the raw bmp message.
+     */
+    // variables to save a raw bmp message
+    uint8_t bmp_msg_buffer[BMP_MSG_BUF_SIZE];
+    int bmp_msg_len;
 
-    if (debug) {
-        char c_ip[46];
-        char c_port[6];
-        if (is_ipv4_connection){
-            sockaddr_in *bmp_router_addr_v4 = (sockaddr_in *) &bmp_router_addr;
-            inet_ntop(AF_INET,  &bmp_router_addr_v4->sin_addr, c_ip, sizeof(c_ip));
-            snprintf(c_port, sizeof(c_port), "%hu", ntohs(bmp_router_addr_v4->sin_port));
-        } else {
-            sockaddr_in6 *bmp_router_addr_v6 = (sockaddr_in6 *) &bmp_router_addr;
-            inet_ntop(AF_INET6,  &bmp_router_addr_v6->sin6_addr, c_ip, sizeof(c_ip));
-            snprintf(c_port, sizeof(c_port), "%hu", ntohs(bmp_router_addr_v6->sin6_port));
-        }
-        cout << "bmp router ip: "<< c_ip << " port: "<< c_port << endl;
-    }
+    while (status == WORKER_STATUS_RUNNING) {
+        // TODO: grab enough byte to feed libparsebgp, it returns number of bytes it still needs.
 
-    // enable TCP keepalive
-    int on = 1;
-    if (setsockopt(bmp_router_tcp_fd, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) < 0) {
-        LOG_NOTICE("%s: sock=%d: Unable to enable tcp keepalive");
+        /* CASE: INIT msg
+         *  should happen once normally unless the bmp router changes its information
+         *  this msg can contain router sysname, sysdesc. */
+        /* From rfc7854:
+         *  "The initiation message consists of the common BMP header followed by
+         *  two or more Information TLVs (Section 4.4) containing information
+         *  about the monitored router.  The sysDescr and sysName Information
+         *  TLVs MUST be sent, any others are optional." */
+
+        /*
+         * CASE: TERM msg
+         * close tcp socket and stop working
+         */
+
+        /* CASE: if msg is contains PEER header (which is all other cases really.)
+         *  peer header can contain distinguisher id, ip addr, asn, and bgp id.
+         *  if {{peer_group}} is used by bmp_raw topic in the config file,
+         *  we will check if there is a peer_group match for this peer. */
+
+
+        // TODO
+        sleep(1);
     }
 }
-
