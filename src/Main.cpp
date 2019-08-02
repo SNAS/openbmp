@@ -28,8 +28,6 @@ void signal_handler(int signum) {
         case SIGINT  :
         case SIGCHLD : // Stop openbmp
             obmp->stop();
-            LOG_INFO("Done closing all active BMP connections");
-            exit(0);
         default:
             LOG_INFO("Ignoring signal %d", signum);
             break;
@@ -81,9 +79,7 @@ int main(int argc, char **argv) {
     // Finally, we initialize OpenBMP and start the service.
     obmp = new OpenBMP();
     obmp->start();
-//obmp->test();
-//cout << "num of workers: " << obmp->workers.size() << endl;
-    sleep(5);
+    sleep(1);
     return 0;
 }
 

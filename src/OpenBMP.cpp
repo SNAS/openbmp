@@ -46,8 +46,6 @@ OpenBMP::OpenBMP() {
 }
 
 void OpenBMP::test() {
-    Worker *w1 = new Worker();
-    workers.emplace_back(w1);
 }
 
 void OpenBMP::start() {
@@ -81,7 +79,8 @@ void OpenBMP::start() {
             if (worker->is_running()) {
                 // if it has a job, we save the worker to workers,
                 workers.emplace_back(worker);
-                // and instantiate a new worker to accept new bmp connection.
+
+                // and instantiate a new worker to accept the next bmp connection.
                 worker = new Worker();
             }
         } else {
@@ -95,10 +94,12 @@ void OpenBMP::start() {
      * cleanup procedures
      *************************************/
     // stop all worker nodes
-    for (auto worker: workers) worker->stop();
+    LOG_INFO("stoping openbmp server.");
+    for (auto w: workers) w->stop();
     // disconnect message bus
     message_bus->disconnect();
     // close sockets?
+    LOG_INFO("openbmp server stopped.");
 }
 
 void OpenBMP::stop() {
@@ -218,7 +219,8 @@ void OpenBMP::find_bmp_connection(Worker *worker) {
             if (cur_sock == sock)  close(sock);
             else if (cur_sock == sock_v6)  close(sock_v6);
         } else {
-            cout << "we found a bmp connection request, now try to establish the connection." << endl;
+            if (debug)
+            LOG_INFO("found a bmp connection request, establishing the connection.");
             // v4 socket is active
             if (cur_sock == sock) {
                 active_socket = sock;

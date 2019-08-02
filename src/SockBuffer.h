@@ -6,12 +6,15 @@
 #define OPENBMP_SOCKBUFFER_H
 
 #include <poll.h>
+#include <thread>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
 #include "Logger.h"
 #include "Config.h"
+
+using namespace std;
 
 /*
  * SockBuffer saves data from an TCP socket,
@@ -29,7 +32,9 @@ public:
 
 private:
     // debug mode
-    bool debug;
+    bool debug = false;
+    // running status
+    bool running = false;
 
     Config *config;
     Logger *logger;
@@ -64,20 +69,26 @@ private:
     int read_position = 0;
     int write_position = 0;
     bool wrap_state = false;
-
     unsigned char *sock_buf_read_ptr;
     unsigned char *sock_buf_write_ptr;
+
+    // thread-related variables
+    thread buffer_thread;
+
+    // plain text variables (nothing to do with the core functionalities)
+    char router_ip[46];
+    char router_port[6];
 
     // function to establish connection with a bmp router
     void establish_router_connection(int obmp_server_sock, bool is_ipv4_connection);
 
     // start to buffer bmp msgs
-    // the thread will call save_data() and push_data() to buffer bmp data
-    void create_sock_buffer_thread();
+    // the thread will call save_data() and push_data() to store and push bmp data
+    void sock_bufferer();
 
     // functions to read and push bmp data
-    void save_data();
-    void push_data();
+    void save_data(); // reads from the sock connected with router
+    void push_data(); // pushes to the sock connected with worker
 
 };
 

@@ -1,11 +1,15 @@
 #ifndef OPENBMP_WORKER_H
 #define OPENBMP_WORKER_H
 
+
+#include <thread>
 #include "Encapsulator.h"
 #include "Logger.h"
 #include "Config.h"
 #include "TopicBuilder.h"
 #include "SockBuffer.h"
+
+using namespace std;
 
 class OpenBMP;  // forward declaration
 
@@ -51,11 +55,15 @@ private:
     //  this is the other end of the socket.
     int read_fd;
 
+    // Work thread
+    thread work_thread;
+
     /**********************************
      * Worker's helper functions
      **********************************/
     // to process bmp messages
     void work();
+
 };
 
 #endif //OPENBMP_WORKER_H

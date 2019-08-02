@@ -26,20 +26,23 @@ void Worker::start(int obmp_server_tcp_socket, bool is_ipv4_socket) {
     // change worker status to RUNNING
     status = WORKER_STATUS_RUNNING;
 
-    /* worker now consumes bmp data from pipe socket (read_fd) to parse bmp msgs.
-     * work() is a blocking operation */
-    work();
+    /* worker now consumes bmp data from pipe socket (read_fd) to parse bmp msgs. */
+    work_thread = thread(&Worker::work, this);
 
-    /* the worker has been notified to stop working, time to clean up. */
-    // stop data_store
-
-    // disconnect with the bmp router normally
-
+    if (debug) LOG_INFO("a worker started.");
 }
 
 // set running flag to false
 void Worker::stop() {
     status = WORKER_STATUS_STOPPED;
+    /* the worker has been notified to stop working, time to clean up. */
+
+    // stop sock_buffer, it will also disconnect with the connected router.
+    sock_buffer.stop();
+
+    // join worker
+    work_thread.join();
+    if (debug) LOG_INFO("a worker stopped.");
 }
 
 // return if the worker is running
