@@ -35,16 +35,22 @@ void SockBuffer::start(int obmp_server_sock, bool is_ipv4_connection) {
     pfd_tcp.events = POLLIN | POLLHUP | POLLERR;
     pfd_tcp.revents = 0;
 
-    // creates a pipe sock (PF_LOCAL) between the worker and datastore
-    socketpair(PF_LOCAL, SOCK_STREAM, 0, worker_to_data_store_sock_pair_fd);
+    // creates a pipe sock (PF_LOCAL) between the worker and sockbuffer
+    if(0 != socketpair(PF_LOCAL, SOCK_STREAM, 0, local_sock_pair)) {
+        perror("cannot create socket pair");
+        LOG_INFO("cannot create socket pair");
+    }
     // worker reads bmp data via reader_fd; worker can get this fd via get_sockbuff_read_sock()
-    reader_fd = worker_to_data_store_sock_pair_fd[0];
+    reader_fd = local_sock_pair[0];
     // sockbuffer pushes bmp data via writer_fd
-    writer_fd = worker_to_data_store_sock_pair_fd[1];
-    // prepare sockbuffer's pollfd
-    pfd_pipe.fd = writer_fd;
-    pfd_pipe.events = POLLIN | POLLHUP | POLLERR;
-    pfd_pipe.revents = 0;
+    writer_fd = local_sock_pair[1];
+    // prepare sockbuffer's pollfd,
+    // so the sockbuffer can know when is good to push bmp data to worker
+    pfd_local.fd = writer_fd;
+    pfd_local.events = POLLOUT | POLLHUP | POLLERR;
+    pfd_local.revents = 0;
+
+    LOG_INFO("reader fd: %d, writer fd: %d", reader_fd, writer_fd);
 
     // create buffering thread
     buffer_thread = thread(&SockBuffer::sock_bufferer, this);
@@ -67,13 +73,15 @@ void SockBuffer::save_data() {
             if (pfd_tcp.revents & POLLHUP or pfd_tcp.revents & POLLERR) {
                 bytes_read = 0;  // Indicate to close the connection
             } else {
-                if (not wrap_state)  // write is ahead of read in terms of buffer pointer
+                if (not wrap_state) {
+                    // write is ahead of read in terms of buffer pointer
                     bytes_read = read(router_tcp_fd, sock_buf_write_ptr,
                                       ring_buffer_size - write_position);
-
-                else if (read_position > write_position) // read is ahead of write in terms of buffer pointer
+                } else if (read_position > write_position) {
+                    // read is ahead of write in terms of buffer pointer
                     bytes_read = read(router_tcp_fd, sock_buf_write_ptr,
                                       read_position - write_position - 1);
+                }
             }
 
             if (bytes_read <= 0) {
@@ -97,17 +105,22 @@ void SockBuffer::save_data() {
     }
 
     /* FOR DEBUGGING */
-    // else LOG_INFO("ring buffer stall, waiting for read to catch up.");
+    else {
+        if (debug) LOG_INFO("ring buffer stall, waiting for read to catch up.");
+    }
 }
 
 void SockBuffer::push_data() {
+    pfd_local.events = POLLOUT | POLLHUP | POLLERR;
+    pfd_local.revents = 0;
     if ((not wrap_state and read_position < write_position) or
         (wrap_state and read_position < ring_buffer_size)) {
 
         // Attempt to write buffer to bmp reader
-        if (poll(&pfd_pipe, 1, 10)) {
+        if (poll(&pfd_local, 1, 10)) {
 
-            if (pfd_pipe.revents & POLLHUP or pfd_pipe.revents & POLLERR) {
+            if (pfd_local.revents & POLLHUP or pfd_local.revents & POLLERR) {
+                LOG_INFO("bad pipe connection between SockBuffer and Worker.");
                 throw "bad pipe connection between SockBuffer and Worker.";
             }
 
@@ -159,7 +172,8 @@ void SockBuffer::establish_router_connection(int obmp_server_sock, bool is_ipv4_
         snprintf(router_port, sizeof(router_port), "%hu", ntohs(bmp_router_addr_v6->sin6_port));
     }
 
-    if (debug) cout << "bmp router ip: " << router_ip << " port: " << router_port << endl;
+    if (debug)
+        LOG_NOTICE("Connected with BMP router %s:%s", router_ip, router_port);
 
     // enable TCP keepalive
     int on = 1;
@@ -180,7 +194,6 @@ void SockBuffer::sock_bufferer() {
             // set running to false to exit the while loop.
             running = false;
         }
-        sleep(1);
     }
 
     if (router_tcp_fd) {
@@ -189,7 +202,12 @@ void SockBuffer::sock_bufferer() {
         close(router_tcp_fd);
     }
 
-    // close local pipe sockets
+    // close local sockets
+    LOG_INFO("closing local sockets");
     close(writer_fd);
     close(reader_fd);
+}
+
+int SockBuffer::get_reader_fd() {
+    return reader_fd;
 }

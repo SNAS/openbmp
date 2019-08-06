@@ -10,6 +10,8 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <fstream>
+#include <iostream>
 
 #include "Logger.h"
 #include "Config.h"
@@ -29,6 +31,9 @@ public:
     void start(int obmp_server_sock, bool is_ipv4_connection);
     // stop buffering, close the connection to bmp router.
     void stop();
+
+    // worker can get reader_fd here
+    int get_reader_fd();
 
 private:
     // debug mode
@@ -54,13 +59,13 @@ private:
     sockaddr_storage bmp_router_addr;
 
     // creates a pipe sock (PF_LOCAL) between the worker and datastore.
-    int worker_to_data_store_sock_pair_fd[2];
+    int local_sock_pair[2];
     // worker will read from reader_fd.
     int reader_fd;
-    // datastore will push data to writer_fd.
+    // sockbuffer will push data to writer_fd.
     int writer_fd;
-    // pollfd that checks pipe socket that writes tcp data back to worker
-    pollfd pfd_pipe;
+    // pollfd that checks local socket that writes tcp data back to worker
+    pollfd pfd_local;
 
     // ring buffer related variables
     unsigned char* ring_buffer;
@@ -75,7 +80,7 @@ private:
     // thread-related variables
     thread buffer_thread;
 
-    // plain text variables (nothing to do with the core functionalities)
+    // plain text variables (for readable logs)
     char router_ip[46];
     char router_port[6];
 
