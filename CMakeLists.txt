@@ -95,6 +95,22 @@ find_library(LIBRDKAFKA_CPP_LIBRARY
         lib64
         lib)
 
+find_path(LIBPARSEBGP_INCLUDE_DIR
+        parsebgp_bgp.h
+        HINTS
+        ${HINT_ROOT_DIR}
+        PATH_SUFFIXES
+        include)
+
+find_library(LIBPARSEBGP_LIBRARY
+        NAMES
+        libparsebgp.a parsebgp
+        HINTS
+        ${HINT_ROOT_DIR}
+        PATH_SUFFIXES
+        lib64
+        lib)
+
 find_library(LIBRT_LIBRARY
         NAMES
         rt
@@ -112,15 +128,19 @@ if (NOT LIBYAML_CPP_INCLUDE_DIR OR NOT LIBYAML_CPP_LIBRARY)
     Message(FATAL_ERROR "Libyaml-cpp was not found, cannot proceed.  Visit https://github.com/jbeder/yaml-cpp for install details.")
 endif ()
 
+if (NOT LIBPARSEBGP_INCLUDE_DIR OR NOT LIBPARSEBGP_LIBRARY)
+    Message(FATAL_ERROR "libparsebgp was not found, cannot proceed.  Visit https://github.com/CAIDA/libparsebgp for install details.")
+endif ()
+
 if (NOT LIBRT_LIBRARY AND NOT MACOSX)
     Message(FATAL_ERROR "librt was not found, cannot proceed.")
 endif ()
 
 # Update the include dir
-include_directories(${LIBRDKAFKA_INCLUDE_DIR} ${LIBYAML_CPP_INCLUDE_DIR} src/)
+include_directories(${LIBRDKAFKA_INCLUDE_DIR} ${LIBYAML_CPP_INCLUDE_DIR} ${LIBPARSEBGP_INCLUDE_DIR} src/)
 
 # Set the libs to link
-set(LIBS ${LIBYAML_CPP_LIBRARY} ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} z ${SSL_LIBS} dl pthread)
+set(LIBS ${LIBYAML_CPP_LIBRARY} ${LIBRDKAFKA_CPP_LIBRARY} ${LIBRDKAFKA_LIBRARY} ${LIBPARSEBGP_LIBRARY} z ${SSL_LIBS} dl pthread)
 
 
 ##############################################
@@ -136,7 +156,7 @@ set(MAIN_FILES
         src/Encapsulator.cpp
         src/Config.cpp
         src/SockBuffer.cpp
-        src/TopicBuilder.cpp)
+        src/TopicBuilder.cpp src/Parser.cpp src/Parser.h src/Constants.h)
 
 add_executable(openbmp_main ${MAIN_FILES})
 
@@ -154,9 +174,7 @@ endif ()
 
 ############# Message Bus Tests ##############
 set(MSGBUS_FILES
-        test/message_bus_test.cpp
-        src/MessageBus.cpp
-        )
+        test/message_bus_test.cpp)
 
 # Message bus test executable
 add_executable(msgbus_test ${MSGBUS_FILES})
