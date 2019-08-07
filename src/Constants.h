@@ -1,0 +1,14 @@
+//
+// Created by Lumin Shi on 2019-08-06.
+//
+
+#ifndef OPENBMP_CONSTANTS_H
+#define OPENBMP_CONSTANTS_H
+
+#define WORKER_STATUS_WAITING 1
+#define WORKER_STATUS_RUNNING 2
+#define WORKER_STATUS_STOPPED 3
+
+#define BMP_MSG_BUF_SIZE 68000
+
+#endif //OPENBMP_CONSTANTS_H
