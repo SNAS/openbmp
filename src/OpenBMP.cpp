@@ -77,10 +77,9 @@ void OpenBMP::start() {
 
             // check if the current worker has a job (established tcp connection).
             if (worker->is_running()) {
-                // if it has a job, we save the worker to workers,
+                // if it has a job, we save the worker to worker list (workers),
                 workers.emplace_back(worker);
-
-                // and instantiate a new worker to accept the next bmp connection.
+                // and instantiate a new worker to accept the future bmp connection.
                 worker = new Worker();
             }
         } else {
@@ -256,6 +255,7 @@ bool OpenBMP::did_not_affect_rib_dump_rate() {
 void OpenBMP::remove_dead_workers() {
     for (int i = 0; i < workers.size(); i++) {
         if (workers.at(i)->has_stopped()) {
+            workers.at(i)->stop();
             delete workers.at(i);
             workers.erase(workers.begin() + i);
         }

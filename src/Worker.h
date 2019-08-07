@@ -3,20 +3,18 @@
 
 
 #include <thread>
+#include <sys/socket.h>
 #include "Encapsulator.h"
 #include "Logger.h"
 #include "Config.h"
+#include "Constants.h"
 #include "TopicBuilder.h"
 #include "SockBuffer.h"
+#include "Parser.h"
 
 using namespace std;
 
 class OpenBMP;  // forward declaration
-
-#define WORKER_STATUS_WAITING 1
-#define WORKER_STATUS_RUNNING 2
-#define WORKER_STATUS_STOPPED 3
-#define BMP_MSG_BUF_SIZE 68000
 
 class Worker {
 public:
@@ -33,6 +31,7 @@ public:
     bool has_stopped();
     double rib_dump_rate();
 
+
 private:
     /*************************************
      * Worker's dependencies
@@ -40,30 +39,42 @@ private:
     Encapsulator encapsulator;
     TopicBuilder topic_builder;
     SockBuffer sock_buffer;
+    Parser parser;  // libparsebgp wrapper
     Config *config;
     Logger *logger;
-    // libparsebgp bmp_parser;  // TODO: we need to add the to-be-updated libparsebgp here.
 
     // debug flag
     bool debug;
     // worker status: WORKER_STATUS_WAITING | WORKER_STATUS_RUNNING | WORKER_STATUS_STOPPED
     int status;
 
-    // Worker's read fd
-    //  sockbuffer saves bmp router's data to its ringbuffer,
-    //  it then pushes bmp data via a pipe socket.
-    //  this is the other end of the socket.
-    int read_fd;
+    // worker will read from reader_fd.
+    int reader_fd;
 
     // Work thread
     thread work_thread;
+
+    // variables to save raw bmp data
+    uint8_t bmp_data_buffer[BMP_MSG_BUF_SIZE];
+    int bmp_data_unread_len = 0;
+    int bmp_data_read_len = 0;
 
     /**********************************
      * Worker's helper functions
      **********************************/
     // to process bmp messages
     void work();
+    // bmp_data_buffer related functions
+    uint8_t *get_unread_buffer();
 
+    // get the length of unread bytes in the bmp data buffer
+    int get_bmp_data_unread_len();
+
+    // update buffer values
+    void update_buffer(int parsed_bmp_msg_len);
+
+    // save more data from sockbuffer
+    void refill_buffer();
 };
 
 #endif //OPENBMP_WORKER_H
