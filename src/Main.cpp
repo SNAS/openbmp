@@ -50,6 +50,9 @@ int main(int argc, char **argv) {
             cout << "ERROR: Failed to load the configuration file: " << str << endl;
             return 2;
         }
+    } else {
+        cout << "ERROR: Must specify the path to configuration file: " << endl;
+        return 2;
     }
 
     // Initialize singleton Logger
