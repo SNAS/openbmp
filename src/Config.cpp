@@ -143,7 +143,17 @@ void Config::parse_base(const YAML::Node &node) {
             }
 
         } catch (YAML::TypedBadConversion<std::string> err) {
-            print_warning("admin_id is not of type string", node["admin_id"]);
+            print_warning("collector name is not of type string", node["collector_name"]);
+        }
+    }
+
+    if (node["collector_group"]) {
+        try {
+            collector_group = node["collector_group"].as<std::string>();
+            if (debug_all)
+                std::cout << "   Config: collector group : " << collector_group << std::endl;
+        } catch (YAML::TypedBadConversion<std::string> err) {
+            print_warning("admin_id is not of type string", node["collector_group"]);
         }
     }
 

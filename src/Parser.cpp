@@ -32,10 +32,10 @@ parsebgp_error_t Parser::parse(uint8_t *buffer, int buffer_len) {
     return err;
 }
 
-int Parser::get_parsed_len() {
+int Parser::get_raw_bmp_msg_len() {
     return (int) read_len;
 }
 
-parsebgp_msg_t *Parser::get_parsed_bmp_msg() {
-    return parsed_msg;
+parsebgp_bmp_msg_t *Parser::get_parsed_bmp_msg() {
+    return parsed_msg->types.bmp;
 }

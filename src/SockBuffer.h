@@ -27,13 +27,14 @@ public:
     // constructor
     SockBuffer();
 
-    // runs sockbuffer and handles thread creation.
+    // to connect with bmp router and handle bufferer thread creation
     void start(int obmp_server_sock, bool is_ipv4_connection);
     // stop buffering, close the connection to bmp router.
     void stop();
 
-    // worker can get reader_fd here
+    // worker calls this function to get reader_fd
     int get_reader_fd();
+    string get_router_ip();
 
 private:
     // debug mode
@@ -80,12 +81,12 @@ private:
     // thread-related variables
     thread buffer_thread;
 
-    // plain text variables (for readable logs)
-    char router_ip[46];
-    char router_port[6];
+    // plain text router info
+    string router_ip;
+    string router_port;
 
     // function to establish connection with a bmp router
-    void establish_router_connection(int obmp_server_sock, bool is_ipv4_connection);
+    void connect_bmp_router(int obmp_server_sock, bool is_ipv4_connection);
 
     // start to buffer bmp msgs
     // the thread will call save_data() and push_data() to store and push bmp data

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <arpa/inet.h>
+#include <parsebgp.h>
 #include "Worker.h"
 
 Worker::Worker() {
@@ -11,6 +12,7 @@ Worker::Worker() {
     debug = (config->debug_worker | config->debug_all);
     // get logger instance
     logger = Logger::get_logger();
+    topic_builder = TopicBuilder();
 }
 
 double Worker::rib_dump_rate() {
@@ -20,6 +22,10 @@ double Worker::rib_dump_rate() {
 void Worker::start(int obmp_server_tcp_socket, bool is_ipv4_socket) {
     // start SockBuffer
     sock_buffer.start(obmp_server_tcp_socket, is_ipv4_socket);
+
+    // initialize router information
+    router_ip = sock_buffer.get_router_ip();
+
     // get read fd
     reader_fd = sock_buffer.get_reader_fd();
 
@@ -83,10 +89,43 @@ void Worker::work() {
     while (status == WORKER_STATUS_RUNNING) {
         parsebgp_error_t err = parser.parse(get_unread_buffer(), get_bmp_data_unread_len());
         if (err == PARSEBGP_OK) {
-            int read_len = parser.get_parsed_len();
-            update_buffer(read_len);
+            // parser returns the length of the raw bmp message
+            int raw_bmp_msg_len = parser.get_raw_bmp_msg_len();
+            // get parsed msg
+            parsebgp_bmp_msg_t *parsed_bmp_msg = parser.get_parsed_bmp_msg();
+
+            // TODO: handle init and term bmp msgs
+            if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_INIT_MSG) {
+                LOG_INFO("received init msg.");
+                router_init = true;
+            } else if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_TERM_MSG) {
+                LOG_INFO("received term msg.");
+                router_init = false;
+                status = WORKER_STATUS_STOPPED;
+            }
+
+            int mapping[] = {-1, AF_INET, AF_INET6};
+            char ip_buf[INET6_ADDRSTRLEN] = "[invalid IP]";
+            if (parsed_bmp_msg->peer_hdr.afi)
+                inet_ntop(mapping[parsed_bmp_msg->peer_hdr.afi],
+                        parsed_bmp_msg->peer_hdr.addr, ip_buf, INET6_ADDRSTRLEN);
+            string peer_ip(ip_buf);
+            topic_builder.get_raw_bmp_topic_string(router_ip, peer_ip, parsed_bmp_msg->peer_hdr.asn);
+            /* TODO:
+             *  1. topicbuilder builds the right topic string
+             *  2. encapsulator builds encapsulated message by using the raw bmp message.
+             *  3. message bus sends the encapsulated message to the right topic. */
+
+            // update buffer pointers
+            update_buffer(raw_bmp_msg_len);
         } else if (err == PARSEBGP_PARTIAL_MSG) {
-            refill_buffer();
+            // recv data from socket 1 byte at a time until a bmp init msg is received.
+            // this allows us to receive the entire init msg faster (as soon as the router is connected).
+            /* TODO: may be a bug here, recv() will continue to block until, e.g. all 1500 bytes are received.
+             *          which means if the ringbuffer cannot fulfill the last 1500 bytes before it terminates,
+             *          the worker stucks at recv();  unless recv() returns a smaller amount of bytes
+             *          when it detects the connection has been closed.*/
+            refill_buffer(router_init ? 1500 : 1);
         } else {
             LOG_INFO("stopping the worker, something serious happened -- %d", err);
             // set worker status to stopped so the main thread can clean up.
@@ -95,29 +134,28 @@ void Worker::work() {
         }
     }
 
-    // worker stopped for some reason.
-    // stop sock_buffer, it disconnects with the connected router.
+    // worker stopped for some reason
+    // stop sock_buffer to disconnect with the connected bmp router
     sock_buffer.stop();
 }
 
-void Worker::refill_buffer() {
-    // this value affects how soon we need to refill the buffer;
-    // the larger the value, the less frequent the refills.
-    int avg_bmp_msg_len = 1500;
+// recv_len affects how soon we need to refill the buffer;
+// the larger the value, the less frequent the refills or memmove calls.
+void Worker::refill_buffer(int recv_len) {
     // move unread buffer to the beginning of bmp_data_buffer
     memmove(bmp_data_buffer, get_unread_buffer(), get_bmp_data_unread_len());
     // clear read len
     bmp_data_read_len = 0;
 
     // make sure no buffer overflow
-    if ((get_bmp_data_unread_len() + avg_bmp_msg_len) < BMP_MSG_BUF_SIZE) {
+    if ((get_bmp_data_unread_len() + recv_len) < BMP_MSG_BUF_SIZE) {
         int received_bytes = 0;
         // append data to the buffer
         received_bytes = recv(reader_fd,get_unread_buffer() + get_bmp_data_unread_len(),
-                avg_bmp_msg_len,MSG_WAITALL);
+                recv_len,MSG_WAITALL);
         if (received_bytes <= 0) {
             LOG_INFO("bad connection");
-            // set worker status to stopped so the main thread can clean up.
+            // set worker status to stopped. the main thread will clean up later.
             status = WORKER_STATUS_STOPPED;
         }
         bmp_data_unread_len += received_bytes;
@@ -139,3 +177,4 @@ int Worker::get_bmp_data_unread_len() {
 uint8_t *Worker::get_unread_buffer() {
     return bmp_data_buffer + bmp_data_read_len;
 }
+

@@ -28,7 +28,7 @@ void SockBuffer::start(int obmp_server_sock, bool is_ipv4_connection) {
 
     // establish connection to bmp router
     // it initializes router_tcp_fd
-    establish_router_connection(obmp_server_sock, is_ipv4_connection);
+    connect_bmp_router(obmp_server_sock, is_ipv4_connection);
 
     // prepare router's pollfd
     pfd_tcp.fd = router_tcp_fd;
@@ -147,7 +147,7 @@ void SockBuffer::push_data() {
     }
 }
 
-void SockBuffer::establish_router_connection(int obmp_server_sock, bool is_ipv4_connection) {
+void SockBuffer::connect_bmp_router(int obmp_server_sock, bool is_ipv4_connection) {
     // accept the pending client request, or block till one exists
     socklen_t bmp_router_addr_len = sizeof(bmp_router_addr);
     router_tcp_fd = accept(obmp_server_sock, (struct sockaddr *) &bmp_router_addr, &bmp_router_addr_len);
@@ -162,18 +162,22 @@ void SockBuffer::establish_router_connection(int obmp_server_sock, bool is_ipv4_
     }
 
     // populate the some human-readable ip information about the bmp router
+    char tmp_router_ip[46];
+    char tmp_router_port[6];
     if (is_ipv4_connection){
         sockaddr_in *bmp_router_addr_v4 = (sockaddr_in *) &bmp_router_addr;
-        inet_ntop(AF_INET, &bmp_router_addr_v4->sin_addr, router_ip, sizeof(router_ip));
-        snprintf(router_port, sizeof(router_port), "%hu", ntohs(bmp_router_addr_v4->sin_port));
+        inet_ntop(AF_INET, &bmp_router_addr_v4->sin_addr, tmp_router_ip, sizeof(tmp_router_ip));
+        snprintf(tmp_router_port, sizeof(tmp_router_port), "%hu", ntohs(bmp_router_addr_v4->sin_port));
     } else {
         sockaddr_in6 *bmp_router_addr_v6 = (sockaddr_in6 *) &bmp_router_addr;
-        inet_ntop(AF_INET6, &bmp_router_addr_v6->sin6_addr, router_ip, sizeof(router_ip));
-        snprintf(router_port, sizeof(router_port), "%hu", ntohs(bmp_router_addr_v6->sin6_port));
+        inet_ntop(AF_INET6, &bmp_router_addr_v6->sin6_addr, tmp_router_ip, sizeof(tmp_router_ip));
+        snprintf(tmp_router_port, sizeof(tmp_router_port), "%hu", ntohs(bmp_router_addr_v6->sin6_port));
     }
+    router_ip.assign(tmp_router_ip);
+    router_port.assign(tmp_router_port);
 
     if (debug)
-        LOG_NOTICE("Connected with BMP router %s:%s", router_ip, router_port);
+        LOG_NOTICE("Connected with BMP router %s:%s", router_ip.c_str(), router_port.c_str());
 
     // enable TCP keepalive
     int on = 1;
@@ -211,3 +215,8 @@ void SockBuffer::sock_bufferer() {
 int SockBuffer::get_reader_fd() {
     return reader_fd;
 }
+
+string SockBuffer::get_router_ip() {
+    return router_ip;
+}
+

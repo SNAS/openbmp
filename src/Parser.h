@@ -31,19 +31,21 @@ public:
     parsebgp_error_t parse(uint8_t *buffer, int buffer_len);
 
     // returns parse bmp msg
-    parsebgp_msg_t* get_parsed_bmp_msg();
+    parsebgp_bmp_msg_t* get_parsed_bmp_msg();
     // returns how many bytes were required to parse the message
-    int get_parsed_len();
+    int get_raw_bmp_msg_len();
 
 
 private:
     Logger *logger;
     Config *config;
     bool debug;
-    // libparsebgp config files
+    // libparsebgp configurations
     parsebgp_opts_t opts;
     parsebgp_msg_type_t type = PARSEBGP_MSG_TYPE_BMP;
     parsebgp_error_t err = PARSEBGP_OK;
+
+    // this var holds parsed bmp message
     parsebgp_msg_t *parsed_msg;
 
     // save how many bytes were read from the buffer; the buffer given to the parse()

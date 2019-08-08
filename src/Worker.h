@@ -47,6 +47,7 @@ private:
     bool debug;
     // worker status: WORKER_STATUS_WAITING | WORKER_STATUS_RUNNING | WORKER_STATUS_STOPPED
     int status;
+    bool router_init = false;
 
     // worker will read from reader_fd.
     int reader_fd;
@@ -58,6 +59,9 @@ private:
     uint8_t bmp_data_buffer[BMP_MSG_BUF_SIZE];
     int bmp_data_unread_len = 0;
     int bmp_data_read_len = 0;
+
+    // router related information
+    string router_ip;
 
     /**********************************
      * Worker's helper functions
@@ -74,7 +78,8 @@ private:
     void update_buffer(int parsed_bmp_msg_len);
 
     // save more data from sockbuffer
-    void refill_buffer();
+    void refill_buffer(int recv_len);
+
 };
 
 #endif //OPENBMP_WORKER_H
