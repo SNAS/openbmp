@@ -253,7 +253,7 @@ bool OpenBMP::did_not_affect_rib_dump_rate() {
 }
 
 void OpenBMP::remove_dead_workers() {
-    for (int i = 0; i < workers.size(); i++) {
+    for (size_t i = 0; i < workers.size(); i++) {
         if (workers.at(i)->has_stopped()) {
             workers.at(i)->stop();
             delete workers.at(i);

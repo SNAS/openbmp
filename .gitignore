@@ -1,4 +1,4 @@
 .idea
-cmake-build*
-build
+cmake-get_encap_msg*
+get_encap_msg
 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <parsebgp.h>
 #include "Worker.h"
 
@@ -12,7 +13,6 @@ Worker::Worker() {
     debug = (config->debug_worker | config->debug_all);
     // get logger instance
     logger = Logger::get_logger();
-    topic_builder = TopicBuilder();
 }
 
 double Worker::rib_dump_rate() {
@@ -24,7 +24,14 @@ void Worker::start(int obmp_server_tcp_socket, bool is_ipv4_socket) {
     sock_buffer.start(obmp_server_tcp_socket, is_ipv4_socket);
 
     // initialize router information
+    is_router_ip_ipv4 = is_ipv4_socket;
     router_ip = sock_buffer.get_router_ip();
+    sock_buffer.get_router_ip_raw(router_ip_raw);
+    router_hostname = Utility::resolve_ip(router_ip);
+    topic_builder = new TopicBuilder(router_ip, router_hostname);
+    router_group = topic_builder->get_router_group();
+
+    encapsulator = new Encapsulator(router_ip_raw, is_router_ip_ipv4, router_hostname, router_group);
 
     // get read fd
     reader_fd = sock_buffer.get_reader_fd();
@@ -64,27 +71,9 @@ bool Worker::has_stopped() {
 void Worker::work() {
     /* each iteration populates:
      * 1) a raw bmp message with its length.
-     * 2) variables required to build a corresponding openbmp kafka topic
+     * 2) variables required to get_encap_msg a corresponding openbmp kafka topic
      *  and a custom binary header that encapsulates the raw bmp message.
      */
-    /* CASE: INIT msg
-     *  should happen once normally unless the bmp router changes its information
-     *  this msg can contain router sysname, sysdesc. */
-    /* From rfc7854:
-     *  "The initiation message consists of the common BMP header followed by
-     *  two or more Information TLVs (Section 4.4) containing information
-     *  about the monitored router.  The sysDescr and sysName Information
-     *  TLVs MUST be sent, any others are optional." */
-
-    /*
-     * CASE: TERM msg
-     * close tcp socket and stop working
-     */
-
-    /* CASE: if msg is contains PEER header (which is all other cases really.)
-     *  peer header can contain distinguisher id, ip addr, asn, and bgp id.
-     *  if {{peer_group}} is used by bmp_raw topic in the config file,
-     *  we will check if there is a peer_group match for this peer. */
 
     while (status == WORKER_STATUS_RUNNING) {
         parsebgp_error_t err = parser.parse(get_unread_buffer(), get_bmp_data_unread_len());
@@ -94,28 +83,34 @@ void Worker::work() {
             // get parsed msg
             parsebgp_bmp_msg_t *parsed_bmp_msg = parser.get_parsed_bmp_msg();
 
-            // TODO: handle init and term bmp msgs
+            // 1. topicbuilder builds the right topic string (done)
+            string peer_ip;
+            parser.get_peer_ip(peer_ip);
+            string topic_string = topic_builder->get_raw_bmp_topic_string(peer_ip, parser.get_peer_asn());
+
+            // 2. encapsulator builds encapsulated message by using the raw bmp message.
+            encapsulator->build_encap_bmp_msg(get_unread_buffer(), raw_bmp_msg_len);
+            uint8_t* encap_msg = encapsulator->get_encap_bmp_msg();
+            int encap_msg_size = encapsulator->get_encap_bmp_msg_size();
+
+            // TODO: 3. message bus sends the encapsulated message to the right topic. */
+
+            // we now handle bmp init and term msg
             if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_INIT_MSG) {
+                /* CASE: INIT msg
+                 *  should happen once normally unless the bmp router changes its information
+                 *  this msg can contain router sysname, sysdesc. */
                 LOG_INFO("received init msg.");
                 router_init = true;
             } else if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_TERM_MSG) {
+                /*
+                 * CASE: TERM msg
+                 * close tcp socket and stop working
+                 */
                 LOG_INFO("received term msg.");
                 router_init = false;
                 status = WORKER_STATUS_STOPPED;
             }
-
-            int mapping[] = {-1, AF_INET, AF_INET6};
-            char ip_buf[INET6_ADDRSTRLEN] = "[invalid IP]";
-            if (parsed_bmp_msg->peer_hdr.afi)
-                inet_ntop(mapping[parsed_bmp_msg->peer_hdr.afi],
-                        parsed_bmp_msg->peer_hdr.addr, ip_buf, INET6_ADDRSTRLEN);
-            string peer_ip(ip_buf);
-            topic_builder.get_raw_bmp_topic_string(router_ip, peer_ip, parsed_bmp_msg->peer_hdr.asn);
-            /* TODO:
-             *  1. topicbuilder builds the right topic string
-             *  2. encapsulator builds encapsulated message by using the raw bmp message.
-             *  3. message bus sends the encapsulated message to the right topic. */
-
             // update buffer pointers
             update_buffer(raw_bmp_msg_len);
         } else if (err == PARSEBGP_PARTIAL_MSG) {

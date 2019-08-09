@@ -168,10 +168,14 @@ void SockBuffer::connect_bmp_router(int obmp_server_sock, bool is_ipv4_connectio
         sockaddr_in *bmp_router_addr_v4 = (sockaddr_in *) &bmp_router_addr;
         inet_ntop(AF_INET, &bmp_router_addr_v4->sin_addr, tmp_router_ip, sizeof(tmp_router_ip));
         snprintf(tmp_router_port, sizeof(tmp_router_port), "%hu", ntohs(bmp_router_addr_v4->sin_port));
+        // save bmp router addr in raw
+        memcpy(router_ip_raw, &(bmp_router_addr_v4)->sin_addr, 4);
     } else {
         sockaddr_in6 *bmp_router_addr_v6 = (sockaddr_in6 *) &bmp_router_addr;
         inet_ntop(AF_INET6, &bmp_router_addr_v6->sin6_addr, tmp_router_ip, sizeof(tmp_router_ip));
         snprintf(tmp_router_port, sizeof(tmp_router_port), "%hu", ntohs(bmp_router_addr_v6->sin6_port));
+        // save bmp router addr in raw
+        memcpy(router_ip_raw, &(bmp_router_addr_v6)->sin6_addr, 16);
     }
     router_ip.assign(tmp_router_ip);
     router_port.assign(tmp_router_port);
@@ -194,7 +198,7 @@ void SockBuffer::sock_bufferer() {
             save_data();
             push_data();
         } catch (...) {
-            LOG_INFO("%s: Thread for sock [%d] ended abnormally: ", router_ip, router_tcp_fd);
+            LOG_INFO("%s: Thread for sock [%d] ended abnormally: ", router_ip.c_str(), router_tcp_fd);
             // set running to false to exit the while loop.
             running = false;
         }
@@ -218,5 +222,9 @@ int SockBuffer::get_reader_fd() {
 
 string SockBuffer::get_router_ip() {
     return router_ip;
+}
+
+void SockBuffer::get_router_ip_raw(uint8_t* save_to) {
+    memcpy(save_to, router_ip_raw, 16);
 }
 

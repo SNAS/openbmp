@@ -15,8 +15,9 @@ extern "C" {
 #include <string.h>
 #include <unistd.h>
 }
+#include <netinet/in.h>
 #include "Logger.h"
-#include "Constants.h"
+#include "Constant.h"
 #include "Config.h"
 
 class Parser {
@@ -34,6 +35,9 @@ public:
     parsebgp_bmp_msg_t* get_parsed_bmp_msg();
     // returns how many bytes were required to parse the message
     int get_raw_bmp_msg_len();
+
+    void get_peer_ip(string& save_to_string);
+    uint32_t get_peer_asn();
 
 
 private:

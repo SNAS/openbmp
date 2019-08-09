@@ -156,7 +156,7 @@ set(MAIN_FILES
         src/Encapsulator.cpp
         src/Config.cpp
         src/SockBuffer.cpp
-        src/TopicBuilder.cpp src/Parser.cpp src/Parser.h src/Constants.h)
+        src/TopicBuilder.cpp src/Parser.cpp src/Parser.h src/Constant.h src/Utility.h)
 
 add_executable(openbmp_main ${MAIN_FILES})
 

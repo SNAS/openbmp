@@ -3,6 +3,7 @@
 //
 
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include "Parser.h"
 
 
@@ -13,6 +14,7 @@ Parser::Parser() {
     parsebgp_opts_init(&opts);
     opts.ignore_not_implemented = 1;
     opts.silence_not_implemented = debug ? 0 : 1;
+    // TODO: enable shallow parsing
     // instantiate libparsebgp msg.
     parsed_msg = parsebgp_create_msg();
 }
@@ -38,4 +40,19 @@ int Parser::get_raw_bmp_msg_len() {
 
 parsebgp_bmp_msg_t *Parser::get_parsed_bmp_msg() {
     return parsed_msg->types.bmp;
+}
+
+void Parser::get_peer_ip(string &save_to_string) {
+    int mapping[] = {-1, AF_INET, AF_INET6};
+    char ip_buf[INET6_ADDRSTRLEN] = "[no_peer_IP]";
+    parsebgp_bmp_peer_hdr_t peer_hdr = parsed_msg->types.bmp->peer_hdr;
+    if (peer_hdr.afi)
+        inet_ntop(mapping[peer_hdr.afi],
+                  peer_hdr.addr, ip_buf, INET6_ADDRSTRLEN);
+    save_to_string.assign(ip_buf);
+}
+
+uint32_t Parser::get_peer_asn() {
+    parsebgp_bmp_peer_hdr_t peer_hdr = parsed_msg->types.bmp->peer_hdr;
+    return peer_hdr.asn;
 }

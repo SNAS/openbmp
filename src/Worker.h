@@ -7,7 +7,7 @@
 #include "Encapsulator.h"
 #include "Logger.h"
 #include "Config.h"
-#include "Constants.h"
+#include "Constant.h"
 #include "TopicBuilder.h"
 #include "SockBuffer.h"
 #include "Parser.h"
@@ -36,10 +36,11 @@ private:
     /*************************************
      * Worker's dependencies
      *************************************/
-    Encapsulator encapsulator;
-    TopicBuilder topic_builder;
+    Encapsulator *encapsulator;
+    TopicBuilder *topic_builder;
     SockBuffer sock_buffer;
     Parser parser;  // libparsebgp wrapper
+
     Config *config;
     Logger *logger;
 
@@ -61,7 +62,11 @@ private:
     int bmp_data_read_len = 0;
 
     // router related information
+    bool is_router_ip_ipv4 = true;
     string router_ip;
+    uint8_t router_ip_raw[16];
+    string router_hostname;
+    string router_group;
 
     /**********************************
      * Worker's helper functions

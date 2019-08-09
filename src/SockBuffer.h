@@ -34,7 +34,10 @@ public:
 
     // worker calls this function to get reader_fd
     int get_reader_fd();
+    // get readable router ip
     string get_router_ip();
+    // get raw ip in network-byte order
+    void get_router_ip_raw(uint8_t* save_to);
 
 private:
     // debug mode
@@ -81,6 +84,8 @@ private:
     // thread-related variables
     thread buffer_thread;
 
+    // save router ip in raw
+    uint8_t router_ip_raw[16];
     // plain text router info
     string router_ip;
     string router_port;
