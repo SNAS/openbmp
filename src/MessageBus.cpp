@@ -39,7 +39,7 @@ MessageBus::~MessageBus() {
     delete producer_config;
 }
 
-void MessageBus::send(std::string topic, uint8_t *encapsulated_msg, int msg_len) {
+void MessageBus::send(std::string &topic, uint8_t *encapsulated_msg, int msg_len) {
     while (!is_connected) {
         LOG_WARN("Not connected to Kafka, attempting to reconnect");
         connect();
@@ -124,6 +124,7 @@ void MessageBus::connect() {
         LOG_ERR("Failed to create producer: %s", errstr.c_str());
         throw "ERROR: Failed to create producer";
     }
+
     is_connected = true;
 
     producer->poll(1000);
@@ -131,7 +132,6 @@ void MessageBus::connect() {
         LOG_ERR("Failed to connect to Kafka, will try again in a few");
         return;
     }
-
 }
 
 void MessageBus::disconnect() {

@@ -10,6 +10,7 @@
 #include "Constant.h"
 #include "TopicBuilder.h"
 #include "SockBuffer.h"
+#include "MessageBus.h"
 #include "Parser.h"
 
 using namespace std;
@@ -38,6 +39,7 @@ private:
      *************************************/
     Encapsulator *encapsulator;
     TopicBuilder *topic_builder;
+    MessageBus *msg_bus;
     SockBuffer sock_buffer;
     Parser parser;  // libparsebgp wrapper
 

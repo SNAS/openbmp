@@ -40,14 +40,18 @@ Encapsulator::Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &rout
     bin_hdr_buffer = (uint8_t *) calloc(ENCAPSULATOR_BUF_SIZE, sizeof(uint8_t));
 
     // calculate the binary header size
-    int collect_name_len = strlen((const char *) config->collector_name);
-    int router_group_len = router_group.size();
+    int collector_name_len = strlen((const char *) config->collector_name);
+    int router_group_len = 0;
+    if (router_group != ROUTER_GROUP_UNDEFINED_STRING)
+        router_group_len = router_group.size();
 
-    binary_hdr_len_raw_bmp = collect_name_len + router_group_len
+    binary_hdr_len_raw_bmp = collector_name_len + router_group_len
                              + timestamp_usec_pos + BINARY_HDR_TIMESTAMP_USEC_SIZE
                              + BINARY_HDR_COLLECTOR_HASH_SIZE + BINARY_HDR_COLLECTOR_NAME_LEN_SIZE
                              + BINARY_HDR_ROUTER_HASH_SIZE + BINARY_HDR_ROUTER_IP_SIZE
                              + BINARY_HDR_ROUTER_GROUP_LEN_SIZE + BINARY_HDR_ROW_COUNT_SIZE;
+
+    uint8_t* current_buff_pos = fill_common_bin_header();
 
     /*
      * Start to fill hdr buffer
@@ -56,9 +60,8 @@ Encapsulator::Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &rout
     uint16_t u16;
     uint32_t u32;
 
-    uint8_t* current_buff_pos = fill_common_bin_header();
-
     // set router flag to indicate that router fields are filled
+    u8 = 0;
     u8 |= 0x80;
     // set ip type bit if router uses ipv6
     if (!is_router_ipv4) {
@@ -66,6 +69,10 @@ Encapsulator::Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &rout
     }
     memcpy(bin_hdr_buffer + encap_flag_pos, &u8, sizeof(u8));
 
+
+    // set msg type to bmp_raw
+    u8 = BINARY_HDR_MSG_TYPE_BMP_RAW;
+    memcpy(bin_hdr_buffer + encap_msg_type_pos, &u8, sizeof(u8));
 
     // Router Hash
     // TODO
@@ -154,7 +161,7 @@ uint8_t* Encapsulator::fill_common_bin_header() {
     memcpy(current_buff_pos, &u8, sizeof(u8));
     current_buff_pos++;
 
-    // Header length
+    // binary header length
     u16 = htons(binary_hdr_len_raw_bmp);
     memcpy(current_buff_pos, &u16, sizeof(u16));
     current_buff_pos += sizeof(u16);
@@ -162,16 +169,16 @@ uint8_t* Encapsulator::fill_common_bin_header() {
     // data length (in this case, raw bmp msg)  (skip)
     current_buff_pos += sizeof(u32);
 
-    // Flags
+    // flags
     // we set the flag to indicate that the binary header will not include router info
-    // the contructor for bmp_msgs will change the flag.
+    // the constructor for bmp_msgs will change the flag.
     u8 = 0;
     memcpy(current_buff_pos, &u8, sizeof(u8));
     current_buff_pos++;
 
     // Message type
-    u8 = BINARY_HDR_MSG_TYPE_BMP_RAW;
-    memcpy(current_buff_pos + encap_msg_type_pos, &u8, sizeof(uint8_t));
+    // u8 = BINARY_HDR_MSG_TYPE_BMP_RAW;
+    memcpy(current_buff_pos + encap_msg_type_pos, &u8, sizeof(u8));
     current_buff_pos++;
 
     // Timestamps (skip twice)

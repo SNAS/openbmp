@@ -1,5 +1,4 @@
 #include <iostream>
-#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <parsebgp.h>
 #include "Worker.h"
@@ -13,6 +12,8 @@ Worker::Worker() {
     debug = (config->debug_worker | config->debug_all);
     // get logger instance
     logger = Logger::get_logger();
+    // get msg bus instance
+    msg_bus = MessageBus::get_message_bus();
 }
 
 double Worker::rib_dump_rate() {
@@ -93,7 +94,8 @@ void Worker::work() {
             uint8_t* encap_msg = encapsulator->get_encap_bmp_msg();
             int encap_msg_size = encapsulator->get_encap_bmp_msg_size();
 
-            // TODO: 3. message bus sends the encapsulated message to the right topic. */
+            // 3. message bus sends the encapsulated message to the right topic. */
+            msg_bus->send(topic_string, encap_msg, encap_msg_size);
 
             // we now handle bmp init and term msg
             if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_INIT_MSG) {
