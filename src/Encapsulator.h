@@ -21,9 +21,10 @@ public:
     uint8_t* get_encap_bmp_msg();
     size_t get_encap_bmp_msg_size();
 
-    // TODO: functions for collector msgs
-
-    // TODO: functions for router msgs
+    // functions for collector (hearbeat) msgs
+    void build_encap_collector_msg();
+    uint8_t* get_encap_collector_msg();
+    size_t get_encap_collector_msg_size();
 
 private:
     Logger *logger;
@@ -55,26 +56,5 @@ private:
     // for each raw bmp msg, we call this function to modify the raw_bmp bin header
     void build_bin_header_raw_bmp();
 };
-
-/*
- * V2 Binary Header Format
- * Magic Number (0x4F424D50)
- * Major Ver
- * Minor Ver
- * Binary Header Length
- * Raw BMP Message Length
- * Flags (1. has router fields, 2. router ip v4 or v6)
- * Msg Type (collector or raw_bmp)
- * Collector Timestamp (seconds)
- * Collector Timestamp (microseconds)
- * Collector Hash (16 bytes)
- * Collector Name Length
- * Collector Name (variable)
- * Router Hash (16 bytes)
- * Router IP (16 bytes)
- * Router Group Length
- * Router Group (variable)
- * Row Count (4 bytes)
- */
 
 #endif //OPENBMP_ENCAPSULATOR_H

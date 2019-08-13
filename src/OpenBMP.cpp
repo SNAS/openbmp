@@ -1,10 +1,9 @@
 #include <iostream>
 #include <poll.h>
 #include <unistd.h>
-#include <openssl/md5.h>
+#include <chrono>
 
 #include "OpenBMP.h"
-
 
 using namespace std;
 
@@ -45,9 +44,6 @@ OpenBMP::OpenBMP() {
         collector_addr_v6.sin6_addr = in6addr_any;
 }
 
-void OpenBMP::test() {
-}
-
 void OpenBMP::start() {
     // connect to kafka server
     // TODO: make sure the connect() will block the code until the message bus is connected.
@@ -61,12 +57,37 @@ void OpenBMP::start() {
     /*************************************
      * openbmp server routine
      *************************************/
+     // instantiate a encapsulator just for sending the heartbeat msgs.
+     // could be improved maybe?
+     Encapsulator encapsulator = Encapsulator();
+     string router_ip, router_hostname;
+     TopicBuilder topicbuilder = TopicBuilder(router_ip, router_hostname);
+     string collector_topic_string = topicbuilder.get_collector_topic_string();
+
     // worker pointer that points to a worker who needs a job.
     auto *worker = new Worker();
-    while (running) {
 
+    auto last_heartbeat_timestamp = chrono::high_resolution_clock::now();
+    while (running) {
         // remove all stopped workers
         remove_dead_workers();
+
+        // check if we need to send a collector (heartbeat) msg
+        auto current_time = chrono::high_resolution_clock::now();
+        auto duration = chrono::duration_cast<chrono::seconds>(current_time - last_heartbeat_timestamp);
+        // if the last heartbeat msg was sent more than heartbeat_interval ago,
+        //  we send another one.
+        if (duration.count() >= (config->heartbeat_interval)) {
+            // update heartbeat time
+            encapsulator.build_encap_collector_msg();
+            uint8_t *collector_msg = encapsulator.get_encap_collector_msg();
+            int collector_msg_len = encapsulator.get_encap_collector_msg_size();
+            message_bus->send(collector_topic_string, collector_msg, collector_msg_len);
+            last_heartbeat_timestamp = current_time;
+            if (debug) {
+                LOG_INFO("sent a heartbeat msg.");
+            }
+        }
 
         // check if we can accept new connections
         if (can_accept_bmp_connection()) {
@@ -93,7 +114,7 @@ void OpenBMP::start() {
      * cleanup procedures
      *************************************/
     // stop all worker nodes
-    LOG_INFO("stoping openbmp server.");
+    LOG_INFO("stopping openbmp.");
     for (auto w: workers) w->stop();
     // disconnect message bus
     message_bus->disconnect();
@@ -218,8 +239,9 @@ void OpenBMP::find_bmp_connection(Worker *worker) {
             if (cur_sock == sock)  close(sock);
             else if (cur_sock == sock_v6)  close(sock_v6);
         } else {
-            if (debug)
-            LOG_INFO("found a bmp connection request, establishing the connection.");
+            if (debug) {
+                LOG_INFO("found a bmp connection request, establishing the connection.");
+            }
             // v4 socket is active
             if (cur_sock == sock) {
                 active_socket = sock;

@@ -228,10 +228,6 @@ string TopicBuilder::get_collector_topic_string() {
     return collector_topic_string;
 }
 
-string TopicBuilder::get_router_topic_string() {
-    return router_topic_string;
-}
-
 string TopicBuilder::get_raw_bmp_topic_string(const string &peer_ip, uint32_t peer_asn) {
     string key = peer_ip + to_string(peer_asn);
 

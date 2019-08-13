@@ -28,7 +28,6 @@ public:
     TopicBuilder(string &router_ip, string &router_hostname);
 
     string get_collector_topic_string();  // initialized by constructor
-    string get_router_topic_string();  // initialized by constructor
     // find raw_bmp topic in cache or generate one
     string get_raw_bmp_topic_string(const string& peer_ip, uint32_t peer_asn);
 

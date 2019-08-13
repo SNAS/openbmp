@@ -1,7 +1,6 @@
 #ifndef OPENBMP_WORKER_H
 #define OPENBMP_WORKER_H
 
-
 #include <thread>
 #include <sys/socket.h>
 #include "Encapsulator.h"
@@ -20,16 +19,22 @@ class OpenBMP;  // forward declaration
 class Worker {
 public:
     Worker();
+
     // worker start function starts with a socket with pending bmp request
     void start(int obmp_server_tcp_socket, bool is_ipv4_socket);
+
     // stop function set worker status to STOPPED
     void stop();
+
     // return if worker is processing bmp data
     bool is_running();
+
     // return if worker is waiting for bmp router
     bool is_waiting();
+
     // return if worker has been stopped for whatever reason
     bool has_stopped();
+
     double rib_dump_rate();
 
 
@@ -37,14 +42,13 @@ private:
     /*************************************
      * Worker's dependencies
      *************************************/
+    Config *config;
+    Logger *logger;
     Encapsulator *encapsulator;
     TopicBuilder *topic_builder;
     MessageBus *msg_bus;
     SockBuffer sock_buffer;
     Parser parser;  // libparsebgp wrapper
-
-    Config *config;
-    Logger *logger;
 
     // debug flag
     bool debug;
@@ -52,10 +56,13 @@ private:
     int status;
     bool router_init = false;
 
-    // worker will read from reader_fd.
+    // worker will read bmp data from reader_fd,
+    //  and the bmp data is sent by SockBuffer
+    //  as it receives the bmp data from its connected bmp router
     int reader_fd;
 
-    // Work thread
+    // work() thread
+    //  the
     thread work_thread;
 
     // variables to save raw bmp data
@@ -73,8 +80,9 @@ private:
     /**********************************
      * Worker's helper functions
      **********************************/
-    // to process bmp messages
+    // processes bmp data and send encapsulated raw bmp msgs to the msg bus
     void work();
+
     // bmp_data_buffer related functions
     uint8_t *get_unread_buffer();
 

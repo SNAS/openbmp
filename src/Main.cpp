@@ -35,9 +35,10 @@ void signal_handler(int signum) {
 }
 
 int main(int argc, char **argv) {
+    // Initialize Config (singleton)
     auto *config = Config::init();
 
-    // Process cli args
+    // Process CLI args
     if (CLI::ReadCmdArgs(argc, argv, config)) {
         return 1;
     }
@@ -55,7 +56,7 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    // Initialize singleton Logger
+    // Initialize Logger (singleton)
     try {
         logger = Logger::init(config->log_filename, config->debug_filename);
     } catch (char const *str) {

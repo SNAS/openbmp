@@ -24,9 +24,9 @@ Encapsulator::Encapsulator() {
 
     // collector bin hdr is simple, we fill out the shared part
     uint8_t* current_buff_pos = fill_common_bin_header();
-    // and we set the row count to 0
-    // Row Count
-    uint32_t u32 = htonl(0); // TODO: idk what should be the value here actually
+
+    // we set the row count to 0 as it's a collector msg.
+    uint32_t u32 = htonl(0); // TODO: verify if this is the right value to set.
     memcpy(current_buff_pos, &u32, sizeof(u32));
 
 }
@@ -201,3 +201,30 @@ uint8_t* Encapsulator::fill_common_bin_header() {
 
     return current_buff_pos;
 }
+
+size_t Encapsulator::get_encap_collector_msg_size() {
+    return binary_hdr_len_collector;
+}
+
+void Encapsulator::build_encap_collector_msg() {
+    // simply update the timestamps
+
+    // record the capture time for this message
+    uint32_t u32;
+    timeval tv;
+    gettimeofday(&tv, nullptr);
+    uint32_t capture_ts_secs = tv.tv_sec;
+    u32 = htonl(capture_ts_secs);
+    memcpy(bin_hdr_buffer + timestamp_sec_pos, &u32, sizeof(u32));
+    uint32_t capture_ts_usecs = tv.tv_usec;
+    u32 = htonl(capture_ts_usecs);
+    memcpy(bin_hdr_buffer + timestamp_usec_pos, &u32, sizeof(u32));
+
+}
+
+uint8_t *Encapsulator::get_encap_collector_msg() {
+    return bin_hdr_buffer;
+}
+
+
+

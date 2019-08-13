@@ -118,11 +118,11 @@ void Worker::work() {
         } else if (err == PARSEBGP_PARTIAL_MSG) {
             // recv data from socket 1 byte at a time until a bmp init msg is received.
             // this allows us to receive the entire init msg faster (as soon as the router is connected).
-            /* TODO: may be a bug here, recv() will continue to block until, e.g. all 1500 bytes are received.
+            /* TODO: may be a bug here? recv() will continue to block until, e.g. all 1500 bytes are received.
              *          which means if the ringbuffer cannot fulfill the last 1500 bytes before it terminates,
              *          the worker stucks at recv();  unless recv() returns a smaller amount of bytes
              *          when it detects the connection has been closed.*/
-            refill_buffer(router_init ? 1500 : 1);
+            refill_buffer(router_init ? WORKER_BUF_REFILL_SIZE : 1);
         } else {
             LOG_INFO("stopping the worker, something serious happened -- %d", err);
             // set worker status to stopped so the main thread can clean up.

@@ -39,6 +39,8 @@ public:
     unsigned char collector_name[64];
     // Collector group
     string collector_group;
+    // Collector hearbeat interval
+    int heartbeat_interval = 10;
 
     uint16_t bmp_port;               // BMP listening port
     string bind_ipv4;                // IP to listen on for IPv4

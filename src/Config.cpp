@@ -157,6 +157,16 @@ void Config::parse_base(const YAML::Node &node) {
         }
     }
 
+    if (node["heartbeat_interval"]) {
+        try {
+            heartbeat_interval = node["heartbeat_interval"].as<int>();
+            if (debug_all)
+                std::cout << "   Config: heartbeat interval: " << heartbeat_interval << std::endl;
+        } catch (YAML::TypedBadConversion<std::string> err) {
+            print_warning("heartbeat_interval is not of type int", node["heartbeat_interval"]);
+        }
+    }
+
     if (node["listen_port"]) {
         try {
             bmp_port = node["listen_port"].as<uint16_t>();
