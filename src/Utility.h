@@ -7,6 +7,8 @@
 
 #include <string>
 #include <netdb.h>
+#include "stdlib.h"
+#include "stdio.h"
 
 using namespace std;
 
@@ -24,6 +26,39 @@ public:
             freeaddrinfo(ai);
         }
         return hostname;
+    }
+
+    static double get_avg_cpu_util() {
+        unsigned long long totalUser[2], totalUserLow[2], totalSys[2], totalIdle[2];
+        unsigned long long total;
+        double percent = 0;
+        FILE* file = fopen("/proc/stat", "r");
+        fscanf(file, "cpu %llu %llu %llu %llu",
+                &totalUser[0], &totalUserLow[0], &totalSys[0], &totalIdle[0]);
+        fclose(file);
+
+        sleep(3);
+
+        // sleep for a while and check the cpu util again
+        file = fopen("/proc/stat", "r");
+        fscanf(file, "cpu %llu %llu %llu %llu",
+               &totalUser[1], &totalUserLow[1], &totalSys[1], &totalIdle[1]);
+        fclose(file);
+
+        if (totalUser[1] < totalUser[0] || totalUserLow[1] < totalUserLow[0] ||
+            totalSys[1] < totalSys[0] || totalIdle[1] < totalIdle[0]){
+            //Overflow detection. Just skip this value.
+            percent = -1.0;
+        } else {
+            total = (totalUser[1] - totalUser[0])
+                    + (totalUserLow[1] - totalUserLow[0])
+                    + (totalSys[1] - totalSys[0]);
+            percent = total;
+            total += (totalIdle[1] - totalIdle[0]);
+            percent /= total;
+            percent *= 100;
+        }
+        return percent;
     }
 };
 #endif //OPENBMP_UTILITY_H

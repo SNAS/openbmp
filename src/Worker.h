@@ -37,6 +37,8 @@ public:
 
     double rib_dump_rate();
 
+    // return if rib dump phase has started.
+    bool has_rib_dump_started();
 
 private:
     /*************************************
@@ -54,7 +56,10 @@ private:
     bool debug;
     // worker status: WORKER_STATUS_WAITING | WORKER_STATUS_RUNNING | WORKER_STATUS_STOPPED
     int status;
+    // whether the worker has received a init msg
     bool router_init = false;
+    // set to true when the worker receives none init msgs after the init msg.
+    bool router_rib_dump_started = false;
 
     // worker will read bmp data from reader_fd,
     //  and the bmp data is sent by SockBuffer
@@ -62,7 +67,7 @@ private:
     int reader_fd;
 
     // work() thread
-    //  the
+    //  this thread process bmp data from sockbuffer and send bmp msgs to message bus
     thread work_thread;
 
     // variables to save raw bmp data

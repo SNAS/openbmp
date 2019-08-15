@@ -23,14 +23,6 @@ public:
     MessageBus *message_bus;
     std::vector<Worker*> workers;
 
-    /*******************************************************
-     *  openbmp server connection-related variables
-     *******************************************************/
-    int sock;  // collector listening socket (v4)
-    int sock_v6;  // collector listening socket (v6)
-    sockaddr_in  collector_addr;  // collector v4 address
-    sockaddr_in6 collector_addr_v6;  // collector v6 address
-
     /**********************************
      *  public functions of openbmp
      **********************************/
@@ -40,11 +32,21 @@ public:
 
     int get_num_of_active_connections();
 
-    void test();
-
 private:
     bool running; // collector running status.
-    bool debug; // whether the collector should print debug messages.
+    bool debug; // whether the openbmp main thread should print debug messages.
+
+    // a cpu utilization monitor thread will update this value
+    double cpu_util = 0;
+    thread cpu_mon_thread;
+
+    /*******************************************************
+     *  openbmp server connection-related variables
+     *******************************************************/
+    int sock;  // collector listening socket (v4)
+    int sock_v6;  // collector listening socket (v6)
+    sockaddr_in  collector_addr;  // collector v4 address
+    sockaddr_in6 collector_addr_v6;  // collector v6 address
 
     /****************************************************
      * Functions to accept new bmp connections
@@ -58,14 +60,17 @@ private:
     // checks if the collector can still handle more bmp connections.
     bool can_accept_bmp_connection();
 
-    // used by can_accept_bmp_connection()
-    bool below_max_cpu_utilization_threshold();
+    // a thread that updates cpu usage
+    void cpu_usage_monitor();
 
     // used by can_accept_bmp_connection()
     bool did_not_affect_rib_dump_rate();
 
     // remove workers that has stopped working.
     void remove_dead_workers();
+
+    // return the number of workers that are waiting for their RIB dumps
+    int get_rib_dump_waiting_worker_num();
 
 };
 

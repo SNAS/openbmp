@@ -16,6 +16,10 @@ Worker::Worker() {
     msg_bus = MessageBus::get_message_bus();
 }
 
+bool Worker::has_rib_dump_started() {
+    return router_rib_dump_started;
+}
+
 double Worker::rib_dump_rate() {
     std::cout << "rib dump rate is not implemented yet." << std::endl;
 }
@@ -76,9 +80,30 @@ void Worker::work() {
      *  and a custom binary header that encapsulates the raw bmp message.
      */
 
+    /* A way to tell that the worker has received a INIT msg from a router
+     *  but is waiting for RIB dump.
+     *  There is a typically 30 second window before a router start to dump RIB table,
+     *  if a collector has many router connections at once,
+     *  the cpu usage monitor alone cannot help to determine
+     *  if the collector should accept the connections.
+     *
+     *  ASSUMPTION:
+     *  once the count value is >= 2, it means the router started to dump its RIB
+     */
+    int bmp_msg_count = 0;
+
     while (status == WORKER_STATUS_RUNNING) {
         parsebgp_error_t err = parser.parse(get_unread_buffer(), get_bmp_data_unread_len());
         if (err == PARSEBGP_OK) {
+
+            // increase bmp_msg_count up to 2 (an arbitrary decision)
+            if (router_init & (bmp_msg_count >= 2))
+                // if true, it means rib dump has started.
+                router_rib_dump_started = true;
+            else {
+                bmp_msg_count++;
+            }
+
             // parser returns the length of the raw bmp message
             int raw_bmp_msg_len = parser.get_raw_bmp_msg_len();
             // get parsed msg

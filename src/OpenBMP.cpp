@@ -14,11 +14,10 @@ OpenBMP::OpenBMP() {
     logger = Logger::get_logger();
     // set up message bus after the logger is initialized.
     message_bus = MessageBus::init();
-
     // set server running status
     running = false;
-
-    debug = config->debug_collector;
+    // set debug flag
+    debug = config->debug_collector | config->debug_all;
 
     /*********************************************
         set up server socket related variables
@@ -53,6 +52,8 @@ void OpenBMP::start() {
 
     // all dependencies have been initialized, set running status to true.
     running = true;
+
+    cpu_mon_thread = thread(&OpenBMP::cpu_usage_monitor, this);
 
     /*************************************
      * openbmp server routine
@@ -94,6 +95,7 @@ void OpenBMP::start() {
             // check for any new tcp connection.
             // if there is one, we accept the connection,
             // and hand it over to the worker
+            // note that find_bmp_connection() checks connection for 1 sec.
             find_bmp_connection(worker);
 
             // check if the current worker has a job (established tcp connection).
@@ -118,6 +120,8 @@ void OpenBMP::start() {
     for (auto w: workers) w->stop();
     // disconnect message bus
     message_bus->disconnect();
+    // join cpu util mon
+    cpu_mon_thread.join();
     // close sockets?
     LOG_INFO("openbmp server stopped.");
 }
@@ -261,11 +265,13 @@ void OpenBMP::find_bmp_connection(Worker *worker) {
 
 // check if the collector has enough head room to accept new bmp connections.
 bool OpenBMP::can_accept_bmp_connection() {
-    return below_max_cpu_utilization_threshold() & did_not_affect_rib_dump_rate();
-}
-
-bool OpenBMP::below_max_cpu_utilization_threshold() {
-    // TODO: implement conditions to accept new connections here.
+    int rib_waiting_workers = get_rib_dump_waiting_worker_num();
+    if (debug) {
+        LOG_INFO("%d worker(s) in router rib dump waiting state", rib_waiting_workers);
+    }
+    if (rib_waiting_workers >= config->max_rib_waiting_workers) {
+        return false;
+    }
     return true;
 }
 
@@ -282,4 +288,23 @@ void OpenBMP::remove_dead_workers() {
             workers.erase(workers.begin() + i);
         }
     }
+}
+
+void OpenBMP::cpu_usage_monitor() {
+    while (running) {
+        cpu_util = Utility::get_avg_cpu_util();
+        if (debug) {
+            LOG_INFO("avg cpu util (%): %f", cpu_util);
+        }
+    }
+}
+
+int OpenBMP::get_rib_dump_waiting_worker_num() {
+    int count = 0;
+    for (auto w: workers) {
+        if (!w->has_rib_dump_started()){
+            count++;
+        }
+    }
+    return count;
 }

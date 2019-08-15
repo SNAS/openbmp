@@ -227,11 +227,23 @@ void Config::parse_base(const YAML::Node &node) {
 
             bmp_ring_buffer_size *= 1024 * 1024;  // MB to bytes
 
-            if (debug_all)
+            if (debug_all) {
                 std::cout << "   Config: bmp buffer: " << bmp_ring_buffer_size << std::endl;
+            }
 
         } catch (YAML::TypedBadConversion<int> err) {
-            print_warning("buffers.router is not of type int", node["bmp_ring_buffer_size"]);
+            print_warning("bmp_ring_buffer_size is not of type int", node["bmp_ring_buffer_size"]);
+        }
+    }
+
+    if (node["max_rib_waiting_workers"]) {
+        try {
+            max_rib_waiting_workers = node["max_rib_waiting_workers"].as<int>();
+            if (debug_all) {
+                std::cout << "   Config: max_rib_waiting_workers: " << max_rib_waiting_workers << std::endl;
+            }
+        } catch (YAML::TypedBadConversion<int> err) {
+            print_warning("max_rib_waiting_workers is not of type int", node["max_rib_waiting_workers"]);
         }
     }
 

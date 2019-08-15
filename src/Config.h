@@ -46,8 +46,9 @@ public:
     string bind_ipv4;                // IP to listen on for IPv4
     string bind_ipv6;                // IP to listen on for IPv6
 
-    int bmp_ring_buffer_size;      // BMP buffer size in bytes (min is 2M max is 128M)
-    float max_cpu_utilization;     // CPU utilization cap of the program
+    int bmp_ring_buffer_size = 5;      // BMP buffer size in bytes (min is 2M max is 128M)
+    int max_rib_waiting_workers = 10;
+    float max_cpu_utilization = 0.9;     // CPU utilization cap of the program
 
     bool svr_ipv4;                 // Indicates if server should listen for IPv4 connections
     bool svr_ipv6;                 // Indicates if server should listen for IPv6 connections
