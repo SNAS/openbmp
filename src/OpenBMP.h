@@ -30,8 +30,6 @@ public:
 
     void stop(); // stop openbmp server
 
-    int get_num_of_active_connections();
-
 private:
     bool running; // collector running status.
     bool debug; // whether the openbmp main thread should print debug messages.

@@ -6,6 +6,7 @@
 using namespace std;
 
 
+
 /*************************************/
 /******* singleton message bus *******/
 /*************************************/
@@ -32,6 +33,7 @@ MessageBus::MessageBus() {
     producer_config = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
     is_connected = false;
     producer = nullptr;
+    running = true;
 }
 
 MessageBus::~MessageBus() {
@@ -40,12 +42,14 @@ MessageBus::~MessageBus() {
 }
 
 void MessageBus::send(std::string &topic, uint8_t *encapsulated_msg, int msg_len) {
-    while (!is_connected) {
+    while (!is_connected && running) {
         LOG_WARN("Not connected to Kafka, attempting to reconnect");
         connect();
         sleep(1);
     }
-
+    if (!running) {
+        return;
+    }
     RdKafka::ErrorCode resp =
             producer->produce(topic, RdKafka::Topic::PARTITION_UA,
                               RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
@@ -63,36 +67,11 @@ void MessageBus::send(std::string &topic, uint8_t *encapsulated_msg, int msg_len
 
 void MessageBus::connect() {
     string errstr;
-    string value;
     std::ostringstream rx_bytes, tx_bytes, sess_timeout, socket_timeout;
     std::ostringstream q_buf_max_msgs, q_buf_max_kbytes, q_buf_max_ms,
             msg_send_max_retry, retry_backoff_ms;
 
     disconnect();
-
-    /*
-     * Configure Kafka Producer (https://kafka.apache.org/08/configuration.html)
-     */
-    //TODO: Add config options to change these settings
-
-    // Disable logging of connection close/idle timeouts caused by Kafka 0.9.x (connections.max.idle.ms)
-    //    See https://github.com/edenhill/librdkafka/issues/437 for more details.
-    // TODO: change this when librdkafka has better handling of the idle disconnects
-    value = "false";
-    if (producer_config->set("log.connection.close", value, errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure log.connection.close=false: %s.", errstr.c_str());
-    }
-
-    value = "true";
-    if (producer_config->set("api.version.request", value, errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure api.version.request=true: %s.", errstr.c_str());
-    }
-
-    // TODO: Add config for address family - default is any
-    /*value = "v4";
-    if (producer_config->set("broker.address.family", value, errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure broker.address.family: %s.", errstr.c_str());
-    }*/
 
     // pass librdkafka configs from the config file to producer producer_config
     for (auto & it : config->librdkafka_passthrough_configs) {
@@ -103,22 +82,13 @@ void MessageBus::connect() {
     }
 
     // Register event callback
-    //event_callback = new KafkaEventCallback(&isConnected, logger);
-    //if (producer_config->set("event_cb", event_callback, errstr) != RdKafka::Conf::CONF_OK) {
-    //    LOG_ERR("Failed to configure kafka event callback: %s", errstr.c_str());
-    //    throw "ERROR: Failed to configure kafka event callback";
-    //}
-
-    // Register delivery report callback
-    /*
-    delivery_callback = new KafkaDeliveryReportCallback();
-    if (producer_config->set("dr_cb", delivery_callback, errstr) != RdKafka::Conf::CONF_OK) {
-        LOG_ERR("Failed to configure kafka delivery report callback: %s", errstr.c_str());
-        throw "ERROR: Failed to configure kafka delivery report callback";
+    event_callback = new KafkaEventCallback(&is_connected, logger);
+    if (producer_config->set("event_cb", event_callback, errstr) != RdKafka::Conf::CONF_OK) {
+        LOG_ERR("Failed to configure kafka event callback: %s", errstr.c_str());
+        throw "ERROR: Failed to configure kafka event callback";
     }
-    */
 
-    // Create producer and connect
+    // Create producer
     producer = RdKafka::Producer::create(producer_config, errstr);
     if (producer == nullptr) {
         LOG_ERR("Failed to create producer: %s", errstr.c_str());
@@ -127,7 +97,9 @@ void MessageBus::connect() {
 
     is_connected = true;
 
+    // check if the connection is up
     producer->poll(1000);
+
     if (not is_connected) {
         LOG_ERR("Failed to connect to Kafka, will try again in a few");
         return;
@@ -143,19 +115,20 @@ void MessageBus::disconnect() {
             i++;
         }
     }
-
     if (producer != nullptr) delete producer;
     producer = nullptr;
 
+    if (event_callback != nullptr) delete event_callback;
+    event_callback = nullptr;
+
     // suggested by librdkafka to free memory
-    RdKafka::wait_destroyed(2000);
-
-    //if (event_callback != NULL) delete event_callback;
-    //event_callback = NULL;
-
-    //if (delivery_callback != NULL) delete delivery_callback;
-    //delivery_callback = NULL;
+    RdKafka::wait_destroyed(500);
 
     is_connected = false;
+}
+
+void MessageBus::stop() {
+    running = false;
+    disconnect();
 }
 

@@ -45,10 +45,13 @@ OpenBMP::OpenBMP() {
 
 void OpenBMP::start() {
     // connect to kafka server
-    // TODO: make sure the connect() will block the code until the message bus is connected.
     message_bus->connect();
     // open server tcp socket
-    open_server_socket(config->svr_ipv4, config->svr_ipv6);
+    try {
+        open_server_socket(config->svr_ipv4, config->svr_ipv6);
+    } catch (const char * err) {
+        LOG_ERR(err);
+    }
 
     // all dependencies have been initialized, set running status to true.
     running = true;
@@ -111,24 +114,29 @@ void OpenBMP::start() {
         }
     }
 
-    /*************************************
-     * openbmp server has stopped
-     * cleanup procedures
-     *************************************/
-    // stop all worker nodes
-    LOG_INFO("stopping openbmp.");
-    for (auto w: workers) w->stop();
-    // disconnect message bus
-    message_bus->disconnect();
-    // join cpu util mon
-    cpu_mon_thread.join();
-    // close sockets?
-    LOG_INFO("openbmp server stopped.");
 }
 
 void OpenBMP::stop() {
     // set running status to false to stop openbmp server routine.
     running = false;
+
+    /*************************************
+     * openbmp server was signaled to stop
+     * cleanup procedures
+     *************************************/
+    // stop all worker nodes
+    LOG_INFO("stopping openbmp.");
+    for (auto w: workers) w->stop();
+
+    // send msg bus stop signal to cancel while loops in the msgbus.send()
+    message_bus->stop();
+    LOG_INFO("msg bus stopped.");
+
+    // join cpu util mon
+    cpu_mon_thread.join();
+    LOG_INFO("cpu monitor stopped.");
+
+    LOG_INFO("openbmp server stopped.");
 }
 
 /**
@@ -186,15 +194,6 @@ void OpenBMP::open_server_socket(bool ipv4, bool ipv6) {
         // listen for incoming connections
         listen(sock_v6, 10);
     }
-}
-
-int OpenBMP::get_num_of_active_connections() {
-    int count = 0;
-    for (auto worker: workers) {
-        if (worker->is_running())
-            count++;
-    }
-    return count;
 }
 
 // checks for any bmp connection, if it finds one,
