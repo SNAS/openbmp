@@ -32,7 +32,7 @@ Encapsulator::Encapsulator() {
 }
 
 // constructor for bmp_raw msgs
-Encapsulator::Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &router_hostname, string &router_group) {
+Encapsulator::Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &router_group) {
     logger = Logger::get_logger();
     config = Config::get_config();
 

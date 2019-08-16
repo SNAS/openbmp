@@ -43,8 +43,8 @@ private:
      *******************************************************/
     int sock;  // collector listening socket (v4)
     int sock_v6;  // collector listening socket (v6)
-    sockaddr_in  collector_addr;  // collector v4 address
-    sockaddr_in6 collector_addr_v6;  // collector v6 address
+    sockaddr_in  collector_addr{};  // collector v4 address
+    sockaddr_in6 collector_addr_v6{};  // collector v6 address
 
     /****************************************************
      * Functions to accept new bmp connections

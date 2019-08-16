@@ -22,6 +22,7 @@ bool Worker::has_rib_dump_started() {
 
 double Worker::rib_dump_rate() {
     std::cout << "rib dump rate is not implemented yet." << std::endl;
+    return .0;
 }
 
 void Worker::start(int obmp_server_tcp_socket, bool is_ipv4_socket) {
@@ -36,7 +37,7 @@ void Worker::start(int obmp_server_tcp_socket, bool is_ipv4_socket) {
     topic_builder = new TopicBuilder(router_ip, router_hostname);
     router_group = topic_builder->get_router_group();
 
-    encapsulator = new Encapsulator(router_ip_raw, is_router_ip_ipv4, router_hostname, router_group);
+    encapsulator = new Encapsulator(router_ip_raw, is_router_ip_ipv4, router_group);
 
     // get read fd
     reader_fd = sock_buffer.get_reader_fd();

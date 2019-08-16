@@ -201,7 +201,7 @@ void Config::parse_base(const YAML::Node &node) {
         try {
             bmp_port = node["listen_port"].as<uint16_t>();
 
-            if (bmp_port < 25 || bmp_port > 65535)
+            if (bmp_port < 25 || bmp_port >= 65535)
                 throw "invalid listen_port, not within range of 25 - 65535)";
 
             if (debug_all)
