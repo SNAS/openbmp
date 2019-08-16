@@ -5,7 +5,6 @@ set (OPENBMP_VER_PATCH "0")
 set (OPENBMP_VER_RELEASE "0")
 set (OPENBMPD_VERSION "${OPENBMP_VER_MAJOR}.${OPENBMP_VER_MINOR}.${OPENBMP_VER_PATCH}-${OPENBMP_VER_RELEASE}")
 
-
 cmake_minimum_required(VERSION 2.6)
 project(OPENBMP)
 
@@ -16,6 +15,14 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL Darwin)
 else ()
     Message(FATAL_ERROR "${CMAKE_SYSTEM_NAME} not supported; Must be Linux or Darwin")
 endif ()
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # Add C++11
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR CMAKE_COMPILER_IS_GNUCXX)
