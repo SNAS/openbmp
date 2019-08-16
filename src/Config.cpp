@@ -126,6 +126,36 @@ void Config::print_warning(std::string msg, const YAML::Node &node) {
 void Config::parse_base(const YAML::Node &node) {
     std::string value;
 
+    if (node["log_filename"]) {
+        try {
+            log_filename = node["log_filename"].as<std::string>();
+            if (debug_all)
+                std::cout << "   Config: log_filename : " << log_filename << std::endl;
+        } catch (YAML::TypedBadConversion<std::string> err) {
+            print_warning("log_filename is not of type string", node["log_filename"]);
+        }
+    }
+
+    if (node["debug_filename"]) {
+        try {
+            debug_filename = node["debug_filename"].as<std::string>();
+            if (debug_all)
+                std::cout << "   Config: debug_filename : " << debug_filename << std::endl;
+        } catch (YAML::TypedBadConversion<std::string> err) {
+            print_warning("debug_filename is not of type string", node["debug_filename"]);
+        }
+    }
+
+    if (node["pid_filename"]) {
+        try {
+            pid_filename = node["pid_filename"].as<std::string>();
+            if (debug_all)
+                std::cout << "   Config: pid_filename : " << pid_filename << std::endl;
+        } catch (YAML::TypedBadConversion<std::string> err) {
+            print_warning("pid_filename is not of type string", node["pid_filename"]);
+        }
+    }
+
     if (node["collector_name"]) {
         try {
             value = node["collector_name"].as<std::string>();

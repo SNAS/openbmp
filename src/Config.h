@@ -29,10 +29,11 @@ public:
 
     /* Config Variables */
     bool daemon;             ///run the program foreground
-    const char *cfg_filename = nullptr;                 // Configuration file name to load/read
-    const char *log_filename = nullptr;                 // Output file to log messages to
-    const char *debug_filename = nullptr;               // Debug file to log messages to
-    const char *pid_filename = nullptr;                 // PID file to record the daemon pid
+    const char *cfg_filename; // Configuration file name to load/read
+    string log_filename; // Output file to log messages to
+    string debug_filename; // Debug file to log messages to
+    string pid_filename; // PID file to record the daemon pid
+
     // Collector Hash ID (raw format); MD5 digest length is 16 bytes
     unsigned char collector_hash_id[MD5_DIGEST_LENGTH];
     // Collector name

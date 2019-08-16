@@ -47,7 +47,7 @@ void Worker::start(int obmp_server_tcp_socket, bool is_ipv4_socket) {
     /* worker now consumes bmp data from pipe socket (read_fd) to parse bmp msgs. */
     work_thread = thread(&Worker::work, this);
 
-    if (debug) LOG_INFO("a worker started.");
+    if (debug) DEBUG("a worker started.");
 }
 
 // set running flag to false
@@ -55,7 +55,7 @@ void Worker::stop() {
     status = WORKER_STATUS_STOPPED;
     /* the worker has been notified to stop working, time to clean up. */
 
-    if (debug) LOG_INFO("a worker stopped.");
+    if (debug) DEBUG("a worker stopped.");
     // join worker
     work_thread.join();
 }

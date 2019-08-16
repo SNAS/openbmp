@@ -159,6 +159,7 @@ void Logger::DebugPrint(const char *filename, int line_num, const char *func_nam
     va_start (args, msg);
 
     printV("DEBUG", debugFile, filename, line_num, func_name, msg, args);
+    fflush(logFile);
 
     // Free/end the args
     va_end(args);
