@@ -39,6 +39,7 @@ MessageBus::MessageBus() {
 MessageBus::~MessageBus() {
     disconnect();
     delete producer_config;
+    delete event_callback;
 }
 
 void MessageBus::send(std::string &topic, uint8_t *encapsulated_msg, int msg_len) {
@@ -82,7 +83,9 @@ void MessageBus::connect() {
     }
 
     // Register event callback
-    event_callback = new KafkaEventCallback(&is_connected, logger);
+    if (event_callback == nullptr) {
+        event_callback = new KafkaEventCallback(&is_connected, logger);
+    }
     if (producer_config->set("event_cb", event_callback, errstr) != RdKafka::Conf::CONF_OK) {
         LOG_ERR("Failed to configure kafka event callback: %s", errstr.c_str());
         throw "ERROR: Failed to configure kafka event callback";
@@ -115,11 +118,10 @@ void MessageBus::disconnect() {
             i++;
         }
     }
-    if (producer != nullptr) delete producer;
+    if (producer != nullptr) {
+        delete producer;
+    }
     producer = nullptr;
-
-    if (event_callback != nullptr) delete event_callback;
-    event_callback = nullptr;
 
     // suggested by librdkafka to free memory
     RdKafka::wait_destroyed(500);
@@ -129,6 +131,5 @@ void MessageBus::disconnect() {
 
 void MessageBus::stop() {
     running = false;
-    disconnect();
 }
 

@@ -122,10 +122,9 @@ private:
     bool running;
 
     // RdKafka variables
-    KafkaEventCallback *event_callback;
+    KafkaEventCallback* event_callback = nullptr;
     RdKafka::Conf *producer_config;
     RdKafka::Producer *producer; // Kafka Producer instance
-
 
 };
 
