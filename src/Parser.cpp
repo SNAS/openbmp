@@ -14,7 +14,8 @@ Parser::Parser() {
     parsebgp_opts_init(&opts);
     opts.ignore_not_implemented = 1;
     opts.silence_not_implemented = debug ? 0 : 1;
-    // TODO: enable shallow parsing
+    // enable shallow parsing
+    opts.bmp.parse_headers_only = 1;
     // instantiate libparsebgp msg.
     parsed_msg = parsebgp_create_msg();
 }
