@@ -51,11 +51,12 @@ void Worker::start(int obmp_server_tcp_socket, bool is_ipv4_socket) {
     if (debug) DEBUG("a worker started.");
 }
 
-// set running flag to false
 void Worker::stop() {
-    status = WORKER_STATUS_STOPPED;
+    // worker stopped for some reason
+    // stop sock_buffer to disconnect with the connected bmp router
+    sock_buffer.stop();
     /* the worker has been notified to stop working, time to clean up. */
-
+    status = WORKER_STATUS_STOPPED;
     if (debug) DEBUG("a worker stopped.");
     // join worker
     work_thread.join();
@@ -93,8 +94,19 @@ void Worker::work() {
      */
     int bmp_msg_count = 0;
 
+//    FILE *fp = fopen("/tmp/bmp_dump/dump_frr_router_from_worker.txt", "w");
+
     while (status == WORKER_STATUS_RUNNING) {
         parsebgp_error_t err = parser.parse(get_unread_buffer(), get_bmp_data_unread_len());
+
+        /*
+        if (get_bmp_data_unread_len() > 0) {
+            fwrite(get_unread_buffer(), 1, get_bmp_data_unread_len(), fp);
+            status = WORKER_STATUS_STOPPED;
+            break;
+        }
+         */
+
         if (err == PARSEBGP_OK) {
 
             // increase bmp_msg_count up to 2 (an arbitrary decision)
@@ -149,6 +161,7 @@ void Worker::work() {
              *          the worker stucks at recv();  unless recv() returns a smaller amount of bytes
              *          when it detects the connection has been closed.*/
             refill_buffer(router_init ? WORKER_BUF_REFILL_SIZE : 1);
+//            refill_buffer(WORKER_BUF_REFILL_SIZE);
         } else {
             LOG_INFO("stopping the worker, something serious happened -- %d", err);
             // set worker status to stopped so the main thread can clean up.
@@ -157,9 +170,9 @@ void Worker::work() {
         }
     }
 
-    // worker stopped for some reason
-    // stop sock_buffer to disconnect with the connected bmp router
-    sock_buffer.stop();
+    // close dump file
+//    fclose(fp);
+
 }
 
 // recv_len affects how soon we need to refill the buffer;

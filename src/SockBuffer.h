@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <fstream>
+#include <stdio.h>
 #include <iostream>
 
 #include "Logger.h"
@@ -24,7 +25,7 @@ using namespace std;
  */
 class SockBuffer {
 public:
-    // constructor
+    // (de)constructor
     SockBuffer();
 
     // to connect with bmp router and handle bufferer thread creation
@@ -101,6 +102,11 @@ private:
     void save_data(); // reads from the sock connected with router
     void push_data(); // pushes to the sock connected with worker
 
+
+    /*************************************
+     * DEBUG: SAVE TCP PACKETS TO FILE ***
+     *************************************/
+//     FILE *fp;
 };
 
 

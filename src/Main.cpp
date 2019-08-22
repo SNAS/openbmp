@@ -149,7 +149,11 @@ int main(int argc, char **argv) {
     // Finally, we initialize OpenBMP and start the service.
     obmp = new OpenBMP();
     obmp->start();
-    sleep(1);
+
+    delete logger;
+    delete config;
+    delete obmp;
+
     return 0;
 }
 

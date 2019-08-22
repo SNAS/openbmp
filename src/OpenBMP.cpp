@@ -89,7 +89,7 @@ void OpenBMP::start() {
             message_bus->send(collector_topic_string, collector_msg, collector_msg_len);
             last_heartbeat_timestamp = current_time;
             if (debug) {
-                DEBUG("sent a heartbeat msg.");
+//                DEBUG("sent a heartbeat msg.");
             }
         }
 
@@ -112,6 +112,7 @@ void OpenBMP::start() {
             // sleep for a second, then start all over.
             sleep(1);
         }
+        sleep(5);
     }
 
 }
@@ -130,6 +131,7 @@ void OpenBMP::stop() {
 
     // send msg bus stop signal to cancel while loops in the msgbus.send()
     message_bus->stop();
+    delete message_bus;
     LOG_INFO("msg bus stopped.");
 
     // join cpu util mon

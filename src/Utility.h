@@ -37,7 +37,7 @@ public:
                 &totalUser[0], &totalUserLow[0], &totalSys[0], &totalIdle[0]);
         fclose(file);
 
-        sleep(3);
+        sleep(5);
 
         // sleep for a while and check the cpu util again
         file = fopen("/proc/stat", "r");

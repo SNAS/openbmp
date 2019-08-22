@@ -98,6 +98,10 @@ Encapsulator::Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &rout
     memcpy(current_buff_pos, &u32, sizeof(u32));
 }
 
+Encapsulator::~Encapsulator() {
+    delete bin_hdr_buffer;
+}
+
 void Encapsulator::build_encap_bmp_msg(uint8_t *bmp_msg, int msg_len) {
     // we do not overwrite the openbmp hdr section in the buffer
     // the hdr shouldn't change much.

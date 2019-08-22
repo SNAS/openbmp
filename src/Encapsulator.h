@@ -15,6 +15,8 @@ public:
     Encapsulator();
     // constructor for bmp_raw msgs
     Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &router_group);
+    // deconstructor
+    ~Encapsulator();
 
     // functions for raw bmp msgs
     void build_encap_bmp_msg(uint8_t* bmp_msg, int bmp_msg_len);

@@ -4,6 +4,8 @@
 
 #include <iostream>
 #include "SockBuffer.h"
+#include <stdio.h>
+
 
 using namespace std;
 
@@ -20,6 +22,11 @@ SockBuffer::SockBuffer() {
     sock_buf_write_ptr = ring_buffer;
 
     debug = (config->debug_all | config->debug_worker);
+
+    /*************************************
+     * DEBUG: SAVE TCP PACKETS TO FILE ***
+     *************************************/
+//    fp = fopen("/tmp/bmp_dump/dump_frr_router_1.txt", "w");
 }
 
 void SockBuffer::start(int obmp_server_sock, bool is_ipv4_connection) {
@@ -62,6 +69,7 @@ void SockBuffer::stop() {
     if (debug) {
         LOG_INFO("sockbuffer stopped.");
     }
+    delete ring_buffer;
 }
 
 void SockBuffer::save_data() {
@@ -83,6 +91,13 @@ void SockBuffer::save_data() {
                                       read_position - write_position - 1);
                 }
             }
+
+            /*************************************
+             * DEBUG: SAVE TCP PACKETS TO FILE ***
+             *************************************/
+//            fwrite(sock_buf_write_ptr, 1, bytes_read, fp);
+//            fclose(fp);
+//            exit(0);
 
             if (bytes_read <= 0) {
                 close(writer_fd);
@@ -107,6 +122,10 @@ void SockBuffer::save_data() {
     /* FOR DEBUGGING */
     else {
         if (debug) LOG_INFO("ring buffer stall, waiting for read to catch up.");
+        /*************************************
+         * DEBUG: SAVE TCP PACKETS TO FILE ***
+         *************************************/
+//        stop();
     }
 }
 
@@ -133,6 +152,7 @@ void SockBuffer::push_data() {
                 bytes_read = write(writer_fd, sock_buf_read_ptr,
                                    (ring_buffer_size - read_position) > CLIENT_WRITE_BUFFER_BLOCK_SIZE ?
                                    CLIENT_WRITE_BUFFER_BLOCK_SIZE : (ring_buffer_size - read_position));
+
 
             if (bytes_read > 0) {
                 sock_buf_read_ptr += bytes_read;
@@ -214,6 +234,11 @@ void SockBuffer::sock_bufferer() {
     LOG_INFO("closing local sockets");
     close(writer_fd);
     close(reader_fd);
+
+    /*************************************
+     * DEBUG: SAVE TCP PACKETS TO FILE ***
+     *************************************/
+//     fclose(fp);
 }
 
 int SockBuffer::get_reader_fd() {
