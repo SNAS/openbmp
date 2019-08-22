@@ -1,10 +1,11 @@
 # OpenBMP V2
 
-## Build Instructions for Ubuntu 18.04
+## Build Instructions for Ubuntu 18.04 and 16.04
+Note that I was also able to run the program in CentOS 7.
 
 ### install dependancies
 ```
-sudo apt-get install gcc g++ libboost-dev cmake zlib1g-dev libssl1.0.0 libsasl2-2 libssl-dev libsasl2-dev
+sudo apt-get install gcc g++ libboost-dev cmake zlib1g-dev libssl1.0.0 libsasl2-2 libssl-dev libsasl2-dev dh-autoreconf
 ``` 
 
 ### install librdkafka
@@ -40,7 +41,7 @@ sudo make install
 
 ### build openbmp v2
 ```
-git clone https://github.com/OpenBMP/openbmp.git
+git clone git@github.com:CAIDA/openbmp.git
 cd openbmp
 git checkout v2
 mkdir build
