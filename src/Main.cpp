@@ -14,25 +14,10 @@ static Logger *logger;
 // needs obmp object global so the signal handler can call stop() in obmp.
 static OpenBMP *obmp;
 
-// needs it to shutdown the program properly
-void signal_handler(int signum) {
-    LOG_NOTICE("Caught signal %d", signum);
-
-    /*
-     * Respond based on the signal
-     */
-    switch (signum) {
-        case SIGTERM :
-        case SIGKILL :
-        case SIGQUIT :
-        case SIGPIPE :
-        case SIGINT  :
-        case SIGCHLD : // Stop openbmp
-            obmp->stop();
-        default:
-            LOG_INFO("Ignoring signal %d", signum);
-            break;
-    }
+// termination signal handling
+static void sigterm (int sig) {
+    LOG_INFO("Termination signal received %d", sig);
+    obmp->stop();
 }
 
 /**
@@ -115,14 +100,15 @@ int main(int argc, char **argv) {
     }
 
     // check if we can need to enable debug mode in the logger
-    if (config->debug_all | config->debug_worker | config->debug_collector
-    | config->debug_encapsulator | config->debug_message_bus) {
+    if (config->debug_all || config->debug_worker
+        || config->debug_collector || config->debug_encapsulator
+        || config->debug_message_bus) {
         logger->enableDebug();
     } else {
         logger->disableDebug();
     }
 
-    // daemonize the program
+    // daemonize the program if needed
     if (config->daemon) {
         if(config->debug_all) {
             cout << "Sending the process to background" << endl;
@@ -131,28 +117,16 @@ int main(int argc, char **argv) {
     }
 
     // Setup the signal handlers
-    struct sigaction sigact{};
-    sigact.sa_handler = signal_handler;
-    sigact.sa_flags = 0;
-    sigemptyset(&sigact.sa_mask);          // blocked signals while handler runs
-
-    sigaction(SIGCHLD, &sigact, nullptr);
-    sigaction(SIGHUP, &sigact, nullptr);
-    sigaction(SIGTERM, &sigact, nullptr);
-    sigaction(SIGPIPE, &sigact, nullptr);
-    sigaction(SIGQUIT, &sigact, nullptr);
-    sigaction(SIGINT, &sigact, nullptr);
-    sigaction(SIGUSR1, &sigact, nullptr);
-    sigaction(SIGUSR2, &sigact, nullptr);
-
+    signal(SIGINT, sigterm);
+    signal(SIGTERM, sigterm);
 
     // Finally, we initialize OpenBMP and start the service.
     obmp = new OpenBMP();
     obmp->start();
 
     delete logger;
-    delete config;
     delete obmp;
+    delete config;
 
     return 0;
 }

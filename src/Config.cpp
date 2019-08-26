@@ -505,6 +505,10 @@ void Config::parse_grouping(const YAML::Node &node) {
     }
 }
 
+Config::~Config() {
+    delete singleton_instance;
+}
+
 
 /**
  * Parse matching regexp list and update the provided map with compiled expressions

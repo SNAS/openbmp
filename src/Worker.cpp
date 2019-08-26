@@ -60,6 +60,8 @@ void Worker::stop() {
     if (debug) DEBUG("a worker stopped.");
     // join worker
     work_thread.join();
+    delete topic_builder;
+    delete encapsulator;
 }
 
 // return if the worker is running

@@ -38,6 +38,7 @@ MessageBus::MessageBus() {
 
 MessageBus::~MessageBus() {
     disconnect();
+    delete singleton_instance;
     delete producer_config;
     delete event_callback;
 }

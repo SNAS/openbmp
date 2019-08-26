@@ -23,6 +23,7 @@ public:
     // delete methods that cause problems to the singleton
     Config(Config const&) = delete;
     void operator=(Config const&)  = delete;
+    ~Config();
 
     /* Method to load variables from a config file */
     void load(const char *config_filename);
