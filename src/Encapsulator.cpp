@@ -75,9 +75,10 @@ Encapsulator::Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &rout
     memcpy(bin_hdr_buffer + encap_msg_type_pos, &u8, sizeof(u8));
 
     // Router Hash
-    // TODO
-    // static_assert(sizeof(router_hash) == 16, "Raw router hash is assumed to be 16 bytes long");
-    // memcpy(buf, router_hash, sizeof(router_hash));
+    MD5(router_ip, strlen((char *) router_ip), router_hash_id);
+    static_assert(sizeof(router_hash_id) == 16, "Raw router hash is assumed to be 16 bytes long");
+
+    memcpy(buf, router_hash_id, sizeof(router_hash_id));
     current_buff_pos += 16;
 
     // Router IP

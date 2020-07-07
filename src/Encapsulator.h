@@ -6,6 +6,8 @@
 #include "Config.h"
 #include <cstdint>
 #include <string>
+#include <openssl/md5.h>
+
 
 using namespace std;
 
@@ -57,6 +59,9 @@ private:
     uint8_t* fill_common_bin_header();
     // for each raw bmp msg, we call this function to modify the raw_bmp bin header
     void build_bin_header_raw_bmp();
+    // Router Hash (raw format); MD5 digest length is 16 bytes
+    unsigned char router_hash_id[MD5_DIGEST_LENGTH];
+
 };
 
 #endif //OPENBMP_ENCAPSULATOR_H
