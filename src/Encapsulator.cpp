@@ -119,11 +119,11 @@ size_t Encapsulator::get_encap_bmp_msg_size() {
 }
 
 void * Encapsulator::get_router_hash_id() {
-    return dynamic_cast<void *>(this->router_hash_id);
+    return (void *)(this->router_hash_id);
 }
 
 void Encapsulator::set_router_hash_id(const unsigned char * router_ip) {
-    MD5(router_ip, strlen(router_ip), this->router_hash_id);
+    MD5(router_ip, strlen((const char *)router_ip), this->router_hash_id);
     static_assert(sizeof(router_hash_id) == 16, "Raw router hash is assumed to be 16 bytes long");
 }
 
