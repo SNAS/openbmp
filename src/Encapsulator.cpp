@@ -75,8 +75,8 @@ Encapsulator::Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &rout
     memcpy(bin_hdr_buffer + encap_msg_type_pos, &u8, sizeof(u8));
 
     // Router Hash
-    this->set_router_hash_id(dynamic_cast<char *>(router_ip));
-    memcpy(buf, router_hash_id, sizeof(router_hash_id));
+    this->set_router_hash_id((const unsigned char *) router_ip);
+    memcpy(current_buff_pos, router_hash_id, sizeof(router_hash_id));
     current_buff_pos += 16;
 
     // Router IP
@@ -122,7 +122,7 @@ void * Encapsulator::get_router_hash_id() {
     return dynamic_cast<void *>(this->router_hash_id);
 }
 
-void Encapsulator::set_router_hash_id(char * router_ip) {
+void Encapsulator::set_router_hash_id(const unsigned char * router_ip) {
     MD5(router_ip, strlen(router_ip), this->router_hash_id);
     static_assert(sizeof(router_hash_id) == 16, "Raw router hash is assumed to be 16 bytes long");
 }
