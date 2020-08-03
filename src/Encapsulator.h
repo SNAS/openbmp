@@ -29,6 +29,8 @@ public:
     void build_encap_collector_msg();
     uint8_t* get_encap_collector_msg();
     size_t get_encap_collector_msg_size();
+    void * get_router_hash_id();
+    void set_router_hash_id(char * router_ip);
 
 private:
     Logger *logger;

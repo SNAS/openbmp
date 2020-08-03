@@ -133,9 +133,11 @@ void Worker::work() {
             encapsulator->build_encap_bmp_msg(get_unread_buffer(), raw_bmp_msg_len);
             uint8_t* encap_msg = encapsulator->get_encap_bmp_msg();
             int encap_msg_size = encapsulator->get_encap_bmp_msg_size();
+            void * encap_key = encapsulator->get_router_hash_id();
+            size_t encap_key_len = 16; /* size of MD5 hash */
 
             // 3. message bus sends the encapsulated message to the right topic. */
-            msg_bus->send(topic_string, encap_msg, encap_msg_size);
+            msg_bus->send(topic_string, encap_msg, encap_msg_size, encap_key, encap_key_len);
 
             // we now handle bmp init and term msg
             if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_INIT_MSG) {
