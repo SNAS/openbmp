@@ -86,7 +86,10 @@ private:
     thread buffer_thread;
 
     // save router ip in raw
-    uint8_t router_ip_raw[16];
+    uint8_t router_ip_raw[16] = { 0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0,
+                                  0, 0, 0, 0 };
     // plain text router info
     string router_ip;
     string router_port;

@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include "Constant.h"
 #include "Encapsulator.h"
+#include <iomanip>
 
 
 // constructor for collector msgs
