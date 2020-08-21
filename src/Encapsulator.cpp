@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include "Constant.h"
 #include "Encapsulator.h"
+#include <iomanip>
 
 
 // constructor for collector msgs
@@ -75,9 +76,8 @@ Encapsulator::Encapsulator(uint8_t *router_ip, bool is_router_ipv4, string &rout
     memcpy(bin_hdr_buffer + encap_msg_type_pos, &u8, sizeof(u8));
 
     // Router Hash
-    // TODO
-    // static_assert(sizeof(router_hash) == 16, "Raw router hash is assumed to be 16 bytes long");
-    // memcpy(buf, router_hash, sizeof(router_hash));
+    this->set_router_hash_id((const unsigned char *) router_ip);
+    memcpy(current_buff_pos, router_hash_id, sizeof(router_hash_id));
     current_buff_pos += 16;
 
     // Router IP
@@ -117,6 +117,15 @@ uint8_t *Encapsulator::get_encap_bmp_msg() {
 
 size_t Encapsulator::get_encap_bmp_msg_size() {
     return binary_hdr_len_raw_bmp + bmp_msg_len;
+}
+
+void * Encapsulator::get_router_hash_id() {
+    return (void *)(this->router_hash_id);
+}
+
+void Encapsulator::set_router_hash_id(const unsigned char * router_ip) {
+    MD5(router_ip, strlen((const char *)router_ip), this->router_hash_id);
+    static_assert(sizeof(router_hash_id) == 16, "Raw router hash is assumed to be 16 bytes long");
 }
 
 void Encapsulator::build_bin_header_raw_bmp() {

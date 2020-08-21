@@ -89,6 +89,8 @@ int main(int argc, char **argv) {
         return 2;
     }
 
+    cout << "loading logger" << endl;
+
     // Initialize Logger (singleton)
     try {
         logger = Logger::init(
