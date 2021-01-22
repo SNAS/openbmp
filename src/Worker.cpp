@@ -1,5 +1,6 @@
 #include <iostream>
 #include <netinet/in.h>
+#include <sys/time.h>
 #include <parsebgp.h>
 #include "Worker.h"
 
@@ -130,14 +131,17 @@ void Worker::work() {
             string topic_string = topic_builder->get_raw_bmp_topic_string(peer_ip, parser.get_peer_asn());
 
             // 2. encapsulator builds encapsulated message by using the raw bmp message.
-            encapsulator->build_encap_bmp_msg(get_unread_buffer(), raw_bmp_msg_len);
+            timeval cap_time;
+            gettimeofday(&cap_time, nullptr);
+            encapsulator->build_encap_bmp_msg(get_unread_buffer(), raw_bmp_msg_len, cap_time);
             uint8_t* encap_msg = encapsulator->get_encap_bmp_msg();
             int encap_msg_size = encapsulator->get_encap_bmp_msg_size();
             void * encap_key = encapsulator->get_router_hash_id();
             size_t encap_key_len = 16; /* size of MD5 hash */
 
             // 3. message bus sends the encapsulated message to the right topic. */
-            msg_bus->send(topic_string, encap_msg, encap_msg_size, encap_key, encap_key_len);
+            int64_t msg_time = cap_time.tv_sec + (cap_time.tv_usec/1000);
+            msg_bus->send(topic_string, encap_msg, encap_msg_size, encap_key, encap_key_len, msg_time);
 
             // we now handle bmp init and term msg
             if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_INIT_MSG) {

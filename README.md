@@ -5,7 +5,7 @@ Note that I was also able to run the program in CentOS 7.
 
 ### install dependancies
 ```
-sudo apt-get install gcc g++ libboost-dev cmake zlib1g-dev libssl1.0.0 libsasl2-2 libssl-dev libsasl2-dev dh-autoreconf
+sudo apt-get install gcc g++ libboost-dev cmake zlib1g-dev libssl1.0.0 libsasl2-2 libssl-dev libsasl2-dev dh-autoreconf libyaml-cpp-dev
 ``` 
 
 ### install librdkafka

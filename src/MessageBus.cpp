@@ -43,7 +43,8 @@ MessageBus::~MessageBus() {
     delete event_callback;
 }
 
-void MessageBus::send(std::string &topic, uint8_t *encapsulated_msg, int msg_len, const void * key, size_t key_len) {
+void MessageBus::send(std::string &topic, uint8_t *encapsulated_msg, int msg_len,
+                      const void * key, size_t key_len, int64_t timestamp) {
     while (!is_connected && running) {
         LOG_WARN("Not connected to Kafka, attempting to reconnect");
         connect();
@@ -57,7 +58,7 @@ void MessageBus::send(std::string &topic, uint8_t *encapsulated_msg, int msg_len
                               RdKafka::Producer::RK_MSG_COPY /* Copy payload */,
                               encapsulated_msg, msg_len, /* Value */
                               key, key_len, /* Key */
-                              0, /* Timestamp (defaults to now) */
+                              timestamp, /* Timestamp */
                               nullptr, /* Message headers, if any */
                               nullptr);
     if (resp != RdKafka::ERR_NO_ERROR) {
