@@ -140,7 +140,7 @@ void Worker::work() {
             size_t encap_key_len = 16; /* size of MD5 hash */
 
             // 3. message bus sends the encapsulated message to the right topic. */
-            int64_t msg_time = cap_time.tv_sec + (cap_time.tv_usec/1000);
+            int64_t msg_time = (int64_t) ((int64_t) cap_time.tv_sec * 1000 + (int64_t) cap_time.tv_usec / 1000);
             msg_bus->send(topic_string, encap_msg, encap_msg_size, encap_key, encap_key_len, msg_time);
 
             // we now handle bmp init and term msg
