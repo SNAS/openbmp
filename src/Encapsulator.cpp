@@ -102,12 +102,12 @@ Encapsulator::~Encapsulator() {
     delete bin_hdr_buffer;
 }
 
-void Encapsulator::build_encap_bmp_msg(uint8_t *bmp_msg, int msg_len) {
+void Encapsulator::build_encap_bmp_msg(uint8_t *bmp_msg, int msg_len, timeval cap_time) {
     // we do not overwrite the openbmp hdr section in the buffer
     // the hdr shouldn't change much.
     // we may need to change the msg len field in the hdr tho.
     bmp_msg_len = msg_len;
-    build_bin_header_raw_bmp();
+    build_bin_header_raw_bmp(cap_time);
     memcpy(bin_hdr_buffer + binary_hdr_len_raw_bmp, bmp_msg, bmp_msg_len);
 }
 
@@ -128,7 +128,7 @@ void Encapsulator::set_router_hash_id(const unsigned char * router_ip) {
     static_assert(sizeof(router_hash_id) == 16, "Raw router hash is assumed to be 16 bytes long");
 }
 
-void Encapsulator::build_bin_header_raw_bmp() {
+void Encapsulator::build_bin_header_raw_bmp(timeval cap_time) {
     // requires 3 rewrites:
     // 1. timestamps (2 places)
     // 2. bmp msg len (if obj type is not raw_bmp then it is 0)
@@ -136,12 +136,10 @@ void Encapsulator::build_bin_header_raw_bmp() {
     uint32_t u32;
 
     // record the capture time for this message
-    timeval tv;
-    gettimeofday(&tv, nullptr);
-    uint32_t capture_ts_secs = tv.tv_sec;
+    uint32_t capture_ts_secs = cap_time.tv_sec;
     u32 = htonl(capture_ts_secs);
     memcpy(bin_hdr_buffer + timestamp_sec_pos, &u32, sizeof(u32));
-    uint32_t capture_ts_usecs = tv.tv_usec;
+    uint32_t capture_ts_usecs = cap_time.tv_usec;
     u32 = htonl(capture_ts_usecs);
     memcpy(bin_hdr_buffer + timestamp_usec_pos, &u32, sizeof(u32));
 

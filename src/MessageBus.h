@@ -100,8 +100,8 @@ public:
     ~MessageBus();
 
     // send openbmp msg to kafka
-    void send(std::string &topic, uint8_t *encapsulated_msg, int msg_len, const void * key = nullptr,
-              size_t key_len = 0);
+    void send(std::string &topic, uint8_t *encapsulated_msg, int msg_len,
+              const void * key = nullptr, size_t key_len = 0, int64_t timestamp = 0);
 
     void connect();
 

@@ -6,6 +6,7 @@
 #include "Config.h"
 #include <cstdint>
 #include <string>
+#include <sys/time.h>
 #include <openssl/md5.h>
 
 
@@ -21,7 +22,7 @@ public:
     ~Encapsulator();
 
     // functions for raw bmp msgs
-    void build_encap_bmp_msg(uint8_t* bmp_msg, int bmp_msg_len);
+    void build_encap_bmp_msg(uint8_t* bmp_msg, int bmp_msg_len, timeval cap_time);
     uint8_t* get_encap_bmp_msg();
     size_t get_encap_bmp_msg_size();
 
@@ -60,7 +61,7 @@ private:
     // fill information that shared by both collector and raw_bmp msgs.
     uint8_t* fill_common_bin_header();
     // for each raw bmp msg, we call this function to modify the raw_bmp bin header
-    void build_bin_header_raw_bmp();
+    void build_bin_header_raw_bmp(timeval cap_time);
     // Router Hash (raw format); MD5 digest length is 16 bytes
     unsigned char router_hash_id[MD5_DIGEST_LENGTH];
 
