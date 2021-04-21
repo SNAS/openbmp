@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2013-2016 Cisco Systems, Inc. and others.  All rights reserved.
  * Copyright (c) 2019 Lumin Shi.  All rights reserved.
@@ -78,12 +79,18 @@ void SockBuffer::stop() {
 }
 
 void SockBuffer::save_data() {
+  int prc;
     if ((wrap_state and (write_position + 1) < read_position) or
         (not wrap_state and write_position < ring_buffer_size)) {
 
         // Attempt to read from socket
-        if (poll(&pfd_tcp, 1, 5)) {
+      prc = poll(&pfd_tcp, 1, 5);
+      if (prc < 0) {
+        LOG_ERR("tcp poll failed (%d)", errno);
+        throw "tcp poll failed";
+      } else if (prc > 0) {
             if (pfd_tcp.revents & POLLHUP or pfd_tcp.revents & POLLERR) {
+                LOG_INFO("peer closed tcp connection");
                 bytes_read = 0;  // Indicate to close the connection
             } else {
                 if (not wrap_state) {
@@ -108,7 +115,14 @@ void SockBuffer::save_data() {
                 close(writer_fd);
                 close(reader_fd);
                 close(router_tcp_fd);
-                throw "bad tcp connection.";
+                if (bytes_read < 0) {
+                  LOG_ERR("tcp read failed: %d", errno);
+                  throw "tcp read failed";
+                } else {
+                  LOG_INFO("tcp connection eof");
+                  running = false;
+                  return;
+                }
             }
             else {
                 sock_buf_write_ptr += bytes_read;
@@ -222,8 +236,9 @@ void SockBuffer::sock_bufferer() {
         try {
             save_data();
             push_data();
-        } catch (...) {
-            LOG_INFO("%s: Thread for sock [%d] ended abnormally: ", router_ip.c_str(), router_tcp_fd);
+        } catch (const char *err) {
+          LOG_ERR("%s: Thread for sock [%d] ended abnormally: %s",
+                   router_ip.c_str(), router_tcp_fd, err);
             // set running to false to exit the while loop.
             running = false;
         }
