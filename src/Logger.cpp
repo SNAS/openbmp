@@ -92,8 +92,6 @@ Logger::Logger(const char *log_filename, const char *debug_filename) {
  * Destructor for class
  ***********************************************************************/
 Logger::~Logger() {
-    delete singleton_instance;
-
     /*
      * Close open files
      */

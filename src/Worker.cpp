@@ -207,7 +207,7 @@ void Worker::refill_buffer(int recv_len) {
         received_bytes = recv(reader_fd,get_unread_buffer() + get_bmp_data_unread_len(),
                 recv_len,MSG_WAITALL);
         if (received_bytes <= 0) {
-            LOG_INFO("bad connection");
+            LOG_INFO("sock_buffer terminated, worker stopping");
             // set worker status to stopped. the main thread will clean up later.
             status = WORKER_STATUS_STOPPED;
         }

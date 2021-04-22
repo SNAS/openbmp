@@ -515,7 +515,6 @@ void Config::parse_grouping(const YAML::Node &node) {
 }
 
 Config::~Config() {
-    delete singleton_instance;
 }
 
 
