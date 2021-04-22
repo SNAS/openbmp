@@ -179,6 +179,11 @@ void Worker::work() {
              *          when it detects the connection has been closed.*/
             refill_buffer(router_init ? WORKER_BUF_REFILL_SIZE : 1);
 //            refill_buffer(WORKER_BUF_REFILL_SIZE);
+        } else if (err == PARSEBGP_INVALID_MSG) {
+            // Handle invalid messages without stopping the worker.
+            LOG_ERR("Invalid BMP messages of type: %d. Skipping");
+            int raw_bmp_msg_len = parser.get_raw_bmp_msg_len();
+            update_buffer(raw_bmp_msg_len);
         } else {
             LOG_INFO("stopping the worker, something serious happened -- %d", err);
             // set worker status to stopped so the main thread can clean up.
