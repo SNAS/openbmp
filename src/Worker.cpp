@@ -167,7 +167,32 @@ void Worker::work() {
                 LOG_INFO("received term msg.");
                 router_init = false;
                 status = WORKER_STATUS_STOPPED;
+            } else if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_PEER_UP) {
+                /*
+                 * CASE: TERM msg
+                 * close tcp socket and stop working
+                 */
+                LOG_INFO("received peer up   message from router: %s for peer: %s",router_ip.c_str(), peer_ip.c_str());
+            } else if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_PEER_DOWN) {
+                /*
+                 * CASE: TERM msg
+                 * close tcp socket and stop working
+                 */
+                LOG_INFO("received peer down message from router: %s for peer: %s",router_ip.c_str(), peer_ip.c_str());
+            } else if (parsed_bmp_msg->type == PARSEBGP_BMP_TYPE_STATS_REPORT) {
+                /*
+                 * CASE: TERM msg
+                 * close tcp socket and stop working
+                 */
+                LOG_INFO("received stats report from router: %s",router_ip.c_str());
             }
+            //It's not sufficient ro only refill the buffer if a PARTIAL_MSG is found. A valid message at the the end 
+            //of the buffer can lead to an overflow without triggering a PARTIAL_MSG. When the buffer gets
+            //below 64 bytes, refill
+            if(bmp_data_unread_len <= 64){
+                LOG_DEBUG("low unread buffer: %d refilling", bmp_data_unread_len);
+                refill_buffer(WORKER_BUF_REFILL_SIZE);
+            } 
             // update buffer pointers
             update_buffer(raw_bmp_msg_len);
         } else if (err == PARSEBGP_PARTIAL_MSG) {
@@ -212,11 +237,14 @@ void Worker::refill_buffer(int recv_len) {
         received_bytes = recv(reader_fd,get_unread_buffer() + get_bmp_data_unread_len(),
                 recv_len,MSG_WAITALL);
         if (received_bytes <= 0) {
-            LOG_INFO("bad connection");
+            LOG_INFO("bad connection from router: %d, stopping worker", router_ip.c_str());
             // set worker status to stopped. the main thread will clean up later.
             status = WORKER_STATUS_STOPPED;
         }
         bmp_data_unread_len += received_bytes;
+    } else {
+        LOG_ERR("Buffer overflow in worker! router: %d", router_ip.c_str());
+        status = WORKER_STATUS_STOPPED;
     }
 
 }
@@ -224,7 +252,13 @@ void Worker::refill_buffer(int recv_len) {
 void Worker::update_buffer(int parsed_bmp_msg_len) {
     bmp_data_read_len += parsed_bmp_msg_len;
     bmp_data_unread_len -= parsed_bmp_msg_len;
-    assert(bmp_data_read_len >= 0);
+    if(bmp_data_read_len < 0){
+        LOG_ERR("Assertion error. bmp_data_read_len is invalid (%d)", bmp_data_read_len);
+    }
+    assert(bmp_data_unread_len >= 0);
+    if(bmp_data_unread_len < 0){
+        LOG_ERR("Assertion error. bmp_data_unread_len is invalid (%d)", bmp_data_read_len);
+    }
     assert(bmp_data_unread_len >= 0);
 }
 
@@ -235,4 +269,3 @@ int Worker::get_bmp_data_unread_len() {
 uint8_t *Worker::get_unread_buffer() {
     return bmp_data_buffer + bmp_data_read_len;
 }
-
