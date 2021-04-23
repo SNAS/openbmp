@@ -55,7 +55,7 @@ Logger::Logger(const char *log_filename, const char *debug_filename) {
     logFile_REALFILE    = false;
     debugFile_REALFILE  = false;
     width_filename      = 20;
-    width_function      = 20;
+    width_function      = 25;
 
     /*
      * Open log file

@@ -23,6 +23,7 @@
 /*
  * Below defines LOG macros for various severities
  */
+#define LOG_DEBUG(...)   logger->Print("DEBUG",  __FUNCTION__, __VA_ARGS__)
 #define LOG_INFO(...)    logger->Print("INFO",   __FUNCTION__, __VA_ARGS__)
 #define LOG_WARN(...)    logger->Print("WARN",   __FUNCTION__, __VA_ARGS__)
 #define LOG_NOTICE(...)  logger->Print("NOTICE", __FUNCTION__, __VA_ARGS__)
