@@ -71,8 +71,7 @@ void MessageBus::send(std::string &topic, uint8_t *encapsulated_msg, int msg_len
                               nullptr, /* Message headers, if any */
                               nullptr);
     if (resp != RdKafka::ERR_NO_ERROR) {
-        std::cerr << "% Produce failed: " <<
-                  RdKafka::err2str(resp) << std::endl;
+        LOG_ERR("Produce failed: %s\n",RdKafka::err2str(resp).c_str());
     }
     producer->poll(0);
 }
