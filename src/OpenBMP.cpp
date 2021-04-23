@@ -98,7 +98,7 @@ void OpenBMP::start() {
             message_bus->send(collector_topic_string, collector_msg, collector_msg_len);
             last_heartbeat_timestamp = current_time;
             if (debug) {
-//                DEBUG("sent a heartbeat msg.");
+                LOG_DEBUG("sent a heartbeat msg.");
             }
         }
 
@@ -277,7 +277,7 @@ void OpenBMP::find_bmp_connection(Worker *worker) {
 bool OpenBMP::can_accept_bmp_connection() {
     int rib_waiting_workers = get_rib_dump_waiting_worker_num();
     if (debug) {
-        DEBUG("%d worker(s) in router rib dump waiting state", rib_waiting_workers);
+        LOG_DEBUG("%d worker(s) in router rib dump waiting state", rib_waiting_workers);
     }
     if (rib_waiting_workers >= config->max_rib_waiting_workers) {
         return false;
@@ -304,7 +304,7 @@ void OpenBMP::cpu_usage_monitor() {
     while (running) {
         cpu_util = Utility::get_avg_cpu_util();
         if (debug) {
-            DEBUG("avg cpu util (%): %f", cpu_util);
+            LOG_DEBUG("avg cpu util (%): %f", cpu_util);
         }
     }
 }
