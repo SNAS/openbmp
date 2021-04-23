@@ -2,4 +2,5 @@
 cmake-get_encap_msg*
 cmake-build*
 get_encap_msg
-
+/build/
+/.vscode/
